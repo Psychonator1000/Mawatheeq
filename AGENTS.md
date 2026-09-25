@@ -22,7 +22,9 @@ The GitHub repository is public. It contains an intentionally sanitized source c
 
 ## Opening the application
 
-Live app: https://mawatheeq.amratif15.chatgpt.site
+Live app: use the link in README.md.
 Source repository: https://github.com/Psychonator1000/Mawatheeq
 
-The README's “Open Mawatheeq” link opens the existing authenticated app. GitHub serves the source code; direct GitHub edits do not independently trigger a live deployment. The synchronized delivery above is part of the workflow for requested app changes, not a background GitHub-to-Sites deployment service.
+Use `mawatheeq.site` as the displayed app-link label, as requested by the owner. The custom domain is not connected yet; retain the working destination until the custom hostname is verified as active. Avoid repeating the personal deployment address in public documentation.
+
+The README's “mawatheeq.site” link opens the existing authenticated app. GitHub serves the source code; direct GitHub edits do not independently trigger a live deployment. The synchronized delivery above is part of the workflow for requested app changes, not a background GitHub-to-Sites deployment service.

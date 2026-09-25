@@ -1,8 +1,8 @@
 # Mawatheeq | مواثيق
 
-## [Open Mawatheeq →](https://mawatheeq.amratif15.chatgpt.site)
+## [mawatheeq.site](https://mawatheeq.amratif15.chatgpt.site)
 
-Use this link to open the live application and sign in with the account that has access. No download or code setup is needed to use the app.
+Use this link to open the live application, currently hosted on ChatGPT Sites, and sign in with the account that has access. No download or code setup is needed to use the app.
 
 Arabic, right-to-left legal case management with a beige and dark red interface.
 
