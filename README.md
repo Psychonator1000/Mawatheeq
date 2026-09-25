@@ -1,6 +1,6 @@
 # Mawatheeq | مواثيق
 
-## Open Mawatheeq (link shared with office members)
+## mawatheeq.site
 
 Use this link to open the live application and sign in with the account that has access. No download or code setup is needed to use the app.
 
