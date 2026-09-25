@@ -1,5 +1,9 @@
 # Mawatheeq | مواثيق
 
+## [Open Mawatheeq →](https://mawatheeq.amratif15.chatgpt.site)
+
+Use this link to open the live application and sign in with the account that has access. No download or code setup is needed to use the app.
+
 Arabic, right-to-left legal case management with a beige and dark red interface.
 
 ## Features
@@ -10,11 +14,11 @@ Arabic, right-to-left legal case management with a beige and dark red interface.
 - Arabic PDF scanning and autofill, including JBIG2 scanner images, English date stamps, and Arabic digits.
 - Review extracted details and generate a statement of claim and document bundle in the office's Word layouts.
 
-## Source snapshot and data
+## Source and data
 
 This repository contains the application source, including the PDF-reader repair. It starts with **empty case data**. Client records, original PDFs, uploaded documents, real-case examples, credentials, and the private production database are not included. The Word templates contain placeholders rather than case details.
 
-The repository is a source snapshot. Publishing GitHub changes does not automatically update the existing hosted application. Production records and files remain in that application's database and file storage.
+Future app updates made with ChatGPT include both publishing the live app and synchronizing the source here, as recorded in `AGENTS.md`. Direct edits on GitHub still require a separate deployment; this repository does not have a GitHub-to-Sites deployment trigger. Production records and files remain in the private application's database and file storage.
 
 ## Local development
 
