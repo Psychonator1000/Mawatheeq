@@ -1,0 +1,2 @@
+import {db,authorize,jsonError} from '@/lib/db';
+export async function POST(req:Request){try{authorize(req);const {rules}=await req.json() as any;for(const key of ['first','appeal','objection','execution','warning'])if(!Number.isInteger(rules[key])||rules[key]<0||rules[key]>365)throw new Error('المدة يجب أن تكون بين 0 و365 يوماً.');await db().prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').bind('rules',JSON.stringify(rules)).run();return Response.json({rules})}catch(e){return jsonError(e)}}
