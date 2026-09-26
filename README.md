@@ -6,11 +6,15 @@ Arabic, right-to-left legal case management with shared office records, PDF read
 
 This version uses **GitHub Pages for the application** and **Supabase for shared records, private PDFs, and sign-in**. Visitors do not need ChatGPT.
 
-**Activation is pending:** the shared Supabase project must be connected and GitHub Pages enabled. The intended app address is `https://psychonator1000.github.io/Mawatheeq/`. This is not yet a verified live link. Follow [the setup guide](docs/GITHUB_PAGES_SETUP.md).
+**[Open Mawatheeq](https://psychonator1000.github.io/Mawatheeq/)**
 
-Once activated, share this repository and open its GitHub Pages deployment. Approved members see and edit the same office records from any device. Creating an account alone does not grant access to office data; the owner approves members in the application.
+The GitHub Pages deployment and public sign-in screen are verified. The shared Supabase backend is connected on the Free plan. Initial owner account setup is still pending; follow [the setup guide](docs/GITHUB_PAGES_SETUP.md) to finish authentication and office access.
+
+Share this repository or the app link. Approved members see and edit the same office records from any device. Creating an account alone does not grant access to office data; the owner approves members in the application.
 
 The GitHub Actions workflow checks and builds every update on `main`, then deploys configured builds automatically. Pull requests run the checks without publishing.
+
+The owner requires a free-only setup: keep the public repository, standard GitHub Actions runners, GitHub Pages address, and Supabase Free plan. Do not purchase domains, upgrade plans, or add paid services. Free quotas and inactivity restrictions can limit availability; see the setup guide.
 
 ## Features
 
@@ -53,7 +57,7 @@ pnpm run build:pages
 pnpm run check:pages-config
 ```
 
-`test:shared` executes the actual SQL migration in PostgreSQL/WASM with fixtures for Supabase's managed auth and storage schemas. It checks allowed and denied access, shared editing, conflict detection, private PDFs, member approval/revocation, and import rollback. Live Supabase authentication and storage still need verification after connection.
+`test:shared` executes the actual SQL migration in PostgreSQL/WASM with fixtures for Supabase's managed auth and storage schemas. It checks allowed and denied access, shared editing, conflict detection, private PDFs, member approval/revocation, and import rollback. Hosted checks confirmed anonymous API denial, unapproved-user database denial, private storage configuration, and no Supabase security advisories. Sign-in and a saved-PDF round trip with an approved account still need verification after owner setup.
 
 The build generates `dist-pages/` and packages OCR assets from locked dependencies. Generated files are excluded from Git. The configuration check intentionally blocks publication until a backend URL and publishable key are present.
 
