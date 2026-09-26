@@ -1,0 +1,9 @@
+.auth-page{min-height:100vh;display:grid;place-items:center;padding:28px;background:radial-gradient(ellipse at top,#fbf6ec,#eee4d5)}
+.auth-card{width:100%;max-width:460px;background:#fffdf8;border:1px solid #ded0bd;border-radius:18px;padding:36px;box-shadow:0 18px 60px #563e3210}
+.auth-card .brand-mark{margin-bottom:20px}.auth-card h1{font-size:28px;margin-bottom:12px;color:#74283b}
+.auth-card p{line-height:1.9;color:#786450;margin-bottom:18px}.auth-card form{display:grid;gap:18px}
+.auth-card .btn{justify-content:center}.auth-card .auth-links{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px}
+.auth-message{margin:15px 0;padding:12px;border-radius:8px;background:#f2eadc;line-height:1.8}.auth-message.error{color:#8d2638;background:#fae8e8}
+.account-bar{position:fixed;bottom:12px;left:12px;z-index:35;background:#fffaf1;border:1px solid #dfd1bf;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:12px;box-shadow:0 3px 15px #563e3215;font-size:12px}
+.member-panel{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#25141165;padding:20px}.member-panel .auth-card{max-width:600px;max-height:90vh;overflow:auto}.member-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #e8dfd2;overflow-wrap:anywhere}
+@media(max-width:600px){.auth-card{padding:24px}.account-bar .account-email{display:none}.account-bar{bottom:8px;left:8px}.member-row{font-size:12px}}
