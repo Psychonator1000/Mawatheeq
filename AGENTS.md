@@ -10,6 +10,12 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - Do not publish future changes to ChatGPT Sites. Preserve the previous private database and files until an explicit, verified migration; never put them in GitHub.
 - Distinguish prepared source, configured backend, and successful deployment. Never describe the app as live unless deployment succeeds.
 
+## Cost constraint
+
+- The owner requires this application to remain free. Keep the repository public, use standard GitHub-hosted runners and GitHub Pages, and keep the Supabase organization on the Free plan.
+- Do not upgrade plans, buy domains, add paid compute/storage/backups, enable paid email services, or start paid trials. Do not add payment details. If a free quota is exhausted, reduce usage or explain the limitation; do not introduce charges.
+- Use the default GitHub Pages address. Authentication email delivery must use an explicitly verified free option or existing no-cost resources. Do not weaken account verification to avoid an email service cost.
+
 ## Data and access
 
 - Keep the public source free of case records, original PDFs, backups, credentials, and private deployment addresses. Keep `lib/data/seed.json` empty.

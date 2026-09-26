@@ -2,18 +2,28 @@
 
 GitHub Pages serves the app's HTML, JavaScript, fonts, templates, and OCR assets. Supabase provides the shared PostgreSQL database, private PDF storage, and email authentication. No ChatGPT sign-in or ChatGPT hosting is used by this build.
 
+## Free-only setup
+
+The owner requires the application to remain free. Use a public GitHub repository, standard GitHub-hosted runners, GitHub Pages, and a Supabase Free-plan organization. Do not add payment details, upgrade plans, purchase a domain, enable paid add-ons, or start paid trials.
+
+Supabase Free quotas include 500 MB of database data and 1 GB of file storage. Exceeding the Free quota can cause service restrictions; reduce usage instead of upgrading. Free projects may also pause after inactivity. Check the [current quotas](https://supabase.com/docs/guides/platform/billing-on-supabase) and [Free-plan restrictions](https://supabase.com/docs/guides/platform/billing-faq) before changing the setup.
+
+Email delivery is a separate setup item. Only connect an existing no-cost SMTP service or a provider whose free plan and hard limits have been verified. Do not pay for SMTP or disable email verification to work around delivery restrictions. Until email delivery is configured, accounts outside the Supabase project team cannot complete self-service registration or recovery.
+
 ## 1. Connect the shared backend
 
 Create or select a Supabase project owned by the office. Apply `supabase/migrations/202609250001_shared_office.sql` through a database migration or the project's SQL editor. It creates empty app tables, member-only read policies, guarded write functions, and a private PDF bucket limited to 25 MiB PDFs.
 
 The migration never creates an owner or grants access to the first person who registers. Run it against the intended project, not an unrelated production database.
 
+The shared schema and private bucket are now applied to the connected Free-plan project, and the public frontend configuration is present. Anonymous API access and unapproved-user database access have been tested. The initial owner account and real sign-in/PDF round trip still need verification.
+
 Configure Supabase Authentication:
 
 - Enable email/password authentication and email confirmation.
 - Set the Site URL and allowed redirect URL to `https://psychonator1000.github.io/Mawatheeq/`.
 - Add the local development URL only to a development project when needed.
-- Configure [custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp) before onboarding office members. Supabase's default mail service sends only to project-team addresses and is intended for testing.
+- Configure [custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp) using a verified free option before onboarding office members. Supabase's default mail service sends only to project-team addresses and is intended for testing.
 
 Put the project's HTTPS URL and **publishable** key into `public/app-config.json`:
 
@@ -65,7 +75,7 @@ Take a private export of the original records, settings, document metadata, and 
 
 ## Optional custom domain
 
-The default `github.io` address works without buying a domain. Use `mawatheeq.site` only after registering or confirming ownership and configuring it in GitHub Pages. Then change `PAGES_BASE_PATH` in the workflow to `/`, update the Supabase redirect URLs, and follow [GitHub's domain setup](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site).
+The default `github.io` address works without buying a domain and is the address for this free setup. Do not purchase `mawatheeq.site`. Only consider a domain later if the owner provides an existing domain and explicitly requests its use. Then verify ownership, configure it in GitHub Pages, change `PAGES_BASE_PATH` in the workflow to `/`, update the Supabase redirect URLs, and follow [GitHub's domain setup](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site).
 
 ## References
 
