@@ -8,9 +8,9 @@ This version uses **GitHub Pages for the application** and **Supabase for shared
 
 **[Open Mawatheeq](https://psychonator1000.github.io/Mawatheeq/)**
 
-The GitHub Pages deployment and public sign-in screen are verified. The shared Supabase backend is connected on the Free plan. Initial owner account setup is still pending; follow [the setup guide](docs/GITHUB_PAGES_SETUP.md) to finish authentication and office access.
+The GitHub Pages deployment and public sign-in screen are verified. The shared Supabase backend is connected on the Free plan. Sign-in uses a local username and password, with one initial admin account. No email address, Google sign-in, or email verification is required. See [the setup guide](docs/GITHUB_PAGES_SETUP.md).
 
-Share this repository or the app link. Approved members see and edit the same office records from any device. Creating an account alone does not grant access to office data; the owner approves members in the application.
+Share this repository or the app link. Approved members see and edit the same office records from any device. Accounts are provisioned privately; there is no public registration. The password is checked on the server and is never included in the public source.
 
 The GitHub Actions workflow checks and builds every update on `main`, then deploys configured builds automatically. Pull requests run the checks without publishing.
 
@@ -20,7 +20,7 @@ The owner requires a free-only setup: keep the public repository, standard GitHu
 
 - Judgment register, case editing, procedure histories, insurance, and execution tracking.
 - Shared records with refresh across users and conflict protection for simultaneous edits.
-- Owner-managed office membership, email sign-in, and password recovery.
+- Local username sign-in, in-app password changes, and expiring server-verified sessions.
 - Deadline reminders, client summaries, and analysis charts.
 - Excel import/export and case-data backup downloads.
 - Arabic PDF scanning and autofill, including JBIG2 scanner images, English date stamps, and Arabic digits.
@@ -53,11 +53,12 @@ pnpm run check
 pnpm run test:domain
 pnpm run test:pdf
 pnpm run test:shared
+pnpm run test:local-auth
 pnpm run build:pages
 pnpm run check:pages-config
 ```
 
-`test:shared` executes the actual SQL migration in PostgreSQL/WASM with fixtures for Supabase's managed auth and storage schemas. It checks allowed and denied access, shared editing, conflict detection, private PDFs, member approval/revocation, and import rollback. Hosted checks confirmed anonymous API denial, unapproved-user database denial, private storage configuration, and no Supabase security advisories. Sign-in and a saved-PDF round trip with an approved account still need verification after owner setup.
+`test:shared` executes the actual SQL migration in PostgreSQL/WASM with fixtures for Supabase's managed auth and storage schemas. It checks allowed and denied access, shared editing, conflict detection, private PDFs, member approval/revocation, and import rollback. Hosted checks confirmed anonymous API denial, unapproved-user database denial, private storage configuration, and denial of unapproved access. The additional `test:local-auth` check executes the username migration with real bcrypt, token expiry/revocation, password changes, lockout, shared-data access, and private file authorization.
 
 The build generates `dist-pages/` and packages OCR assets from locked dependencies. Generated files are excluded from Git. The configuration check intentionally blocks publication until a backend URL and publishable key are present.
 
@@ -71,7 +72,9 @@ OCR results require review before Word generation. Low-quality pages and missing
 
 ## Project structure
 
-- `pages/` — standalone app entry, sign-in, and office membership.
+- `pages/` — standalone app entry, username sign-in, and password changes.
+- `lib/local-auth.ts` — local account sessions and authenticated file requests.
+- `supabase/functions/local-files/` — session-checked private PDF access.
 - `components/` — workspace, case editor, and document studio.
 - `lib/shared-backend.ts` — shared records and private PDF access.
 - `lib/domain.ts` — judgment and execution rules.

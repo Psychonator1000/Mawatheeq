@@ -14,14 +14,14 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 
 - The owner requires this application to remain free. Keep the repository public, use standard GitHub-hosted runners and GitHub Pages, and keep the Supabase organization on the Free plan.
 - Do not upgrade plans, buy domains, add paid compute/storage/backups, enable paid email services, or start paid trials. Do not add payment details. If a free quota is exhausted, reduce usage or explain the limitation; do not introduce charges.
-- Use the default GitHub Pages address. Authentication email delivery must use an explicitly verified free option or existing no-cost resources. Do not weaken account verification to avoid an email service cost.
+- Use the default GitHub Pages address. The owner requires local usernames and passwords only. Do not add email addresses, email verification/recovery, Google sign-in, or SMTP services to the application.
 
 ## Data and access
 
 - Keep the public source free of case records, original PDFs, backups, credentials, and private deployment addresses. Keep `lib/data/seed.json` empty.
-- The GitHub page is public, but shared case data and PDFs require an authenticated, approved office membership. New accounts receive no membership automatically.
+- The GitHub page is public, but shared case data and PDFs require a valid local username session and approved office membership. Start with one admin account; there is no public registration. Never embed a password or session token in public files. Store only bcrypt password hashes and SHA-256 session hashes in the private database schema.
 - Use only the Supabase project URL and publishable key in public frontend configuration. Never include a service-role key, secret key, password, or management token.
-- Keep database grants, row policies, and private storage policies in migrations, and test access denial as well as allowed member access.
+- Keep database grants, row policies, custom session checks, and private storage policies in migrations. Test login failure, token expiry/revocation, data denial, and authorized access. The local-files Edge Function must validate the opaque session before using its server-only storage credentials.
 - Preserve conflict checks when more than one person edits a record.
 - Keep Word templates parameterized and free of real case details. Generate OCR assets from locked dependencies rather than committing them.
 
