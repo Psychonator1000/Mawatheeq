@@ -1,4 +1,5 @@
 import { backend } from './supabase-client';
+import { localRequest, fileRequest } from './local-auth';
 import { DEFAULT_RULES } from './domain';
 
 function checked<T>({ data, error }: { data: T; error: { message: string } | null }): T {
@@ -9,7 +10,7 @@ function checked<T>({ data, error }: { data: T; error: { message: string } | nul
 async function allRows(table: string): Promise<any[]> {
   const rows: any[] = [];
   for (let from = 0; ; from += 500) {
-    const page = checked(await backend().from(table).select('*').order('id').range(from, from + 499)) || [];
+    const page = await localRequest(table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', { offset: from }) || [];
     rows.push(...page);
     if (page.length < 500) return rows;
   }
@@ -20,21 +21,21 @@ export async function sharedRequest(path: string, init?: RequestInit): Promise<a
   if (path === '/api/cases' && method === 'GET') {
     const [rows, settings] = await Promise.all([
       allRows('mawatheeq_cases'),
-      backend().from('mawatheeq_settings').select('value').eq('key', 'rules').maybeSingle().then(checked),
+      localRequest('rules'),
     ]);
-    return { cases: rows.map(row => ({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived })), rules: settings?.value || DEFAULT_RULES };
+    return { cases: rows.map(row => ({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived })), rules: settings || DEFAULT_RULES };
   }
   if (path === '/api/cases' && method === 'POST') {
     const body = JSON.parse(String(init?.body));
-    return { case: checked(await backend().rpc('mawatheeq_save_case', { p_case: body.case })) };
+    return { case: await localRequest('save_case', { case: body.case }) };
   }
   if (path === '/api/cases' && method === 'PUT') {
     const body = JSON.parse(String(init?.body));
-    return checked(await backend().rpc('mawatheeq_import_cases', { p_cases: body.cases }));
+    return await localRequest('import_cases', { cases: body.cases });
   }
   if (path === '/api/settings' && method === 'POST') {
     const body = JSON.parse(String(init?.body));
-    return { rules: checked(await backend().rpc('mawatheeq_save_rules', { p_rules: body.rules })) };
+    return { rules: await localRequest('save_rules', { rules: body.rules }) };
   }
   if (path === '/api/documents' && method === 'GET') {
     const rows = await allRows('mawatheeq_documents');
@@ -57,25 +58,23 @@ async function saveDocument(body: BodyInit | null | undefined) {
     if (file.size > 25 * 1024 * 1024 || !file.name.toLowerCase().endsWith('.pdf') || new TextDecoder().decode(await file.slice(0, 5).arrayBuffer()) !== '%PDF-') {
       throw new Error('اختر ملف PDF صالحاً بحجم لا يتجاوز 25 ميجابايت.');
     }
-    fileKey = `documents/${id}/${crypto.randomUUID()}.pdf`;
+    const upload = await fileRequest('upload', { id });
+    fileKey = upload.path;
     filename = file.name;
-    checked(await backend().storage.from('mawatheeq-documents').upload(fileKey, file, { contentType: 'application/pdf', upsert: false }));
+    checked(await backend().storage.from('mawatheeq-documents').uploadToSignedUrl(fileKey, upload.token!, file, { contentType: 'application/pdf', upsert: false }));
   }
   try {
-    return checked(await backend().rpc('mawatheeq_save_document', {
-      p_id: id, p_payload: payload, p_filename: filename, p_file_key: fileKey,
-      p_revision: Number(body.get('revision') || 0),
-    }));
+    return await localRequest('save_document', { id, payload, filename, fileKey, revision: Number(body.get('revision') || 0) });
   } catch (error) {
-    if (fileKey) await backend().storage.from('mawatheeq-documents').remove([fileKey]);
+    if (fileKey) await fileRequest('cleanup', { path: fileKey }).catch(() => undefined);
     throw error;
   }
 }
 
 export async function downloadDocument(id: string): Promise<Blob> {
-  const row = checked(await backend().from('mawatheeq_documents').select('file_key').eq('id', id).single());
-  if (!row?.file_key) throw new Error('لا يوجد ملف PDF محفوظ لهذا المستند.');
-  const file = checked(await backend().storage.from('mawatheeq-documents').download(row.file_key));
-  if (!file) throw new Error('تعذر تحميل ملف PDF الأصلي.');
-  return file;
+  const access = await fileRequest('download', { id });
+  if (!access.url) throw new Error('لا يوجد ملف PDF محفوظ لهذا المستند.');
+  const response = await fetch(access.url);
+  if (!response.ok) throw new Error('تعذر تحميل ملف PDF الأصلي.');
+  return response.blob();
 }

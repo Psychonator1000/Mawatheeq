@@ -17,7 +17,7 @@ export function loadBackend(): Promise<SupabaseClient> {
       throw new Error('إعدادات الاتصال تحتاج مراجعة مسؤول المكتب.');
     }
     client = createClient(config.supabaseUrl, config.supabasePublishableKey, {
-      auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
     return client;
   })().catch(error => { initializing = undefined; throw error; });

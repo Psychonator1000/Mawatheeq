@@ -30,6 +30,7 @@ jobs:
       - run: pnpm run test:domain
       - run: pnpm run test:pdf
       - run: pnpm run test:shared
+      - run: pnpm run test:local-auth
       - run: pnpm run build:pages
         env:
           PAGES_BASE_PATH: /Mawatheeq/
