@@ -12,7 +12,7 @@ const compile=(file,replacements={})=>{
 };
 const fieldsURL=compile('lib/document-fields.ts');
 const {extractFields,extractionSummary,parseDocumentDate,assessText,amountInWords}=await import(fieldsURL);
-const {readPDFPages}=await import(compile('lib/pdf-reader.ts',{'./document-fields':fieldsURL}));
+const {readPDFPages}=await import(compile('lib/pdf-reader.ts',{'./document-fields':fieldsURL,'./asset-url':compile('lib/asset-url.ts')}));
 assert.equal(parseDocumentDate('٠٨/١٢/٢٠٢٤'),'2024-12-08');
 assert.equal(parseDocumentDate('2024/12/8'),'2024-12-08');
 assert.equal(parseDocumentDate('14 OCT 2025'),'2025-10-14');

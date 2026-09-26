@@ -1,30 +1,25 @@
 # Mawatheeq project workflow
 
-The owner requested on 25 September 2026 that future app updates made with ChatGPT also update the GitHub repository automatically.
+The owner requested on 25 September 2026 that Mawatheeq run through GitHub with shared records, independently of ChatGPT Sites. This supersedes the previous Sites deployment workflow.
 
-## Delivery of app changes
+## Delivery
 
-- For each requested application change, validate the change, publish the existing private Mawatheeq Site, and synchronize the corresponding source changes to `Psychonator1000/Mawatheeq` on `main`, unless the user explicitly requests a narrower scope.
-- Use the Sites workflow for the live app. Resolve its current identity from the private checkout's hosting manifest or native Sites tools. Preserve its access settings and production records.
-- Read the current GitHub branch and relevant files before writing. Preserve unrelated edits; use ordinary commits and fast-forward updates, never a force push.
-- Verify the successful live deployment and the GitHub branch/file results before reporting both as complete. If one step fails, report which step remains.
-- Documentation-only GitHub changes do not require rebuilding or republishing the unchanged app.
+- Make the GitHub Pages frontend and Supabase backend the primary application. All approved members use the same records and private documents; do not substitute browser-only storage.
+- Validate requested changes and synchronize them to `Psychonator1000/Mawatheeq` on `main`. The GitHub Pages workflow publishes successful, configured builds automatically.
+- Read the current branch and changed files before writing. Preserve unrelated edits and use fast-forward updates only.
+- Do not publish future changes to ChatGPT Sites. Preserve the previous private database and files until an explicit, verified migration; never put them in GitHub.
+- Distinguish prepared source, configured backend, and successful deployment. Never describe the app as live unless deployment succeeds.
 
-## Public source boundaries
+## Data and access
 
-The GitHub repository is public. It contains an intentionally sanitized source copy.
+- Keep the public source free of case records, original PDFs, backups, credentials, and private deployment addresses. Keep `lib/data/seed.json` empty.
+- The GitHub page is public, but shared case data and PDFs require an authenticated, approved office membership. New accounts receive no membership automatically.
+- Use only the Supabase project URL and publishable key in public frontend configuration. Never include a service-role key, secret key, password, or management token.
+- Keep database grants, row policies, and private storage policies in migrations, and test access denial as well as allowed member access.
+- Preserve conflict checks when more than one person edits a record.
+- Keep Word templates parameterized and free of real case details. Generate OCR assets from locked dependencies rather than committing them.
 
-- Keep `lib/data/seed.json` empty, with the typed empty-seed initialization path.
-- Exclude real case examples, client records, uploaded PDFs/Word/Excel files, production database or storage exports, credentials, and the production Site identifier.
-- Keep the Word templates parameterized and free of case details and personal document metadata.
-- Preserve the public setup scripts and tests; OCR assets are generated from the locked dependencies rather than committed.
-- Never replace production data with the empty public starter data.
+## Links
 
-## Opening the application
-
-Live app: use the link in README.md.
-Source repository: https://github.com/Psychonator1000/Mawatheeq
-
-Use `mawatheeq.site` as the displayed app-link label, as requested by the owner. The custom domain is not connected yet; retain the working destination until the custom hostname is verified as active. Avoid repeating the personal deployment address in public documentation.
-
-The README's “mawatheeq.site” link opens the existing authenticated app. GitHub serves the source code; direct GitHub edits do not independently trigger a live deployment. The synchronized delivery above is part of the workflow for requested app changes, not a background GitHub-to-Sites deployment service.
+- Link the README to the verified GitHub Pages deployment after activation. Do not use a misleading domain label or redirect readers to ChatGPT Sites.
+- Only configure `mawatheeq.site` after ownership and DNS setup are confirmed. A custom domain is optional for the GitHub Pages address.

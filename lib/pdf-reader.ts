@@ -1,6 +1,7 @@
 import type {PDFDocumentProxy} from 'pdfjs-dist';
 import type {Worker,PSM} from 'tesseract.js';
 import {assessText,cleanDocumentText,needsNumericReading,numericReadings} from './document-fields';
+import {assetUrl} from './asset-url';
 
 export type PDFPageText={page:number;text:string;method:'text'|'ocr';confidence?:number;warning?:string};
 type Progress=(percent:number,message:string)=>void;
@@ -102,9 +103,9 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
 export async function extractPDF(file:File,onProgress:Progress,signal:AbortSignal){
   check(signal);onProgress(0,'تجهيز قارئ PDF واللغة العربية…');
   const pdfjs=await import('pdfjs-dist');
-  pdfjs.GlobalWorkerOptions.workerSrc='/ocr/pdf.worker.min.mjs';
+  pdfjs.GlobalWorkerOptions.workerSrc=assetUrl('/ocr/pdf.worker.min.mjs');
   const task=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),useSystemFonts:true,
-    wasmUrl:'/ocr/pdfjs/wasm/',cMapUrl:'/ocr/pdfjs/cmaps/',standardFontDataUrl:'/ocr/pdfjs/standard_fonts/',
+    wasmUrl:assetUrl('/ocr/pdfjs/wasm/'),cMapUrl:assetUrl('/ocr/pdfjs/cmaps/'),standardFontDataUrl:assetUrl('/ocr/pdfjs/standard_fonts/'),
     // Do not silently discard a damaged/unsupported scanned image layer.
     stopAtErrors:true});
   const cancel=()=>{void task.destroy().catch(()=>{});};
@@ -113,7 +114,7 @@ export async function extractPDF(file:File,onProgress:Progress,signal:AbortSigna
     const pdf=await interruptible(task.promise,signal);
     return await readPDFPages(pdf,()=>document.createElement('canvas'),async progress=>{
       const {createWorker}=await import('tesseract.js');
-      return createWorker(['ara','eng'],1,{workerPath:'/ocr/worker.min.js',corePath:'/ocr',langPath:'/ocr',logger:m=>{if(m.status==='recognizing text')progress(m.progress);}});
+      return createWorker(['ara','eng'],1,{workerPath:assetUrl('/ocr/worker.min.js'),corePath:assetUrl('/ocr'),langPath:assetUrl('/ocr'),logger:m=>{if(m.status==='recognizing text')progress(m.progress);}});
     },onProgress,signal);
   }catch(e){
     if(signal.aborted)throw aborted();
