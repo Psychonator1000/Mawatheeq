@@ -29,3 +29,10 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 
 - Link the README to the verified GitHub Pages deployment after activation. Do not use a misleading domain label or redirect readers to ChatGPT Sites.
 - Only configure `mawatheeq.site` after ownership and DNS setup are confirmed. A custom domain is optional for the GitHub Pages address.
+
+## Office server and document direction
+
+- The owner intends to migrate the whole application, database, attachments, and local username accounts to an office server. Keep future work portable and free; the current hosted backend is an interim arrangement. Staff must never need provider login.
+- The previous case data and original uploaded PDF have been restored and verified. Legacy extracted text was incomplete; retain the original and the explicit review requirement. Never overwrite restored office data with an empty seed.
+- The 27 September 2026 direction supersedes the 100-PDF automation proposal: build التحصيل later, with each structured collection file linked to a case, and generate صحيفة الدعوى and الحافظة from reviewed civil ID, address, party, claim, and evidence details. See docs/TAHSEEL_PLAN.md. Do not add that section prematurely or discard existing drafts.
+- Case month filters and dashboard month links use judgment month plus year. Keep numbered pages, direct jumps, combined filters, and chart counts consistent.

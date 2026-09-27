@@ -22,6 +22,8 @@ The owner requires a free-only setup: keep the public repository, standard GitHu
 - Shared records with refresh across users and conflict protection for simultaneous edits.
 - Local username sign-in, in-app password changes, and expiring server-verified sessions.
 - Deadline reminders, client summaries, and analysis charts.
+- Numbered pages and direct page jumps, including Arabic numerals.
+- Combined month/year, code, client, and opposing-party filters. Dashboard months open their matching case lists.
 - Excel import/export and case-data backup downloads.
 - Arabic PDF scanning and autofill, including JBIG2 scanner images, English date stamps, and Arabic digits.
 - Private PDF storage shared with approved office members.
@@ -31,9 +33,13 @@ The owner requires a free-only setup: keep the public repository, standard GitHu
 
 The public repository contains **empty case data** and parameterized Word templates. Client records, original PDFs, credentials, and private database exports are never stored in GitHub.
 
-The shared database starts empty. Previous records have not been migrated. Export and verify a private backup before any migration. The case-data JSON download contains cases, procedures, and rules; original PDFs and saved document drafts require a separate storage/database backup.
+The previous case records, procedure histories, insurance records, and original uploaded PDF have been restored to the private shared backend. Record counts and the original PDF download were verified. Incomplete legacy OCR text was not treated as a complete document draft; the restored original remains available for review. The case-data JSON download contains cases, procedures, and rules; original PDFs and saved document drafts require a separate storage/database backup.
 
 Only the Supabase project URL and `sb_publishable_` key belong in `public/app-config.json`. They identify the public API; access is enforced by authentication, membership, database grants, and row/storage policies. Never place an administrative or service-role key there.
+
+## Planned التحصيل workflow
+
+The next document workflow will generate **صحيفة الدعوى** and **الحافظة** from reviewed collection files linked to cases, including civil IDs, addresses, and the required case details. This section will be built later; see [the recorded design](docs/TAHSEEL_PLAN.md). The deployment must remain portable to an office server, with Mawatheeq usernames and no email or provider sign-in for staff.
 
 ## Development
 
@@ -51,6 +57,7 @@ The default commands now run the GitHub Pages application. Configure a developme
 ```bash
 pnpm run check
 pnpm run test:domain
+pnpm run test:browse
 pnpm run test:pdf
 pnpm run test:shared
 pnpm run test:local-auth

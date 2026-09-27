@@ -23,7 +23,8 @@
     "build:pages": "node scripts/build-pages.mjs",
     "test:shared": "node scripts/verify-shared-backend.mjs",
     "check:pages-config": "node scripts/check-pages-config.mjs",
-    "test:local-auth": "node scripts/verify-local-auth.mjs"
+    "test:local-auth": "node scripts/verify-local-auth.mjs",
+    "test:browse": "node --experimental-strip-types scripts/verify-case-browse.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
