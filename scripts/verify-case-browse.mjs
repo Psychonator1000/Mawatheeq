@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { emptyCase } from '../lib/domain.ts';
-import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel } from '../lib/case-browse.ts';
+import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, needsAutoNumber } from '../lib/case-browse.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
 
 const fixture = (id, fields) => ({ ...emptyCase(), id, ...fields });
@@ -40,6 +40,22 @@ assert.equal(monthFromHash('#cases?month=2026-13'), '');
 assert.equal(monthFromHash('#overview?month=2026-09'), '');
 assert.equal(monthFromHash('#cases'), '');
 assert.equal(caseMonthHash('invalid'), '#cases');
+
+// A statistics drill-down must agree with the card count, survive refresh,
+// combine with month filters, and disappear when filters are cleared.
+const missingLink = caseFiltersHash({ numberStatus: 'missing' });
+assert.equal(missingLink, '#cases?autoNumber=missing');
+assert.deepEqual(find(caseLinkFilters(missingLink)), ['previous-year', 'different-opponent', 'december']);
+assert.equal(find(caseLinkFilters(missingLink)).length, records.filter(c => !c.archived && needsAutoNumber(c)).length);
+const combinedLink = caseFiltersHash({ month: '2026-09', numberStatus: 'missing' });
+assert.deepEqual(find(caseLinkFilters(combinedLink)), ['different-opponent']);
+assert.equal(caseFiltersHash(EMPTY_CASE_FILTERS), '#cases');
+assert.equal(find(caseLinkFilters('#cases')).length, 5);
+assert.equal(caseLinkFilters('#insurance?autoNumber=missing').numberStatus, '');
+assert.equal(caseLinkFilters('#cases?autoNumber=anything').numberStatus, '');
+assert.equal(needsAutoNumber(fixture('whitespace', { autoNumber: '  ' })), true);
+assert.equal(needsAutoNumber(fixture('leading-zero', { autoNumber: '000123' })), false);
+assert.equal(needsAutoNumber(fixture('zero', { autoNumber: '0' })), false);
 
 assert.deepEqual(pageNumbers(1, 1), [1]);
 assert.deepEqual(pageNumbers(1, 40), [1, 2, 3, 4, 5, 'gap', 40]);
