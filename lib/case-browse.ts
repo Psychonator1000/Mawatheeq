@@ -1,7 +1,7 @@
 import type { CaseRecord } from './domain';
 
-export type CaseFilters = { search: string; month: string; code: string; client: string; opponent: string };
-export const EMPTY_CASE_FILTERS: CaseFilters = { search: '', month: '', code: '', client: '', opponent: '' };
+export type CaseFilters = { search: string; month: string; code: string; client: string; opponent: string; numberStatus: string };
+export const EMPTY_CASE_FILTERS: CaseFilters = { search: '', month: '', code: '', client: '', opponent: '', numberStatus: '' };
 export const MONTH_NAMES = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 // Search normalization is independent of the legal-rule normalization in domain.ts.
@@ -22,17 +22,34 @@ export function monthLabel(month: string) {
   return validMonth(month) ? `${MONTH_NAMES[Number(month.slice(5)) - 1]} ${month.slice(0, 4)}` : '';
 }
 export function caseMonthHash(month: string) {
-  return validMonth(month) ? `#cases?month=${month}` : '#cases';
+  return caseFiltersHash({ month });
 }
 export function monthFromHash(hash: string) {
+  return caseLinkFilters(hash).month;
+}
+export function caseFiltersHash(filters: Partial<CaseFilters>) {
+  const query = new URLSearchParams();
+  if (filters.month && validMonth(filters.month)) query.set('month', filters.month);
+  if (filters.numberStatus === 'missing') query.set('autoNumber', 'missing');
+  return query.size ? `#cases?${query}` : '#cases';
+}
+export function caseLinkFilters(hash: string): Pick<CaseFilters, 'month' | 'numberStatus'> {
   const [view, query = ''] = hash.replace(/^#/, '').split('?');
-  const month = new URLSearchParams(query).get('month') || '';
-  return view === 'cases' && validMonth(month) ? month : '';
+  const params = new URLSearchParams(query);
+  const month = params.get('month') || '';
+  return {
+    month: view === 'cases' && validMonth(month) ? month : '',
+    numberStatus: view === 'cases' && params.get('autoNumber') === 'missing' ? 'missing' : '',
+  };
+}
+export function needsAutoNumber(record: CaseRecord) {
+  return !String(record.autoNumber ?? '').trim();
 }
 
 export function matchesCaseFilters(record: CaseRecord, filters: CaseFilters) {
   const includes = (value: unknown, term: string) => normalizeSearch(value).includes(normalizeSearch(term));
   return (!filters.month || caseMonth(record.date) === filters.month)
+    && (filters.numberStatus !== 'missing' || needsAutoNumber(record))
     && includes(record.code, filters.code)
     && includes(`${record.client || ''} ${record.clientGroup || ''}`, filters.client)
     && includes(record.opponent, filters.opponent)

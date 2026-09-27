@@ -1,5 +1,6 @@
 'use client';
 import { useId, useMemo } from 'react';
+import { X } from 'lucide-react';
 import type { CaseRecord } from '@/lib/domain';
 import { caseMonth, monthLabel, type CaseFilters } from '@/lib/case-browse';
 
@@ -29,7 +30,10 @@ export default function CaseFilterFields({ records, filters, onChange, onClear, 
     <datalist id={codeList}>{options.codes.map(value => <option key={value} value={value}/>)}</datalist>
     <datalist id={clientList}>{options.clients.map(value => <option key={value} value={value}/>)}</datalist>
     <datalist id={opponentList}>{options.opponents.map(value => <option key={value} value={value}/>)}</datalist>
-    <div className="case-filter-summary"><span aria-live="polite">{hasFilters ? `${total} سجل مطابق للتصفية` : 'يمكن الجمع بين عوامل التصفية'}</span>
+    <div className="case-filter-summary"><div className="actions">
+      {filters.numberStatus === 'missing' && <button type="button" className="tag amber" onClick={() => onChange('numberStatus', '')}
+        aria-label="إلغاء تصفية الأرقام الآلية الناقصة">أرقام آلية تحتاج استكمال <X size={14}/></button>}
+      <span aria-live="polite">{hasFilters ? `${total} سجل مطابق للتصفية` : 'يمكن الجمع بين عوامل التصفية'}</span></div>
       {hasFilters && <button type="button" className="text-link" onClick={onClear}>مسح عوامل التصفية</button>}
     </div>
   </div>;
