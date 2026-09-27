@@ -62,7 +62,9 @@ PDFs remain in a private bucket. The `local-files` function checks the local ses
 
 ## Existing office data
 
-The shared database starts empty. Previous records and original PDFs have not been migrated. Export a private backup, transfer records and documents through an authenticated process, and compare counts and sample downloads before retiring the old service. Never put those backups in GitHub.
+The previous case records, procedures, insurance records, and original PDF have been restored to the private shared backend. Record counts and a byte-for-byte original PDF download were verified. The legacy extracted text was incomplete, so the recovered draft explicitly requires review or rereading from the original. Preserve the previous source and private backup until the complete document workflow is verified. Never put office backups in GitHub.
+
+The owner intends to move the application and all data to an office server. Keep the frontend, database, username accounts, attachments, and templates portable; the hosted backend is an interim setup. Staff use only their Mawatheeq username and password.
 
 ## Advisor notes
 
