@@ -29,6 +29,7 @@ jobs:
       - run: pnpm run check
       - run: pnpm run test:domain
       - run: pnpm run test:browse
+      - run: pnpm run test:clients
       - run: pnpm run test:pdf
       - run: pnpm run test:shared
       - run: pnpm run test:local-auth

@@ -17,9 +17,25 @@ alter table storage.objects enable row level security;
 grant usage on schema storage to anon,authenticated,service_role;
 grant select,insert,update,delete on storage.objects to anon,authenticated;
 `);
-for (const file of fs.readdirSync('supabase/migrations').filter(x => x.endsWith('.sql')).sort()) await db.exec(fs.readFileSync('supabase/migrations/' + file,'utf8'));
+for (const file of fs.readdirSync('supabase/migrations').filter(x => x.endsWith('.sql')).sort()) {
+  if (file.endsWith('_client_entities.sql')) {
+    await db.query("insert into public.mawatheeq_cases(id,payload) values('legacy-a',$1),('legacy-b',$2)",[
+      JSON.stringify({id:'legacy-a',client:'Example organization — Person One',clientGroup:'Example organization',procedures:[{id:'p',text:'Original procedure'}],revision:1}),
+      JSON.stringify({id:'legacy-b',client:'Example organization — Person Two',clientGroup:'Example organization',revision:1})]);
+  }
+  await db.exec(fs.readFileSync('supabase/migrations/' + file,'utf8'));
+  if (file.endsWith('_client_entities.sql')) {
+    const rows=(await db.query('select payload,revision from public.mawatheeq_cases order by id')).rows;
+    assert.equal(rows.length,2); assert.equal(rows[0].revision,2);
+    assert.equal(rows[0].payload.clientEntityId,rows[1].payload.clientEntityId);
+    assert.equal(rows[0].payload.procedures[0].text,'Original procedure');
+    assert.equal((await db.query('select count(*)::int n from mawatheeq_private.client_case_history')).rows[0].n,2);
+    await db.exec('delete from public.mawatheeq_cases; delete from mawatheeq_private.client_case_history; delete from mawatheeq_private.client_entities;');
+  }
+}
 const rpc = async (name, args) => (await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) as result`,args)).rows[0].result;
 const login = (name,password) => rpc('mawatheeq_local_login',[name,password]);
+const clientRequest = (token,action,data={}) => rpc('mawatheeq_client_request',[token,action,JSON.stringify(data)]);
 const request = (token,action,data={}) => rpc('mawatheeq_local_request',[token,action,JSON.stringify(data)]);
 const admin = async () => db.exec('reset role');
 const anon = async () => { await db.exec('reset role'); await db.exec('set role anon'); };
@@ -40,6 +56,7 @@ assert.match(first.token,/^[a-f0-9]{64}$/);
 assert.equal(first.user.username,'owner');
 assert.equal(first.user.mustChangePassword,true);
 await assert.rejects(()=>request(first.token,'cases_page'),/غيّر/);
+await assert.rejects(()=>clientRequest(first.token,'list'),/غيّر/);
 await assert.rejects(()=>request(first.token,'password',{currentPassword:'wrong',newPassword:'New-test-password-123'}),/الحالية/);
 await assert.rejects(()=>request(first.token,'password',{currentPassword:'Test-only-password-123',newPassword:'short'}),/12/);
 assert.equal((await request(first.token,'password',{currentPassword:'Test-only-password-123',newPassword:'New-test-password-123'})).mustChangePassword,false);
@@ -55,6 +72,43 @@ saved=await request(editor.token,'save_case',{case:{...saved,notes:'second membe
 assert.equal(saved.revision,2);
 await assert.rejects(()=>request(owner.token,'save_case',{case:{...sample,revision:1}}),/مستخدم آخر/);
 await assert.rejects(()=>request(editor.token,'arbitrary_sql',{query:'select 1'}),/غير متاحة/);
+// Client entity access and conflict tests use only synthetic office records.
+await assert.rejects(()=>clientRequest('b'.repeat(64),'list'),/الجلسة/);
+await assert.rejects(()=>db.query('select * from mawatheeq_private.client_entities'),/permission denied/);
+await assert.rejects(()=>db.query('select * from mawatheeq_private.client_case_history'),/permission denied/);
+const entity=(id,name,contacts=[])=>({id,name,kind:'organization',sector:'other',contacts,aliases:[],notes:'',needsReview:false,revision:0});
+const contact=(id,name)=>({id,name,role:'Case coordinator',phone:'',notes:''});
+const aId='30000000-0000-4000-8000-000000000001',bId='30000000-0000-4000-8000-000000000002';
+const pId='40000000-0000-4000-8000-000000000001',qId='40000000-0000-4000-8000-000000000002';
+let a=await clientRequest(owner.token,'save',{client:entity(aId,'Company One',[contact(pId,'Same person')])});
+let b=await clientRequest(editor.token,'save',{client:entity(bId,'Company Two',[contact(qId,'Same person')])});
+assert.equal((await clientRequest(editor.token,'list')).canMerge,false);
+assert.equal((await clientRequest(owner.token,'list')).canMerge,true);
+await assert.rejects(()=>clientRequest(editor.token,'merge',{sourceId:aId,targetId:bId,sourceRevision:a.revision,targetRevision:b.revision}),/مسؤول/);
+await assert.rejects(()=>request(owner.token,'save_case',{case:{...saved,clientEntityId:aId,clientContactId:qId}}),/غير مرتبط/);
+saved=await request(owner.token,'save_case',{case:{...saved,clientEntityId:aId,clientContactId:pId}});
+assert.equal(saved.clientEntityId,aId); assert.equal(saved.client,'حالة اختبار');
+const list=await clientRequest(owner.token,'list'); a=list.clients.find(c=>c.id===aId);
+await assert.rejects(()=>clientRequest(owner.token,'save',{client:{...a,contacts:[]}}),/لا يمكن حذف/);
+await assert.rejects(()=>clientRequest(owner.token,'save',{client:{...a,revision:0}}),/أعد التحميل/);
+await assert.rejects(()=>clientRequest(owner.token,'save',{client:{...a,kind:'invalid'}}),/راجع/);
+const {clientEntityId,clientContactId,...oldFrontend}=saved;
+saved=await request(owner.token,'save_case',{case:{...oldFrontend,notes:'Older frontend saved a note'}});
+assert.equal(saved.clientEntityId,aId); assert.equal(saved.clientContactId,pId);
+await assert.rejects(()=>clientRequest(owner.token,'merge',{sourceId:aId,targetId:bId}),/غير مكتملة/);
+await assert.rejects(()=>clientRequest(owner.token,'merge',{sourceId:aId,targetId:bId,sourceRevision:0,targetRevision:b.revision}),/أعد التحميل/);
+const merged=await clientRequest(owner.token,'merge',{sourceId:aId,targetId:bId,sourceRevision:a.revision,targetRevision:b.revision});
+assert.equal(merged.moved,1);
+const afterMerge=(await request(owner.token,'cases_page'))[0].payload;
+assert.equal(afterMerge.clientEntityId,bId); assert.equal(afterMerge.clientContactId,pId); assert.equal(afterMerge.client,'حالة اختبار');
+assert.equal((await clientRequest(owner.token,'list')).clients.find(c=>c.id===bId).contacts.length,2,'matching person names do not collapse distinct contact identities');
+await assert.rejects(()=>request(owner.token,'save_case',{case:saved}),/مستخدم آخر/);
+assert.equal((await request(owner.token,'import_cases',{cases:[sample]})).added,0,'original import identity survives a merge');
+await assert.rejects(()=>clientRequest(owner.token,'save',{client:a}),/أعد التحميل/);
+await admin();
+assert.ok((await db.query("select count(*)::int n from mawatheeq_private.client_case_history where case_id='local-auth-test'")).rows[0].n>=2);
+assert.equal((await db.query('select merged_into::text target from mawatheeq_private.client_entities where id=$1',[aId])).rows[0].target,bId);
+await anon();
 const id='20000000-0000-4000-8000-000000000001';
 const access=await request(owner.token,'file_upload',{id});
 assert.ok(access.path.startsWith('documents/'+id+'/'));
@@ -68,6 +122,7 @@ await assert.rejects(()=>request(editor.token,'file_cleanup',{path:access.path})
 await assert.rejects(()=>request(editor.token,'file_cleanup',{path:'../other.pdf'}),/حذف/);
 await request(editor.token,'logout');
 await assert.rejects(()=>request(editor.token,'cases_page'),/الجلسة/);
+await assert.rejects(()=>clientRequest(editor.token,'list'),/الجلسة/);
 await admin();
 assert.equal((await db.query('select count(*)::int as n from auth.users')).rows[0].n,0,'no email or Supabase Auth identity is created');
 assert.equal((await db.query("select count(*)::int as n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'mawatheeq_%' and p.prosecdef")).rows[0].n,0);
@@ -80,4 +135,4 @@ assert.ok((await login('editor','Test-only-password-123')).error,'account lockou
 await db.exec('reset role; set role authenticated');
 await assert.rejects(()=>rpc('mawatheeq_save_case',[JSON.stringify(sample)]),/permission denied/);
 await db.close();
-console.log('Passed: real bcrypt login, no email identities, password rotation, token hashing/expiry/revocation, lockout, shared records, conflicts, private file authorization and legacy API denial.');
+console.log('Passed: real bcrypt login, no email identities, password rotation, token hashing/expiry/revocation, lockout, shared records, conflicts, private file authorization, entity bootstrap, merge preservation, representative boundaries and legacy API denial.');

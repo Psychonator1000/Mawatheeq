@@ -90,3 +90,13 @@ OCR results require review before Word generation. Low-quality pages and missing
 - `supabase/migrations/` — database functions, grants, and access policies.
 - `.github/workflows/pages.yml` — validation and automatic deployment.
 - `AGENTS.md` — standing update and data-handling workflow.
+
+### Case categories and client profiles
+
+The main cases screen contains All cases, Execution, Insurance, and Telecom buttons. Adding from a category preselects that classification. Manually creating an execution file does not certify a favorable judgment, absence of an appeal, or legal readiness. Calendar controls replace typed full dates, with month/year selection and a clear action.
+
+The client directory uses stable entity IDs for organizations, individuals, and joint parties. Each profile stores its representatives or contacts, former source spellings, and linked cases. A case separately identifies its client, the person instructing/following up, and any person involved in that case. Names alone do not establish that two entities or people are identical.
+
+Owners can review and merge duplicate profiles. Merges retain original case wording, source profiles, contacts, aliases, and private case snapshots. Unclear source entries remain flagged for review. Excel exports include client and contact sheets, and the JSON export includes the entity directory. The new private schema and username-gated RPC are defined in `supabase/migrations/20260928064201_client_entities.sql`; no real office records or cleanup mappings belong in the public repository. Existing local username login remains the only staff sign-in.
+
+Validate entity relationships and calendar dates with `pnpm test:clients`. `pnpm test:local-auth` also verifies migration of legacy records, entity access denial, merges, revision conflicts, contact boundaries, preservation of original import identity, and compatibility with an older frontend.

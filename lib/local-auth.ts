@@ -11,17 +11,19 @@ function saveToken(value: string) {
   if (value) localStorage.setItem(storageKey, value); else localStorage.removeItem(storageKey);
   announce();
 }
-export async function localRequest<T = any>(action: string, data: Record<string, unknown> = {}): Promise<T> {
+async function sessionRequest<T = any>(endpoint: string, action: string, data: Record<string, unknown> = {}): Promise<T> {
   await loadBackend();
   const current = token || localStorage.getItem(storageKey) || '';
   if (!current) throw new Error('يرجى تسجيل الدخول أولاً.');
-  const { data: result, error } = await backend().rpc('mawatheeq_local_request', { p_token: current, p_action: action, p_data: data });
+  const { data: result, error } = await backend().rpc(endpoint, { p_token: current, p_action: action, p_data: data });
   if (error) {
     if (error.code === '28000' && current === (localStorage.getItem(storageKey) || '')) saveToken('');
     throw new Error(error.message);
   }
   return result as T;
 }
+export const localRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_local_request', action, data);
+export const clientRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_client_request', action, data);
 export async function restoreSession(): Promise<LocalUser | null> {
   await loadBackend();
   token = localStorage.getItem(storageKey) || '';

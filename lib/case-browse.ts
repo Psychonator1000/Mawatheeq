@@ -1,7 +1,7 @@
 import type { CaseRecord } from './domain';
 
-export type CaseFilters = { search: string; year: string; month: string; code: string; client: string; opponent: string; numberStatus: string };
-export const EMPTY_CASE_FILTERS: CaseFilters = { search: '', year: '', month: '', code: '', client: '', opponent: '', numberStatus: '' };
+export type CaseFilters = { search: string; year: string; month: string; code: string; client: string; opponent: string; numberStatus: string; category: string; clientEntityId: string };
+export const EMPTY_CASE_FILTERS: CaseFilters = { search: '', year: '', month: '', code: '', client: '', opponent: '', numberStatus: '', category: '', clientEntityId: '' };
 export const MONTH_NAMES = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 // Search normalization is independent of the legal-rule normalization in domain.ts.
@@ -37,17 +37,22 @@ export function caseFiltersHash(filters: Partial<CaseFilters>) {
   const query = new URLSearchParams();
   if (filters.year && validYear(filters.year)) query.set('year', filters.year);
   if (filters.month && validMonthNumber(filters.month)) query.set('month', filters.month);
+  if (['execution','insurance','telecom'].includes(filters.category || '')) query.set('category', filters.category!);
+  if (filters.clientEntityId) query.set('clientId', filters.clientEntityId);
   if (filters.numberStatus === 'missing') query.set('autoNumber', 'missing');
   return query.size ? `#cases?${query}` : '#cases';
 }
-export function caseLinkFilters(hash: string): Pick<CaseFilters, 'year' | 'month' | 'numberStatus'> {
+export function caseLinkFilters(hash: string): Pick<CaseFilters, 'year' | 'month' | 'numberStatus' | 'category' | 'clientEntityId'> {
   const [view, query = ''] = hash.replace(/^#/, '').split('?');
   const params = new URLSearchParams(query);
   const year = params.get('year') || '';
   const month = params.get('month') || '';
   // Preserve links created before year and month had separate controls.
   const legacy = caseMonthFilters(month);
+  const category = ['execution','insurance','telecom'].includes(view) ? view : params.get('category') || '';
   return {
+    category: (view === 'cases' || ['execution','insurance','telecom'].includes(view)) && ['execution','insurance','telecom'].includes(category) ? category : '',
+    clientEntityId: view === 'cases' ? params.get('clientId') || '' : '',
     year: view === 'cases' ? (validYear(year) ? year : legacy.year) : '',
     month: view === 'cases' ? (validMonthNumber(month) ? month : legacy.month) : '',
     numberStatus: view === 'cases' && params.get('autoNumber') === 'missing' ? 'missing' : '',
@@ -63,11 +68,12 @@ export function matchesCaseFilters(record: CaseRecord, filters: CaseFilters) {
   return (!filters.year || month.slice(0, 4) === filters.year)
     && (!filters.month || month.slice(5) === filters.month)
     && (filters.numberStatus !== 'missing' || needsAutoNumber(record))
+    && (!filters.clientEntityId || record.clientEntityId === filters.clientEntityId)
     && includes(record.code, filters.code)
-    && includes(`${record.client || ''} ${record.clientGroup || ''}`, filters.client)
+    && includes(`${record.clientEntityName || ''} ${record.client || ''} ${record.clientGroup || ''}`, filters.client)
     && includes(record.opponent, filters.opponent)
     && includes([record.code, record.autoNumber, record.client, record.clientGroup, record.opponent,
-      record.caseNumber, record.lawyer, record.ruling].join(' '), filters.search);
+      record.caseNumber, record.lawyer, record.ruling, record.clientEntityName, record.clientContactName, record.casePerson].join(' '), filters.search);
 }
 
 export function monthlyCaseCounts(records: CaseRecord[], year: string) {

@@ -1,5 +1,5 @@
 export type Procedure={id:string;date:string;text:string;lawyer?:string;source?:string;followup?:string;kind?:string};
-export type CaseRecord={id:string;code:string;autoNumber:string;client:string;clientGroup:string;opponent:string;role:string;type:string;ruling:string;outcome:string;appealRecorded:string;appealConfirmation:string;date:string;notes:string;executionNote:string;copyDate:string;notificationDate:string;announcementDate:string;originalDate:string;executionStage:string;executionLegacy:string;noActionConfirmation:string;caseNumber:string;court:string;subject:string;lawyer:string;source:string;review:string;legacyNotes:string;insurance:boolean;procedures:Procedure[];revision?:number;archived?:boolean;[key:string]:unknown};
+export type CaseRecord={id:string;code:string;autoNumber:string;client:string;clientGroup:string;opponent:string;role:string;type:string;ruling:string;outcome:string;appealRecorded:string;appealConfirmation:string;date:string;notes:string;executionNote:string;copyDate:string;notificationDate:string;announcementDate:string;originalDate:string;executionStage:string;executionLegacy:string;noActionConfirmation:string;caseNumber:string;court:string;subject:string;lawyer:string;source:string;review:string;legacyNotes:string;insurance:boolean;procedures:Procedure[];revision?:number;archived?:boolean;executionFile?:boolean;telecom?:boolean;clientEntityId?:string;clientContactId?:string;clientEntityName?:string;clientSector?:string;clientContactName?:string;casePerson?:string;casePersonRole?:string;[key:string]:unknown};
 export const EXECUTION_NOTES=['تم عمل اجراءات التنفيذ','لم يتم عمل اجراءات التنفيذ','غير متداول','تم فتح ملف التنفيذ','لم يتم فتح ملف التنفيذ','مراجعة المستشار'];
 export const TYPES=['حكم أول درجة','حكم استئناف','حكم تمييز','إشكال','يحتاج مراجعة'];
 export type Rules={first:number;appeal:number;objection:number;execution:number;warning:number};
@@ -25,3 +25,14 @@ export function caseState(c:CaseRecord,r:Rules=DEFAULT_RULES,today=todayISO()){
  return {outcome,appeal,criminal,due,days,remaining,executionDue,eligible,status,alert};
 }
 export function emptyCase():CaseRecord{return {id:crypto.randomUUID(),code:'',autoNumber:'',client:'',clientGroup:'',opponent:'',role:'',type:'حكم أول درجة',ruling:'',outcome:'غير محدد',appealRecorded:'',appealConfirmation:'',date:'',notes:'',executionNote:'',copyDate:'',notificationDate:'',announcementDate:'',originalDate:'',executionStage:'',executionLegacy:'',noActionConfirmation:'',caseNumber:'',court:'',subject:'',lawyer:'',source:'إدخال يدوي',review:'',legacyNotes:'',insurance:false,procedures:[]}}
+
+export type CaseCategory = '' | 'execution' | 'insurance' | 'telecom';
+export function inCaseCategory(c:CaseRecord,category:string,rules:Rules=DEFAULT_RULES){
+ if(category==='execution')return Boolean(c.executionFile)||caseState(c,rules).eligible;
+ if(category==='insurance')return Boolean(c.insurance)||c.clientSector==='insurance';
+ if(category==='telecom')return Boolean(c.telecom)||c.clientSector==='telecom';
+ return true;
+}
+export function newCategoryCase(category:CaseCategory,clientEntityId=''):CaseRecord{
+ return {...emptyCase(),executionFile:category==='execution',insurance:category==='insurance',telecom:category==='telecom',clientEntityId,clientContactId:'',casePerson:'',casePersonRole:''};
+}
