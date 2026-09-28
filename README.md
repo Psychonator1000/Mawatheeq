@@ -23,7 +23,7 @@ The owner requires a free-only setup: keep the public repository, standard GitHu
 - Local username sign-in, in-app password changes, and expiring server-verified sessions.
 - Deadline reminders, client summaries, and analysis charts.
 - Numbered pages and direct page jumps, including Arabic numerals.
-- Combined month/year, code, client, and opposing-party filters. Dashboard months open their matching case lists.
+- Separate judgment year and month filters, combined with code, client, and opposing-party filters. Select a year, a month across years, or both. Dashboard months open their matching case lists with both date filters selected.
 - Excel import/export and case-data backup downloads.
 - Arabic PDF scanning and autofill, including JBIG2 scanner images, English date stamps, and Arabic digits.
 - Private PDF storage shared with approved office members.

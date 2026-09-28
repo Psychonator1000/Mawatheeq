@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { emptyCase } from '../lib/domain.ts';
-import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, needsAutoNumber } from '../lib/case-browse.ts';
+import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber } from '../lib/case-browse.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
 
 const fixture = (id, fields) => ({ ...emptyCase(), id, ...fields });
@@ -13,9 +13,9 @@ const records = [
   fixture('archived', { date: '2026-09-05', archived: true }),
 ];
 const find = filters => records.filter(c => !c.archived && matchesCaseFilters(c, { ...EMPTY_CASE_FILTERS, ...filters })).map(c => c.id);
-assert.deepEqual(find({ month: '2026-09' }), ['current', 'different-opponent']);
-assert.deepEqual(find({ month: '2025-09' }), ['previous-year']);
-assert.deepEqual(find({ month: '2026-09', code: '١٠٥٠', client: 'الامان', opponent: 'محمد' }), ['current']);
+assert.deepEqual(find({ year: '2026', month: '09' }), ['current', 'different-opponent']);
+assert.deepEqual(find({ year: '2025', month: '09' }), ['previous-year']);
+assert.deepEqual(find({ year: '2026', month: '09', code: '١٠٥٠', client: 'الامان', opponent: 'محمد' }), ['current']);
 assert.deepEqual(find({ code: '۱۰۵۰' }), ['current', 'previous-year']);
 assert.deepEqual(find({ code: '105' }), ['current', 'previous-year', 'different-opponent']);
 assert.deepEqual(find({ search: '٠٠٩٩٠٠' }), ['current']);
@@ -23,8 +23,27 @@ assert.deepEqual(find({ code: '009900' }), []); // The dedicated code filter mus
 assert.deepEqual(find({ client: 'EXAMPLE' }), ['december']);
 assert.deepEqual(find({ client: 'محمد' }), []); // Opponents must not match the client field.
 assert.deepEqual(find({ opponent: 'أحمد' }), []);
-assert.deepEqual(find({ month: '2026-01' }), []);
+assert.deepEqual(find({ year: '2026', month: '01' }), []);
 assert.equal(find({}).length, 5);
+assert.deepEqual(find({ year: '2026' }), ['current', 'different-opponent', 'december']);
+assert.deepEqual(find({ year: '2025' }), ['previous-year']);
+assert.deepEqual(find({ month: '09' }), ['current', 'previous-year', 'different-opponent']);
+assert.deepEqual(find({ month: '12' }), ['december']);
+assert.deepEqual(find({ year: '2025', month: '12' }), []);
+assert.deepEqual(find({ year: '2026', month: '09', numberStatus: 'missing' }), ['different-opponent']);
+assert.deepEqual(caseMonthFilters('2026-09'), { year: '2026', month: '09' });
+for (const filters of [{ year: '2026' }, { month: '09' }, { year: '2026', month: '09' }, { year: '2026', month: '09', numberStatus: 'missing' }]) {
+  assert.deepEqual(find(caseLinkFilters(caseFiltersHash(filters))), find(filters), 'Date filters must survive refresh, separately or together');
+}
+assert.equal(caseFiltersHash({ year: '2026' }), '#cases?year=2026');
+assert.equal(caseFiltersHash({ month: '09' }), '#cases?month=09');
+assert.equal(caseFiltersHash({ year: '2026', month: '09' }), '#cases?year=2026&month=09');
+assert.deepEqual(caseLinkFilters('#cases?month=2026-09'), { year: '2026', month: '09', numberStatus: '' });
+assert.deepEqual(find(caseLinkFilters('#cases?month=2026-09')), ['current', 'different-opponent']);
+assert.deepEqual(find(caseLinkFilters('#cases?month=2026-09&autoNumber=missing')), ['different-opponent']);
+assert.deepEqual(caseLinkFilters('#cases?year=invalid&month=13'), { year: '', month: '', numberStatus: '' });
+assert.deepEqual(caseLinkFilters('#overview?year=2026&month=09'), { year: '', month: '', numberStatus: '' });
+
 
 for (const year of ['2025', '2026']) {
   const months = monthlyCaseCounts(records, year);
@@ -32,7 +51,7 @@ for (const year of ['2025', '2026']) {
   for (const month of months) {
     const linkedMonth = monthFromHash(caseMonthHash(month.key));
     assert.equal(linkedMonth, month.key);
-    assert.equal(find({ month: linkedMonth }).length, month.count, 'Every chart count must match its linked case list');
+    assert.equal(find(caseMonthFilters(linkedMonth)).length, month.count, 'Every chart count must match its linked case list');
   }
 }
 assert.equal(monthLabel('2026-09'), 'سبتمبر 2026');
@@ -47,7 +66,7 @@ const missingLink = caseFiltersHash({ numberStatus: 'missing' });
 assert.equal(missingLink, '#cases?autoNumber=missing');
 assert.deepEqual(find(caseLinkFilters(missingLink)), ['previous-year', 'different-opponent', 'december']);
 assert.equal(find(caseLinkFilters(missingLink)).length, records.filter(c => !c.archived && needsAutoNumber(c)).length);
-const combinedLink = caseFiltersHash({ month: '2026-09', numberStatus: 'missing' });
+const combinedLink = caseFiltersHash({ year: '2026', month: '09', numberStatus: 'missing' });
 assert.deepEqual(find(caseLinkFilters(combinedLink)), ['different-opponent']);
 assert.equal(caseFiltersHash(EMPTY_CASE_FILTERS), '#cases');
 assert.equal(find(caseLinkFilters('#cases')).length, 5);
@@ -68,4 +87,4 @@ assert.equal(clampPage(40, 2), 2); // A filter or a refresh shrinks the list.
 assert.equal(clampPage(1, 0), 1); // Empty results keep a valid first page.
 const many = Array.from({ length: 800 }, (_, n) => n + 1);
 assert.deepEqual(many.slice((parsePage('٢٧', 40) - 1) * 20, parsePage('٢٧', 40) * 20), Array.from({ length: 20 }, (_, n) => 521 + n));
-console.log('Passed: combined Arabic filters, month/year isolation, chart-to-list counts, empty and archived records, numbered pages, Arabic jumps and shrinking result sets.');
+console.log('Passed: independent year/month filters, legacy date links, combined Arabic filters, chart-to-list counts, missing-number links, numbered pages and Arabic jumps.');
