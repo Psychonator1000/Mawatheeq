@@ -36,3 +36,13 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - The previous case data and original uploaded PDF have been restored and verified. Legacy extracted text was incomplete; retain the original and the explicit review requirement. Never overwrite restored office data with an empty seed.
 - The 27 September 2026 direction supersedes the 100-PDF automation proposal: build التحصيل later, with each structured collection file linked to a case, and generate صحيفة الدعوى and الحافظة from reviewed civil ID, address, party, claim, and evidence details. See docs/TAHSEEL_PLAN.md. Do not add that section prematurely or discard existing drafts.
 - Keep judgment year and month as separate filters: either can be selected alone or combined. Dashboard month links select both, and older links with a combined year-month value must keep working. Keep numbered pages, direct jumps, combined filters, and chart counts consistent.
+
+## Client entities and case categories
+
+- Keep execution, insurance, and telecom inside the main cases view. Preserve old execution/insurance links by mapping them to case categories.
+- A client entity has its own stable ID. Names, spellings, and representatives are not identity keys for interactive edits. A person may represent multiple entities; never merge companies just because they share a person.
+- Keep original `client` and `clientGroup` wording on existing cases. Link the entity and the relevant contact separately; distinguish the contact from a person involved in that particular case.
+- Private entity consolidation must preserve source aliases, case snapshots, contacts, and optimistic revision checks. Merge only verified matches; retain review flags for truncated names, uncertain entities, and unverified roles. Never commit a private consolidation plan or real client fixtures.
+- `executionFile` records manual classification. It must not silently change the outcome, appeal confirmation, or legal eligibility rules. Insurance and telecom categories include their entities' sectors and explicit per-case flags.
+- Use the shared calendar picker for full dates. Preserve date-only ISO values without timezone shifts; keep separate year/month browsing filters.
+- Run `test:clients` and the entity tests in `test:local-auth` when changing these relationships.

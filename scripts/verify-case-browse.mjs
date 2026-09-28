@@ -38,11 +38,11 @@ for (const filters of [{ year: '2026' }, { month: '09' }, { year: '2026', month:
 assert.equal(caseFiltersHash({ year: '2026' }), '#cases?year=2026');
 assert.equal(caseFiltersHash({ month: '09' }), '#cases?month=09');
 assert.equal(caseFiltersHash({ year: '2026', month: '09' }), '#cases?year=2026&month=09');
-assert.deepEqual(caseLinkFilters('#cases?month=2026-09'), { year: '2026', month: '09', numberStatus: '' });
+assert.deepEqual(caseLinkFilters('#cases?month=2026-09'), { year: '2026', month: '09', numberStatus: '', category: '', clientEntityId: '' });
 assert.deepEqual(find(caseLinkFilters('#cases?month=2026-09')), ['current', 'different-opponent']);
 assert.deepEqual(find(caseLinkFilters('#cases?month=2026-09&autoNumber=missing')), ['different-opponent']);
-assert.deepEqual(caseLinkFilters('#cases?year=invalid&month=13'), { year: '', month: '', numberStatus: '' });
-assert.deepEqual(caseLinkFilters('#overview?year=2026&month=09'), { year: '', month: '', numberStatus: '' });
+assert.deepEqual(caseLinkFilters('#cases?year=invalid&month=13'), { year: '', month: '', numberStatus: '', category: '', clientEntityId: '' });
+assert.deepEqual(caseLinkFilters('#overview?year=2026&month=09'), { year: '', month: '', numberStatus: '', category: '', clientEntityId: '' });
 
 
 for (const year of ['2025', '2026']) {
@@ -88,3 +88,16 @@ assert.equal(clampPage(1, 0), 1); // Empty results keep a valid first page.
 const many = Array.from({ length: 800 }, (_, n) => n + 1);
 assert.deepEqual(many.slice((parsePage('٢٧', 40) - 1) * 20, parsePage('٢٧', 40) * 20), Array.from({ length: 20 }, (_, n) => 521 + n));
 console.log('Passed: independent year/month filters, legacy date links, combined Arabic filters, chart-to-list counts, missing-number links, numbered pages and Arabic jumps.');
+
+// A representative does not determine entity identity; matching IDs do.
+records[0].clientEntityId='entity-a'; records[1].clientEntityId='entity-b';
+records[0].clientEntityName='شركة جديدة'; records[0].clientContactName='موظف اختبار';
+assert.deepEqual(find({clientEntityId:'entity-a'}),['current']);
+assert.deepEqual(find({clientEntityId:'entity-b'}),['previous-year']);
+assert.deepEqual(find({client:'جديدة'}),['current']);
+assert.deepEqual(find({search:'موظف اختبار'}),['current']);
+assert.equal(caseLinkFilters('#execution').category,'execution');
+assert.equal(caseLinkFilters('#insurance').category,'insurance');
+assert.equal(caseLinkFilters('#cases?category=invalid').category,'');
+const entityLink=caseLinkFilters(caseFiltersHash({category:'telecom',clientEntityId:'entity-a',month:'09'}));
+assert.equal(entityLink.category,'telecom'); assert.equal(entityLink.clientEntityId,'entity-a'); assert.equal(entityLink.month,'09');
