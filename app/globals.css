@@ -7,7 +7,7 @@
 
 /* Case browsing controls share the workspace's RTL layout and colors. */
 .case-filters{padding:16px 22px 12px;border-bottom:1px solid var(--border)}
-.case-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.case-filter-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
 .case-filter-grid .field{min-width:0}
 .case-filter-grid input,.field select{min-height:43px;padding:9px 11px;font-size:13px}
 .field select,.chart-year select{font:inherit;color:var(--foreground);background:#fffdf8;border:1px solid var(--border);border-radius:8px;max-width:100%;outline-color:var(--ring)}
@@ -30,6 +30,6 @@
 .month-link{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;background:#f6efe5;border:1px solid transparent;border-radius:8px;font-size:11px;color:#806e5d}
 .month-link b{font-size:14px;color:#743042}
 .month-link:hover,.month-link:focus-visible{background:#efe3e4;border-color:#c398a2}
-@media(max-width:1100px){.case-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1100px){.case-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.case-filter-grid>.field:last-child{grid-column:1/-1}}
 @media(max-width:560px){.case-filters{padding:14px}.case-filter-grid{gap:10px}.case-filter-grid input,.case-filter-grid select{font-size:12px;padding:9px 7px}.page-controls{justify-content:flex-start;gap:12px}.page-buttons{gap:4px}.pagination .page-number{min-width:30px;padding:4px 6px}.month-links{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media print{.case-filters,.month-links,.chart-year{display:none!important}}
