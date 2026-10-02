@@ -4,7 +4,7 @@ Arabic, right-to-left legal case management with shared office records, PDF read
 
 ## GitHub hosting
 
-This version uses **GitHub Pages for the application** and **Supabase for shared records, private PDFs, and sign-in**. Visitors need no other account.
+This version uses **GitHub Pages for the application** and **Supabase for shared records, private PDFs, and sign-in**.
 
 **[Open Mawatheeq](https://psychonator1000.github.io/Mawatheeq/)**
 
