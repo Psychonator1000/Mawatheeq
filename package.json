@@ -25,7 +25,8 @@
     "check:pages-config": "node scripts/check-pages-config.mjs",
     "test:local-auth": "node scripts/verify-local-auth.mjs",
     "test:browse": "node --experimental-strip-types scripts/verify-case-browse.mjs",
-    "test:clients": "node --experimental-strip-types scripts/verify-client-model.mjs"
+    "test:clients": "node --experimental-strip-types scripts/verify-client-model.mjs",
+    "test:excel": "node scripts/verify-excel.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
