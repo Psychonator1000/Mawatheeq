@@ -46,3 +46,10 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - `executionFile` records manual classification. It must not silently change the outcome, appeal confirmation, or legal eligibility rules. Insurance and telecom categories include their entities' sectors and explicit per-case flags.
 - Use the shared calendar picker for full dates. Preserve date-only ISO values without timezone shifts; keep separate year/month browsing filters.
 - Run `test:clients` and the entity tests in `test:local-auth` when changing these relationships.
+
+## Case timing and workbook updates
+
+- Calculate elapsed and remaining calendar days from date-only values. The deadlines page and its export use the selected report date; other case views use today's office date. Unknown dates must not display zero days.
+- New workbooks supplement the corrected website data. Preserve existing nonempty values, client links, procedures, and records omitted from a newer workbook. Keep conflicting source values visible for review instead of overwriting corrections.
+- Match repeated judgments using their automatic number, date, and parties; a changed office code alone does not make a new judgment. Never import workbook helper tables or cached countdown formulas as case records.
+- Keep private import plans and source workbooks outside the public repository. Use revision checks, snapshots, and reconciliation for shared-data updates. Run `test:excel` when changing workbook parsing.
