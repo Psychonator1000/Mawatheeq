@@ -53,3 +53,11 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - New workbooks supplement the corrected website data. Preserve existing nonempty values, client links, procedures, and records omitted from a newer workbook. Keep conflicting source values visible for review instead of overwriting corrections.
 - Match repeated judgments using their automatic number, date, and parties; a changed office code alone does not make a new judgment. Never import workbook helper tables or cached countdown formulas as case records.
 - Keep private import plans and source workbooks outside the public repository. Use revision checks, snapshots, and reconciliation for shared-data updates. Run `test:excel` when changing workbook parsing.
+
+## Office workflows and source verification
+
+- The 4 October 2026 clarification makes new case entry form-based. PDFs were for building the initial database; attachments remain optional for entry and verification. Never require a PDF to add a case or approve a source-based review.
+- Judgment data and execution-announcement reviews are separate. Approval requires the reviewed source type/reference, current case revision, signed-in owner, server timestamp and explicit attestation. Existing dates or free-text review notes must not become approvals automatically.
+- Edits invalidate approvals. Optional attachments require the exact link/document revisions the reviewer saw; reject stale submissions. Keep review and change history private.
+- Named local staff accounts have owner/editor roles; no email. Tasks/hearings use revision checks, named assignees and date pickers. Existing work can be closed after its case is archived.
+- Run `test:office` and the synthetic browser workflow before deploying changes to these controls. Do not use real case mutations as tests.
