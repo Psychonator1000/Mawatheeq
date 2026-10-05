@@ -1,9 +1,10 @@
 'use client';
-import {useState} from 'react';
+import {useId,useState} from 'react';
 import {officeRequest} from '@/lib/local-auth';
 import {changedFields,REVIEW_LABELS,type ReviewStatus,type Change} from '@/lib/office';
 export function OfficeSelect({label,value,onChange,options,empty}:{label:string;value:string;onChange:(value:string)=>void;options:[string,string][];empty?:string}) {
- return <label className="field"><span>{label}</span><select value={value} onChange={e=>onChange(e.target.value)}>{empty!==undefined&&<option value="">{empty}</option>}{options.map(([key,text])=><option key={key} value={key}>{text}</option>)}</select></label>;
+ const labelId=useId();
+ return <label className="field"><span id={labelId}>{label}</span><select aria-labelledby={labelId} value={value} onChange={e=>onChange(e.target.value)}>{empty!==undefined&&<option value="">{empty}</option>}{options.map(([key,text])=><option key={key} value={key}>{text}</option>)}</select></label>;
 }
 export function ReviewBadge({status}:{status:ReviewStatus}) {return <span className={'tag '+(status==='verified'?'green':status==='unreviewed'?'':'amber')}>{REVIEW_LABELS[status]}</span>}
 export function officeTime(value:string) {return new Date(value).toLocaleString('ar-KW',{timeZone:'Asia/Kuwait',dateStyle:'medium',timeStyle:'short'})}
