@@ -1,7 +1,9 @@
 import type { CaseRecord } from './domain';
+import type { ClientEntity } from './clients';
 
-export type CaseFilters = { search: string; year: string; month: string; code: string; client: string; opponent: string; numberStatus: string; category: string; clientEntityId: string };
-export const EMPTY_CASE_FILTERS: CaseFilters = { search: '', year: '', month: '', code: '', client: '', opponent: '', numberStatus: '', category: '', clientEntityId: '' };
+export type CaseFilters = { search: string; year: string; month: string; code: string; client: string; opponent: string; numberStatus: string; category: string; clientEntityId: string; analysisField:string;analysisValue:string };
+export const EMPTY_CASE_FILTERS: CaseFilters = { search: '', year: '', month: '', code: '', client: '', opponent: '', numberStatus: '', category: '', clientEntityId: '', analysisField:'',analysisValue:'' };
+const analysisFields=['type','outcome','status','appeal','appealRecorded'];
 export const MONTH_NAMES = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 // Search normalization is independent of the legal-rule normalization in domain.ts.
@@ -40,9 +42,10 @@ export function caseFiltersHash(filters: Partial<CaseFilters>) {
   if (['execution','insurance','telecom'].includes(filters.category || '')) query.set('category', filters.category!);
   if (filters.clientEntityId) query.set('clientId', filters.clientEntityId);
   if (filters.numberStatus === 'missing') query.set('autoNumber', 'missing');
+  if(analysisFields.includes(filters.analysisField||'')&&filters.analysisValue){query.set('analysisField',filters.analysisField!);query.set('analysisValue',filters.analysisValue);}
   return query.size ? `#cases?${query}` : '#cases';
 }
-export function caseLinkFilters(hash: string): Pick<CaseFilters, 'year' | 'month' | 'numberStatus' | 'category' | 'clientEntityId'> {
+export function caseLinkFilters(hash: string): Pick<CaseFilters, 'year' | 'month' | 'numberStatus' | 'category' | 'clientEntityId'> & Partial<Pick<CaseFilters,'analysisField'|'analysisValue'>> {
   const [view, query = ''] = hash.replace(/^#/, '').split('?');
   const params = new URLSearchParams(query);
   const year = params.get('year') || '';
@@ -51,6 +54,7 @@ export function caseLinkFilters(hash: string): Pick<CaseFilters, 'year' | 'month
   const legacy = caseMonthFilters(month);
   const category = ['execution','insurance','telecom'].includes(view) ? view : params.get('category') || '';
   return {
+    ...(view==='cases'&&analysisFields.includes(params.get('analysisField')||'')?{analysisField:params.get('analysisField')!,analysisValue:params.get('analysisValue')||''}:{}),
     category: (view === 'cases' || ['execution','insurance','telecom'].includes(view)) && ['execution','insurance','telecom'].includes(category) ? category : '',
     clientEntityId: view === 'cases' ? params.get('clientId') || '' : '',
     year: view === 'cases' ? (validYear(year) ? year : legacy.year) : '',
@@ -87,4 +91,16 @@ export function monthlyCaseCounts(records: CaseRecord[], year: string) {
     const key = `${year}-${String(index + 1).padStart(2, '0')}`;
     return { key, month, count: counts.get(key) || 0 };
   });
+}
+
+// Names only suggest possible overlaps. They never merge entities or clear a legal conflict.
+export function partyMatches(records:CaseRecord[],clients:ClientEntity[],query:string) {
+ const term=normalizeSearch(query); if(term.length<2)return [];
+ const entities=new Map(clients.map(c=>[c.id,c]));
+ return records.flatMap(record=>{
+  const entity=entities.get(record.clientEntityId||'');
+  const candidates:[string,string][]=[['خصم',record.opponent],['موكل',entity?.name||record.clientGroup||record.client],['صيغة أصلية للموكل',record.client],['صيغة أصلية للموكل',record.clientGroup],['شخص معني بالقضية',String(record.casePerson||'')],...(entity?.aliases||[]).map(x=>['صيغة أخرى للموكل',x] as [string,string]),...(entity?.contacts||[]).map(x=>['شخص مرتبط بالموكل',x.name] as [string,string])];
+  const seen=new Set<string>(); const matches=candidates.filter(([,name])=>{const key=normalizeSearch(name);if(!key||!key.includes(term)||seen.has(key))return false;seen.add(key);return true}).map(([role,name])=>({role,name}));
+  return matches.length?[{record,matches}]:[];
+ });
 }
