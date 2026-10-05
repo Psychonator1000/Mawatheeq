@@ -100,3 +100,15 @@ The client directory uses stable entity IDs for organizations, individuals, and 
 Owners can review and merge duplicate profiles. Merges retain original case wording, source profiles, contacts, aliases, and private case snapshots. Unclear source entries remain flagged for review. Excel exports include client and contact sheets, and the JSON export includes the entity directory. The new private schema and username-gated RPC are defined in `supabase/migrations/20260928064201_client_entities.sql`; no real office records or cleanup mappings belong in the public repository. Existing local username login remains the only staff sign-in.
 
 Validate entity relationships and calendar dates with `pnpm test:clients`. `pnpm test:local-auth` also verifies migration of legacy records, entity access denial, merges, revision conflicts, contact boundaries, preservation of original import identity, and compatibility with an older frontend.
+
+## Office verification and daily work
+
+New cases use direct forms. PDF attachments are optional; historical PDF imports are not a prerequisite for case entry or review.
+
+The verification center separates judgment-data reviews from execution-announcement reviews. An owner records the checked source and reference, confirms the comparison, and approves the current case revision. The server records their local username and time. Optional attachments are tied to the precise versions reviewed; later case or evidence changes invalidate the current approval. This records a human source check, not an automated court certification. Case history preserves before/after values from feature activation onward; legacy dates and notes are not auto-approved.
+
+Tasks and hearings have named assignees, date pickers, priority, completion notes, revision conflicts, and in-app overdue/today/upcoming views. Local staff accounts are managed in Settings, without email. The party-name search includes archived cases and aliases and is a preliminary aid, not conflict clearance. Analytics distributions open the included case records and identify the calculation scope.
+
+The JSON data export includes reviews, evidence references, work items, history, and account names, without passwords/session secrets or PDF bytes. Download private attachments separately. See [the office workflows specification](docs/OFFICE_WORKFLOWS.md) for migration and rollback details.
+
+Run `pnpm test:office` for synthetic database and logic tests. `scripts/verify-office-ui.mjs` runs synthetic browser workflows against a local Pages dev server with Playwright; the Pages CI gates deployment on this test. Browser tests use an isolated database and never contact the real backend.
