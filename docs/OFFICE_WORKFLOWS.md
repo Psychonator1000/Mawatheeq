@@ -45,3 +45,5 @@ Rollback: restore the prior frontend commit. New private tables/history may rema
 ## Updated direction, 4 October 2026
 
 PDFs served the historical database import. New cases use direct forms. Attaching a PDF is optional for case entry and review. Verification requires the source type and exact reference checked, the signed-in reviewer, timestamp, explicit attestation, and the saved case revision. Optional PDF evidence must still be linked to the same case and match the review scope. Source references document a human check, not an automated court confirmation.
+
+Migration: `supabase/migrations/20261005161605_office_workflows.sql`, applied using the backend-generated version. The migration is additive and leaves existing case payloads and revisions untouched. Private tables intentionally have no direct-client policies: access uses the validated local-session RPC. Supabase Auth password-provider settings do not apply to these local bcrypt accounts.
