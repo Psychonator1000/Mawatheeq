@@ -26,7 +26,8 @@
     "test:local-auth": "node scripts/verify-local-auth.mjs",
     "test:browse": "node --experimental-strip-types scripts/verify-case-browse.mjs",
     "test:clients": "node --experimental-strip-types scripts/verify-client-model.mjs",
-    "test:excel": "node scripts/verify-excel.mjs"
+    "test:excel": "node scripts/verify-excel.mjs",
+    "test:office": "node --experimental-strip-types scripts/verify-office.mjs && node scripts/verify-office-db.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
