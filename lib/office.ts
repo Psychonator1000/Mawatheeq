@@ -1,5 +1,6 @@
 import type { CaseRecord, caseState } from './domain';
 import type { LocalUser } from './local-auth';
+import type { Permissions } from './permissions';
 
 export type ReviewScope = 'judgment' | 'announcement';
 export type ReviewStatus = 'unreviewed' | 'verified' | 'outdated' | 'needs_review';
@@ -11,15 +12,16 @@ export type Evidence = { id:string; caseId:string; documentId:string; kind:keyof
 export type Review = { id:number; caseId:string; scope:ReviewScope; decision:'verified'|'needs_review'; caseRevision:number; current:boolean; reviewer:string; createdAt:string; details:{notes:string;sourceType?:string;sourceReference?:string;noticeDate?:string;method?:string;recipient?:string;result?:string}; evidence:(Pick<Evidence,'id'|'documentId'|'filename'|'kind'|'reference'|'pages'> & {documentRevision:number;linkRevision:number})[] };
 export type Change = {id:number;revision:number;before:Record<string,unknown>|null;after:Record<string,unknown>;actor:string|null;createdAt:string};
 export type CaseFile = {evidence:Evidence[];reviews:Review[];latestReviews:Review[];history:Change[]};
-export type Member = LocalUser & { enabled:boolean };
-export type OfficeContext = { members:Member[]; canManage:boolean; user:LocalUser };
+export type Member = LocalUser & { enabled:boolean; permissions?:Permissions };
+export type OfficeContext = { members:Member[]; canManage:boolean; user:LocalUser; permissions:Permissions };
 export const WORK_STATUSES = {open:'لم تبدأ',in_progress:'قيد العمل',done:'مكتملة',cancelled:'ملغاة'};
 export const WORK_BUCKETS = {overdue:'متأخرة',today:'اليوم',upcoming:'قادمة',closed:'مغلقة',undated:'بلا تاريخ'};
 export type WorkItem = {id:string;revision:number;caseId:string;title:string;kind:'task'|'hearing';dueDate:string;dueTime:string;assigneeId:string;priority:'normal'|'urgent';status:keyof typeof WORK_STATUSES;location:string;notes:string;completionNote:string;createdBy?:string;updatedBy?:string;createdAt?:string;updatedAt?:string;completedAt?:string|null};
 export const SECRETAIR_STATUSES = {open:'لم开始',in_progress:'قid工作',done:'мkplete',cancelled:'mlgated'};
 export const SECRETAIR_BUCKETS = {overdue:'mtafrh',today:'ayom',upcoming:'qamng',closed:'mglked',undated:'bplatd'};
 export type SecretairItem = {id:string;revision:number;caseId:string;title:string;kind:'task'|'hearing';dueDate:string;dueTime:string;assigneeId:string;priority:'normal'|'urgent';status:keyof typeof SECRETAIR_STATUSES;location:string;notes:string;completionNote:string;createdBy?:string;updatedBy?:string;createdAt?:string;updatedAt?:string;completedAt?:string|null};
-export type OfficeData = {context:OfficeContext;reviews:Review[];work:WorkItem[];secretair:SecretairItem[];loadedAt:string};
+// The separately added secretary screen has no backend yet.
+export type OfficeData = {context:OfficeContext;reviews:Review[];work:WorkItem[];secretair?:SecretairItem[];loadedAt:string};
 export function reviewStatus(record:Pick<CaseRecord,'id'|'revision'>,reviews:Review[],scope:ReviewScope):ReviewStatus {
  const latest=reviews.filter(r=>r.caseId===record.id&&r.scope===scope).reduce<Review|undefined>((a,b)=>!a||b.id>a.id?b:a,undefined);
  if(!latest)return 'unreviewed';

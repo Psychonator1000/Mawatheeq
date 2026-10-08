@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { KeyRound, LogOut, RefreshCw } from 'lucide-react';
 import Workspace from '@/components/workspace';
-import { restoreSession, signIn, signOut, changePassword, sessionEvent, type LocalUser } from '@/lib/local-auth';
+import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, type LocalUser } from '@/lib/local-auth';
+import type { Permissions } from '@/lib/permissions';
 
 export default function SharedApp() {
   const [ready, setReady] = useState(false);
@@ -77,7 +78,7 @@ export default function SharedApp() {
   const passwordRequired = !!user?.mustChangePassword;
   const passwordForm = user && (passwordRequired || changingPassword);
   if (ready && user && !passwordForm) return <>
-    <Workspace key={user.id} />
+    <AuthorizedWorkspace key={user.id} owner={user.role==='owner'} />
     <div className="account-bar"><span className="account-email" dir="ltr">{user.username}</span><button className="text-link" onClick={() => { setChangingPassword(true); setMessage(''); setError(''); }}><KeyRound size={15} /> تغيير كلمة المرور</button><button className="text-link" disabled={busy} onClick={() => void logout()}><LogOut size={15} /> خروج</button></div>
     {error && <div className="auth-message error" role="alert">{error}</div>}
   </>;
@@ -106,4 +107,11 @@ export default function SharedApp() {
     {error && <div className="auth-message error" role="alert">{error}</div>}
     {error && !ready && <button className="btn" onClick={() => window.location.reload()}><RefreshCw size={16} /> إعادة المحاولة</button>}
   </section></main>;
+}
+
+function AuthorizedWorkspace({owner}:{owner:boolean}) {
+  const [access,setAccess]=useState<Permissions|null>(null),[error,setError]=useState('');
+  useEffect(()=>{let active=true;localRequest<Permissions>('access').then(value=>{if(active)setAccess(value)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[]);
+  if(!access)return <main className="auth-page"><section className="auth-card"><h1>مواثيق</h1>{error?<><p role="alert">{error}</p><button className="btn" onClick={()=>location.reload()}>إعادة المحاولة</button></>:<p role="status">جارٍ تحميل صلاحياتك…</p>}</section></main>;
+  return <Workspace access={access} owner={owner}/>;
 }

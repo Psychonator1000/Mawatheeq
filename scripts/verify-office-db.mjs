@@ -17,8 +17,11 @@ grant usage on schema storage to anon,authenticated,service_role;
 grant select,insert,update,delete on storage.objects to anon,authenticated;
 `);
 for (const file of fs.readdirSync('supabase/migrations').filter(x => x.endsWith('.sql')).sort()) await db.exec(fs.readFileSync('supabase/migrations/' + file,'utf8'));
+if(fs.existsSync('supabase/user_permissions.pending.sql')) await db.exec(fs.readFileSync('supabase/user_permissions.pending.sql','utf8'));
 await db.query(`insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values ('owner',extensions.crypt($1,extensions.gen_salt('bf',4)),false),('editor',extensions.crypt($1,extensions.gen_salt('bf',4)),false)`,['Fixture-password-123']);
 await db.exec("insert into public.mawatheeq_members(user_id,role) select id,case when username='owner' then 'owner' else 'editor' end from mawatheeq_private.accounts");
+// This regression fixture deliberately represents a fully authorized editor.
+await db.exec(`insert into mawatheeq_private.member_access(user_id,permissions) select user_id,mawatheeq_private.access_for((select user_id from public.mawatheeq_members where role='owner'))-'revision' from public.mawatheeq_members where role='editor'`);
 const rpc=async(name,args)=>(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
 const request=(token,action,data={})=>rpc('mawatheeq_office_request',[token,action,JSON.stringify(data)]);
 const local=(token,action,data={})=>rpc('mawatheeq_local_request',[token,action,JSON.stringify(data)]);
@@ -63,7 +66,7 @@ assert.equal(file.history.length,2);assert.equal(file.history[0].actor,'editor')
 await request(editor.token,'review',{caseId:c.id,caseRevision:c.revision,scope:'judgment',decision:'needs_review',notes:'Please resolve changed opponent'});
 await assert.rejects(()=>request(editor.token,'create_member',{username:'newstaff',password:'Temporary-password-123'}),/مسؤول/);
 await assert.rejects(()=>request(owner.token,'create_member',{username:'newstaff',password:'short'}),/12/);
-const newMember=await request(owner.token,'create_member',{username:'newstaff',password:'Temporary-password-123'});
+const newMember=await request(owner.token,'create_member',{username:'newstaff',password:'Temporary-password-123',permissions:context.permissions});
 assert.equal(newMember.role,'editor'); assert.equal(newMember.mustChangePassword,true);
 const fresh=await rpc('mawatheeq_local_login',['newstaff','Temporary-password-123']);
 await assert.rejects(()=>request(fresh.token,'context'),/غيّر/);

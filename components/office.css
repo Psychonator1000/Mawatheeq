@@ -3,3 +3,21 @@
 @media print{.office-form,.office-toolbar button,.office-dialog .actions{display:none}.office-card{break-inside:avoid}.office-summary{background:white}.office-table tr{break-inside:avoid}}
 
 .office-attachments{border:1px solid #e2d8ca;border-radius:10px;padding:14px;margin-top:18px}.office-attachments>summary{cursor:pointer;font-size:13px;color:#745749}.office-attachments[open]>summary{margin-bottom:14px}
+
+/* Administrator permission editor */
+.permissions-dialog{max-width:840px!important}
+.permission-group{border:1px solid #e4d9cb!important;border-radius:12px;padding:18px!important;margin:22px 0!important;min-width:0}
+.permission-group legend{font-weight:700;padding:0 8px;color:#642b3b}
+.permission-group>.checkbox-line{margin:12px 0}
+.permission-group .subtitle{margin-top:14px;line-height:1.9}
+.permission-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.permission-cases{border:1px solid #e4d9cb;border-radius:9px;margin-top:12px;overflow:hidden}
+.permission-case{display:flex;align-items:flex-start;gap:12px;padding:12px;border-bottom:1px solid #eee6dc;cursor:pointer;overflow-wrap:anywhere}
+.permission-case:last-child{border-bottom:0}
+.permission-case input{margin-top:6px;accent-color:#74283b}
+.permission-case span{min-width:0}
+.permission-case small{display:block;color:#766354;line-height:1.8}
+.readonly-fields{border:0;padding:0;min-width:0}
+.readonly-fields:disabled input,.readonly-fields:disabled textarea,.readonly-fields:disabled button,.readonly-fields:disabled select{opacity:1;color:#655044;cursor:default}
+.access-scope{margin-bottom:20px;border-inline-start:3px solid #8e5160;padding:10px 15px;background:#f7f0e7;font-size:13px;line-height:1.8}
+@media(max-width:600px){.permission-sections{grid-template-columns:1fr}.permission-group{padding:12px!important}.permission-case{padding:10px}}

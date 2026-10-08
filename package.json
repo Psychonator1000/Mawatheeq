@@ -27,7 +27,8 @@
     "test:browse": "node --experimental-strip-types scripts/verify-case-browse.mjs",
     "test:clients": "node --experimental-strip-types scripts/verify-client-model.mjs",
     "test:excel": "node scripts/verify-excel.mjs",
-    "test:office": "node --experimental-strip-types scripts/verify-office.mjs && node scripts/verify-office-db.mjs"
+    "test:office": "node --experimental-strip-types scripts/verify-office.mjs && node scripts/verify-office-db.mjs",
+    "test:permissions": "node scripts/verify-permissions.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -60,7 +61,7 @@
     "tailwind-merge": "3.6.0",
     "tesseract.js": "^7.0.0",
     "vaul": "^1.1.2",
-    "xlsx": "^0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^3.25.76"
   },
   "devDependencies": {

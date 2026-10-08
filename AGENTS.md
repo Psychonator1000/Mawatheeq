@@ -4,7 +4,7 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 
 ## Delivery
 
-- Make the GitHub Pages frontend and Supabase backend the primary application. All approved members use the same records and private documents; do not substitute browser-only storage.
+- Make the GitHub Pages frontend and Supabase backend the primary application. Approved members share server records and private documents within administrator-assigned permissions; do not substitute browser-only storage.
 - Validate requested changes and synchronize them to `Psychonator1000/Mawatheeq` on `main`. The GitHub Pages workflow publishes successful, configured builds automatically.
 - Read the current branch and changed files before writing. Preserve unrelated edits and use fast-forward updates only.
 - Do not publish future changes to ChatGPT Sites. Preserve the previous private database and files until an explicit, verified migration; never put them in GitHub.
@@ -61,3 +61,11 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - Edits invalidate approvals. Optional attachments require the exact link/document revisions the reviewer saw; reject stale submissions. Keep review and change history private.
 - Named local staff accounts have owner/editor roles; no email. Tasks/hearings use revision checks, named assignees and date pickers. Existing work can be closed after its case is archived.
 - Run `test:office` and the synthetic browser workflow before deploying changes to these controls. Do not use real case mutations as tests.
+
+## User permissions
+
+- Only the owner creates/manages local accounts and grants access. New accounts default to no sections, no cases, read-only, and no report export. The owner cannot be restricted or disabled through staff controls.
+- Enforce allowed cases and sections on the server, including documents, client/contact projections, work, history, reviews and exports. Hidden navigation is not authorization. Never restore broad execute grants to private legacy functions or direct table/storage access.
+- Changing permissions requires the current permission revision, records an audit entry and revokes sessions. Keep account locking/revalidation so a concurrent stale password request cannot undo an administrator reset.
+- Shared client profiles/new case creation require all-case editing and their corresponding section. Restricted case edits preserve client links and historical labels, including omitted keys. Unclassified document studio access requires all-case scope; case evidence must be linked exclusively to allowed cases.
+- Run test:permissions, test:local-auth, test:office and the synthetic browser test when changing any of these boundaries. Use synthetic fixtures only. See docs/USER_PERMISSIONS.md.
