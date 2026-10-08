@@ -1,0 +1,18 @@
+models:
+  - title: "Qwen 3.5 MoE (Local Agent Rig)"
+    provider: lmstudio
+    model: qwen3.5-14b-a3b-claude-4.6-opus-reasoning-distilled-reap
+    apiBase: http://localhost:1234/v1
+
+contextProviders:
+  - name: codebase
+    options: {}
+  - name: openFiles
+    options: {}
+
+slashCommands:
+  - name: edit
+    description: Edit selected code
+
+experimental:
+  useTools: false
