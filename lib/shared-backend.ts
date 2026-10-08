@@ -2,6 +2,7 @@ import { backend } from './supabase-client';
 import { localRequest, fileRequest, clientRequest } from './local-auth';
 import { DEFAULT_RULES } from './domain';
 import { enrichCase, type ClientEntity } from './clients';
+import { canReadCases, type Permissions } from './permissions';
 
 function checked<T>({ data, error }: { data: T; error: { message: string } | null }): T {
   if (error) throw new Error(error.message);
@@ -17,10 +18,10 @@ async function allRows(table: string): Promise<any[]> {
   }
 }
 
-async function allClients() {
+async function allClients(action: 'list' | 'lookup') {
   const clients: ClientEntity[] = []; let canMerge = false;
   for (let offset = 0; ; offset += 500) {
-    const page = await clientRequest('list', { offset }); clients.push(...page.clients); canMerge = page.canMerge;
+    const page = await clientRequest(action, { offset }); clients.push(...page.clients); canMerge = page.canMerge;
     if (page.clients.length < 500) return { clients, canMerge };
   }
 }
@@ -28,9 +29,11 @@ async function allClients() {
 export async function sharedRequest(path: string, init?: RequestInit): Promise<any> {
   const method = init?.method || 'GET';
   if (path === '/api/cases' && method === 'GET') {
+    const access = await localRequest<Permissions>('access');
+    const canRead = canReadCases(access);
     const [rows, settings, directory] = await Promise.all([
-      allRows('mawatheeq_cases'),
-      localRequest('rules'), allClients(),
+      canRead ? allRows('mawatheeq_cases') : [],
+      localRequest('rules'), canRead ? allClients(access.sections.includes('clients') ? 'list' : 'lookup') : {clients: [], canMerge: false},
     ]);
     return { ...directory, cases: rows.map(row => enrichCase({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived }, directory.clients)), rules: settings || DEFAULT_RULES };
   }

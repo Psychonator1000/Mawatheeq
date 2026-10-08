@@ -33,6 +33,7 @@ for (const file of fs.readdirSync('supabase/migrations').filter(x => x.endsWith(
     await db.exec('delete from public.mawatheeq_cases; delete from mawatheeq_private.client_case_history; delete from mawatheeq_private.client_entities;');
   }
 }
+if(fs.existsSync('supabase/user_permissions.pending.sql')) await db.exec(fs.readFileSync('supabase/user_permissions.pending.sql','utf8'));
 const rpc = async (name, args) => (await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) as result`,args)).rows[0].result;
 const login = (name,password) => rpc('mawatheeq_local_login',[name,password]);
 const clientRequest = (token,action,data={}) => rpc('mawatheeq_client_request',[token,action,JSON.stringify(data)]);
@@ -41,6 +42,8 @@ const admin = async () => db.exec('reset role');
 const anon = async () => { await db.exec('reset role'); await db.exec('set role anon'); };
 await db.query(`insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values ('owner',extensions.crypt($1,extensions.gen_salt('bf',10)),true),('editor',extensions.crypt($1,extensions.gen_salt('bf',10)),false),('pending',extensions.crypt($1,extensions.gen_salt('bf',10)),false)`,['Test-only-password-123']);
 await db.exec("insert into public.mawatheeq_members(user_id,role) select id,case when username='owner' then 'owner' else 'editor' end from mawatheeq_private.accounts where username<>'pending'");
+// This regression fixture deliberately represents a fully authorized editor.
+await db.exec(`insert into mawatheeq_private.member_access(user_id,permissions) select user_id,mawatheeq_private.access_for((select user_id from public.mawatheeq_members where role='owner'))-'revision' from public.mawatheeq_members where role='editor'`);
 await anon();
 await assert.rejects(()=>db.query('select * from mawatheeq_private.accounts'),/permission denied/);
 await assert.rejects(()=>db.query('select * from public.mawatheeq_cases'),/permission denied/);

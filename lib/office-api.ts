@@ -6,7 +6,8 @@ export async function officePages<T>(action:string,data:Record<string,unknown>={
  for(let offset=0;;offset+=size){const rows=await officeRequest<T[]>(action,{...data,offset});result.push(...rows);if(rows.length<size)return result;}
 }
 export async function loadOffice():Promise<OfficeData> {
- const [context,reviews,work]=await Promise.all([officeRequest<OfficeContext>('context'),officePages<Review>('reviews_page'),officePages<WorkItem>('work_page')]);
+ const context=await officeRequest<OfficeContext>('context');
+ const [reviews,work]=await Promise.all([context.permissions.sections.includes('verification')?officePages<Review>('reviews_page'):[],context.permissions.sections.includes('work')?officePages<WorkItem>('work_page'):[]]);
  return {context,reviews,work,loadedAt:new Date().toISOString()};
 }
 export async function exportOfficeData() {

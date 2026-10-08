@@ -47,3 +47,7 @@ Rollback: restore the prior frontend commit. New private tables/history may rema
 PDFs served the historical database import. New cases use direct forms. Attaching a PDF is optional for case entry and review. Verification requires the source type and exact reference checked, the signed-in reviewer, timestamp, explicit attestation, and the saved case revision. Optional PDF evidence must still be linked to the same case and match the review scope. Source references document a human check, not an automated court confirmation.
 
 Migration: `supabase/migrations/20261005161605_office_workflows.sql`, applied using the backend-generated version. The migration is additive and leaves existing case payloads and revisions untouched. Private tables intentionally have no direct-client policies: access uses the validated local-session RPC. Supabase Auth password-provider settings do not apply to these local bcrypt accounts.
+
+## Administrator-controlled access
+
+Staff account creation now includes explicit section/case/edit/report permissions. The administrator can edit them later from **الإعدادات والبيانات → فريق المكتب والصلاحيات → تعديل الصلاحيات**. All lists, charts and searches use allowed cases. Read-only staff cannot change office data, and only the administrator can manage users or export the complete backup. See [USER_PERMISSIONS.md](USER_PERMISSIONS.md) for boundaries and verification.
