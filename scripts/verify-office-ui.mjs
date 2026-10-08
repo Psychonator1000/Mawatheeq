@@ -73,14 +73,14 @@ try{
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'No horizontal viewport overflow on mobile');
  // Independent staff browser keeps its session active while the admin changes grants.
  const staffContext=await browser.newContext({viewport:{width:1360,height:900},reducedMotion:'reduce'});
- const staff=await staffContext.newPage();await configurePage(staff);
+ const staff=await staffContext.newPage();await configurePage(staff);const staffSheet=staff.getByRole('dialog');
  const staffGo=async name=>staff.getByRole('button',{name:name==='سجل الأحكام'?/^سجل الأحكام/:name,exact:name!=='سجل الأحكام'}).first().click();
  await staff.goto(base+'#cases');await staff.getByLabel('اسم المستخدم',{exact:true}).fill('ui_staff');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Temporary-synthetic-123');await staffGo('فتح مساحة العمل');
  await staff.getByLabel('كلمة المرور الحالية',{exact:true}).fill('Temporary-synthetic-123');await staff.getByLabel('كلمة المرور الجديدة',{exact:true}).fill('Staff-synthetic-123');await staff.getByLabel('تأكيد كلمة المرور الجديدة',{exact:true}).fill('Staff-synthetic-123');await staffGo('حفظ كلمة المرور');
  await staff.getByRole('heading',{name:'سجل الأحكام',exact:true}).waitFor();await staff.getByRole('button',{name:'فتح القضية TEST-2',exact:true}).waitFor();
  assert.equal(await staff.locator('tbody tr').count(),1);assert.equal(await staff.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'إعداد المستندات',exact:true}).count(),0);
  assert.equal(await staff.getByRole('button',{name:'إضافة قضية',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'تصدير',exact:true}).count(),0);
- await staffGo('فتح القضية TEST-2');assert.equal(await staff.getByLabel('الخصم',{exact:true}).isDisabled(),true);assert.equal(await staff.getByRole('button',{name:'حفظ التغييرات',exact:true}).count(),0);
+ await staffGo('فتح القضية TEST-2');assert.equal(await staffSheet.getByLabel('الخصم',{exact:true}).isDisabled(),true);assert.equal(await staff.getByRole('button',{name:'حفظ التغييرات',exact:true}).count(),0);
  await staff.getByRole('tab',{name:'التحقق والمصادر',exact:true}).click();await staff.getByText('سجل التغييرات',{exact:true}).waitFor();assert.equal(await staff.getByRole('button',{name:'حفظ طلب المراجعة',exact:true}).count(),0);await staff.keyboard.press('Escape');
  await staff.evaluate(()=>{location.hash='settings'});await staff.getByRole('heading',{name:'هذا القسم غير متاح لحسابك',exact:true}).waitFor();assert.equal(await staff.getByRole('button',{name:'إضافة موظف',exact:true}).count(),0);
  await staffGo('التحليل والإحصائيات');await staff.getByText('تُحسب الأعداد من 1 سجل حكم نشط',{exact:false}).waitFor();await staff.screenshot({path:artifacts+'/restricted-analytics-desktop.png',fullPage:true});
@@ -91,7 +91,11 @@ try{
  await page.getByRole('dialog').waitFor({state:'hidden'});await staff.evaluate(()=>window.dispatchEvent(new Event('focus')));await staff.getByRole('heading',{name:'تسجيل الدخول',exact:true}).waitFor();
  await staff.getByLabel('اسم المستخدم',{exact:true}).fill('ui_staff');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Staff-synthetic-123');await staffGo('فتح مساحة العمل');await staff.getByRole('heading',{name:'التحليل والإحصائيات',exact:true}).waitFor();await staffGo('سجل الأحكام');
  await staff.getByRole('button',{name:'فتح القضية TEST-3',exact:true}).waitFor();assert.equal(await staff.getByRole('button',{name:'فتح القضية TEST-2',exact:true}).count(),0);await staffGo('فتح القضية TEST-3');
- assert.equal(await staff.getByLabel('الخصم',{exact:true}).isDisabled(),false);assert.equal(await staff.getByLabel('الموكل / الجهة',{exact:true}).isDisabled(),true);await staff.getByLabel('ملاحظات',{exact:true}).fill('Allowed restricted staff edit');await staffGo('حفظ التغييرات');await staff.getByText('تم حفظ السجل وتحديث القوائم',{exact:true}).waitFor();
+ assert.equal(await staffSheet.getByLabel('الخصم',{exact:true}).isDisabled(),false);assert.equal(await staffSheet.getByLabel('الموكل / الجهة',{exact:true}).isDisabled(),true);await staffSheet.getByLabel('ملاحظات',{exact:true}).fill('Allowed restricted staff edit');await staffGo('حفظ التغييرات');await staff.getByText('تم حفظ السجل وتحديث القوائم',{exact:true}).waitFor();
  assert.deepEqual(errors,[]);console.log('Passed office UI: form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');
 }catch(e){await page.screenshot({path:artifacts+'/office-ui-failure.png',fullPage:true});console.error(await page.locator('body').innerText());throw e}
-finally{await browser.close();await db.close()}
+finally{
+ await browser.close();await db.close();
+ // Optional synthetic screenshots for review when artifact downloads are unavailable.
+ if(process.env.OFFICE_TEST_INLINE_SCREENSHOTS==='1')for(const name of ['permission-editor-desktop.png','restricted-analytics-mobile.png']){const file=artifacts+'/'+name;if(fs.existsSync(file))console.log('OFFICE_UI_SCREENSHOT '+name+' '+fs.readFileSync(file).toString('base64'))}
+}
