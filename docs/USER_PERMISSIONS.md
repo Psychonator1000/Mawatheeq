@@ -21,4 +21,8 @@ Test guessed IDs, forged roles, hidden sections via RPC/hash links, read-only wr
 
 ## Delivery
 
-No new service or dependency. Keep the pending migration outside the migration directory until Supabase assigns its applied version. Run the same SQL in PGlite and the synthetic browser workflow before applying it to the live database. Check existing record fingerprints before/after, then publish the tested frontend through GitHub Pages.
+No new service. The permission migration is recorded as `20261009092550_user_permissions.sql`, using the actual applied database version. Its SQL passed the PGlite abuse tests and the two-account Chrome workflow before application. Case, document and client fingerprints and review counts were unchanged after application. The tested frontend is delivered through GitHub Pages.
+
+To manage access, sign in as the administrator and open **الإعدادات والبيانات → فريق المكتب والصلاحيات → إضافة موظف**. Select the sections, cases and operations, then save the account. The employee sets a personal password at first login. Use **تعديل الصلاحيات** to change access later; saving ends that employee’s sessions.
+
+If the frontend fails after release, redeploy the previous successful Pages build while preparing a fix. Keep the database permission checks, access grants and audit history in place. Restricted staff may temporarily receive access errors in the previous interface; the administrator retains full access. Do not restore broad table/function grants or discard permission data to recover the UI. Fix backend defects with a reviewed forward migration.
