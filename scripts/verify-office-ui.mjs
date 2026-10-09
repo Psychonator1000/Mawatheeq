@@ -17,7 +17,6 @@ create schema storage;create table storage.buckets(id text primary key,name text
 create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text references storage.buckets(id),name text);
 alter table storage.objects enable row level security;grant usage on schema storage to anon,authenticated,service_role;grant select,insert,update,delete on storage.objects to anon,authenticated;`);
 for(const file of fs.readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort())await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
-if(fs.existsSync('supabase/user_permissions.pending.sql')) await db.exec(fs.readFileSync('supabase/user_permissions.pending.sql','utf8'));
 await db.query("insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values ('ui_owner',extensions.crypt($1,extensions.gen_salt('bf',4)),false)",['Synthetic-password-123']);
 await db.exec("insert into public.mawatheeq_members(user_id,role) select id,'owner' from mawatheeq_private.accounts;set role anon");
 const rpc=async(name,args)=>(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
@@ -94,8 +93,4 @@ try{
  assert.equal(await staffSheet.getByLabel('الخصم',{exact:true}).isDisabled(),false);assert.equal(await staffSheet.getByLabel('الموكل / الجهة',{exact:true}).isDisabled(),true);await staffSheet.getByLabel('ملاحظات',{exact:true}).fill('Allowed restricted staff edit');await staffGo('حفظ التغييرات');await staff.getByText('تم حفظ السجل وتحديث القوائم',{exact:true}).waitFor();
  assert.deepEqual(errors,[]);console.log('Passed office UI: form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');
 }catch(e){await page.screenshot({path:artifacts+'/office-ui-failure.png',fullPage:true});console.error(await page.locator('body').innerText());throw e}
-finally{
- await browser.close();await db.close();
- // Optional synthetic screenshots for review when artifact downloads are unavailable.
- if(process.env.OFFICE_TEST_INLINE_SCREENSHOTS==='1')for(const name of ['permission-editor-desktop.png','restricted-analytics-mobile.png']){const file=artifacts+'/'+name;if(fs.existsSync(file))console.log('OFFICE_UI_SCREENSHOT '+name+' '+fs.readFileSync(file).toString('base64'))}
-}
+finally{await browser.close();await db.close()}
