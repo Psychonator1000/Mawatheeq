@@ -36,17 +36,20 @@ jobs:
       - run: pnpm run test:local-auth
       - run: pnpm run test:office
       - run: pnpm run test:permissions
+      - run: pnpm run test:departments
       - name: Install isolated browser test dependency
         run: npm install --prefix "$RUNNER_TEMP/office-browser" --no-save --package-lock=false --ignore-scripts playwright@1.62.1
       - name: Test office workflows in Chrome
         env:
           PLAYWRIGHT_MODULES_PATH: ${{ runner.temp }}/office-browser/node_modules
           PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
+          OFFICE_TEST_INLINE_SCREENSHOTS: "1"
           OFFICE_TEST_ARTIFACTS: ${{ runner.temp }}/office-ui
         run: |
           pnpm run dev --host 127.0.0.1 --port 4175 > "$RUNNER_TEMP/office-vite.log" 2>&1 &
           node -e 'async function ready(){for(let i=0;i<30;i++){try{if((await fetch("http://127.0.0.1:4175/Mawatheeq/")).ok)return}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)}ready()'
           node scripts/verify-office-ui.mjs
+          node scripts/verify-workspaces-ui.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -11,7 +11,7 @@ export function emptyClient(): ClientEntity {
   return { id: crypto.randomUUID(), name: '', kind: 'organization', sector: 'other', contacts: [], aliases: [], notes: '', needsReview: false, revision: 0 };
 }
 export function emptyContact(): ClientContact { return { id: crypto.randomUUID(), name: '', role: '', phone: '', notes: '' }; }
-export function clientName(record: CaseRecord) { return record.clientEntityName || record.clientGroup || record.client; }
+export function clientName(record: Pick<CaseRecord,'clientEntityName'|'clientGroup'|'client'>) { return record.clientEntityName || record.clientGroup || record.client; }
 export function enrichCase(record: CaseRecord, clients: ClientEntity[]): CaseRecord {
   const entity = clients.find(c => c.id === record.clientEntityId);
   return { ...record, clientEntityName: entity?.name || '', clientSector: entity?.sector || 'other',

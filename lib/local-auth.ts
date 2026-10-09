@@ -25,6 +25,7 @@ async function sessionRequest<T = any>(endpoint: string, action: string, data: R
 export const localRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_local_request', action, data);
 export const clientRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_client_request', action, data);
 export const officeRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_office_request', action, data);
+export const departmentRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_department_request', action, data);
 export async function restoreSession(): Promise<LocalUser | null> {
   await loadBackend();
   token = localStorage.getItem(storageKey) || '';

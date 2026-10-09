@@ -1,3 +1,4 @@
+import {departmentPages} from './departments';
 import {officeRequest} from './local-auth';
 import type {OfficeContext,OfficeData,Review,WorkItem} from './office';
 
@@ -12,5 +13,7 @@ export async function loadOffice():Promise<OfficeData> {
 }
 export async function exportOfficeData() {
  const names=['case_reviews','case_evidence','case_changes','work_items','work_changes'];
- return Object.fromEntries(await Promise.all(names.map(async kind=>[kind,await officePages('export_page',{kind},100)])));
+ const office=Object.fromEntries(await Promise.all(names.map(async kind=>[kind,await officePages('export_page',{kind},100)])));
+ const departments=Object.fromEntries(await Promise.all(['records','changes','outputs'].map(async kind=>[kind,await departmentPages('collections','backup_page',{kind},100)])));
+ return {...office,departments};
 }

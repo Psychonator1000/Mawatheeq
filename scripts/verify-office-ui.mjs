@@ -17,6 +17,7 @@ create schema storage;create table storage.buckets(id text primary key,name text
 create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text references storage.buckets(id),name text);
 alter table storage.objects enable row level security;grant usage on schema storage to anon,authenticated,service_role;grant select,insert,update,delete on storage.objects to anon,authenticated;`);
 for(const file of fs.readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort())await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
+if(fs.existsSync('supabase/employee_workspaces.pending.sql'))await db.exec(fs.readFileSync('supabase/employee_workspaces.pending.sql','utf8'));
 await db.query("insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values ('ui_owner',extensions.crypt($1,extensions.gen_salt('bf',4)),false)",['Synthetic-password-123']);
 await db.exec("insert into public.mawatheeq_members(user_id,role) select id,'owner' from mawatheeq_private.accounts;set role anon");
 const rpc=async(name,args)=>(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
@@ -41,7 +42,7 @@ await configurePage(page);
 const base='http://127.0.0.1:4175/Mawatheeq/';
 const go=async(name)=>{await page.getByRole('button',{name:name==='سجل الأحكام'?/^سجل الأحكام/:name,exact:name!=='سجل الأحكام'}).first().click()};
 try{
- await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await go('فتح مساحة العمل');
+ await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await go('فتح مساحة العمل');await go('فتح القضايا');
  await page.getByRole('heading',{name:'كل قضاياك، في مكان واحد'}).waitFor();await page.getByRole('button',{name:/بيانات أحكام معتمدة بالمراجعة/}).waitFor();
  await go('التحليل والإحصائيات');await page.getByRole('button',{name:'يحتاج مراجعة 1',exact:true}).click();
  await page.getByText('من التحليل:',{exact:false}).waitFor();assert.match(page.url(),/analysisField=type/);assert.equal(await page.locator('tbody tr').count(),1);
@@ -75,7 +76,7 @@ try{
  const staff=await staffContext.newPage();await configurePage(staff);const staffSheet=staff.getByRole('dialog');
  const staffGo=async name=>staff.getByRole('button',{name:name==='سجل الأحكام'?/^سجل الأحكام/:name,exact:name!=='سجل الأحكام'}).first().click();
  await staff.goto(base+'#cases');await staff.getByLabel('اسم المستخدم',{exact:true}).fill('ui_staff');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Temporary-synthetic-123');await staffGo('فتح مساحة العمل');
- await staff.getByLabel('كلمة المرور الحالية',{exact:true}).fill('Temporary-synthetic-123');await staff.getByLabel('كلمة المرور الجديدة',{exact:true}).fill('Staff-synthetic-123');await staff.getByLabel('تأكيد كلمة المرور الجديدة',{exact:true}).fill('Staff-synthetic-123');await staffGo('حفظ كلمة المرور');
+ await staff.getByLabel('كلمة المرور الحالية',{exact:true}).fill('Temporary-synthetic-123');await staff.getByLabel('كلمة المرور الجديدة',{exact:true}).fill('Staff-synthetic-123');await staff.getByLabel('تأكيد كلمة المرور الجديدة',{exact:true}).fill('Staff-synthetic-123');await staffGo('حفظ كلمة المرور');await staffGo('فتح القضايا');
  await staff.getByRole('heading',{name:'سجل الأحكام',exact:true}).waitFor();await staff.getByRole('button',{name:'فتح القضية TEST-2',exact:true}).waitFor();
  assert.equal(await staff.locator('tbody tr').count(),1);assert.equal(await staff.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'إعداد المستندات',exact:true}).count(),0);
  assert.equal(await staff.getByRole('button',{name:'إضافة قضية',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'تصدير',exact:true}).count(),0);
@@ -88,7 +89,7 @@ try{
  await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-2');assert.equal(await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).isChecked(),true);await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).uncheck();
  await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-3');await page.getByRole('checkbox',{name:'إتاحة القضية TEST-3',exact:true}).check();await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).check();await go('حفظ الصلاحيات وإنهاء الجلسات');
  await page.getByRole('dialog').waitFor({state:'hidden'});await staff.evaluate(()=>window.dispatchEvent(new Event('focus')));await staff.getByRole('heading',{name:'تسجيل الدخول',exact:true}).waitFor();
- await staff.getByLabel('اسم المستخدم',{exact:true}).fill('ui_staff');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Staff-synthetic-123');await staffGo('فتح مساحة العمل');await staff.getByRole('heading',{name:'التحليل والإحصائيات',exact:true}).waitFor();await staffGo('سجل الأحكام');
+ await staff.getByLabel('اسم المستخدم',{exact:true}).fill('ui_staff');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Staff-synthetic-123');await staffGo('فتح مساحة العمل');await staffGo('فتح القضايا');await staff.getByRole('heading',{name:'التحليل والإحصائيات',exact:true}).waitFor();await staffGo('سجل الأحكام');
  await staff.getByRole('button',{name:'فتح القضية TEST-3',exact:true}).waitFor();assert.equal(await staff.getByRole('button',{name:'فتح القضية TEST-2',exact:true}).count(),0);await staffGo('فتح القضية TEST-3');
  assert.equal(await staffSheet.getByLabel('الخصم',{exact:true}).isDisabled(),false);assert.equal(await staffSheet.getByLabel('الموكل / الجهة',{exact:true}).isDisabled(),true);await staffSheet.getByLabel('ملاحظات',{exact:true}).fill('Allowed restricted staff edit');await staffGo('حفظ التغييرات');await staff.getByText('تم حفظ السجل وتحديث القوائم',{exact:true}).waitFor();
  assert.deepEqual(errors,[]);console.log('Passed office UI: form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');

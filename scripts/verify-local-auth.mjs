@@ -33,6 +33,7 @@ for (const file of fs.readdirSync('supabase/migrations').filter(x => x.endsWith(
     await db.exec('delete from public.mawatheeq_cases; delete from mawatheeq_private.client_case_history; delete from mawatheeq_private.client_entities;');
   }
 }
+if(fs.existsSync('supabase/employee_workspaces.pending.sql'))await db.exec(fs.readFileSync('supabase/employee_workspaces.pending.sql','utf8'));
 const rpc = async (name, args) => (await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) as result`,args)).rows[0].result;
 const login = (name,password) => rpc('mawatheeq_local_login',[name,password]);
 const clientRequest = (token,action,data={}) => rpc('mawatheeq_client_request',[token,action,JSON.stringify(data)]);

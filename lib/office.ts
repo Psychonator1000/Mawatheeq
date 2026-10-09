@@ -17,11 +17,7 @@ export type OfficeContext = { members:Member[]; canManage:boolean; user:LocalUse
 export const WORK_STATUSES = {open:'لم تبدأ',in_progress:'قيد العمل',done:'مكتملة',cancelled:'ملغاة'};
 export const WORK_BUCKETS = {overdue:'متأخرة',today:'اليوم',upcoming:'قادمة',closed:'مغلقة',undated:'بلا تاريخ'};
 export type WorkItem = {id:string;revision:number;caseId:string;title:string;kind:'task'|'hearing';dueDate:string;dueTime:string;assigneeId:string;priority:'normal'|'urgent';status:keyof typeof WORK_STATUSES;location:string;notes:string;completionNote:string;createdBy?:string;updatedBy?:string;createdAt?:string;updatedAt?:string;completedAt?:string|null};
-export const SECRETAIR_STATUSES = {open:'لم开始',in_progress:'قid工作',done:'мkplete',cancelled:'mlgated'};
-export const SECRETAIR_BUCKETS = {overdue:'mtafrh',today:'ayom',upcoming:'qamng',closed:'mglked',undated:'bplatd'};
-export type SecretairItem = {id:string;revision:number;caseId:string;title:string;kind:'task'|'hearing';dueDate:string;dueTime:string;assigneeId:string;priority:'normal'|'urgent';status:keyof typeof SECRETAIR_STATUSES;location:string;notes:string;completionNote:string;createdBy?:string;updatedBy?:string;createdAt?:string;updatedAt?:string;completedAt?:string|null};
-// The separately added secretary screen has no backend yet.
-export type OfficeData = {context:OfficeContext;reviews:Review[];work:WorkItem[];secretair?:SecretairItem[];loadedAt:string};
+export type OfficeData = {context:OfficeContext;reviews:Review[];work:WorkItem[];loadedAt:string};
 export function reviewStatus(record:Pick<CaseRecord,'id'|'revision'>,reviews:Review[],scope:ReviewScope):ReviewStatus {
  const latest=reviews.filter(r=>r.caseId===record.id&&r.scope===scope).reduce<Review|undefined>((a,b)=>!a||b.id>a.id?b:a,undefined);
  if(!latest)return 'unreviewed';
@@ -29,11 +25,6 @@ export function reviewStatus(record:Pick<CaseRecord,'id'|'revision'>,reviews:Rev
  return latest.current&&latest.caseRevision===record.revision?'verified':'outdated';
 }
 export function workBucket(item:Pick<WorkItem,'status'|'dueDate'>,today:string):keyof typeof WORK_BUCKETS {
- if(item.status==='done'||item.status==='cancelled')return 'closed';
- if(!/^\d{4}-\d{2}-\d{2}$/.test(item.dueDate))return 'undated';
- return item.dueDate<today?'overdue':item.dueDate===today?'today':'upcoming';
-}
-export function secretairBucket(item:Pick<SecretairItem,'status'|'dueDate'>,today:string):keyof typeof SECRETAIR_BUCKETS {
  if(item.status==='done'||item.status==='cancelled')return 'closed';
  if(!/^\d{4}-\d{2}-\d{2}$/.test(item.dueDate))return 'undated';
  return item.dueDate<today?'overdue':item.dueDate===today?'today':'upcoming';

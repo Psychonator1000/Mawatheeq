@@ -1,6 +1,6 @@
 'use client';
 import {useState} from 'react';
-import {SECTIONS,type Permissions,type Section} from '@/lib/permissions';
+import {SECTIONS,LEGAL_SECTIONS,type Permissions,type Section} from '@/lib/permissions';
 import {type CaseRecord} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -23,9 +23,9 @@ export default function PermissionEditor({value,onChange,records}:{value:Permiss
     {!value.caseIds.length&&<p className="notice">لن تظهر لهذا المستخدم أي قضية حتى تختار له قضايا.</p>}
    </>}
   </fieldset>
-  <fieldset className="permission-group"><legend>الأقسام المتاحة</legend><div className="permission-sections">{Object.entries(SECTIONS).map(([id,label])=><label className="checkbox-line" key={id}><input type="checkbox" checked={value.sections.includes(id as Section)} disabled={id==='documents'&&value.caseScope!=='all'} onChange={e=>patch({sections:e.target.checked?[...value.sections,id as Section]:value.sections.filter(s=>s!==id)})}/>{label}</label>)}</div>
-   <p className="subtitle">كل قسم يعرض القضايا المسموحة فقط. إخفاء قسم لا يحجب حقول القضية المتاحة من قسم آخر. مرفقات القضايا ضمن «التحقق»؛ مكتبة إعداد المستندات غير المصنفة تتطلب جميع القضايا.</p>
-  </fieldset>
+  {[false,true].map(legal=><fieldset className="permission-group" key={String(legal)}><legend>{legal?'أقسام مساحة القضايا':'بيئات العمل الإضافية'}</legend><div className="permission-sections">{Object.entries(SECTIONS).filter(([id])=>LEGAL_SECTIONS.includes(id as Section)===legal).map(([id,label])=><label className="checkbox-line" key={id}><input type="checkbox" checked={value.sections.includes(id as Section)} disabled={id==='documents'&&value.caseScope!=='all'} onChange={e=>patch({sections:e.target.checked?[...value.sections,id as Section]:value.sections.filter(s=>s!==id)})}/>{label}</label>)}</div>
+   <p className="subtitle">بيئات العمل الإضافية تتيح ملخص القضية وأدوات القسم فقط. كل قسم يعرض القضايا المسموحة فقط. إخفاء قسم لا يحجب حقول القضية المتاحة من قسم آخر. مرفقات القضايا ضمن «التحقق»؛ مكتبة إعداد المستندات غير المصنفة تتطلب جميع القضايا.</p>
+  </fieldset>)}
   <fieldset className="permission-group"><legend>العمليات المسموحة</legend>
    <label className="checkbox-line"><input type="checkbox" checked={value.canEdit} onChange={e=>patch({canEdit:e.target.checked})}/>السماح بالتعديل في الأقسام المتاحة</label>
    <label className="checkbox-line"><input type="checkbox" checked={value.canExport} onChange={e=>patch({canExport:e.target.checked})}/>السماح بتصدير التقارير وطباعتها</label>
