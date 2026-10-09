@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { KeyRound, LogOut, RefreshCw } from 'lucide-react';
-import Workspace from '@/components/workspace';
+import WorkspaceHub from '@/components/workspace-hub';
+import {workspaceStorageKey} from '@/lib/departments';
 import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, type LocalUser } from '@/lib/local-auth';
 import type { Permissions } from '@/lib/permissions';
 
@@ -47,6 +48,7 @@ export default function SharedApp() {
     event.preventDefault(); setBusy(true); setError(''); setMessage('');
     try {
       const found = await signIn(username, password);
+      sessionStorage.removeItem(workspaceStorageKey);
       ++generation.current;
       setUser(found); setReady(true); setPassword('');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'تعذر تسجيل الدخول.'); }
@@ -57,6 +59,7 @@ export default function SharedApp() {
     try {
       if (newPassword !== confirmPassword) throw new Error('كلمتا المرور الجديدتان غير متطابقتين.');
       const updated = await changePassword(password, newPassword);
+      sessionStorage.removeItem(workspaceStorageKey);
       ++generation.current;
       setUser(updated); setChangingPassword(false);
       setPassword(''); setNewPassword(''); setConfirmPassword('');
@@ -70,6 +73,7 @@ export default function SharedApp() {
     catch { /* The local session is cleared even when the network is unavailable. */ }
     finally {
       ++generation.current;
+      sessionStorage.removeItem(workspaceStorageKey);
       setUser(null); setReady(true); setChangingPassword(false); setBusy(false);
       setPassword(''); setNewPassword(''); setConfirmPassword(''); setMessage(''); setError('');
     }
@@ -113,5 +117,5 @@ function AuthorizedWorkspace({owner}:{owner:boolean}) {
   const [access,setAccess]=useState<Permissions|null>(null),[error,setError]=useState('');
   useEffect(()=>{let active=true;localRequest<Permissions>('access').then(value=>{if(active)setAccess(value)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[]);
   if(!access)return <main className="auth-page"><section className="auth-card"><h1>مواثيق</h1>{error?<><p role="alert">{error}</p><button className="btn" onClick={()=>location.reload()}>إعادة المحاولة</button></>:<p role="status">جارٍ تحميل صلاحياتك…</p>}</section></main>;
-  return <Workspace access={access} owner={owner}/>;
+  return <WorkspaceHub access={access} owner={owner}/>;
 }
