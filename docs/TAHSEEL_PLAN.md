@@ -1,6 +1,6 @@
-# التحصيل — planned case-linked document workflow
+# التحصيل — case-linked document workflow
 
-Status: recorded for a later phase, as requested on 27 September 2026. This update does not add a التحصيل screen or replace existing document drafts.
+Status: activated by the 9 October 2026 employee-workspace request. See [the implemented workflow](EMPLOYEE_WORKSPACES.md). Existing document drafts remain separate.
 
 ## Intended flow
 

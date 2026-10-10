@@ -61,7 +61,7 @@ try{
  await screen('secretary-desktop');await page.reload();await page.getByRole('heading',{name:'كل موعد في مكانه.',exact:true}).waitFor();
  await switchTo('القضايا');await click('المهام والجلسات');await page.getByText('تنسيق موعد تجريبي',{exact:true}).waitFor();
  await switchTo('التحصيل');await click('ملف تحصيل جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');
- for(const [label,value] of [['الشركة المدعية','شركة اختبار التحصيل'],['المدعى عليه','خصم اختبار التحصيل'],['الرقم المدني للمدعى عليه','200000000001'],['الجنسية','كويتي'],['العنوان','عنوان تجريبي'],['الرقم المدني للشركة','SYN-1'],['السجل التجاري','SYN-2'],['رقم العقد / الحساب','SYN-ACCOUNT'],['مبلغ المطالبة (د.ك)','125.125'],['رقم أمر الأداء','1/2026'],['محكمة أمر الأداء','محكمة تجريبية'],['رقم الدعوى','1'],['سنة الدعوى','2026'],['محكمة الجلسة','محكمة تجريبية'],['الدائرة','1'],['يوم الجلسة','يوم تجريبي'],['مرجع المصدر الذي تمت مطابقته','عقد تجريبي 1']])await field(label,value);
+ for(const [label,value] of [['الشركة المدعية','شركة اختبار التحصيل'],['المدعى عليه','خصم اختبار التحصيل'],['الرقم المدني للمدعى عليه','200000000001'],['الجنسية','كويتي'],['العنوان','عنوان تجريبي'],['الهاتف','50000000'],['الرقم المدني للشركة','SYN-1'],['السجل التجاري','SYN-2'],['رقم العقد / الحساب','SYN-ACCOUNT'],['مبلغ المطالبة (د.ك)','125.125'],['رقم أمر الأداء','1/2026'],['محكمة أمر الأداء','محكمة تجريبية'],['رقم الدعوى','1'],['سنة الدعوى','2026'],['محكمة الجلسة','محكمة تجريبية'],['الدائرة','1'],['يوم الجلسة','يوم تجريبي'],['مرجع المصدر الذي تمت مطابقته','عقد تجريبي 1']])await field(label,value);
  for(const label of ['تاريخ رفض أمر الأداء','تاريخ التكليف بالوفاء','تاريخ كشف الحساب','تاريخ الجلسة'])await pickToday(label);
  await click('إضافة مستند للحافظة');await field('وصف المستند 1','عقد تجريبي تمت مراجعته');await click('حفظ ملف التحصيل');
  await page.getByRole('heading',{name:'مراجعة المصدر',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).isDisabled(),true);
@@ -91,9 +91,14 @@ try{
  assert.equal(await staff.getByRole('button',{name:'ملف تحصيل جديد',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'تصدير القائمة',exact:true}).count(),0);
  await staff.getByRole('button',{name:'فتح الملف',exact:true}).click();assert.equal(await staff.getByLabel('العنوان',{exact:true}).isDisabled(),true);assert.equal(await staff.getByRole('button',{name:'تسجيل مراجعة المصدر',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).count(),0);await staff.keyboard.press('Escape');
  await staff.getByRole('button',{name:'خروج',exact:true}).click();await staff.getByLabel('اسم المستخدم',{exact:true}).fill('dept_ui_reader');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await staff.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();
- assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login, shared secretary task, reviewed claim/bundle Word downloads, precise ledger/void, employee/leave forms, department-only readonly access, responsive layouts and no runtime errors.');
+ await staff.evaluate(()=>sessionStorage.setItem('mawatheeq.workspace.v1','legal'));await staff.reload();await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),2,'Forged workspace preference cannot grant legal access');
+ await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();await staff.getByLabel('كلمة المرور الحالية',{exact:true}).fill('Unsaved-password-from-previous-user');
+ const otherTab=await sc.newPage();await configurePage(otherTab);await otherTab.goto(base);
+ await otherTab.evaluate(token=>localStorage.setItem('mawatheeq.local-session.v1',token),login.token);
+ await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),5);
+ await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();assert.equal(await staff.getByLabel('كلمة المرور الحالية',{exact:true}).inputValue(),'','Cross-tab session replacement clears old password inputs');
+ assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, precise ledger/void, employee/leave forms, department-only readonly access, responsive layouts and no runtime errors.');
 }catch(e){await screen('failure');console.error(await page.locator('body').innerText());throw e}
 finally{
- if(process.env.OFFICE_TEST_INLINE_SCREENSHOTS==='1')for(const name of ['chooser-desktop','secretary-desktop','collections-desktop','accounting-desktop','hr-desktop','mobile-accounting','failure']){const path=artifacts+'/'+name+'.png';if(fs.existsSync(path))console.log('OFFICE_UI_SCREENSHOT '+name+' '+fs.readFileSync(path).toString('base64'))}
  await browser.close();await db.close();
 }

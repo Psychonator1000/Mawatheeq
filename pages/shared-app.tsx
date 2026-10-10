@@ -31,15 +31,22 @@ export default function SharedApp() {
     }
     void refresh();
     const onRefresh = () => void refresh();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key && event.key !== 'mawatheeq.local-session.v1') return;
+      ++generation.current; setUser(null); setReady(false);
+      setChangingPassword(false); setPassword(''); setNewPassword(''); setConfirmPassword(''); setMessage(''); setError('');
+      sessionStorage.removeItem(workspaceStorageKey);
+      void refresh();
+    };
     window.addEventListener(sessionEvent, onRefresh);
-    window.addEventListener('storage', onRefresh);
+    window.addEventListener('storage', onStorage);
     window.addEventListener('focus', onRefresh);
     const timer = window.setInterval(onRefresh, 60000);
     return () => {
       active = false;
       clearInterval(timer);
       window.removeEventListener(sessionEvent, onRefresh);
-      window.removeEventListener('storage', onRefresh);
+      window.removeEventListener('storage', onStorage);
       window.removeEventListener('focus', onRefresh);
     };
   }, []);

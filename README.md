@@ -37,9 +37,9 @@ The previous case records, procedure histories, insurance records, and original 
 
 Only the Supabase project URL and `sb_publishable_` key belong in `public/app-config.json`. They identify the public API; access is enforced by authentication, membership, database grants, and row/storage policies. Never place an administrative or service-role key there.
 
-## Planned التحصيل workflow
+## Employee workspaces
 
-The next document workflow will generate **صحيفة الدعوى** and **الحافظة** from reviewed collection files linked to cases, including civil IDs, addresses, and the required case details. This section will be built later; see [the recorded design](docs/TAHSEEL_PLAN.md). The deployment must remain portable to an office server, with Mawatheeq usernames and no email or provider sign-in for staff.
+After login, choose **القضايا، السكرتارية، التحصيل، المحاسبة أو الموارد البشرية** from the workspaces assigned by the administrator. They share private records and case assignments. Collections prepares Word claims and evidence bundles from reviewed structured files; accounting records fees, receipts and expenses; HR manages employee profiles and leave. See [workspace setup and rules](docs/EMPLOYEE_WORKSPACES.md). The deployment remains portable to an office server, with local usernames and no email or provider sign-in for staff.
 
 ## Development
 

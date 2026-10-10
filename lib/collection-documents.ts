@@ -7,7 +7,7 @@ export const COLLECTION_FIELDS:[string,[string,string][]][]=[
 ];
 export const COLLECTION_LABELS=Object.fromEntries(COLLECTION_FIELDS.flatMap(([,fields])=>fields));
 const required={
- claim:['company','defendant','civilId','nationality','address','amount','amountWords','account','orderNumber','court','rejectedDate','demandDate','statementDate','companyCivil','companyRegister','hearingCourt','hearingDate','hearingDay','hearingCircuit'],
+ claim:['company','defendant','civilId','nationality','address','amount','amountWords','account','phone','orderNumber','court','rejectedDate','demandDate','statementDate','companyCivil','companyRegister','hearingCourt','hearingDate','hearingDay','hearingCircuit'],
  bundle:['company','defendant','hearingCourt','hearingDate','hearingCircuit','lawsuitNumber','lawsuitYear'],
 };
 export function missingDocumentFields(data:CollectionData,kind:'claim'|'bundle') {

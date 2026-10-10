@@ -322,7 +322,7 @@ begin
   if r.revision is distinct from (p_data->>'revision')::integer or r.review is null or (r.review->>'recordRevision')::integer<>r.revision
    or (r.review->>'caseRevision')::integer<>c.revision then raise exception 'راجع الملف الحالي والقضية الحالية قبل إنشاء المستند.' using errcode='40001'; end if;
   foreach field in array case when p_data->>'kind'='claim' then
-   array['company','defendant','civilId','nationality','address','amount','amountWords','account','orderNumber','court','rejectedDate','demandDate','statementDate','companyCivil','companyRegister','hearingCourt','hearingDate','hearingDay','hearingCircuit']
+   array['company','defendant','civilId','nationality','address','amount','amountWords','account','phone','orderNumber','court','rejectedDate','demandDate','statementDate','companyCivil','companyRegister','hearingCourt','hearingDate','hearingDay','hearingCircuit']
    else array['company','defendant','hearingCourt','hearingDate','hearingCircuit','lawsuitNumber','lawsuitYear'] end loop
    if btrim(coalesce(r.payload->>field,''))='' then raise exception 'أكمل حقول القالب المطلوبة قبل الإنشاء: %.',field; end if;
   end loop;

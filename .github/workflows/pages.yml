@@ -43,7 +43,6 @@ jobs:
         env:
           PLAYWRIGHT_MODULES_PATH: ${{ runner.temp }}/office-browser/node_modules
           PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/google-chrome
-          OFFICE_TEST_INLINE_SCREENSHOTS: "1"
           OFFICE_TEST_ARTIFACTS: ${{ runner.temp }}/office-ui
         run: |
           pnpm run dev --host 127.0.0.1 --port 4175 > "$RUNNER_TEMP/office-vite.log" 2>&1 &
