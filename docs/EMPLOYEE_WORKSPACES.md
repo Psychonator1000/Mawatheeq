@@ -12,7 +12,7 @@ After username login (and any required password change), choose an assigned work
 
 ## Administrator setup
 
-In **القضايا → الإعدادات والبيانات → إدارة المستخدمين**, create or edit a named local account. Choose its workspaces and legal sections, all cases or selected cases, and whether editing/exporting is allowed. An employee can have multiple workspaces. New accounts have no access until the administrator assigns it. Saving a permission change ends that employee's existing sessions.
+In **القضايا → الإعدادات والبيانات → فريق المكتب والصلاحيات**, create or edit a named local account. Choose its workspaces and legal sections, all cases or selected cases, and whether editing/exporting is allowed. An employee can have multiple workspaces. New accounts have no access until the administrator assigns it. Saving a permission change ends that employee's existing sessions.
 
 The owner always retains every workspace. HR employee profiles are separate from login accounts; HR access never grants account administration.
 
