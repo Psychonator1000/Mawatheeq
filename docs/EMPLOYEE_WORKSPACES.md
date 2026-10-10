@@ -44,7 +44,7 @@ Employee profiles include an internal employee number, name, job title, departme
 
 ## Maintenance
 
-The additive migration introduces private department records, histories and output snapshots, plus the opaque-session RPC `mawatheeq_department_request`. Direct table/helper access remains denied. Existing case, client, document and account records are preserved.
+Migration `20261010082155_employee_workspaces.sql` introduces private department records, histories and output snapshots, plus the opaque-session RPC `mawatheeq_department_request`. Direct table/helper access remains denied. Existing case, client, document and account records are preserved.
 
 Run `pnpm run check`, `test:departments`, `test:permissions`, `test:office`, `test:local-auth`, `test:clients` and `build:pages`. GitHub CI runs the existing office browser workflow and `scripts/verify-workspaces-ui.mjs` against synthetic PGlite records with real Chrome; it never tests mutations against production.
 

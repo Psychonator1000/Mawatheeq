@@ -17,7 +17,6 @@ grant usage on schema storage to anon,authenticated,service_role;
 grant select,insert,update,delete on storage.objects to anon,authenticated;
 `);
 for (const file of fs.readdirSync('supabase/migrations').filter(x => x.endsWith('.sql')).sort()) await db.exec(fs.readFileSync('supabase/migrations/' + file,'utf8'));
-if(fs.existsSync('supabase/employee_workspaces.pending.sql'))await db.exec(fs.readFileSync('supabase/employee_workspaces.pending.sql','utf8'));
 await db.query(`insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values ('owner',extensions.crypt($1,extensions.gen_salt('bf',4)),false),('editor',extensions.crypt($1,extensions.gen_salt('bf',4)),false)`,['Fixture-password-123']);
 await db.exec("insert into public.mawatheeq_members(user_id,role) select id,case when username='owner' then 'owner' else 'editor' end from mawatheeq_private.accounts");
 // This regression fixture deliberately represents a fully authorized editor.
