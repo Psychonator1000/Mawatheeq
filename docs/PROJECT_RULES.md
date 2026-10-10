@@ -34,7 +34,7 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 
 - The owner intends to migrate the whole application, database, attachments, and local username accounts to an office server. Keep future work portable and free; the current hosted backend is an interim arrangement. Staff must never need provider login.
 - The previous case data and original uploaded PDF have been restored and verified. Legacy extracted text was incomplete; retain the original and the explicit review requirement. Never overwrite restored office data with an empty seed.
-- The 27 September 2026 direction supersedes the 100-PDF automation proposal: build التحصيل later, with each structured collection file linked to a case, and generate صحيفة الدعوى and الحافظة from reviewed civil ID, address, party, claim, and evidence details. See docs/TAHSEEL_PLAN.md. Do not add that section prematurely or discard existing drafts.
+- The 9 October 2026 employee-workspace request activates التحصيل: keep one structured file per case and prepare صحيفة الدعوى and الحافظة from reviewed source details. This supersedes the previous deferral and 100-PDF automation proposal. Preserve existing drafts and templates; see docs/EMPLOYEE_WORKSPACES.md.
 - Keep judgment year and month as separate filters: either can be selected alone or combined. Dashboard month links select both, and older links with a combined year-month value must keep working. Keep numbered pages, direct jumps, combined filters, and chart counts consistent.
 
 ## Client entities and case categories
@@ -69,3 +69,12 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - Changing permissions requires the current permission revision, records an audit entry and revokes sessions. Keep account locking/revalidation so a concurrent stale password request cannot undo an administrator reset.
 - Shared client profiles/new case creation require all-case editing and their corresponding section. Restricted case edits preserve client links and historical labels, including omitted keys. Unclassified document studio access requires all-case scope; case evidence must be linked exclusively to allowed cases.
 - Run test:permissions, test:local-auth, test:office and the synthetic browser test when changing any of these boundaries. Use synthetic fixtures only. See docs/USER_PERMISSIONS.md.
+
+## Employee workspaces
+
+- Selecting legal, secretary, collections, accounting or HR never grants authority. Department grants alone must not authorize the full legal case, client profile, document or other departments' records.
+- Keep case assignments shared across case-linked departments. HR profiles are independent of login accounts; only the owner administers users.
+- Secretary work reuses work_items. Collection edits invalidate source reviews; generation checks current file and case revisions and preserves immutable output snapshots.
+- Keep posted financial entries immutable, with exact minor-unit amounts, separate currencies and audited cancellation reasons. Never introduce paid payment services or payroll calculations implicitly.
+- HR leave approval must serialize per employee and reject overlapping approved dates. Keep profile and leave histories.
+- Run test:departments and both synthetic browser workflows alongside existing access tests before deployment.

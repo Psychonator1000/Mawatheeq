@@ -61,7 +61,7 @@ const record=(workspace,kind,payload,caseId='',subjectId='')=>({id:uuid(++counte
 let counter=0;
 const save=(user,workspace,r)=>dept(user.token,workspace,'save_record',{record:r});
 const action=(user,workspace,op,r,data={})=>dept(user.token,workspace,op,{id:r.id,revision:r.revision,...data});
-const collectionData={company:'Synthetic Co',defendant:'Synthetic Defendant',civilId:'200000000001',nationality:'Synthetic nationality',address:'Synthetic address',amount:'125.125',amountWords:'مبلغ تجريبي',account:'SYN-ACCOUNT',orderNumber:'1/2026',court:'Synthetic Court',rejectedDate:'2026-10-01',demandDate:'2026-09-01',statementDate:'2026-08-01',companyCivil:'SYN-CIVIL',companyRegister:'SYN-REGISTER',hearingCourt:'Synthetic Court',hearingDate:'2026-11-01',hearingDay:'الأحد',hearingCircuit:'1',lawsuitNumber:'1',lawsuitYear:'2026',sourceReference:'Synthetic original contract 1',notes:'Sensitive collection note',evidence:[{id:'e1',included:true,date:'2026-09-01',description:'Synthetic contract',pages:2}]};
+const collectionData={company:'Synthetic Co',defendant:'Synthetic Defendant',civilId:'200000000001',nationality:'Synthetic nationality',address:'Synthetic address',amount:'125.125',amountWords:'مبلغ تجريبي',account:'SYN-ACCOUNT',phone:'50000000',orderNumber:'1/2026',court:'Synthetic Court',rejectedDate:'2026-10-01',demandDate:'2026-09-01',statementDate:'2026-08-01',companyCivil:'SYN-CIVIL',companyRegister:'SYN-REGISTER',hearingCourt:'Synthetic Court',hearingDate:'2026-11-01',hearingDay:'الأحد',hearingCircuit:'1',lawsuitNumber:'1',lawsuitYear:'2026',sourceReference:'Synthetic original contract 1',notes:'Sensitive collection note',evidence:[{id:'e1',included:true,date:'2026-09-01',description:'Synthetic contract',pages:2}]};
 let file=await save(collector,'collections',record('collections','file',collectionData,visible.id));
 const hiddenFile=await save(owner,'collections',record('collections','file',{...collectionData,defendant:'Hidden collection'},hidden.id));
 assert.equal((await dept(collector.token,'collections','records_page')).length,1);
@@ -89,6 +89,9 @@ await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'b
 await assert.rejects(()=>action(collector,'collections','review_file',file,{caseRevision:visible.revision-1,attested:true}),e=>e.code==='40001');
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
 await action(collector,'collections','generate',file,{kind:'bundle',outputId:uuid(102)});
+file=await save(collector,'collections',{...file,payload:{...file.payload,phone:''}});
+file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
+await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(105)}),/phone/);
 file=await save(collector,'collections',{...file,payload:{...file.payload,civilId:''}});
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
 await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(103)}),/civilId/);
