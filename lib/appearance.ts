@@ -4,6 +4,7 @@ export const THEMES = {
   noir: { label: 'أسود وذهبي', swatch: '#0b0a08', accent: '#d4af37' },
   ivory: { label: 'أبيض وذهبي', swatch: '#c99d2e', accent: '#ffffff' },
   sunflower: { label: 'أصفر مشمس', swatch: '#ffc928', accent: '#fff3b0' },
+  royal: { label: 'أزرق وذهبي', swatch: '#163a66', accent: '#d4af37' },
   sky: { label: 'أزرق سماوي فاتح', swatch: '#7cc8f5', accent: '#e6f6ff' },
   navy: { label: 'كحلي', swatch: '#1f3d63', accent: '#b9cbe0' },
   teal: { label: 'فيروزي', swatch: '#0f6e6a', accent: '#7ee0d2' },

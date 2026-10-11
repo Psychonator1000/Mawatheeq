@@ -53,3 +53,17 @@
 :root[data-theme=sky] .stat.featured :is(.stat-label,.stat-foot,.stat-label svg){color:#235777}
 :root[data-theme=sky] .department-brand .brand-mark{background:#8fd3ff;color:#0b2e45;border-color:#5cb6ea}
 :root[data-theme=sky] .payroll-totals>div{background:linear-gradient(135deg,#a8dfff,#6cc3f3);color:#0b2e45}
+/* Blue and gold: deep royal blue with gold accents */
+:root[data-theme=royal]{--sidebar:#0f2a4a;--sidebar-foreground:#dfe7f2;--sidebar-primary:#d4af37;--sidebar-primary-foreground:#0f2a4a;--sidebar-accent:#1a3c66;--sidebar-accent-foreground:#f3e2ad;--sidebar-border:#d4af3726;--sidebar-ring:#d4af37}
+:root[data-theme=royal] [data-slot=sidebar-container]{background:linear-gradient(180deg,#132f53,#0b2140);border-inline-start:1px solid #d4af3740}
+:root[data-theme=royal] .brand-en{color:#f3e2ad}
+:root[data-theme=royal] :is(.brand-ar,.nav-section,.sidebar-foot){color:#a9b9d0}
+:root[data-theme=royal] .brand-mark{color:#d4af37;border-color:#d4af3780}
+:root[data-theme=royal] .nav-button[data-active=true]{background:linear-gradient(135deg,#e6c65c,#c39a2c)!important;color:#0f2a4a!important;box-shadow:0 6px 20px -8px #d4af3780}
+:root[data-theme=royal] :is(.btn.primary,.back-to-top){background:linear-gradient(135deg,#e6c65c,#c39a2c);border-color:#c39a2c;color:#0f2a4a}
+:root[data-theme=royal] .btn.primary:hover{background:linear-gradient(135deg,#efd277,#cfa73a)}
+:root[data-theme=royal] .stat.featured{background:linear-gradient(135deg,#163a66,#0f2a4a);border-color:#d4af37;box-shadow:inset 0 0 0 1px #d4af3755}
+:root[data-theme=royal] .stat.featured .stat-num{color:#f0d27a}
+:root[data-theme=royal] .department-brand .brand-mark{background:#0f2a4a;color:#d4af37;border-color:#d4af37}
+:root[data-theme=royal] :is(.department-hero h1,.page-head h1){background-image:linear-gradient(100deg,#163a66 0%,#163a66 38%,#d4af37 50%,#163a66 62%,#163a66 100%)}
+:root[data-theme=royal] .scroll-progress{background:linear-gradient(90deg,#d4af37,#163a66)}
