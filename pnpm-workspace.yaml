@@ -6,10 +6,8 @@ strictDepBuilds: true
 allowBuilds:
   esbuild: true
   fsevents: true
-  sharp: true
   tesseract.js: false
   unrs-resolver: true
-  workerd: true
 storeDir: ${SITES_PNPM_SHARED_STORE:-.sites-runtime/pnpm-store}
 cacheDir: ${SITES_PNPM_SHARED_STORE:-.sites-runtime/pnpm-store}/policy-cache
 enableGlobalVirtualStore: false
@@ -18,5 +16,3 @@ packageImportMethod: clone-or-copy
 # The explicit installer owns dependency setup, including restored workspaces.
 verifyDepsBeforeRun: false
 optimisticRepeatInstall: false
-overrides:
-  miniflare>sharp: 0.35.4

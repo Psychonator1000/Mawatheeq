@@ -50,7 +50,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-The default commands now run the GitHub Pages application. Configure a development Supabase project using the setup guide to test shared data. The old server implementation remains available through `dev:legacy` and `build:legacy`; it is not used by the GitHub workflow.
+The default commands now run the GitHub Pages application. Configure a development Supabase project using the setup guide to test shared data. The former Cloudflare server was removed on 11 October 2026; it remains in Git history.
 
 ## Checks and build
 
