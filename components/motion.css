@@ -7,7 +7,7 @@
 :root[data-theme=graphite]{--brand:#33393f;--brand-deep:#272c31;--brand-ink:#1c2024;--brand-hover:#464e56;--brand-ring:#7d868f;--glow-1:#a9b4bf;--glow-2:#d3cbbd;--glow-3:#c4ccd4}
 :root[data-theme=sunflower]{--brand:#a57400;--brand-deep:#8a6100;--brand-ink:#4a3600;--brand-hover:#b98400;--brand-ring:#f0c040;--glow-1:#ffe14d;--glow-2:#fff0a0;--glow-3:#ffd6a0;--background:#fffbea}
 :root[data-theme=ivory]{--brand:#9a7413;--brand-deep:#7d5d0e;--brand-ink:#5a430a;--brand-hover:#b38a1f;--brand-ring:#d6b55a;--glow-1:#f3d77a;--glow-2:#fbedc0;--glow-3:#fff7e0;--background:#fbfaf7}
-:root[data-theme=sky]{--brand:#1d6fa5;--brand-deep:#175b88;--brand-ink:#0f3f60;--brand-hover:#2a84bf;--brand-ring:#6fb2dc;--glow-1:#8fd3ff;--glow-2:#c4e9ff;--glow-3:#dff3ff;--background:#eef4f7}
+:root[data-theme=sky]{--brand:#1b6fa0;--brand-deep:#155a83;--brand-ink:#0b2e45;--brand-hover:#2484bd;--brand-ring:#7cc4ee;--glow-1:#8fd3ff;--glow-2:#c7ecff;--glow-3:#e6f6ff;--background:#f0f8fd}
 :root[data-theme=teal]{--brand:#0f6e6a;--brand-deep:#0b5956;--brand-ink:#073f3d;--brand-hover:#16857f;--brand-ring:#5fb3ad;--glow-1:#7ee0d2;--glow-2:#bdeee4;--glow-3:#e6dcb8;--background:#eef4f1}
 :root[data-theme=sunset]{--brand:#b0451f;--brand-deep:#923819;--brand-ink:#652611;--brand-hover:#c4562c;--brand-ring:#e0906b;--glow-1:#ffb27a;--glow-2:#ffd6a8;--glow-3:#f7b8a8;--background:#f8f0e8}
 :root[data-theme=rose]{--brand:#a3325a;--brand-deep:#872849;--brand-ink:#5e1a32;--brand-hover:#b9456e;--brand-ring:#d88aa5;--glow-1:#f7a8c4;--glow-2:#f9d0dc;--glow-3:#e9c9b5;--background:#f8eff1}
