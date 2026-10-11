@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { reviewStatus, workBucket, changedFields, analysisValue } from '../lib/office.ts';
+import { reviewStatus, workBucket, changedFields, analysisValue, monthGrid, shiftMonth } from '../lib/office.ts';
 import { partyMatches, caseFiltersHash, caseLinkFilters } from '../lib/case-browse.ts';
 
 const c={id:'fixture',revision:3,opponent:'أحمد علي',client:'شركة اختبار',clientEntityId:'entity',archived:false};
@@ -31,4 +31,10 @@ for(const field of ['type','outcome','status','appeal','appealRecorded']){
  assert.equal(analysisValue(c,st,filters.analysisField),filters.analysisValue);
 }
 assert.equal(caseLinkFilters('#cases?analysisField=password&analysisValue=x').analysisField,undefined);
-console.log('Passed office logic: distinct evidence approvals, stale revisions, date-only workload, field changes, archived-party matches and analytic links.');
+const october=monthGrid('2026-10');
+assert.equal(october.length,35);assert.equal(october[0],'2026-09-27');assert.equal(october[4],'2026-10-01');assert.equal(october.at(-1),'2026-10-31');
+assert.equal(monthGrid('2026-02').length,28,'February 2026 starts on Sunday and fills four weeks');
+assert.equal(monthGrid('2028-02').filter(d=>d.startsWith('2028-02')).length,29,'Leap-year February');
+for(const zone of ['Asia/Kuwait','America/Los_Angeles','Pacific/Kiritimati']){process.env.TZ=zone;assert.equal(monthGrid('2026-03')[0],'2026-03-01','Calendar cells do not shift with the browser timezone')}
+assert.equal(shiftMonth('2026-12',1),'2027-01');assert.equal(shiftMonth('2026-01',-1),'2025-12');
+console.log('Passed office logic: distinct evidence approvals, stale revisions, date-only workload, field changes, archived-party matches, analytic links and month calendar grids.');

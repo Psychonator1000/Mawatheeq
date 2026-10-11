@@ -24,7 +24,8 @@
     "test:excel": "node scripts/verify-excel.mjs",
     "test:office": "node --experimental-strip-types scripts/verify-office.mjs && node scripts/verify-office-db.mjs",
     "test:permissions": "node scripts/verify-permissions.mjs",
-    "test:departments": "node scripts/verify-departments.mjs"
+    "test:departments": "node scripts/verify-departments.mjs",
+    "test:tools": "node --experimental-strip-types scripts/verify-notifications.mjs && node --experimental-strip-types scripts/verify-case-print.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
