@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import WorkspaceHub from '@/components/workspace-hub';
 import { AccountContext } from '@/components/account-menu';
 import MotionLayer from '@/components/motion-layer';
+import ConnectionStatus from '@/components/connection-status';
 import {workspaceStorageKey} from '@/lib/departments';
 import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, type LocalUser } from '@/lib/local-auth';
 import type { Permissions } from '@/lib/permissions';
@@ -92,11 +93,12 @@ export default function SharedApp() {
   const passwordForm = user && (passwordRequired || changingPassword);
   if (ready && user && !passwordForm) return <AccountContext.Provider value={{ username: user.username, busy, onChangePassword: () => { setChangingPassword(true); setMessage(''); setError(''); }, onLogout: () => void logout() }}>
     <MotionLayer />
+    <ConnectionStatus />
     <AuthorizedWorkspace key={user.id} owner={user.role==='owner'} />
     {error && <div className="auth-message error" role="alert">{error}</div>}
   </AccountContext.Provider>;
 
-  return <><MotionLayer /><main className="auth-page"><section className="auth-card">
+  return <><MotionLayer /><ConnectionStatus /><main className="auth-page"><section className="auth-card">
     <div className="brand-mark">M</div><h1>مواثيق</h1><p>مساحة المكتب المشتركة للأحكام والتنفيذ والمستندات.</p>
     {!ready ? <p role="status">جارٍ فتح مساحة العمل…</p> : passwordForm ? <>
       <h2>تغيير كلمة المرور</h2><p>{passwordRequired ? 'عيّن كلمة مرور خاصة بك لفتح مساحة المكتب.' : 'تُسجّل الجلسات الأخرى خروجها عند تغيير كلمة المرور.'}</p>

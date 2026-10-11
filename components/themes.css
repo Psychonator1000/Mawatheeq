@@ -39,20 +39,6 @@
 /* Department accents in the dark theme. */
 :root[data-theme=noir] [class*=theme-]{--dept-soft:color-mix(in srgb,var(--brand) 12%,#15130f)}
 :root[data-theme=noir] .department-hero p{color:#b8ab92}
-/* Light sky blue */
-:root[data-theme=sky]{--sidebar:#a9dcfb;--sidebar-foreground:#0f3a57;--sidebar-primary:#0f3a57;--sidebar-primary-foreground:#d8f0ff;--sidebar-accent:#c6e9fe;--sidebar-accent-foreground:#0b2e45;--sidebar-border:#0000000f;--sidebar-ring:#1b6fa0;--primary-foreground:#0b2e45}
-:root[data-theme=sky] [data-slot=sidebar-container]{background:linear-gradient(180deg,#bfe6ff,#93d1f7)}
-:root[data-theme=sky] .brand-en{color:#0b2e45}
-:root[data-theme=sky] :is(.brand-ar,.nav-section,.sidebar-foot){color:#2d6185}
-:root[data-theme=sky] .brand-mark{color:#0f3a57;border-color:#0f3a5766}
-:root[data-theme=sky] .nav-count{border-color:#00000022}
-:root[data-theme=sky] .nav-button[data-active=true]{background:#f3fbff!important;color:#0f3a57!important}
-:root[data-theme=sky] .sidebar-rail{background:#00000010}
-:root[data-theme=sky] :is(.btn.primary,.stat.featured,.back-to-top){background:linear-gradient(135deg,#a8dfff,#6cc3f3);border-color:#5cb6ea;color:#0b2e45}
-:root[data-theme=sky] .btn.primary:hover{background:linear-gradient(135deg,#bce7ff,#82cdf6)}
-:root[data-theme=sky] .stat.featured :is(.stat-label,.stat-foot,.stat-label svg){color:#235777}
-:root[data-theme=sky] .department-brand .brand-mark{background:#8fd3ff;color:#0b2e45;border-color:#5cb6ea}
-:root[data-theme=sky] .payroll-totals>div{background:linear-gradient(135deg,#a8dfff,#6cc3f3);color:#0b2e45}
 /* Blue and gold: deep royal blue with gold accents */
 :root[data-theme=royal]{--sidebar:#0f2a4a;--sidebar-foreground:#dfe7f2;--sidebar-primary:#d4af37;--sidebar-primary-foreground:#0f2a4a;--sidebar-accent:#1a3c66;--sidebar-accent-foreground:#f3e2ad;--sidebar-border:#d4af3726;--sidebar-ring:#d4af37}
 :root[data-theme=royal] [data-slot=sidebar-container]{background:linear-gradient(180deg,#132f53,#0b2140);border-inline-start:1px solid #d4af3740}
@@ -67,3 +53,106 @@
 :root[data-theme=royal] .department-brand .brand-mark{background:#0f2a4a;color:#d4af37;border-color:#d4af37}
 :root[data-theme=royal] :is(.department-hero h1,.page-head h1){background-image:linear-gradient(100deg,#163a66 0%,#163a66 38%,#d4af37 50%,#163a66 62%,#163a66 100%)}
 :root[data-theme=royal] .scroll-progress{background:linear-gradient(90deg,#d4af37,#163a66)}
+
+/* ───────── Frutiger Aero (the light blue theme): sky, glass, gloss and bubbles ───────── */
+:root[data-theme=sky]{--sidebar:transparent;--sidebar-foreground:#ffffff;--sidebar-primary:#ffffff;--sidebar-primary-foreground:#0b4f7d;--sidebar-accent:rgba(255,255,255,.22);--sidebar-accent-foreground:#ffffff;--sidebar-border:rgba(255,255,255,.35);--sidebar-ring:#ffffff;--primary-foreground:#ffffff;
+ --card:rgba(255,255,255,.62);--popover:rgba(250,253,255,.92);--border:rgba(255,255,255,.85);--input:#bcdcf0;--aero-glow:0 10px 30px -12px rgba(0,90,160,.35),inset 0 1px 0 rgba(255,255,255,.95)}
+:root[data-theme=sky] body{background:linear-gradient(180deg,#9ad8ff 0%,#cdeeff 32%,#effaff 58%,#e6fbd9 82%,#b8ea8c 100%) fixed}
+:root[data-theme=sky] .ambient-blob.one{background:radial-gradient(circle,#ffffff 0,transparent 60%);opacity:.7}
+:root[data-theme=sky] .ambient-blob.two{background:radial-gradient(circle,#8fe3ff 0,transparent 62%);opacity:.5}
+:root[data-theme=sky] .ambient-blob.three{background:radial-gradient(circle,#b8f08f 0,transparent 62%);opacity:.55}
+:root[data-theme=sky]:not([data-backdrop=none]) .ambient-canvas{display:block}
+/* Glass surfaces */
+:root[data-theme=sky] :is(.panel,.stat,.office-card,.client-card,.person-card,.collection-card,.device-card,.department-metrics>div,.att-stat,.quick-card,.my-work-item,.department-hero,.ledger-summary>div,.payroll-totals>div,.notice){background:linear-gradient(180deg,rgba(255,255,255,.82) 0%,rgba(255,255,255,.5) 48%,rgba(235,248,255,.45) 100%)!important;border:1px solid rgba(255,255,255,.9)!important;box-shadow:var(--aero-glow);backdrop-filter:blur(14px) saturate(1.5);-webkit-backdrop-filter:blur(14px) saturate(1.5);border-radius:18px}
+:root[data-theme=sky] .topbar,:root[data-theme=sky] .department-topbar{background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(225,245,255,.55))!important;border-bottom:1px solid rgba(255,255,255,.9);box-shadow:0 1px 0 rgba(0,120,200,.12)}
+:root[data-theme=sky] [data-slot=sidebar-container]{background:linear-gradient(180deg,rgba(64,180,240,.88) 0%,rgba(20,130,205,.86) 55%,rgba(40,170,120,.82) 100%);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);border-inline-start:1px solid rgba(255,255,255,.6);box-shadow:inset 1px 0 0 rgba(255,255,255,.5)}
+:root[data-theme=sky] [data-slot=sidebar-container]::before{content:'';position:absolute;inset:0 0 auto;height:42%;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0));pointer-events:none}
+:root[data-theme=sky] .brand-en{color:#fff;text-shadow:0 1px 2px rgba(0,60,110,.45)}
+:root[data-theme=sky] :is(.brand-ar,.nav-section,.sidebar-foot){color:#e3f6ff}
+:root[data-theme=sky] .brand-mark{color:#fff;border-color:rgba(255,255,255,.8);background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,.1));box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(0,70,130,.3)}
+:root[data-theme=sky] .nav-button{color:#fff!important;text-shadow:0 1px 1px rgba(0,60,110,.35)}
+:root[data-theme=sky] .nav-button[data-active=true]{background:linear-gradient(180deg,#ffffff 0%,#e3f6ff 50%,#c9ecff 51%,#eaf8ff 100%)!important;color:#0b4f7d!important;text-shadow:none;border-radius:999px!important;box-shadow:inset 0 1px 0 #fff,0 4px 14px rgba(0,70,130,.3)}
+:root[data-theme=sky] .nav-count{border-color:rgba(255,255,255,.5)}
+/* Glossy aqua pills */
+:root[data-theme=sky] .btn{border-radius:999px;border:1px solid rgba(110,180,225,.7);background:linear-gradient(180deg,#ffffff 0%,#f2faff 49%,#ddf1ff 50%,#f6fcff 100%);box-shadow:inset 0 1px 0 #fff,0 2px 6px rgba(0,90,160,.15);color:#0b4f7d}
+:root[data-theme=sky] .btn:hover{background:linear-gradient(180deg,#ffffff 0%,#e9f7ff 49%,#c8eaff 50%,#eefaff 100%)}
+:root[data-theme=sky] :is(.btn.primary,.back-to-top,.door-btn,.department-shell .btn.primary){position:relative;color:#fff!important;text-shadow:0 1px 1px rgba(0,60,120,.55);border:1px solid #127bbd;background:linear-gradient(180deg,#9fe6ff 0%,#3ab4ef 48%,#118bd8 50%,#2fb3f2 100%)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 6px 16px -4px rgba(0,110,190,.55)}
+:root[data-theme=sky] :is(.btn.primary,.back-to-top):hover{filter:brightness(1.07) saturate(1.1)}
+:root[data-theme=sky] .btn.primary::before{background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.55) 48%,transparent 66%)}
+:root[data-theme=sky] .stat.featured{background:radial-gradient(120% 90% at 30% 0%,#c8ffe0 0%,#36d199 40%,#0e9f75 100%)!important;color:#fff;border-color:#0e9f75!important;text-shadow:0 1px 2px rgba(0,80,50,.5)}
+:root[data-theme=sky] .stat.featured :is(.stat-label,.stat-foot,.stat-label svg){color:#eafff4}
+:root[data-theme=sky] :is(.field input,.field textarea,.field select,.searchbox,select){border-radius:12px;border-color:#a9d4ee;background:linear-gradient(180deg,#f3fbff,#ffffff 40%);box-shadow:inset 0 1px 3px rgba(0,80,140,.15)}
+:root[data-theme=sky] :is(.field input,.field textarea,.field select):focus{border-color:#2fa8e8;box-shadow:0 0 0 4px rgba(47,168,232,.25),inset 0 1px 3px rgba(0,80,140,.1)}
+:root[data-theme=sky] :is(.department-hero h1,.page-head h1){background-image:linear-gradient(100deg,#0b6fae 0%,#0b6fae 38%,#7fe0ff 50%,#0b6fae 62%,#0b6fae 100%);filter:drop-shadow(0 1px 0 #fff)}
+:root[data-theme=sky] .tag{border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+:root[data-theme=sky] :is(.case-table,.office-table) th{background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(220,242,255,.8))!important}
+:root[data-theme=sky] .scroll-progress{background:linear-gradient(90deg,#b8f08f,#2fa8e8)}
+:root[data-theme=sky] .cursor-halo{border-color:rgba(255,255,255,.95);background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.9) 0 12%,rgba(140,215,255,.25) 40%,transparent 70%);box-shadow:inset 0 0 6px rgba(255,255,255,.8)}
+:root[data-theme=sky] [role=dialog]{border-radius:20px;border:1px solid rgba(255,255,255,.9);background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(232,247,255,.92));box-shadow:0 30px 60px -20px rgba(0,80,140,.45),inset 0 1px 0 #fff}
+:root[data-theme=sky] .payroll-totals>div,:root[data-theme=sky] .department-brand .brand-mark{color:#0b4f7d}
+.aero-splash{position:fixed;inset:0;z-index:96;pointer-events:none;display:grid;place-items:center}
+.aero-splash b{font:italic 700 64px/1 'Segoe UI',Tahoma,sans-serif;color:#fff;text-shadow:0 2px 0 #2fa8e8,0 6px 24px rgba(0,120,200,.6);animation:aero-word 1.5s cubic-bezier(.2,.8,.2,1) both}
+.aero-splash i{position:absolute;bottom:-60px;left:calc(var(--i) * 7.2%);width:calc(30px + var(--i) * 3px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 32% 30%,#fff 0 14%,rgba(160,225,255,.25) 45%,rgba(255,255,255,.7) 100%);border:1px solid rgba(255,255,255,.9);animation:aero-rise 1.5s cubic-bezier(.2,.7,.3,1) calc(var(--i) * 40ms) both}
+@keyframes aero-rise{to{translate:0 -115vh;scale:1.3}}
+@keyframes aero-word{0%{opacity:0;scale:.6;filter:blur(8px)}30%{opacity:1;scale:1.05;filter:none}75%{opacity:1;scale:1}100%{opacity:0;scale:1.1}}
+
+/* ───────── Persona (hidden: type “persona”): red, black and white, slanted and loud ───────── */
+:root[data-theme=phantom]{color-scheme:dark;--brand:#e60012;--brand-deep:#7a0009;--brand-ink:#000;--brand-hover:#ff1f33;--brand-ring:#ff4d5c;--glow-1:#e60012;--glow-2:#ffffff;--glow-3:#e60012;--background:#0a0a0a;--card:#111;--popover:#111;--foreground:#fff;--primary-foreground:#fff;--accent-foreground:#ff3344;
+ --sidebar:#000;--sidebar-foreground:#fff;--sidebar-primary:#e60012;--sidebar-primary-foreground:#fff;--sidebar-accent:#e60012;--sidebar-accent-foreground:#fff;--sidebar-border:#e6001255;--sidebar-ring:#e60012}
+:root[data-theme=phantom] body{background:radial-gradient(#e6001230 1.6px,transparent 1.8px) 0 0/14px 14px,linear-gradient(118deg,transparent 0 60%,#e60012 60% 71%,#000 71% 73%,transparent 73%),#0a0a0a;background-attachment:fixed}
+:root[data-theme=phantom]:not([data-backdrop=none]) .ambient-canvas{display:block}
+:root[data-theme=phantom] .ambient-blob{opacity:.18;background:radial-gradient(circle,#e60012 0,transparent 60%)!important}
+:root[data-theme=phantom] :is(h1,h2,h3,.btn,.nav-button,.tag,.stat-num,[role=tab]){font-style:italic;font-weight:800;letter-spacing:.01em}
+:root[data-theme=phantom] :is(.department-hero h1,.page-head h1){background:none;-webkit-background-clip:border-box;background-clip:border-box;color:#fff;animation:none;display:inline-block;padding:2px 18px;position:relative;z-index:0;transform:rotate(-2.5deg);text-shadow:3px 3px 0 #000}
+:root[data-theme=phantom] :is(.department-hero h1,.page-head h1)::before{content:'';position:absolute;inset:-4px -8px;z-index:-1;background:#e60012;clip-path:polygon(2% 8%,100% 0,97% 92%,0 100%);box-shadow:none}
+:root[data-theme=phantom] :is(.department-hero h1,.page-head h1)::after{content:'★';position:absolute;inset-inline-start:-26px;top:-14px;color:#fff;font-size:26px;transform:rotate(-18deg);text-shadow:2px 2px 0 #e60012}
+/* Slanted cards with red offset shadows and cut corners */
+:root[data-theme=phantom] :is(.panel,.office-card,.client-card,.person-card,.collection-card,.device-card,.department-metrics>div,.att-stat,.my-work-item,.quick-card,.ledger-summary>div){background:#0f0f0f!important;border:2px solid #fff!important;border-radius:0!important;box-shadow:7px 7px 0 #e60012}
+:root[data-theme=phantom] :is(.stat){background:#fff!important;color:#000;border:none!important;border-radius:0!important;transform:skewX(-6deg);box-shadow:8px 8px 0 #e60012}
+:root[data-theme=phantom] .stat>*{transform:skewX(6deg)}
+:root[data-theme=phantom] .stat :is(.stat-label,.stat-foot,.stat-label svg){color:#333}
+:root[data-theme=phantom] .stat.featured{background:#e60012!important;color:#fff;box-shadow:8px 8px 0 #fff}
+:root[data-theme=phantom] .stat.featured :is(.stat-label,.stat-foot,.stat-label svg){color:#fff}
+:root[data-theme=phantom] .department-hero{background:#000!important;border:none!important;border-radius:0!important;box-shadow:inset 0 -6px 0 #e60012;clip-path:polygon(0 0,100% 0,100% 82%,96% 100%,0 100%)}
+/* Buttons: skewed slabs that flip to red and shake */
+:root[data-theme=phantom] .btn{border-radius:0;border:2px solid #fff;background:#000;color:#fff;transform:skewX(-12deg)}
+:root[data-theme=phantom] .btn>*{transform:skewX(12deg)}
+:root[data-theme=phantom] .btn:hover{background:#e60012;color:#fff;border-color:#fff;box-shadow:4px 4px 0 #fff;animation:phantom-jolt .25s steps(2) 1}
+:root[data-theme=phantom] .btn.primary{background:#e60012;border-color:#fff;color:#fff;box-shadow:4px 4px 0 #fff}
+:root[data-theme=phantom] .btn.primary:hover{background:#fff;color:#000;box-shadow:4px 4px 0 #e60012}
+:root[data-theme=phantom] .btn:active{transform:skewX(-12deg) scale(.94)}
+@keyframes phantom-jolt{50%{translate:-2px 1px}}
+/* Menu like the game's: tilted slabs */
+:root[data-theme=phantom] [data-slot=sidebar-container]{background:#000;border-inline-start:3px solid #e60012}
+:root[data-theme=phantom] .brand-en{color:#fff;font-style:italic}
+:root[data-theme=phantom] :is(.brand-ar,.nav-section,.sidebar-foot){color:#ff6b77}
+:root[data-theme=phantom] .brand-mark{color:#fff;background:#e60012;border-color:#fff;transform:rotate(-6deg)}
+:root[data-theme=phantom] .nav-button{color:#fff!important;border-radius:0!important;transition:transform .2s cubic-bezier(.3,1.6,.5,1),background .15s!important}
+:root[data-theme=phantom] .nav-button:hover{background:#e60012!important;transform:skewX(-14deg) translateX(-6px)}
+:root[data-theme=phantom] .nav-button[data-active=true]{background:#fff!important;color:#000!important;transform:skewX(-14deg) rotate(-2deg) scale(1.04);box-shadow:5px 5px 0 #e60012!important}
+:root[data-theme=phantom] .tag{border-radius:0;transform:skewX(-10deg);background:#fff;color:#000}
+:root[data-theme=phantom] .tag.red{background:#e60012;color:#fff}
+:root[data-theme=phantom] :is(.case-table,.office-table) th{background:#e60012!important;color:#fff!important;font-style:italic}
+:root[data-theme=phantom] :is(.case-table,.office-table)>tbody>tr:hover,:root[data-theme=phantom] :is(.case-table,.office-table)>tbody>tr[data-spot]{background:linear-gradient(100deg,#e60012 0 6px,rgba(230,0,18,.18) 6px 70%,transparent 70%)!important;box-shadow:none}
+:root[data-theme=phantom] [role=dialog]{border-radius:0;border:3px solid #fff;background:#0b0b0b;box-shadow:12px 12px 0 #e60012}
+:root[data-theme=phantom] [data-sonner-toast]{background:#000!important;color:#fff!important;border:2px solid #e60012!important;border-radius:0!important;transform:skewX(-6deg)}
+:root[data-theme=phantom] :is(.field input,.field textarea,.field select,select,.searchbox){border-radius:0;border:2px solid #fff;background:#000;color:#fff}
+:root[data-theme=phantom] :is(.field input,.field textarea,.field select):focus{border-color:#e60012;box-shadow:4px 4px 0 #e60012}
+:root[data-theme=phantom] .topbar,:root[data-theme=phantom] .department-topbar{background:#000!important;border-bottom:3px solid #e60012}
+:root[data-theme=phantom] .scroll-progress{height:5px;background:repeating-linear-gradient(-45deg,#e60012 0 10px,#fff 10px 20px)}
+:root[data-theme=phantom] .cursor-halo{border:none;background:#e60012;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);animation:phantom-spin 3s linear infinite;opacity:.85!important}
+@keyframes phantom-spin{to{rotate:360deg}}
+:root[data-theme=phantom] .rail-comet{background:#e60012;border-radius:0;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);box-shadow:none}
+:root[data-theme=phantom] :is(.panel-head h2,.department-toolbar>h2,.att-section h2,.section-title){display:inline-block;background:#fff;color:#000;padding:0 12px;transform:skewX(-10deg) rotate(-1deg);box-shadow:4px 4px 0 #e60012}
+/* Page changes: a red slash wipes across */
+:root[data-theme=phantom]:not([data-motion=off]) .fade-in>*{animation:phantom-in .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes phantom-in{from{opacity:0;translate:60px 0;transform:skewX(-14deg)}}
+:root[data-theme=phantom]::view-transition-new(root){animation:phantom-wipe .5s cubic-bezier(.7,0,.2,1) both}
+@keyframes phantom-wipe{from{clip-path:polygon(110% 0,130% 0,110% 100%,90% 100%)}to{clip-path:polygon(-30% 0,130% 0,110% 100%,-50% 100%)}}
+.phantom-splash{position:fixed;inset:0;z-index:96;pointer-events:none;display:grid;place-items:center;background:linear-gradient(118deg,transparent 0 38%,#e60012 38% 62%,transparent 62%);animation:phantom-flash 1.9s ease both}
+.calling-card{background:#fff;color:#000;padding:26px 48px;border:4px solid #000;box-shadow:14px 14px 0 #000;transform:rotate(-6deg);text-align:center;animation:card-slam 1.9s cubic-bezier(.2,1.6,.4,1) both;display:grid;gap:6px}
+.calling-card small{font-style:italic;font-weight:700;color:#e60012;letter-spacing:.2em}.calling-card b{font-size:44px;font-weight:900;font-style:italic}.calling-card span{font-weight:700}
+@keyframes phantom-flash{0%{opacity:0;clip-path:polygon(0 0,0 0,0 100%,0 100%)}15%{opacity:1;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}80%{opacity:1}100%{opacity:0}}
+@keyframes card-slam{0%{scale:3;opacity:0;rotate:-30deg}18%{scale:.95;opacity:1;rotate:0deg}24%{scale:1.04}30%{scale:1}82%{opacity:1}100%{opacity:0;translate:0 -30px}}
+:root[data-motion=off] :is(.egg-splash){display:none}
+@media (prefers-reduced-motion:reduce){.egg-splash{display:none}:root[data-theme=phantom] .cursor-halo{animation:none}}

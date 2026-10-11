@@ -33,6 +33,10 @@ const THEMES = {
   noir: c => c.l >= .5
     ? { ...c, l: clamp(.06 + (1 - c.l) * .7), s: chroma(c) > .12 ? c.s * .5 : .1, h: chroma(c) > .12 ? c.h : 40 }
     : { ...c, l: clamp(.92 - c.l * .45), s: chroma(c) > .12 ? c.s * .6 : .18, h: chroma(c) > .12 ? c.h : 40 },
+  // Persona: ink blacks and paper whites with no warmth; red and other coloured accents keep their hue.
+  phantom: c => c.l >= .5
+    ? { ...c, l: clamp(.05 + (1 - c.l) * .55), s: chroma(c) > .12 ? c.s * .6 : 0, h: chroma(c) > .12 ? c.h : 0 }
+    : { ...c, l: clamp(.96 - c.l * .35), s: chroma(c) > .12 ? c.s * .5 : 0, h: c.h },
   // White and gold: warm creams become clean whites, borders turn neutral grey; text and accents stay.
   ivory: c => c.l >= .9 ? { ...c, l: clamp(c.l + (1 - c.l) * .6), s: c.s * .15 } : c.l >= .72 ? { ...c, s: c.s * .3 } : c,
 };

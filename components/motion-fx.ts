@@ -5,7 +5,7 @@
 type RGB = [number, number, number];
 type Node = { x: number; y: number; vx: number; vy: number; r: number; phase: number; hue: number };
 type Spark = { x: number; y: number; ox: number; oy: number; dx: number; dy: number; r: number; delay: number; color: RGB };
-type Burst = { x: number; y: number; born: number; sparks: Spark[]; ring: number; color: RGB; strong: boolean };
+type Burst = { x: number; y: number; born: number; sparks: Spark[]; ring: number; color: RGB; strong: boolean; shape: string };
 export type FxState = { mode: string; motion: string; reduced: boolean; pointerX: number; pointerY: number; pointerOn: boolean; scrollV: number };
 
 const hexRgb = (value: string, fallback: RGB): RGB => {
@@ -37,6 +37,8 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
   let nodes: Node[] = [], frame = 0, last = 0, palette = readPalette(), kind = '';
   const waves: { x: number; y: number; born: number }[] = [];
   const seed = (w: number, h: number) => {
+    if (kind === 'bubbles') { nodes = Array.from({ length: Math.min(34, Math.round(w * h / 45000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .15, vy: -(.15 + Math.random() * .35), r: 8 + Math.random() * 34, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
+    if (kind === 'phantom') { nodes = Array.from({ length: 16 }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: -(.3 + Math.random() * .6), vy: .15 + Math.random() * .35, r: 6 + Math.random() * 16, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
     const fireflies = kind === 'fireflies';
     const count = fireflies ? Math.min(46, Math.round(w * h / 30000)) : Math.min(120, Math.round(w * h / 13000));
     nodes = Array.from({ length: count }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * (fireflies ? .12 : .22), vy: fireflies ? -(.08 + Math.random() * .22) : (Math.random() - .5) * .22, r: fireflies ? 1.4 + Math.random() * 2.2 : .9 + Math.random() * 1.6, phase: Math.random() * Math.PI * 2, hue: Math.random() }));
@@ -53,12 +55,14 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
     for (const n of nodes) {
       if (live) {
         n.phase += .02 * dt * speed;
-        if (kind === 'fireflies') { n.x += (n.vx + Math.sin(n.phase) * .18) * dt * speed; n.y += n.vy * dt * speed; }
+        if (kind === 'bubbles') { n.x += (n.vx + Math.sin(n.phase) * .25) * dt * speed; n.y += n.vy * dt * speed; }
+        else if (kind === 'phantom') { n.x += n.vx * dt * speed; n.y += n.vy * dt * speed; }
+        else if (kind === 'fireflies') { n.x += (n.vx + Math.sin(n.phase) * .18) * dt * speed; n.y += n.vy * dt * speed; }
         else { n.x += n.vx * dt * speed; n.y += n.vy * dt * speed; }
         n.y -= s.scrollV * 1.6 * dt * (.4 + n.r / 3);
         if (near) {
           const dx = n.x - px, dy = n.y - py, d = Math.hypot(dx, dy);
-          if (kind === 'fireflies' ? d < 260 && d > 30 : d < 150 && d > .1) {
+          if (kind === 'phantom' ? false : kind === 'fireflies' ? d < 260 && d > 30 : d < 150 && d > .1) {
             const f = kind === 'fireflies' ? -.012 * (1 - d / 260) : 1.6 * (1 - d / 150);
             n.x += (kind === 'fireflies' ? dx * f : dx / d * f) * dt; n.y += (kind === 'fireflies' ? dy * f : dy / d * f) * dt;
           }
@@ -67,11 +71,33 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
           const age = (now - wv.born) / 1100, radius = easeOut(age) * 260, dx = n.x - wv.x, dy = n.y - wv.y, d = Math.hypot(dx, dy) || 1;
           if (Math.abs(d - radius) < 36) { const push = (1 - age) * 2.4 * dt; n.x += dx / d * push; n.y += dy / d * push; }
         }
-        if (n.x < -20) n.x = w + 20; else if (n.x > w + 20) n.x = -20;
-        if (n.y < -20) n.y = h + 20; else if (n.y > h + 20) n.y = -20;
+        const m = n.r + 20;
+        if (n.x < -m) n.x = w + m; else if (n.x > w + m) n.x = -m;
+        if (n.y < -m) n.y = h + m; else if (n.y > h + m) n.y = -m;
       }
     }
-    if (kind === 'fireflies') {
+    if (kind === 'bubbles') {
+      // Frutiger Aero: glassy bubbles with a rim light and a bright highlight.
+      for (const n of nodes) {
+        const g = ctx.createRadialGradient(n.x - n.r * .3, n.y - n.r * .35, n.r * .1, n.x, n.y, n.r);
+        g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(.55, 'rgba(160,225,255,.08)'); g.addColorStop(.85, 'rgba(120,205,255,.22)'); g.addColorStop(1, 'rgba(255,255,255,.65)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.ellipse(n.x - n.r * .38, n.y - n.r * .45, n.r * .28, n.r * .14, -.6, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (kind === 'phantom') {
+      // Persona: slowly turning red and black rays from the pointer side, with drifting stars.
+      const cx = near ? px : w * .78, cy = near ? py : h * .3, turn = now / 9000, rays = 18, len = Math.hypot(w, h);
+      for (let i = 0; i < rays; i++) {
+        const a = turn + i / rays * Math.PI * 2;
+        ctx.fillStyle = i % 2 ? 'rgba(230,0,18,.10)' : 'rgba(0,0,0,.10)';
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len); ctx.lineTo(cx + Math.cos(a + Math.PI / rays) * len, cy + Math.sin(a + Math.PI / rays) * len); ctx.closePath(); ctx.fill();
+      }
+      for (const n of nodes) {
+        ctx.save(); ctx.translate(n.x, n.y); ctx.rotate(n.phase + now / 1600);
+        ctx.fillStyle = n.hue > .6 ? 'rgba(230,0,18,.7)' : n.hue > .3 ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.6)';
+        ctx.beginPath(); for (let k = 0; k < 10; k++) { const rr = k % 2 ? n.r * .42 : n.r; ctx.lineTo(Math.cos(k * Math.PI / 5) * rr, Math.sin(k * Math.PI / 5) * rr); } ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+    } else if (kind === 'fireflies') {
       for (const n of nodes) {
         const tw = .45 + .55 * Math.sin(n.phase * 2.3), c = mix(palette.glow1, palette.glow2, n.hue), g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 7);
         g.addColorStop(0, rgba(c, .55 * tw)); g.addColorStop(.3, rgba(c, .2 * tw)); g.addColorStop(1, rgba(c, 0));
@@ -96,7 +122,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
   const loop = (now: number) => { frame = 0; const s = state(); if (document.hidden || s.motion === 'off' || s.reduced) return; draw(now, true); frame = requestAnimationFrame(loop); };
   const sync = () => {
     palette = readPalette(); const s = state();
-    if (s.mode !== 'constellation' && s.mode !== 'fireflies') { cancelAnimationFrame(frame); frame = 0; canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height); return; }
+    if (!['constellation', 'fireflies', 'bubbles', 'phantom'].includes(s.mode)) { cancelAnimationFrame(frame); frame = 0; canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height); return; }
     if (s.motion === 'off' || s.reduced) { cancelAnimationFrame(frame); frame = 0; draw(performance.now(), false); return; }
     if (!frame && !document.hidden) { last = 0; frame = requestAnimationFrame(loop); }
   };
@@ -135,11 +161,16 @@ export function createBursts(canvas: HTMLCanvasElement) {
         return { s, t, alpha: t <= 0 ? 0 : (1 - t) * (t < .12 ? t / .12 : 1) };
       });
       ctx.lineWidth = .7;
-      for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      if (b.shape === 'dot') for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
         const a = pts[i], c = pts[j], d = Math.hypot(a.s.x - c.s.x, a.s.y - c.s.y);
         if (d < 44 && a.alpha > 0 && c.alpha > 0) { ctx.strokeStyle = rgba(b.color, .42 * Math.min(a.alpha, c.alpha) * (1 - d / 44)); ctx.beginPath(); ctx.moveTo(a.s.x, a.s.y); ctx.lineTo(c.s.x, c.s.y); ctx.stroke(); }
       }
-      for (const p of pts) if (p.alpha > 0) { ctx.fillStyle = rgba(p.s.color, .85 * p.alpha); ctx.beginPath(); ctx.arc(p.s.x, p.s.y, p.s.r * (1 - p.t * .5), 0, Math.PI * 2); ctx.fill(); }
+      for (const p of pts) if (p.alpha > 0) {
+        const r = p.s.r * (1 - p.t * .5);
+        if (b.shape === 'shard') { ctx.fillStyle = rgba(p.s.color, .95 * p.alpha); ctx.beginPath(); ctx.moveTo(p.s.x + p.s.dx * .06, p.s.y + p.s.dy * .06); ctx.lineTo(p.s.x - p.s.dy * .03, p.s.y + p.s.dx * .03); ctx.lineTo(p.s.x + p.s.dy * .03, p.s.y - p.s.dx * .03); ctx.closePath(); ctx.fill(); }
+        else if (b.shape === 'bubble') { ctx.strokeStyle = rgba(p.s.color, .8 * p.alpha); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(p.s.x, p.s.y, r * 2.2, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = `rgba(255,255,255,${(.7 * p.alpha).toFixed(3)})`; ctx.beginPath(); ctx.arc(p.s.x - r * .7, p.s.y - r * .7, r * .5, 0, Math.PI * 2); ctx.fill(); }
+        else { ctx.fillStyle = rgba(p.s.color, .85 * p.alpha); ctx.beginPath(); ctx.arc(p.s.x, p.s.y, r, 0, Math.PI * 2); ctx.fill(); }
+      }
     }
     if (bursts.length) frame = requestAnimationFrame(draw);
     else ctx.clearRect(0, 0, w, h);
@@ -152,7 +183,9 @@ export function createBursts(canvas: HTMLCanvasElement) {
         const a = i / count * Math.PI * 2 + (Math.random() - .5) * .5, dist = reach * (.55 + Math.random() * .7), start = 4 + Math.random() * 8;
         return { x, y, ox: Math.cos(a) * start, oy: Math.sin(a) * start, dx: Math.cos(a) * dist, dy: Math.sin(a) * dist, r: .9 + Math.random() * 1.7, delay: Math.random() * 90, color: Math.random() < .55 ? p.brand : mix(p.glow1, p.brand, .3) };
       });
-      bursts.push({ x, y, born: performance.now(), sparks, ring: reach * .9, color: p.brand, strong });
+      const theme = document.documentElement.dataset.theme, shape = theme === 'phantom' ? 'shard' : theme === 'sky' ? 'bubble' : 'dot';
+      if (shape === 'shard') for (const sp of sparks) { sp.dx *= 1.5; sp.dy *= 1.5; sp.color = Math.random() < .5 ? [230, 0, 18] : Math.random() < .5 ? [0, 0, 0] : [255, 255, 255]; }
+      bursts.push({ x, y, born: performance.now(), sparks, ring: reach * .9, color: p.brand, strong, shape });
       if (!frame) frame = requestAnimationFrame(draw);
     },
     active: () => bursts.length,

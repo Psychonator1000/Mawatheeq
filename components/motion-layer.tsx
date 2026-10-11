@@ -1,6 +1,6 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,type CSSProperties} from 'react';
 import {ArrowUp} from 'lucide-react';
-import {motionAllowed,pointerEffectsOn} from '@/lib/appearance';
+import {motionAllowed,pointerEffectsOn,unlockTheme,SECRET_WORDS} from '@/lib/appearance';
 import {createBackdrop,createBursts,type FxState} from './motion-fx';
 import './motion.css';
 import './themes.generated.css';
@@ -28,7 +28,7 @@ type Mark={top:number;label:string;el:HTMLElement};
  * touch input, the "off" motion level and reduced-motion preferences.
  */
 export default function MotionLayer() {
- const [showTop,setShowTop]=useState(false),[marks,setMarks]=useState<Mark[]>([]),[active,setActive]=useState(-1),[scrollable,setScrollable]=useState(false);
+ const [showTop,setShowTop]=useState(false),[splash,setSplash]=useState(''),[marks,setMarks]=useState<Mark[]>([]),[active,setActive]=useState(-1),[scrollable,setScrollable]=useState(false);
  const ambient=useRef<HTMLCanvasElement>(null),burst=useRef<HTMLCanvasElement>(null),marksRef=useRef<Mark[]>([]);
  useEffect(()=>{
   const root=document.documentElement,reducedQuery=matchMedia('(prefers-reduced-motion: reduce)');
@@ -36,7 +36,7 @@ export default function MotionLayer() {
   let scrollDir='down',lastScrollAt=0;
   let lastTop=scrollY,lastTime=performance.now(),velocity=0,velFrame=0,settle=0,lastTick=0;
   const fx:FxState={mode:'',motion:'',reduced:false,pointerX:-999,pointerY:-999,pointerOn:false,scrollV:0};
-  const state=()=>{fx.mode=root.dataset.backdrop||'constellation';fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches;fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
+  const state=()=>{const backdropMode=root.dataset.backdrop||'constellation',theme=root.dataset.theme;fx.mode=backdropMode==='none'?'none':theme==='sky'?'bubbles':theme==='phantom'?'phantom':backdropMode;fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches;fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
   const backdrop=ambient.current?createBackdrop(ambient.current,state):null,bursts=burst.current?createBursts(burst.current):null;
   const unset=(...names:string[])=>(el:HTMLElement)=>names.forEach(n=>el.style.removeProperty(n));
   const trackTilt=tracker(unset('--tilt-x','--tilt-y')),trackMagnet=tracker(unset('--mag-x','--mag-y')),trackGlow=tracker(unset('--gx','--gy'));
@@ -143,19 +143,32 @@ export default function MotionLayer() {
    for(const row of document.querySelectorAll(ROWS))if(!watchedRows.has(row)){watchedRows.add(row);rowObserver.observe(row)}};
   const scheduleMeasure=()=>{if(!measureTimer)measureTimer=window.setTimeout(()=>{watch();measure()},350)};
   const observer=new MutationObserver(scheduleMeasure);observer.observe(document.body,{childList:true,subtree:true});
+  // Easter egg: typing a hidden theme's name anywhere outside a field unlocks and applies it.
+  let typed='',splashTimer=0;
+  const onKey=(e:KeyboardEvent)=>{
+   const t=e.target as HTMLElement|null;if(e.ctrlKey||e.metaKey||e.altKey||e.key.length!==1||t?.closest('input,textarea,select,[contenteditable=true]'))return;
+   if(e.shiftKey&&e.key.toLowerCase()==='t'&&!document.querySelector('[role=dialog]')){scrollTo({top:0,behavior:motionAllowed()?'smooth':'auto'});return}
+   typed=(typed+e.key.toLowerCase()).slice(-12);
+   const word=Object.keys(SECRET_WORDS).find(w=>typed.endsWith(w));if(!word)return;
+   typed='';const theme=SECRET_WORDS[word];unlockTheme(theme);
+   if(motionAllowed()){setSplash(theme);clearTimeout(splashTimer);splashTimer=window.setTimeout(()=>setSplash(''),theme==='phantom'?1900:1500)}
+  };
+  addEventListener('keydown',onKey);
   const onAppearance=()=>{backdrop?.sync()};
   onScroll();scheduleMeasure();
   addEventListener('pointermove',onMove,{passive:true});addEventListener('pointerdown',onDown,{passive:true});addEventListener('pointerup',onUp,{passive:true});addEventListener('pointercancel',onUp,{passive:true});document.addEventListener('pointerleave',onLeave);
   addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',scheduleMeasure,{passive:true});addEventListener('mawatheeq-appearance',onAppearance);reducedQuery.addEventListener('change',onAppearance);
   return()=>{cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
    removeEventListener('pointermove',onMove);removeEventListener('pointerdown',onDown);removeEventListener('pointerup',onUp);removeEventListener('pointercancel',onUp);document.removeEventListener('pointerleave',onLeave);
-   removeEventListener('scroll',onScroll);removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
+   removeEventListener('keydown',onKey);clearTimeout(splashTimer);removeEventListener('scroll',onScroll);removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
    for(const a of ['data-scrolled','data-scrolling','data-pointer','data-hover-action','data-pressing'])root.removeAttribute(a)};
  },[]);
  const jump=(m:Mark)=>{const top=m.el.getBoundingClientRect().top+scrollY-96;scrollTo({top,behavior:motionAllowed()?'smooth':'auto'})};
  return <>
   <div className="ambient" aria-hidden="true"><span className="ambient-blob one"/><span className="ambient-blob two"/><span className="ambient-blob three"/><span className="ambient-spot"/><span className="ambient-grain"/><canvas ref={ambient} className="ambient-canvas"/></div>
   <canvas ref={burst} className="burst-canvas" aria-hidden="true"/>
+  {splash==='phantom'&&<div className="egg-splash phantom-splash" aria-hidden="true"><div className="calling-card"><small>بطاقة دعوة</small><b>سنسرق قلبك!</b><span>— لصوص القلوب</span></div></div>}
+  {splash==='sky'&&<div className="egg-splash aero-splash" aria-hidden="true">{Array.from({length:14},(_,i)=><i key={i} style={{'--i':i} as CSSProperties}/>)}<b>Aero</b></div>}
   <div className="cursor-halo" aria-hidden="true"/>
   <div className="scroll-progress" aria-hidden="true"/>
   {scrollable&&<nav className="scroll-rail" aria-label="أقسام الصفحة"><span className="rail-track" aria-hidden="true"><span className="rail-fill"/><span className="rail-comet"/></span>
