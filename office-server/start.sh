@@ -2,7 +2,7 @@
 # Starts (or updates) the Mawatheeq office server. Run from this folder: sh start.sh
 set -eu
 cd "$(dirname "$0")"
-[ -f .env ] || docker run --rm -v "$PWD:/work" -w /work node:22-alpine node tools/setup-env.mjs
+[ -f .env ] || docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work node:22-alpine node tools/setup-env.mjs
 mkdir -p data/files data/bridge backups
 profiles=""
 grep -q '^BRIDGE_KEY=..*' .env && profiles="--profile bridge"
