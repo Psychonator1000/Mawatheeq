@@ -228,19 +228,26 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 /* Scroll reactions for rows, cards and list items: each sweeps in from the scroll direction when it enters. */
 .sr-down{animation:sr-down .62s cubic-bezier(.2,.85,.25,1.08) var(--sr-delay,0ms) both}
 .sr-up{animation:sr-up .62s cubic-bezier(.2,.85,.25,1.08) var(--sr-delay,0ms) both}
-tbody tr.sr-down{animation-name:sr-row-down}tbody tr.sr-up{animation-name:sr-row-up}
 @keyframes sr-down{from{opacity:0;translate:0 44px;scale:.94;filter:blur(3px)}}
 @keyframes sr-up{from{opacity:0;translate:0 -44px;scale:.94;filter:blur(3px)}}
-@keyframes sr-row-down{from{opacity:0;transform:perspective(900px) rotateX(-32deg) translateY(26px);filter:blur(2px)}}
-@keyframes sr-row-up{from{opacity:0;transform:perspective(900px) rotateX(32deg) translateY(-26px);filter:blur(2px)}}
 :root[data-motion=calm] :is(.sr-down,.sr-up){animation-duration:.35s}
-:root[data-motion=calm] :is(.sr-down,.sr-up,tbody tr.sr-down,tbody tr.sr-up){animation-name:sr-fade}
+:root[data-motion=calm] :is(.sr-down,.sr-up){animation-name:sr-fade}
 @keyframes sr-fade{from{opacity:0}}
 /* While scrolling, rows and items trail behind in a wave and spring back. */
-:root[data-motion=full][data-scrolling] :is(tbody tr,.my-work-item,.agenda-item,.client-card,.person-card,.collection-card,.timeline-item,.doc-row,.legend-row,.bar-item,.notice-list li,.comment-list li){transform:translate3d(0,calc(var(--scroll-v,0)*-16px),0)}
-:root[data-motion=full] :is(tbody tr,.my-work-item,.agenda-item,.client-card,.person-card,.collection-card,.timeline-item,.doc-row,.legend-row,.bar-item,.notice-list li,.comment-list li){transition:transform .55s cubic-bezier(.2,.9,.25,1.2),background-color .2s,box-shadow .25s}
-:root[data-motion=full] :is(tbody tr,.client-card,.person-card,.legend-row,.bar-item):nth-child(5n+2){transition-duration:.65s,.2s,.25s}
-:root[data-motion=full] :is(tbody tr,.client-card,.person-card,.legend-row,.bar-item):nth-child(5n+3){transition-duration:.75s,.2s,.25s}
-:root[data-motion=full] :is(tbody tr,.client-card,.person-card,.legend-row,.bar-item):nth-child(5n+4){transition-duration:.85s,.2s,.25s}
-:root[data-motion=full] :is(tbody tr,.client-card,.person-card,.legend-row,.bar-item):nth-child(5n){transition-duration:.95s,.2s,.25s}
+:root[data-motion=full][data-scrolling] :is(.my-work-item,.agenda-item,.client-card,.person-card,.collection-card,.timeline-item,.doc-row,.legend-row,.bar-item,.notice-list li,.comment-list li){transform:translate3d(0,calc(var(--scroll-v,0)*-16px),0)}
+:root[data-motion=full] :is(.my-work-item,.agenda-item,.client-card,.person-card,.collection-card,.timeline-item,.doc-row,.legend-row,.bar-item,.notice-list li,.comment-list li){transition:transform .55s cubic-bezier(.2,.9,.25,1.2),background-color .2s,box-shadow .25s}
+:root[data-motion=full] :is(.client-card,.person-card,.legend-row,.bar-item):nth-child(5n+2){transition-duration:.65s,.2s,.25s}
+:root[data-motion=full] :is(.client-card,.person-card,.legend-row,.bar-item):nth-child(5n+3){transition-duration:.75s,.2s,.25s}
+:root[data-motion=full] :is(.client-card,.person-card,.legend-row,.bar-item):nth-child(5n+4){transition-duration:.85s,.2s,.25s}
+:root[data-motion=full] :is(.client-card,.person-card,.legend-row,.bar-item):nth-child(5n){transition-duration:.95s,.2s,.25s}
 .att-grid tbody tr{transform:none!important}
+
+/* Table rows: revealed once, cell after cell, the first time they scroll into view (no row transforms,
+   so rows never separate from the table). A soft spotlight follows the row at the reading line while scrolling. */
+.row-reveal>td{animation:cell-in .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--sr-delay,0ms) + var(--ci,0) * 28ms)}
+.row-reveal>td:nth-child(2){--ci:1}.row-reveal>td:nth-child(3){--ci:2}.row-reveal>td:nth-child(4){--ci:3}.row-reveal>td:nth-child(5){--ci:4}.row-reveal>td:nth-child(6){--ci:5}.row-reveal>td:nth-child(n+7){--ci:6}
+@keyframes cell-in{from{opacity:0;translate:0 10px}}
+:root[data-motion=calm] .row-reveal>td{animation-name:sr-fade;animation-duration:.3s}
+:is(.case-table,.office-table)>tbody>tr{transition:background-color .35s ease,box-shadow .35s ease}
+:is(.case-table,.office-table)>tbody>tr[data-spot]{background-color:color-mix(in srgb,var(--brand) 7%,transparent);box-shadow:inset -4px 0 0 var(--brand)}
+:is(.case-table,.office-table)>tbody>tr[data-spot] .number-link{text-shadow:0 0 14px color-mix(in srgb,var(--brand) 35%,transparent)}
