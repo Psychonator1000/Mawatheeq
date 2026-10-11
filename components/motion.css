@@ -7,6 +7,7 @@
 :root[data-theme=graphite]{--brand:#33393f;--brand-deep:#272c31;--brand-ink:#1c2024;--brand-hover:#464e56;--brand-ring:#7d868f;--glow-1:#a9b4bf;--glow-2:#d3cbbd;--glow-3:#c4ccd4}
 :root[data-theme=sunflower]{--brand:#a57400;--brand-deep:#8a6100;--brand-ink:#4a3600;--brand-hover:#b98400;--brand-ring:#f0c040;--glow-1:#ffe14d;--glow-2:#fff0a0;--glow-3:#ffd6a0;--background:#fffbea}
 :root[data-theme=ivory]{--brand:#9a7413;--brand-deep:#7d5d0e;--brand-ink:#5a430a;--brand-hover:#b38a1f;--brand-ring:#d6b55a;--glow-1:#f3d77a;--glow-2:#fbedc0;--glow-3:#fff7e0;--background:#fbfaf7}
+:root[data-theme=royal]{--brand:#163a66;--brand-deep:#0f2a4a;--brand-ink:#0a1d33;--brand-hover:#1f4d85;--brand-ring:#c9a338;--glow-1:#d4af37;--glow-2:#9fb8d9;--glow-3:#f1e2b0;--background:#f3f5f9}
 :root[data-theme=sky]{--brand:#1b6fa0;--brand-deep:#155a83;--brand-ink:#0b2e45;--brand-hover:#2484bd;--brand-ring:#7cc4ee;--glow-1:#8fd3ff;--glow-2:#c7ecff;--glow-3:#e6f6ff;--background:#f0f8fd}
 :root[data-theme=teal]{--brand:#0f6e6a;--brand-deep:#0b5956;--brand-ink:#073f3d;--brand-hover:#16857f;--brand-ring:#5fb3ad;--glow-1:#7ee0d2;--glow-2:#bdeee4;--glow-3:#e6dcb8;--background:#eef4f1}
 :root[data-theme=sunset]{--brand:#b0451f;--brand-deep:#923819;--brand-ink:#652611;--brand-hover:#c4562c;--brand-ring:#e0906b;--glow-1:#ffb27a;--glow-2:#ffd6a8;--glow-3:#f7b8a8;--background:#f8f0e8}
