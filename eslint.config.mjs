@@ -12,7 +12,18 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated OCR assets and the Pages build output.
+    "public/ocr/**",
+    "dist-pages/**",
+    // Legacy Sites server routes; not part of the GitHub Pages application.
+    "app/api/**",
   ]),
+  {
+    rules: {
+      // Data loaders intentionally reset loading/error state before fetching.
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
   {
     files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],
     rules: {

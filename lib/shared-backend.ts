@@ -1,18 +1,20 @@
 import { backend } from './supabase-client';
 import { localRequest, fileRequest, clientRequest } from './local-auth';
-import { DEFAULT_RULES } from './domain';
+import { DEFAULT_RULES, type CaseRecord, type Rules } from './domain';
 import { enrichCase, type ClientEntity } from './clients';
 import { canReadCases, type Permissions } from './permissions';
+
+type StoredRow = { id: string; revision: number; payload: Record<string, unknown>; archived?: boolean; filename?: string; file_key?: string | null; updated_at: string };
 
 function checked<T>({ data, error }: { data: T; error: { message: string } | null }): T {
   if (error) throw new Error(error.message);
   return data;
 }
 
-async function allRows(table: string): Promise<any[]> {
-  const rows: any[] = [];
+async function allRows(table: string): Promise<StoredRow[]> {
+  const rows: StoredRow[] = [];
   for (let from = 0; ; from += 500) {
-    const page = await localRequest(table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', { offset: from }) || [];
+    const page = await localRequest<StoredRow[] | null>(table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', { offset: from }) || [];
     rows.push(...page);
     if (page.length < 500) return rows;
   }
@@ -21,21 +23,21 @@ async function allRows(table: string): Promise<any[]> {
 async function allClients(action: 'list' | 'lookup') {
   const clients: ClientEntity[] = []; let canMerge = false;
   for (let offset = 0; ; offset += 500) {
-    const page = await clientRequest(action, { offset }); clients.push(...page.clients); canMerge = page.canMerge;
+    const page = await clientRequest<{ clients: ClientEntity[]; canMerge: boolean }>(action, { offset }); clients.push(...page.clients); canMerge = page.canMerge;
     if (page.clients.length < 500) return { clients, canMerge };
   }
 }
 
-export async function sharedRequest(path: string, init?: RequestInit): Promise<any> {
+export async function sharedRequest(path: string, init?: RequestInit): Promise<unknown> {
   const method = init?.method || 'GET';
   if (path === '/api/cases' && method === 'GET') {
     const access = await localRequest<Permissions>('access');
     const canRead = canReadCases(access);
     const [rows, settings, directory] = await Promise.all([
       canRead ? allRows('mawatheeq_cases') : [],
-      localRequest('rules'), canRead ? allClients(access.sections.includes('clients') ? 'list' : 'lookup') : {clients: [], canMerge: false},
+      localRequest<Rules | null>('rules'), canRead ? allClients(access.sections.includes('clients') ? 'list' : 'lookup') : {clients: [], canMerge: false},
     ]);
-    return { ...directory, cases: rows.map(row => enrichCase({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived }, directory.clients)), rules: settings || DEFAULT_RULES };
+    return { ...directory, cases: rows.map(row => enrichCase({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived } as CaseRecord, directory.clients)), rules: settings || DEFAULT_RULES };
   }
   if (path === '/api/cases' && method === 'POST') {
     const body = JSON.parse(String(init?.body));

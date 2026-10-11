@@ -11,7 +11,7 @@ function saveToken(value: string) {
   if (value) localStorage.setItem(storageKey, value); else localStorage.removeItem(storageKey);
   announce();
 }
-async function sessionRequest<T = any>(endpoint: string, action: string, data: Record<string, unknown> = {}): Promise<T> {
+async function sessionRequest<T = unknown>(endpoint: string, action: string, data: Record<string, unknown> = {}): Promise<T> {
   await loadBackend();
   const current = token || localStorage.getItem(storageKey) || '';
   if (!current) throw new Error('يرجى تسجيل الدخول أولاً.');
@@ -22,10 +22,10 @@ async function sessionRequest<T = any>(endpoint: string, action: string, data: R
   }
   return result as T;
 }
-export const localRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_local_request', action, data);
-export const clientRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_client_request', action, data);
-export const officeRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_office_request', action, data);
-export const departmentRequest = <T = any>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_department_request', action, data);
+export const localRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_local_request', action, data);
+export const clientRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_client_request', action, data);
+export const officeRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_office_request', action, data);
+export const departmentRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_department_request', action, data);
 export async function restoreSession(): Promise<LocalUser | null> {
   await loadBackend();
   token = localStorage.getItem(storageKey) || '';

@@ -2,13 +2,15 @@ import { DEFAULT_RULES } from './domain';
 
 export const sharedBackend = process.env.NEXT_PUBLIC_DATA_BACKEND === 'supabase';
 
+// Untyped JSON boundary: each caller relies on the response shape of its own endpoint.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function requestData(path: string, init?: RequestInit): Promise<any> {
   if (sharedBackend) {
     const { sharedRequest } = await import('./shared-backend');
     return sharedRequest(path, init);
   }
   const response = await fetch(path, init);
-  const data = await response.json() as any;
+  const data = await response.json() as { error?: string };
   if (!response.ok) throw new Error(data.error || 'تعذر الاتصال. يرجى المحاولة مرة أخرى.');
   return data;
 }
