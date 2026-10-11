@@ -39,3 +39,17 @@
 /* Department accents in the dark theme. */
 :root[data-theme=noir] [class*=theme-]{--dept-soft:color-mix(in srgb,var(--brand) 12%,#15130f)}
 :root[data-theme=noir] .department-hero p{color:#b8ab92}
+/* Light sky blue */
+:root[data-theme=sky]{--sidebar:#a9dcfb;--sidebar-foreground:#0f3a57;--sidebar-primary:#0f3a57;--sidebar-primary-foreground:#d8f0ff;--sidebar-accent:#c6e9fe;--sidebar-accent-foreground:#0b2e45;--sidebar-border:#0000000f;--sidebar-ring:#1b6fa0;--primary-foreground:#0b2e45}
+:root[data-theme=sky] [data-slot=sidebar-container]{background:linear-gradient(180deg,#bfe6ff,#93d1f7)}
+:root[data-theme=sky] .brand-en{color:#0b2e45}
+:root[data-theme=sky] :is(.brand-ar,.nav-section,.sidebar-foot){color:#2d6185}
+:root[data-theme=sky] .brand-mark{color:#0f3a57;border-color:#0f3a5766}
+:root[data-theme=sky] .nav-count{border-color:#00000022}
+:root[data-theme=sky] .nav-button[data-active=true]{background:#f3fbff!important;color:#0f3a57!important}
+:root[data-theme=sky] .sidebar-rail{background:#00000010}
+:root[data-theme=sky] :is(.btn.primary,.stat.featured,.back-to-top){background:linear-gradient(135deg,#a8dfff,#6cc3f3);border-color:#5cb6ea;color:#0b2e45}
+:root[data-theme=sky] .btn.primary:hover{background:linear-gradient(135deg,#bce7ff,#82cdf6)}
+:root[data-theme=sky] .stat.featured :is(.stat-label,.stat-foot,.stat-label svg){color:#235777}
+:root[data-theme=sky] .department-brand .brand-mark{background:#8fd3ff;color:#0b2e45;border-color:#5cb6ea}
+:root[data-theme=sky] .payroll-totals>div{background:linear-gradient(135deg,#a8dfff,#6cc3f3);color:#0b2e45}
