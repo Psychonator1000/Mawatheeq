@@ -27,7 +27,7 @@ const employee=(n,name)=>({id:'53000000-0000-4000-8000-00000000000'+n,workspace:
 await dept('hr','save_record',{record:employee(1,'موظف حضور أول')});await dept('hr','save_record',{record:employee(2,'موظف حضور ثان')});
 // Previous office month, so every day is in the past: a late day and an on-time day for PIN 101.
 const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuwait'}).format(new Date());
-const prev=new Date(Date.UTC(Number(today.slice(0,4)),Number(today.slice(5,7))-2,1));const month=prev.toISOString().slice(0,7);
+const prev=new Date(Date.UTC(Number(today.slice(0,4)),Number(today.slice(5,7))-2,1));
 const workdays=[];for(let d=1;d<=28;d++){const date=new Date(Date.UTC(prev.getUTCFullYear(),prev.getUTCMonth(),d));if(date.getUTCDay()<=4)workdays.push(date.toISOString().slice(0,10))}
 const [lateDay,onTimeDay]=workdays;
 await att('import_punches',{punches:[{pin:'101',wall:lateDay+' 08:40:00'},{pin:'101',wall:lateDay+' 16:00:00'},{pin:'101',wall:onTimeDay+' 07:58:00'},{pin:'101',wall:onTimeDay+' 16:05:00'},{pin:'999',wall:onTimeDay+' 08:00:00'}]});

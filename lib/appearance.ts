@@ -1,25 +1,33 @@
 // Per-device display preferences. Purely cosmetic: never affects records or permissions.
 export const THEMES = {
-  burgundy: { label: 'عنابي مواثيق', swatch: '#74283b' },
-  navy: { label: 'كحلي', swatch: '#1f3d63' },
-  emerald: { label: 'زمردي', swatch: '#1d5e4b' },
-  plum: { label: 'بنفسجي', swatch: '#5a2d6e' },
-  copper: { label: 'نحاسي', swatch: '#8a4a24' },
-  graphite: { label: 'رمادي فحمي', swatch: '#33393f' },
+  burgundy: { label: 'عنابي مواثيق', swatch: '#74283b', accent: '#d8b98f' },
+  sunflower: { label: 'أصفر مشمس', swatch: '#8a6500', accent: '#ffd23f' },
+  sky: { label: 'أزرق سماوي', swatch: '#1d6fa5', accent: '#8fd3ff' },
+  navy: { label: 'كحلي', swatch: '#1f3d63', accent: '#b9cbe0' },
+  teal: { label: 'فيروزي', swatch: '#0f6e6a', accent: '#7ee0d2' },
+  emerald: { label: 'زمردي', swatch: '#1d5e4b', accent: '#c9dfb8' },
+  sunset: { label: 'برتقالي الغروب', swatch: '#b0451f', accent: '#ffb27a' },
+  rose: { label: 'وردي', swatch: '#a3325a', accent: '#f7a8c4' },
+  plum: { label: 'بنفسجي', swatch: '#5a2d6e', accent: '#e0c2d6' },
+  indigo: { label: 'نيلي', swatch: '#3b3f9e', accent: '#b4b8ff' },
+  copper: { label: 'نحاسي', swatch: '#8a4a24', accent: '#ecd0a3' },
+  graphite: { label: 'رمادي فحمي', swatch: '#33393f', accent: '#c4ccd4' },
 } as const;
 export const BACKDROPS = {
+  constellation: { label: 'شبكة نقاط حية', hint: 'نقاط متصلة تتجنب المؤشر وتتموج مع الضغط والتمرير' },
+  fireflies: { label: 'يراعات مضيئة', hint: 'أضواء صغيرة تطفو وتنجذب إلى المؤشر' },
   aurora: { label: 'شفق متحرك', hint: 'هالات لونية ناعمة تتبع المؤشر' },
   spotlight: { label: 'شبكة وضوء', hint: 'شبكة نقطية مع ضوء يتبع المؤشر' },
   waves: { label: 'موجات', hint: 'تدرجات تنساب ببطء' },
   none: { label: 'بدون خلفية', hint: 'خلفية ثابتة هادئة' },
 } as const;
 export const MOTION_LEVELS = {
-  full: { label: 'كاملة', hint: 'إمالة البطاقات، الظهور عند التمرير، وتفاعل الخلفية' },
+  full: { label: 'كاملة', hint: 'نقاط عند الضغط، محتوى يتفاعل مع التمرير، إمالة البطاقات وتفاعل الخلفية' },
   calm: { label: 'هادئة', hint: 'حركة خفيفة دون إمالة أو تتبع للمؤشر' },
   off: { label: 'متوقفة', hint: 'بدون أي حركة' },
 } as const;
 export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS };
-export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'aurora', motion: 'full' };
+export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full' };
 const key = 'mawatheeq.appearance.v1';
 
 export function loadAppearance(): Appearance {

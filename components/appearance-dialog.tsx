@@ -6,9 +6,9 @@ import {BACKDROPS,DEFAULT_APPEARANCE,MOTION_LEVELS,THEMES,loadAppearance,saveApp
 export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
  const [value,setValue]=useState<Appearance>(loadAppearance);
  const set=<K extends keyof Appearance>(key:K,next:Appearance[K])=>{const updated={...value,[key]:next};setValue(updated);saveAppearance(updated)};
- const group=<K extends keyof Appearance>(key:K,title:string,options:Record<string,{label:string;hint?:string;swatch?:string}>,swatches=false)=>
+ const group=<K extends keyof Appearance>(key:K,title:string,options:Record<string,{label:string;hint?:string;swatch?:string;accent?:string}>,swatches=false)=>
   <fieldset className="appearance-section"><legend><h3>{title}</h3></legend><div className={swatches?'swatches':'choice-list'}>{Object.entries(options).map(([id,o])=>
-   <label key={id} className="choice"><input type="radio" name={key} value={id} checked={value[key]===id} onChange={()=>set(key,id as Appearance[K])}/>{o.swatch&&<span className="swatch-dot" style={{background:o.swatch}}/>}<span>{o.label}{o.hint&&<small>{o.hint}</small>}</span></label>)}</div></fieldset>;
+   <label key={id} className="choice"><input type="radio" name={key} value={id} checked={value[key]===id} onChange={()=>set(key,id as Appearance[K])}/>{o.swatch&&<span className="swatch-dot" style={{background:`linear-gradient(135deg,${o.accent||o.swatch} 0 38%,${o.swatch} 62%)`}}/>}<span>{o.label}{o.hint&&<small>{o.hint}</small>}</span></label>)}</div></fieldset>;
  return <Dialog open onOpenChange={open=>!open&&onClose()}><DialogContent dir="rtl" className="office-dialog appearance-dialog"><DialogHeader><DialogTitle>المظهر والحركة</DialogTitle><DialogDescription>تُحفظ اختياراتك على هذا الجهاز وتطبق فوراً، ولا تؤثر على السجلات أو الزملاء.</DialogDescription></DialogHeader>
   {group('theme','لون الواجهة',THEMES,true)}
   {group('backdrop','الخلفية المتحركة',BACKDROPS)}
