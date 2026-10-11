@@ -251,3 +251,31 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 :is(.case-table,.office-table)>tbody>tr{transition:background-color .35s ease,box-shadow .35s ease}
 :is(.case-table,.office-table)>tbody>tr[data-spot]{background-color:color-mix(in srgb,var(--brand) 7%,transparent);box-shadow:inset -4px 0 0 var(--brand)}
 :is(.case-table,.office-table)>tbody>tr[data-spot] .number-link{text-shadow:0 0 14px color-mix(in srgb,var(--brand) 35%,transparent)}
+
+/* ── Quality of life: text size, density, connection banner, copy chips, clock, what's new ── */
+:root[data-text=large] body{zoom:1.1}
+:root[data-text=xlarge] body{zoom:1.22}
+:root[data-density=compact] :is(.case-table,.office-table) td{padding-block:8px!important}
+:root[data-density=compact] :is(.case-table,.office-table) th{padding-block:9px!important}
+:root[data-density=compact] .case-table .party strong{line-height:1.5}
+:root[data-density=compact] :is(.panel-head){padding:14px 18px 8px}
+:root[data-density=compact] .panel-body{padding:4px 18px 16px}
+:root[data-density=compact] .stat{padding:14px}
+:root[data-density=compact] .stat-num{font-size:30px;line-height:1.4}
+:root[data-density=compact] .nav-button{height:40px!important;margin-bottom:2px}
+:root[data-density=compact] .workspace{padding-top:20px}
+:root[data-density=compact] .department-content>.panel,:root[data-density=compact] .att-section .panel{padding:16px}
+.connection-banner{position:fixed;top:10px;left:50%;translate:-50% 0;z-index:97;display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 12px 30px -12px #0006;animation:pop-in .35s cubic-bezier(.2,.9,.3,1.3) both}
+.connection-banner.offline{background:#a32e38;color:#fff}.connection-banner.online{background:#2f7a4f;color:#fff}
+.connection-banner .pulse{width:9px;height:9px;border-radius:50%;background:currentColor;animation:pulse-ring 1.6s ease-out infinite}
+.copy-chip{display:inline-flex;align-items:center;gap:6px;font:600 12px/1.6 ui-monospace,monospace;direction:ltr;padding:2px 10px;border-radius:999px;border:1px solid var(--border);background:color-mix(in srgb,var(--brand) 6%,var(--card));color:var(--brand);cursor:pointer;transition:background .2s,transform .15s}
+.copy-chip:hover{background:color-mix(in srgb,var(--brand) 14%,var(--card))}.copy-chip:active{transform:scale(.94)}.copy-chip svg{width:13px;height:13px}
+.copy-chip.copied{background:#2f7a4f;color:#fff;border-color:#2f7a4f}
+.case-copy-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.topbar-clock{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted-foreground);display:flex;align-items:center;gap:6px}.topbar-clock b{color:var(--foreground);font-weight:600}
+.greeting{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted-foreground);margin-bottom:4px}.greeting b{color:var(--brand)}
+.whats-new-dot{width:8px;height:8px;border-radius:50%;background:#e0453a;margin-inline-start:auto;box-shadow:0 0 0 0 #e0453a88;animation:pulse-ring 1.8s ease-out infinite}
+.whats-new-list{list-style:none;padding:0;margin:0;display:grid;gap:10px}.whats-new-list li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:12px;font-size:13px;line-height:1.8}.whats-new-list li>span{font-size:18px;line-height:1.4}
+.whats-new-list b{display:block}
+@media(max-width:950px){.topbar-clock{display:none}}
+.account-trigger{position:relative}.avatar-dot{position:absolute;top:-1px;inset-inline-end:-1px;width:9px;height:9px;border-radius:50%;background:#e0453a;border:2px solid var(--background)}
