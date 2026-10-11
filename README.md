@@ -56,6 +56,7 @@ The default commands now run the GitHub Pages application. Configure a developme
 
 ```bash
 pnpm run check
+pnpm run lint
 pnpm run test:domain
 pnpm run test:browse
 pnpm run test:pdf
