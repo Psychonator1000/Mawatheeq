@@ -9,7 +9,13 @@ HR and accounting share one attendance record built from ZKTeco fingerprint punc
   - add or remove device users;
   - run a full sync, set the device clock and read device information;
   - read the command log;
-  - manage office-bridge keys.
+  - manage office-bridge keys;
+  - set the device type (attendance only, door only, or both), the door name and how long the door stays unlocked;
+  - open a door remotely (confirmed first, recorded with the requester's name);
+  - add or edit device users with a card number and device-admin role;
+  - run a sound test or restart the device;
+  - save every stored punch and then clear the device log;
+  - remove a device. Its punches stay in the attendance record, and nothing is erased from the device itself.
 - **HR / accounting → الرواتب والبصمات** links each employee to their fingerprint number (the device User ID). It also sets the monthly salary, its currency and an optional personal work schedule.
 - **HR / accounting → إعدادات الدوام** sets:
   - working hours and work days;
@@ -51,13 +57,17 @@ Without the bridge, import the device's USB `attlog.dat` or a CSV/TXT export fro
 
 Punch times are the device's wall-clock time. The server interprets them in the timezone set in the settings (Asia/Kuwait by default).
 
-## Applying the migration (one time)
+## Applying the migrations (one time)
 
-Apply **after** `20261011150000_record_comments.sql`, because the grant list at the end of this migration includes the comments entry point.
+Apply them in this order, each in its own query:
 
-1. In Supabase open **SQL Editor** → **New query**.
-2. Paste the full contents of `supabase/migrations/20261011180000_attendance.sql` and select **Run**. It is one transaction and only adds tables and functions.
-3. Expect "Success. No rows returned". Reload Mawatheeq; the attendance tabs appear in HR and accounting.
+1. `supabase/migrations/20261011150000_record_comments.sql` (if not applied yet);
+2. `supabase/migrations/20261011180000_attendance.sql`;
+3. `supabase/migrations/20261011200000_attendance_doors.sql` (door devices, device removal and device-user options).
+
+For each one: in Supabase open **SQL Editor** → **New query**, paste the full file and select **Run**. Each file is one transaction and only adds tables, columns and functions; expect "Success. No rows returned". Reload Mawatheeq afterwards.
+
+Door control needs the lock wired to the device's lock relay. Opening a door is limited to HR accounts with edit permission; the unlock time always comes from the device settings.
 
 Until it is applied, HR and accounting work as before and show a short notice in place of the attendance tabs.
 

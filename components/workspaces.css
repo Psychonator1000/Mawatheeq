@@ -33,3 +33,14 @@
 .payroll-panel>.field{max-width:380px;margin-bottom:14px}.payroll-lines{margin-bottom:16px}.payroll-lines th{width:60%}.payroll-lines tr.total th,.payroll-lines tr.total td{font-weight:700;background:var(--dept-soft)}
 @media(max-width:1050px){.att-today{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:650px){.att-today{grid-template-columns:repeat(2,minmax(0,1fr))}.att-grid tbody th{min-width:110px}.device-grid{grid-template-columns:1fr}.month-switcher b{min-width:100px}}
+/* Door devices and device options */
+.btn.danger{background:#a32e38;border-color:#a32e38;color:#fff}.btn.danger:hover{background:#8c2630}
+.device-card.is-door::after{background:linear-gradient(90deg,var(--s),var(--brand))}
+.device-kind{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--brand);margin:0}
+.door-btn{width:100%;min-height:48px;font-size:15px;gap:10px}.door-btn svg{width:20px;height:20px}
+.door-btn:not(:disabled):hover svg{animation:door-swing .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes door-swing{40%{rotate:-18deg}}
+.device-notes{margin:0;font-size:12px}
+.device-more{border-top:1px solid var(--border);padding-top:10px}.device-more summary{cursor:pointer;font-size:13px;color:var(--brand);list-style:none;display:flex;align-items:center;gap:6px}.device-more summary::before{content:'▸';transition:rotate .2s}.device-more[open] summary::before{rotate:90deg}
+.device-more-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.device-more-actions .btn{font-size:12px;padding:6px 10px;min-height:0}
+.user-actions{display:flex;gap:6px;flex-wrap:wrap}.user-actions .btn{font-size:12px;padding:5px 9px;min-height:0}

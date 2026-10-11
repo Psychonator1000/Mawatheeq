@@ -47,13 +47,14 @@ export function createBridge({ api, connectDevice, state, saveState = () => {}, 
         case 'read_info': { const info = await readInfo(client); await api('device_status', { deviceId: device.id, status: 'online', info }); return info; }
         case 'set_time': { await client.setTime(new Date()); return { deviceTime: toWall(await client.getTime?.().catch(() => new Date())) }; }
         case 'fetch_users': { const users = await readUsers(client); await api('device_users', { deviceId: device.id, users }); return { users: users.length }; }
-        case 'add_user': {
-          const users = await readUsers(client), pin = String(cmd.payload.pin);
-          if (users.some(u => u.pin === pin)) throw new Error('رقم البصمة مسجل مسبقاً على الجهاز');
-          const uid = Math.max(0, ...users.map(u => u.uid || 0)) + 1;
-          await client.setUser(uid, pin, String(cmd.payload.name || '').slice(0, 24), '', 0, 0);
+        case 'add_user': case 'update_user': {
+          const users = await readUsers(client), pin = String(cmd.payload.pin), existing = users.find(u => u.pin === pin);
+          if (cmd.kind === 'add_user' && existing) throw new Error('رقم البصمة مسجل مسبقاً على الجهاز');
+          if (cmd.kind === 'update_user' && !existing?.uid) throw new Error('المستخدم غير موجود على الجهاز');
+          const uid = existing?.uid || Math.max(0, ...users.map(u => u.uid || 0)) + 1;
+          await client.setUser(uid, pin, String(cmd.payload.name || '').slice(0, 24), '', Number(cmd.payload.role) === 14 ? 14 : 0, Number(cmd.payload.card) || 0);
           await api('device_users', { deviceId: device.id, users: await readUsers(client) });
-          return { added: pin, uid };
+          return { [cmd.kind === 'add_user' ? 'added' : 'updated']: pin, uid };
         }
         case 'delete_user': {
           const users = await readUsers(client), target = users.find(u => u.pin === String(cmd.payload.pin));
@@ -62,14 +63,25 @@ export function createBridge({ api, connectDevice, state, saveState = () => {}, 
           await api('device_users', { deviceId: device.id, users: await readUsers(client) });
           return { deleted: target.pin };
         }
+        case 'unlock_door': {
+          if (!client.unlockDoor) throw new Error('الجهاز لا يدعم فتح الباب عن بعد');
+          const seconds = Math.min(60, Math.max(1, Number(cmd.payload.seconds) || 5));
+          await client.unlockDoor(seconds);
+          return { opened: true, seconds };
+        }
+        case 'restart': { if (!client.restart) throw new Error('الجهاز لا يدعم إعادة التشغيل عن بعد'); await client.restart(); return { restarted: true }; }
+        case 'voice_test': { await client.voiceTest(); return { played: true }; }
+        case 'clear_logs': {
+          // Never clear the device before every stored punch has reached Mawatheeq.
+          const synced = await uploadLogs(device, client, true);
+          await client.clearAttendanceLog();
+          return { ...synced, cleared: true };
+        }
         default: throw new Error('أمر غير مدعوم');
       }
     });
   }
-  /** One pass: run queued commands, then pull new punches from every enabled device. */
-  async function cycle() {
-    cycles++;
-    const config = await api('config', { version });
+  async function runCommands(config) {
     const devices = new Map(config.devices.map(d => [d.id, d]));
     for (const cmd of config.commands) {
       const device = devices.get(cmd.deviceId);
@@ -83,6 +95,18 @@ export function createBridge({ api, connectDevice, state, saveState = () => {}, 
         log(`✗ ${device?.name || cmd.deviceId}: ${cmd.kind} — ${e?.message || e}`);
       }
     }
+  }
+  /** Quick check for queued commands (door openings must not wait for the next full sync). */
+  async function commands() {
+    const config = await api('config', { version });
+    await runCommands(config);
+    return { commands: config.commands.length };
+  }
+  /** One pass: run queued commands, then pull new punches from every enabled device. */
+  async function cycle() {
+    cycles++;
+    const config = await api('config', { version });
+    await runCommands(config);
     for (const device of config.devices.filter(d => d.enabled)) {
       try {
         const summary = await withDevice(device, async client => {
@@ -101,7 +125,7 @@ export function createBridge({ api, connectDevice, state, saveState = () => {}, 
     }
     return { devices: config.devices.length, commands: config.commands.length };
   }
-  return { cycle };
+  return { cycle, commands };
 }
 
 /** Supabase RPC client for the bridge: the publishable key plus this bridge's own key. */

@@ -3,11 +3,13 @@ import { attendanceRequest } from './local-auth';
 import type { AttAdjustment, AttEmployee, AttLeave, AttPunch, AttendanceSettings } from './attendance';
 
 export type AttContext = { settings: AttendanceSettings; revision: number; today: string; canEdit: boolean; canManageDevices: boolean; isHr: boolean };
-export type AttDevice = { id: string; name: string; host: string; port: number; location: string; enabled: boolean; serial: string | null; info: Record<string, unknown>; status: 'online' | 'offline' | 'unknown'; lastSeen: string | null; lastSync: string | null; lastError: string | null; revision: number; userCount: number; pendingCommands: number };
+export type DeviceKind = 'attendance' | 'access' | 'both';
+export type AttDevice = { id: string; name: string; host: string; port: number; location: string; enabled: boolean; kind?: DeviceKind; doorName?: string; unlockSeconds?: number; notes?: string; serial: string | null; info: Record<string, unknown>; status: 'online' | 'offline' | 'unknown'; lastSeen: string | null; lastSync: string | null; lastError: string | null; revision: number; userCount: number; pendingCommands: number };
 export type AttDeviceUser = { pin: string; uid: number | null; name: string; role: number; card: string; syncedAt: string; employeeId: string | null };
 export type AttCommand = { id: string; deviceId: string; kind: string; payload: Record<string, unknown>; status: 'pending' | 'running' | 'done' | 'failed'; result: Record<string, unknown> | null; error: string | null; requestedBy: string; createdAt: string; finishedAt: string | null };
 export type AttBridge = { id: string; name: string; version: string | null; createdAt: string; lastSeen: string | null; revoked: boolean };
-export const COMMAND_LABELS: Record<string, string> = { sync_logs: 'مزامنة كاملة للبصمات', fetch_users: 'قراءة مستخدمي الجهاز', read_info: 'قراءة معلومات الجهاز', set_time: 'ضبط ساعة الجهاز', add_user: 'إضافة مستخدم إلى الجهاز', delete_user: 'حذف مستخدم من الجهاز' };
+export const COMMAND_LABELS: Record<string, string> = { sync_logs: 'مزامنة كاملة للبصمات', fetch_users: 'قراءة مستخدمي الجهاز', read_info: 'قراءة معلومات الجهاز', set_time: 'ضبط ساعة الجهاز', add_user: 'إضافة مستخدم إلى الجهاز', update_user: 'تعديل مستخدم على الجهاز', delete_user: 'حذف مستخدم من الجهاز', unlock_door: 'فتح الباب عن بعد', restart: 'إعادة تشغيل الجهاز', voice_test: 'اختبار الصوت', clear_logs: 'حفظ البصمات ثم مسحها من الجهاز' };
+export const DEVICE_KINDS: Record<DeviceKind, string> = { attendance: 'حضور وانصراف فقط', access: 'تحكم بباب فقط', both: 'حضور وتحكم بباب' };
 export const COMMAND_STATUS: Record<AttCommand['status'], string> = { pending: 'بانتظار الجسر', running: 'قيد التنفيذ', done: 'تم', failed: 'تعذر' };
 
 let available: Promise<boolean> | null = null;

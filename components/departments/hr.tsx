@@ -11,7 +11,8 @@ import {OfficeSelect} from '../office-shared';
 import PageNavigation from '../page-navigation';
 import {DepartmentHistory,EditorDialog,StatusMessage,useRecords,exportCsv} from './shared';
 import {leaveDays,leaveUsed} from '@/lib/leave';
-import {AttendanceBoard,AttendanceSettingsPanel,AttendanceUnavailable,DevicesPanel,ProfilesPanel,useAttendanceEnabled} from './attendance';
+import {AttendanceBoard,AttendanceSettingsPanel,AttendanceUnavailable,ProfilesPanel,useAttendanceEnabled} from './attendance';
+import DevicesPanel from './devices';
 type Tab='employee'|'leave'|'attendance'|'devices'|'pay'|'settings';
 const ATT_TABS:[Tab,string][]=[['attendance','الحضور'],['devices','الأجهزة'],['pay','الرواتب والبصمات'],['settings','إعدادات الدوام']];
 export default function HR({access}:{access:Permissions}) {
