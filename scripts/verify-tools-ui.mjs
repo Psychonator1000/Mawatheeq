@@ -173,8 +173,12 @@ await page.reload();await page.getByRole('heading',{name:'الموكلون',leve
 assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'navy','Theme survives a reload');
 assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.btn.primary')).backgroundColor),'rgb(31, 61, 99)','Primary actions follow the theme');
 await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
+await page.getByRole('radio',{name:'أصفر مشمس'}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()),'#8a6500','Yellow theme applies');
+await page.getByRole('radio',{name:'أزرق سماوي'}).check();await page.getByRole('radio',{name:/يراعات مضيئة/}).check();
+assert.deepEqual(await page.evaluate(()=>[document.documentElement.dataset.theme,document.documentElement.dataset.backdrop]),['sky','fireflies']);
 await page.getByRole('button',{name:'استعادة الافتراضي'}).click();await page.getByRole('button',{name:'تم'}).click();
 assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'burgundy');
+assert.equal(await page.evaluate(()=>document.documentElement.dataset.backdrop),'constellation','The living dot network is the default backdrop');
 
 // Keyboard shortcuts.
 await page.locator('body').press('Shift+Slash');
@@ -251,6 +255,9 @@ await motion.getByRole('tab',{name:'الطعن والتنفيذ'}).click();
 await motion.getByRole('tabpanel').waitFor();
 await motion.waitForTimeout(1300);
 assert.equal(await motion.locator('.ripple-host').count(),0,'Press ripples remove themselves');
+assert.equal(await motion.locator('canvas.burst-canvas').count(),1);assert.equal(await motion.locator('.ambient-canvas').isVisible(),true,'The constellation backdrop is drawn');
+await motion.mouse.wheel(0,600);await motion.waitForTimeout(1500);
+assert.equal(await motion.evaluate(()=>document.documentElement.hasAttribute('data-scrolling')),false,'Scroll-reactive lag settles after scrolling stops');
 assert.equal(await motion.evaluate(()=>document.documentElement.dataset.motion),'full');
 await lively.close();
 assert.deepEqual(errors,[],'No runtime errors');

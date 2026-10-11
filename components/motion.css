@@ -5,6 +5,13 @@
 :root[data-theme=plum]{--brand:#5a2d6e;--brand-deep:#4a245b;--brand-ink:#371a44;--brand-hover:#6d3c83;--brand-ring:#9a78ab;--glow-1:#b99ac8;--glow-2:#e0c2d6;--glow-3:#d6cbe8}
 :root[data-theme=copper]{--brand:#8a4a24;--brand-deep:#73391a;--brand-ink:#5a2b12;--brand-hover:#a05a2f;--brand-ring:#c08b67;--glow-1:#e0a87f;--glow-2:#ecd0a3;--glow-3:#e8b9a0}
 :root[data-theme=graphite]{--brand:#33393f;--brand-deep:#272c31;--brand-ink:#1c2024;--brand-hover:#464e56;--brand-ring:#7d868f;--glow-1:#a9b4bf;--glow-2:#d3cbbd;--glow-3:#c4ccd4}
+:root[data-theme=sunflower]{--brand:#8a6500;--brand-deep:#6e5000;--brand-ink:#4a3600;--brand-hover:#a07800;--brand-ring:#c9a640;--glow-1:#ffd23f;--glow-2:#ffe89a;--glow-3:#fff0b8;--background:#f8f3e2}
+:root[data-theme=sky]{--brand:#1d6fa5;--brand-deep:#175b88;--brand-ink:#0f3f60;--brand-hover:#2a84bf;--brand-ring:#6fb2dc;--glow-1:#8fd3ff;--glow-2:#c4e9ff;--glow-3:#dff3ff;--background:#eef4f7}
+:root[data-theme=teal]{--brand:#0f6e6a;--brand-deep:#0b5956;--brand-ink:#073f3d;--brand-hover:#16857f;--brand-ring:#5fb3ad;--glow-1:#7ee0d2;--glow-2:#bdeee4;--glow-3:#e6dcb8;--background:#eef4f1}
+:root[data-theme=sunset]{--brand:#b0451f;--brand-deep:#923819;--brand-ink:#652611;--brand-hover:#c4562c;--brand-ring:#e0906b;--glow-1:#ffb27a;--glow-2:#ffd6a8;--glow-3:#f7b8a8;--background:#f8f0e8}
+:root[data-theme=rose]{--brand:#a3325a;--brand-deep:#872849;--brand-ink:#5e1a32;--brand-hover:#b9456e;--brand-ring:#d88aa5;--glow-1:#f7a8c4;--glow-2:#f9d0dc;--glow-3:#e9c9b5;--background:#f8eff1}
+:root[data-theme=indigo]{--brand:#3b3f9e;--brand-deep:#303383;--brand-ink:#21235c;--brand-hover:#4c51b8;--brand-ring:#8c90d6;--glow-1:#b4b8ff;--glow-2:#d6d8ff;--glow-3:#e5d4f0;--background:#f1f1f8}
+body{transition:background-color .6s}
 
 /* Ambient backdrop: behind all content, never interactive. */
 .ambient{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;contain:strict}
@@ -153,3 +160,68 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 @media (prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation:none!important}.ripple-host{display:none}:is(.btn.primary,.icon-btn,.back-to-top,.quick-search-trigger){translate:none!important}}
 :root[data-motion=off] .ripple-host{display:none}
 :root[data-motion=off] ::view-transition-old(root),:root[data-motion=off] ::view-transition-new(root){animation:none!important}
+
+
+/* ── Living layer: canvases, cursor halo, section rail and scroll-reactive content ── */
+.ambient-canvas{position:absolute;inset:0;width:100%;height:100%;display:none}
+:root:is([data-backdrop=constellation],[data-backdrop=fireflies]) .ambient-canvas{display:block}
+:root[data-backdrop=constellation] .ambient-blob{opacity:.34}
+:root[data-backdrop=fireflies] .ambient-blob{opacity:.28;filter:blur(70px)}
+:root:is([data-backdrop=constellation],[data-backdrop=fireflies]) .ambient-spot{opacity:.35}
+.burst-canvas{position:fixed;inset:0;width:100vw;height:100vh;z-index:95;pointer-events:none}
+/* A soft halo trails the mouse and swells over anything clickable. */
+.cursor-halo{position:fixed;left:0;top:0;z-index:94;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;pointer-events:none;border:1.5px solid color-mix(in srgb,var(--brand) 45%,transparent);background:radial-gradient(circle,color-mix(in srgb,var(--glow-1) 22%,transparent),transparent 70%);translate:var(--cx,-100px) var(--cy,-100px);opacity:0;scale:.6;transition:translate .16s cubic-bezier(.2,.8,.2,1),scale .25s cubic-bezier(.3,1.5,.5,1),opacity .3s,background-color .25s,border-color .25s}
+@media (pointer:fine){:root[data-motion=full][data-pointer] .cursor-halo{opacity:1;scale:1}:root[data-motion=full][data-pointer][data-hover-action] .cursor-halo{scale:1.55;border-color:color-mix(in srgb,var(--brand) 70%,transparent);background-color:color-mix(in srgb,var(--brand) 7%,transparent)}:root[data-motion=full][data-pointer][data-pressing] .cursor-halo{scale:.75;transition-duration:.08s}}
+/* Section rail: a minimap of the page's headings with a comet that stretches with scroll speed. */
+.scroll-rail{position:fixed;left:7px;top:18vh;height:64vh;width:22px;z-index:40;display:flex;justify-content:center;animation:rail-in .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rail-in{from{opacity:0;translate:-16px 0}}
+.rail-track{position:absolute;inset-block:0;width:3px;border-radius:3px;background:color-mix(in srgb,var(--brand) 12%,transparent);overflow:visible}
+.rail-fill{position:absolute;inset-inline:0;top:0;height:calc(var(--scroll-progress,0)*100%);border-radius:3px;background:linear-gradient(var(--glow-1),var(--brand));transition:height .12s linear}
+.rail-comet{position:absolute;left:50%;top:calc(var(--scroll-progress,0)*100%);width:11px;height:calc(11px + var(--scroll-speed,0)*46px);translate:-50% -50%;border-radius:999px;background:radial-gradient(circle at 50% 50%,#fff 0 18%,var(--brand) 60%);box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 16%,transparent),0 0 calc(10px + var(--scroll-speed,0)*26px) color-mix(in srgb,var(--glow-1) 90%,transparent);transition:height .3s cubic-bezier(.3,1.4,.5,1)}
+.rail-mark{position:absolute;left:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border:0;padding:0;background:none;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.rail-mark::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--background);border:1.5px solid color-mix(in srgb,var(--brand) 45%,transparent);transition:scale .3s cubic-bezier(.3,1.6,.5,1),background-color .3s,border-color .3s}
+.rail-mark.past::before{background:color-mix(in srgb,var(--brand) 55%,#fff);border-color:transparent}
+.rail-mark.on::before{background:var(--brand);border-color:var(--brand);scale:1.5;box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 18%,transparent)}
+.rail-mark:hover::before,.rail-mark:focus-visible::before{scale:1.8}
+.rail-label{position:absolute;left:24px;white-space:nowrap;font-size:12px;padding:4px 10px;border-radius:8px;background:color-mix(in srgb,var(--card) 92%,transparent);border:1px solid var(--border);box-shadow:0 8px 20px -12px #2b211c55;color:var(--foreground);opacity:0;translate:-6px 0;pointer-events:none;transition:opacity .2s,translate .25s cubic-bezier(.2,.8,.2,1)}
+.rail-mark:hover .rail-label,.rail-mark:focus-visible .rail-label,.rail-mark.on .rail-label{opacity:1;translate:0 0}
+.scroll-rail:not(:hover) .rail-mark.on .rail-label{opacity:0}
+:root[data-scrolling] .scroll-rail .rail-mark.on .rail-label{opacity:1}
+@media (max-width:900px){.scroll-rail{display:none}}
+/* Content reacts to scroll speed: blocks lag elastically by depth, then settle (full motion only). */
+:root[data-motion=full][data-scrolling] :is(.workspace,.department-content) :is(.panel,.stats>.stat,.department-metrics>div,.office-cards>*,.device-card,.att-stat,.quick-card,.page-head,.department-hero){transform:translate3d(0,calc(var(--scroll-v,0)*-14px),0)}
+:root[data-motion=full][data-scrolling] :is(.workspace,.department-content) :is(.stats>.stat,.department-metrics>div,.att-stat):nth-child(even){transform:translate3d(0,calc(var(--scroll-v,0)*-22px),0)}
+:root[data-motion=full] :is(.workspace,.department-content) :is(.panel,.stats>.stat,.department-metrics>div,.office-cards>*,.device-card,.att-stat,.quick-card,.page-head,.department-hero){transition:transform .7s cubic-bezier(.2,.9,.25,1.15),box-shadow .25s,background-color .2s}
+@supports (animation-timeline: view()){
+ /* Small cards flow in from below and recede as they leave the top. */
+ :root[data-motion=full] :is(.stats>.stat,.department-metrics>div,.office-cards>*,.device-card,.att-stat,.quick-card,.client-card,.person-card,.collection-card){animation:card-flow linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
+ /* Heroes drift and their icons turn as the page scrolls away from them. */
+ :root[data-motion=full] :is(.department-hero>svg,.page-head .eyebrow){animation:hero-drift linear both;animation-timeline:scroll();animation-range:0 420px}
+ :root[data-motion=full] :is(.panel-head h2,.department-toolbar>h2,.att-section h2){animation:heading-in linear both;animation-timeline:view();animation-range:entry 10% entry 70%}
+}
+@keyframes card-flow{0%{opacity:0;translate:0 42px;scale:.94;filter:blur(2px)}10%{opacity:1;translate:0 0;scale:1;filter:none}86%{opacity:1;translate:0 0;scale:1}100%{opacity:.35;translate:0 -18px;scale:.97}}
+@keyframes hero-drift{to{translate:0 50px;rotate:-14deg;scale:.85;opacity:.35}}
+@keyframes heading-in{from{opacity:0;translate:-28px 0;letter-spacing:.06em}to{opacity:1;translate:0 0;letter-spacing:normal}}
+/* Titles carry a slow sheen in the theme colours. */
+:is(.department-hero h1,.page-head h1){background:linear-gradient(100deg,var(--brand) 0%,var(--brand) 38%,color-mix(in srgb,var(--glow-1) 80%,var(--brand)) 50%,var(--brand) 62%,var(--brand) 100%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:title-sheen 7s ease-in-out infinite}
+@keyframes title-sheen{0%,20%{background-position:100% 0}60%,100%{background-position:0 0}}
+@media print{:is(.department-hero h1,.page-head h1){color:var(--brand);background:none}}
+/* The sidebar reacts to scrolling: the brand mark wobbles with speed and the active item carries a moving light. */
+.sidebar-brand .brand-mark{rotate:calc(var(--scroll-v,0)*-14deg)}
+.sidebar-rail i{box-shadow:0 0 calc(10px + var(--scroll-speed,0)*30px) var(--sidebar-primary);transition:box-shadow .3s}
+.nav-button[data-active=true]{background-image:linear-gradient(180deg,transparent calc(var(--scroll-progress,0)*100% - 30%),color-mix(in srgb,var(--glow-1) 35%,transparent) calc(var(--scroll-progress,0)*100%),transparent calc(var(--scroll-progress,0)*100% + 30%))!important}
+.nav-button svg{transition:rotate .3s cubic-bezier(.3,1.6,.5,1),scale .3s}
+.nav-button:hover svg{rotate:-10deg;scale:1.12}
+/* Small finishing touches. */
+.btn svg,.icon-btn svg{transition:rotate .3s cubic-bezier(.3,1.6,.5,1),translate .25s}
+.btn:hover svg{translate:0 -1px;rotate:-8deg}
+.field:focus-within>span{color:var(--brand);translate:-3px 0;transition:color .2s,translate .25s cubic-bezier(.2,.8,.2,1)}
+.field>span{transition:color .2s,translate .25s}
+.tag{transition:scale .2s cubic-bezier(.3,1.6,.5,1)}tr:hover .tag,.tag:hover{scale:1.06}
+.stat-num,.department-metrics b,.att-stat b{transition:color .3s}
+.panel{transition:box-shadow .3s,border-color .3s}.panel:hover{border-color:color-mix(in srgb,var(--brand) 22%,var(--border));box-shadow:0 18px 40px -30px color-mix(in srgb,var(--brand) 55%,transparent)}
+::selection{background:color-mix(in srgb,var(--glow-1) 55%,#fff)}
+/* Off, calm or reduced motion: no canvases moving, no halo, no lag. */
+:root[data-motion=off] :is(.cursor-halo,.burst-canvas),:root[data-motion=calm] .cursor-halo{display:none}
+:root[data-motion=off] .scroll-rail{animation:none}
+@media (prefers-reduced-motion:reduce){.cursor-halo,.burst-canvas{display:none}.sidebar-brand .brand-mark{rotate:none}.rail-comet{transition:none}:is(.department-hero h1,.page-head h1){animation:none;background-position:0 0}}
