@@ -5,8 +5,9 @@ import {BACKDROPS,DENSITIES,DEFAULT_APPEARANCE,MOTION_LEVELS,TEXT_SIZES,THEMES,i
 /** Colour theme, background animation and motion level; saved on this device and applied instantly. */
 export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
  const [value,setValue]=useState<Appearance>(loadAppearance);
- const set=<K extends keyof Appearance>(key:K,next:Appearance[K])=>{const updated={...value,[key]:next};setValue(updated);saveAppearance(updated)};
- const visibleThemes=Object.fromEntries(Object.entries(THEMES).filter(([id])=>!isHidden(id)||value.unlocked.includes(id)||value.theme===id));
+ // Leaving a hidden theme hides it again until its secret word is typed.
+ const set=<K extends keyof Appearance>(key:K,next:Appearance[K])=>{const leaving=key==='theme'&&isHidden(value.theme)&&next!==value.theme;const updated={...value,[key]:next,...(leaving?{unlocked:value.unlocked.filter(t=>t!==value.theme),previous:undefined}:{})};setValue(updated);saveAppearance(updated)};
+ const visibleThemes=Object.fromEntries(Object.entries(THEMES).filter(([id])=>!isHidden(id)||value.theme===id));
  const group=<K extends keyof Appearance>(key:K,title:string,options:Record<string,{label:string;hint?:string;swatch?:string;accent?:string}>,swatches=false)=>
   <fieldset className="appearance-section"><legend><h3>{title}</h3></legend><div className={swatches?'swatches':'choice-list'}>{Object.entries(options).map(([id,o])=>
    <label key={id} className="choice"><input type="radio" name={key} value={id} checked={value[key]===id} onChange={()=>set(key,id as Appearance[K])}/>{o.swatch&&<span className="swatch-dot" style={{background:`linear-gradient(135deg,${o.accent||o.swatch} 0 38%,${o.swatch} 62%)`}}/>}<span>{o.label}{o.hint&&<small>{o.hint}</small>}</span></label>)}</div></fieldset>;

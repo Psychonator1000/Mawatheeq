@@ -36,7 +36,7 @@ export const MOTION_LEVELS = {
   calm: { label: 'هادئة', hint: 'حركة خفيفة دون إمالة أو تتبع للمؤشر' },
   off: { label: 'متوقفة', hint: 'بدون أي حركة' },
 } as const;
-export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; density: keyof typeof DENSITIES; unlocked: string[] };
+export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; density: keyof typeof DENSITIES; unlocked: string[]; previous?: keyof typeof THEMES };
 export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', density: 'comfortable', unlocked: [] };
 const key = 'mawatheeq.appearance.v1';
 
@@ -50,6 +50,7 @@ export function loadAppearance(): Appearance {
       text: saved.text in TEXT_SIZES ? saved.text : DEFAULT_APPEARANCE.text,
       density: saved.density in DENSITIES ? saved.density : DEFAULT_APPEARANCE.density,
       unlocked: Array.isArray(saved.unlocked) ? saved.unlocked.filter((t: string) => t in THEMES) : [],
+      previous: saved.previous in THEMES ? saved.previous : undefined,
     };
   } catch { return { ...DEFAULT_APPEARANCE }; }
 }
@@ -78,8 +79,17 @@ export function withViewTransition(update: () => void) {
   setTimeout(run, 400);
   setTimeout(() => transition?.skipTransition?.(), 1500);
 }
-/** Reveal a hidden theme (after its secret word) and switch to it. */
-export function unlockTheme(theme: keyof typeof THEMES) {
+/**
+ * Secret words toggle their theme: the first time switches to it, typing it again returns to the theme
+ * used before. Hidden themes show in the theme list only while they are active.
+ * Returns true when the theme was switched on.
+ */
+export function toggleSecretTheme(theme: keyof typeof THEMES): boolean {
   const a = loadAppearance();
-  saveAppearance({ ...a, theme, unlocked: a.unlocked.includes(theme) ? a.unlocked : [...a.unlocked, theme] });
+  if (a.theme === theme) {
+    saveAppearance({ ...a, theme: a.previous && a.previous !== theme ? a.previous : DEFAULT_APPEARANCE.theme, previous: undefined, unlocked: a.unlocked.filter(t => t !== theme) });
+    return false;
+  }
+  saveAppearance({ ...a, theme, previous: a.theme, unlocked: a.unlocked.includes(theme) ? a.unlocked : [...a.unlocked, theme] });
+  return true;
 }

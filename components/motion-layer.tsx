@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState,type CSSProperties} from 'react';
 import {ArrowUp} from 'lucide-react';
-import {motionAllowed,pointerEffectsOn,unlockTheme,SECRET_WORDS} from '@/lib/appearance';
+import {motionAllowed,pointerEffectsOn,toggleSecretTheme,SECRET_WORDS} from '@/lib/appearance';
 import {createBackdrop,createBursts,type FxState} from './motion-fx';
 import './motion.css';
 import './themes.generated.css';
@@ -20,6 +20,9 @@ const HEADINGS='.workspace h1,.workspace h2,.department-content h1,.department-c
 /** Remember one hovered element per effect and clear its variables when the pointer moves on. */
 function tracker(clear:(el:HTMLElement)=>void){let el:HTMLElement|null=null;return (next:HTMLElement|null)=>{if(next!==el){if(el)clear(el);el=next}return el}}
 type Mark={top:number;label:string;el:HTMLElement};
+/** Ransom-note letters for the calling card: each cut out in its own style and angle (fixed pattern, no randomness). */
+const RANSOM=['r-w','r-b','r-r','r-w','r-b','r-w','r-r','r-b'];
+const ransom=(text:string)=>text.split(' ').map((word,w)=><span key={w} className="ransom-word">{[...word].map((ch,i)=><span key={i} className={'ransom '+RANSOM[(i*3+w*5)%RANSOM.length]} style={{rotate:`${((i*7+w*3)%9-4)*2}deg`}}>{ch}</span>)}</span>);
 
 /**
  * Ambient, pointer-reactive background, dot-web press bursts, magnetic buttons, edge glow,
@@ -150,7 +153,8 @@ export default function MotionLayer() {
    if(e.shiftKey&&e.key.toLowerCase()==='t'&&!document.querySelector('[role=dialog]')){scrollTo({top:0,behavior:motionAllowed()?'smooth':'auto'});return}
    typed=(typed+e.key.toLowerCase()).slice(-12);
    const word=Object.keys(SECRET_WORDS).find(w=>typed.endsWith(w));if(!word)return;
-   typed='';const theme=SECRET_WORDS[word];unlockTheme(theme);
+   typed='';const theme=SECRET_WORDS[word];
+   if(!toggleSecretTheme(theme)){setSplash('');return}
    if(motionAllowed()){setSplash(theme);clearTimeout(splashTimer);splashTimer=window.setTimeout(()=>setSplash(''),theme==='phantom'?1900:1500)}
   };
   addEventListener('keydown',onKey);
@@ -167,7 +171,7 @@ export default function MotionLayer() {
  return <>
   <div className="ambient" aria-hidden="true"><span className="ambient-blob one"/><span className="ambient-blob two"/><span className="ambient-blob three"/><span className="ambient-spot"/><span className="ambient-grain"/><canvas ref={ambient} className="ambient-canvas"/></div>
   <canvas ref={burst} className="burst-canvas" aria-hidden="true"/>
-  {splash==='phantom'&&<div className="egg-splash phantom-splash" aria-hidden="true"><div className="calling-card"><small>بطاقة دعوة</small><b>سنسرق قلبك!</b><span>— لصوص القلوب</span></div></div>}
+  {splash==='phantom'&&<div className="egg-splash phantom-splash" aria-hidden="true"><div className="calling-card" dir="ltr" lang="en"><small>CALLING CARD</small><b>{ransom("WE'RE GONNA STEAL YOUR HEART!")}</b><span>— The Phantom Thieves</span></div></div>}
   {splash==='sky'&&<div className="egg-splash aero-splash" aria-hidden="true">{Array.from({length:14},(_,i)=><i key={i} style={{'--i':i} as CSSProperties}/>)}<b>Aero</b></div>}
   <div className="cursor-halo" aria-hidden="true"/>
   <div className="scroll-progress" aria-hidden="true"/>
