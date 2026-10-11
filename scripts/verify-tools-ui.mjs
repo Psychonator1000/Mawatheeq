@@ -123,7 +123,7 @@ await discussion.getByLabel('تعليق جديد').fill('نعم، استلمنا
 await discussion.getByLabel('@tools_clerk').check();
 await discussion.getByRole('button',{name:'إرسال التعليق'}).click();
 await discussion.getByText('نعم، استلمناها اليوم').waitFor();
-assert.ok(await discussion.getByRole('list').getByText('@tools_clerk').isVisible(),'Reply shows its mention');
+await discussion.getByRole('list').getByText('@tools_clerk').waitFor(); // Reply shows its mention
 await page.screenshot({path:artifacts+'/discussion.png'});
 assert.equal((await rpc('mawatheeq_comment_request',[clerkSession.token,'mentions','{}'])).items.length,1,'The mentioned colleague receives the reply');
 await discussion.getByRole('listitem').filter({hasText:'نعم، استلمناها اليوم'}).getByRole('button',{name:'حذف التعليق'}).click();
