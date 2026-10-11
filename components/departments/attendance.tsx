@@ -1,9 +1,9 @@
 import {useEffect,useMemo,useState} from 'react';
-import {ChevronRight,ChevronLeft,Fingerprint,Upload,Printer,Plus,RefreshCw,Users,Clock,Info,KeyRound,Trash2,Wifi,WifiOff,Pencil,Settings2} from 'lucide-react';
+import {ChevronRight,ChevronLeft,Upload,Printer,Plus,RefreshCw,Trash2,Pencil,Settings2} from 'lucide-react';
 import {toast} from 'sonner';
 import {attendanceRequest} from '@/lib/local-auth';
 import {type AttendanceSettings,type AttEmployee,type AttAdjustment,type DayKind,type DayRecord,type MonthSummary,DAY_LABELS,WEEKDAYS,monthDays,monthSummary,formatMinutes,parseAttendanceFile,scheduleOf,toMinor,fromMinor} from '@/lib/attendance';
-import {type AttContext,type AttDevice,type AttDeviceUser,type AttCommand,type AttBridge,type AttMonth,COMMAND_LABELS,COMMAND_STATUS,attendanceAvailable,useAttendanceMonth,officeNow} from '@/lib/attendance-api';
+import {type AttContext,type AttDevice,type AttMonth,attendanceAvailable,useAttendanceMonth,officeNow} from '@/lib/attendance-api';
 import {CURRENCIES,moneyText,type Currency} from '@/lib/departments';
 import {formatDate,todayISO} from '@/lib/domain';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -128,70 +128,6 @@ function ProfileDialog({employee,settings,onClose,onSaved}:{employee:AttEmployee
   {custom&&<div className="department-form-section"><div className="form-grid"><Field label="بداية الدوام الخاص" type="time" value={sched.start} onChange={v=>setSched(s=>({...s,start:v}))}/><Field label="نهاية الدوام الخاص" type="time" value={sched.end} onChange={v=>setSched(s=>({...s,end:v}))}/></div><fieldset className="weekday-picker"><legend>أيام العمل</legend>{WEEKDAYS.map((d,i)=><label key={d} className={'chip-toggle'+(sched.workDays.includes(i)?' on':'')}><input type="checkbox" checked={sched.workDays.includes(i)} onChange={e=>setSched(s=>({...s,workDays:e.target.checked?[...s.workDays,i].sort():s.workDays.filter(x=>x!==i)}))}/>{d}</label>)}</fieldset></div>}
   <button type="submit" className="btn primary" disabled={minor===null||!!pin&&!/^[0-9A-Za-z]{1,24}$/.test(pin.trim())||custom&&sched.start>=sched.end}>حفظ ملف الحضور</button></fieldset></form>
   {error&&<p className="notice" role="alert">{error}</p>}<button className="btn" disabled={busy} onClick={onClose}>إغلاق</button>
- </EditorDialog>;
-}
-
-// ───────────── HR: devices and the office bridge ─────────────
-const ago=(iso:string|null)=>{if(!iso)return 'لم يتصل بعد';const m=Math.round((Date.now()-new Date(iso).getTime())/60000);return m<1?'الآن':m<60?`قبل ${m} د`:m<1440?`قبل ${Math.round(m/60)} س`:formatDate(iso.slice(0,10))};
-export function DevicesPanel(){
- const [devices,setDevices]=useState<AttDevice[]|null>(null),[commands,setCommands]=useState<AttCommand[]>([]),[bridges,setBridges]=useState<AttBridge[]>([]),[ctx,setCtx]=useState<AttContext|null>(null),[error,setError]=useState(''),[version,setVersion]=useState(0),[loadedAt,setLoadedAt]=useState(0);
- const [editing,setEditing]=useState<AttDevice|null>(null),[usersOf,setUsersOf]=useState<AttDevice|null>(null),[newKey,setNewKey]=useState(''),[bridgeName,setBridgeName]=useState('');
- const reload=()=>setVersion(v=>v+1);
- useEffect(()=>{let active=true;Promise.all([attendanceRequest<AttDevice[]>('devices'),attendanceRequest<AttCommand[]>('commands'),attendanceRequest<AttBridge[]>('bridges'),attendanceRequest<AttContext>('context')]).then(([d,c,b,x])=>{if(active){setDevices(d);setCommands(c);setBridges(b);setCtx(x);setError('');setLoadedAt(Date.now())}}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[version]);
- const pending=commands.some(c=>c.status==='pending'||c.status==='running');
- useEffect(()=>{if(!pending)return;const t=setInterval(reload,5000);return()=>clearInterval(t)},[pending]);
- const manage=!!ctx?.canManageDevices;
- async function queue(device:AttDevice,kind:string,payload:Record<string,unknown>={}){try{await attendanceRequest('queue_command',{deviceId:device.id,kind,payload});toast.success(COMMAND_LABELS[kind]+': أُرسل الطلب إلى جسر المكتب');reload()}catch(e){fail(e)}}
- async function createBridge(){try{const r=await attendanceRequest<{key:string}>('create_bridge',{name:bridgeName.trim()});setNewKey(r.key);setBridgeName('');reload()}catch(e){fail(e)}}
- const blank=():AttDevice=>({id:crypto.randomUUID(),name:'',host:'',port:4370,location:'',enabled:true,serial:null,info:{},status:'unknown',lastSeen:null,lastSync:null,lastError:null,revision:0,userCount:0,pendingCommands:0});
- const bridgeOnline=bridges.some(b=>!b.revoked&&b.lastSeen&&loadedAt-new Date(b.lastSeen).getTime()<5*60000);
- return <>{error&&<p className="notice" role="alert">{error}</p>}
- <section className="panel"><div className="department-toolbar"><h2><Fingerprint size={20}/> أجهزة البصمة</h2><div className="actions"><span className={'bridge-pill '+(bridgeOnline?'on':'off')}>{bridgeOnline?<Wifi size={15}/>:<WifiOff size={15}/>} {bridgeOnline?'جسر المكتب متصل':'جسر المكتب غير متصل'}</span><button className="btn" onClick={reload}><RefreshCw size={16}/> تحديث الأجهزة</button>{manage&&<button className="btn primary" onClick={()=>setEditing(blank())}><Plus size={16}/> إضافة جهاز</button>}</div></div>
-  {!devices&&!error&&<p role="status">جارٍ تحميل الأجهزة…</p>}
-  {devices&&<div className="device-grid">{devices.map(d=><article key={d.id} className={'device-card s-'+(d.enabled?d.status:'disabled')} data-tilt><header><span className="device-dot" aria-hidden/><div><h3>{d.name}</h3><small dir="ltr">{d.host}:{d.port}</small></div><span className="tag">{!d.enabled?'معطل':d.status==='online'?'متصل':d.status==='offline'?'غير متصل':'لم يُفحص'}</span></header>
-   <dl><dt>الموقع</dt><dd>{d.location||'—'}</dd><dt>الرقم التسلسلي</dt><dd dir="ltr">{d.serial||'—'}</dd><dt>المستخدمون</dt><dd>{d.userCount}</dd><dt>آخر اتصال</dt><dd>{ago(d.lastSeen)}</dd><dt>آخر مزامنة</dt><dd>{ago(d.lastSync)}</dd>{Object.keys(d.info||{}).length>0&&<><dt>السجلات</dt><dd>{String(d.info.logCounts??'—')} / {String(d.info.logCapacity??'—')}</dd></>}</dl>
-   {d.lastError&&d.status==='offline'&&<p className="office-alert device-error">{d.lastError}</p>}{d.pendingCommands>0&&<p className="subtitle">{d.pendingCommands} طلب بانتظار الجسر</p>}
-   <footer><button className="btn" onClick={()=>setUsersOf(d)}><Users size={15}/> مستخدمو {d.name}</button>{manage&&<><button className="btn" disabled={!d.enabled} onClick={()=>void queue(d,'sync_logs')}><RefreshCw size={15}/> مزامنة</button><button className="btn" disabled={!d.enabled} onClick={()=>void queue(d,'set_time')}><Clock size={15}/> ضبط الساعة</button><button className="btn" disabled={!d.enabled} onClick={()=>void queue(d,'read_info')}><Info size={15}/> المعلومات</button><button className="btn" onClick={()=>setEditing(d)}><Pencil size={15}/> تعديل {d.name}</button></>}</footer></article>)}</div>}
-  {devices&&!devices.length&&<Empty title="لا توجد أجهزة" text="أضف جهاز البصمة بعنوان IP الثابت، ثم شغّل جسر المكتب على حاسوب داخل الشبكة."/>}
- </section>
- <section className="panel"><h2>سجل أوامر الأجهزة</h2>{commands.length?<div className="table-wrap"><table className="office-table"><thead><tr><th>الوقت</th><th>الجهاز</th><th>الأمر</th><th>الحالة</th><th>النتيجة</th></tr></thead><tbody>{commands.map(c=><tr key={c.id}><td>{new Date(c.createdAt).toLocaleString('ar-KW-u-nu-latn',{dateStyle:'short',timeStyle:'short'})}<small>{c.requestedBy}</small></td><td>{devices?.find(d=>d.id===c.deviceId)?.name||'—'}</td><td>{COMMAND_LABELS[c.kind]||c.kind}{c.payload?.pin!==undefined&&<small>رقم {String(c.payload.pin)} {String(c.payload.name||'')}</small>}</td><td><span className={'tag '+(c.status==='done'?'green':c.status==='failed'?'red':'amber')}>{COMMAND_STATUS[c.status]}</span></td><td>{c.error||(c.result?Object.entries(c.result).map(([k,v])=>`${k}: ${typeof v==='object'?JSON.stringify(v):v}`).join(' · '):'')}</td></tr>)}</tbody></table></div>:<p className="subtitle">لم تُرسل أوامر بعد.</p>}</section>
- <section className="panel"><h2><KeyRound size={20}/> جسر المكتب</h2><p className="subtitle">برنامج صغير مجاني يعمل على حاسوب داخل شبكة المكتب، يسحب البصمات وينفذ الأوامر. لا يرى القضايا ولا ملفات الموظفين. طريقة التثبيت في مجلد bridge داخل المستودع.</p>
-  {bridges.length>0&&<ul className="bridge-list">{bridges.map(b=><li key={b.id} className={b.revoked?'ledger-void':''}><span><b>{b.name}</b><small>{b.revoked?'ملغى':`آخر اتصال: ${ago(b.lastSeen)}${b.version?' · إصدار '+b.version:''}`}</small></span>{manage&&!b.revoked&&<button className="btn" onClick={()=>{if(confirm('إلغاء مفتاح '+b.name+'؟ سيتوقف الجسر فوراً.'))void attendanceRequest('revoke_bridge',{id:b.id}).then(reload,fail)}}>إلغاء مفتاح {b.name}</button>}</li>)}</ul>}
-  {manage&&<div className="department-toolbar"><Field label="اسم حاسوب الجسر" value={bridgeName} onChange={setBridgeName} placeholder="حاسوب الاستقبال"/><button className="btn primary" disabled={!bridgeName.trim()} onClick={()=>void createBridge()}><KeyRound size={16}/> إنشاء مفتاح جسر</button></div>}
- </section>
- {newKey&&<EditorDialog title="مفتاح الجسر الجديد" description="انسخه الآن إلى ملف config.json على حاسوب الجسر. لن يظهر مرة أخرى." busy={false} onClose={()=>setNewKey('')}><BridgeKey bridgeKey={newKey}/><button className="btn primary" onClick={()=>setNewKey('')}>تم النسخ</button></EditorDialog>}
- {editing&&<DeviceDialog device={editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);reload()}}/>}
- {usersOf&&<DeviceUsersDialog device={usersOf} manage={manage} onClose={()=>setUsersOf(null)} onQueue={(k,p)=>void queue(usersOf,k,p)}/>}
- </>;
-}
-function BridgeKey({bridgeKey}:{bridgeKey:string}){
- const [config,setConfig]=useState('');
- useEffect(()=>{fetch(new URL('app-config.json',document.baseURI)).then(r=>r.json()).then(c=>setConfig(JSON.stringify({supabaseUrl:c.supabaseUrl,publishableKey:c.supabasePublishableKey,bridgeKey,intervalSeconds:60},null,2))).catch(()=>setConfig(''))},[bridgeKey]);
- const copy=(text:string)=>void navigator.clipboard?.writeText(text).then(()=>toast.success('نُسخ'),()=>toast.error('انسخه يدوياً'));
- return <div className="bridge-key"><code dir="ltr">{bridgeKey}</code><button className="btn" onClick={()=>copy(bridgeKey)}>نسخ المفتاح</button>{config&&<><p className="subtitle">أو انسخ ملف config.json كاملاً:</p><pre dir="ltr">{config}</pre><button className="btn" onClick={()=>copy(config)}>نسخ config.json</button></>}</div>;
-}
-function DeviceDialog({device,onClose,onSaved}:{device:AttDevice;onClose:()=>void;onSaved:()=>void}){
- const [draft,setDraft]=useState(device),[busy,setBusy]=useState(false),[error,setError]=useState('');
- const valid=draft.name.trim()&&/^[0-9A-Za-z.-]{3,253}$/.test(draft.host.trim())&&draft.port>0&&draft.port<65536;
- async function save(){setBusy(true);setError('');try{await attendanceRequest('save_device',{device:{...draft,name:draft.name.trim(),host:draft.host.trim()}});toast.success('حُفظ الجهاز');onSaved()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
- return <EditorDialog title={device.revision?'تعديل '+device.name:'جهاز بصمة جديد'} description="استخدم عنوان IP ثابتاً للجهاز داخل شبكة المكتب. المنفذ الافتراضي 4370." busy={busy} onClose={onClose}>
-  <form onSubmit={e=>{e.preventDefault();void save()}}><fieldset disabled={busy}><div className="form-grid"><Field label="اسم الجهاز" value={draft.name} onChange={v=>setDraft(d=>({...d,name:v}))}/><Field label="عنوان IP" value={draft.host} onChange={v=>setDraft(d=>({...d,host:v}))} placeholder="192.168.1.201"/><Field label="المنفذ" type="number" value={String(draft.port)} onChange={v=>setDraft(d=>({...d,port:Math.round(Number(v)||0)}))}/><Field label="موقع الجهاز" value={draft.location} onChange={v=>setDraft(d=>({...d,location:v}))}/></div>
-  <label className="checkbox-line"><input type="checkbox" checked={draft.enabled} onChange={e=>setDraft(d=>({...d,enabled:e.target.checked}))}/> الجهاز مفعل (يتصل به الجسر)</label><button type="submit" className="btn primary" disabled={!valid}>حفظ الجهاز</button></fieldset></form>
-  {error&&<p className="notice" role="alert">{error}</p>}<button className="btn" disabled={busy} onClick={onClose}>إغلاق</button>
- </EditorDialog>;
-}
-function DeviceUsersDialog({device,manage,onClose,onQueue}:{device:AttDevice;manage:boolean;onClose:()=>void;onQueue:(kind:string,payload:Record<string,unknown>)=>void}){
- const [users,setUsers]=useState<AttDeviceUser[]|null>(null),[employees,setEmployees]=useState<AttEmployee[]>([]),[error,setError]=useState(''),[pin,setPin]=useState(''),[name,setName]=useState(''),[search,setSearch]=useState('');
- useEffect(()=>{Promise.all([attendanceRequest<AttDeviceUser[]>('device_users',{deviceId:device.id}),attendanceRequest<AttEmployee[]>('employees')]).then(([u,e])=>{setUsers(u);setEmployees(e)}).catch(e=>setError(e.message))},[device.id]);
- const nameOf=(id:string|null)=>employees.find(e=>e.id===id)?.name;
- const missing=employees.filter(e=>e.active&&e.pin&&users&&!users.some(u=>u.pin===e.pin));
- const shown=(users||[]).filter(u=>normalizeSearch([u.pin,u.name,nameOf(u.employeeId)].join(' ')).includes(normalizeSearch(search)));
- return <EditorDialog title={'مستخدمو '+device.name} description={users?.length?`آخر قراءة: ${ago(users.reduce((a,u)=>u.syncedAt>a?u.syncedAt:a,users[0].syncedAt))}`:'اطلب قراءة المستخدمين ليظهروا هنا.'} busy={false} onClose={onClose}>
-  {error&&<p className="notice" role="alert">{error}</p>}{manage&&<button className="btn" onClick={()=>onQueue('fetch_users',{})}><RefreshCw size={15}/> قراءة المستخدمين من الجهاز</button>}
-  {users&&users.length>0&&<><Field label="بحث مستخدمي الجهاز" value={search} onChange={setSearch}/><div className="table-wrap"><table className="office-table"><thead><tr><th>رقم البصمة</th><th>الاسم على الجهاز</th><th>الموظف في مواثيق</th><th>الصلاحية</th>{manage&&<th>إجراء</th>}</tr></thead><tbody>{shown.map(u=><tr key={u.pin}><td>{u.pin}</td><td>{u.name||'—'}</td><td>{nameOf(u.employeeId)||<span className="tag amber">غير مربوط</span>}</td><td>{u.role>0?'مدير جهاز':'مستخدم'}</td>{manage&&<td><button className="btn" onClick={()=>{if(confirm(`حذف ${u.name||u.pin} من ${device.name}؟ تُحذف بصماته المسجلة على الجهاز.`))onQueue('delete_user',{pin:u.pin})}}>حذف {u.pin}</button></td>}</tr>)}</tbody></table></div></>}
-  {manage&&missing.length>0&&<p className="notice">موظفون لهم رقم بصمة وغير موجودين على هذا الجهاز: {missing.map(e=><button key={e.id} className="btn" onClick={()=>onQueue('add_user',{pin:e.pin,name:e.name.slice(0,24)})}>إضافة {e.name} ({e.pin})</button>)}</p>}
-  {manage&&<form className="department-form-section" onSubmit={e=>{e.preventDefault();onQueue('add_user',{pin:pin.trim(),name:name.trim().slice(0,24)});setPin('');setName('')}}><h3>إضافة مستخدم إلى الجهاز</h3><div className="form-grid"><Field label="رقم المستخدم على الجهاز" value={pin} onChange={setPin}/><Field label="الاسم على الجهاز" value={name} onChange={setName}/></div><p className="subtitle">بعد الإضافة يسجّل الموظف بصمته على الجهاز نفسه.</p><button type="submit" className="btn primary" disabled={!/^\d{1,9}$/.test(pin.trim())}>إرسال الإضافة</button></form>}
-  <button className="btn" onClick={onClose}>إغلاق</button>
  </EditorDialog>;
 }
 

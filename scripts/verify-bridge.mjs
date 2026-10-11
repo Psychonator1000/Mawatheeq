@@ -34,11 +34,13 @@ const { key } = await att('create_bridge', { name: 'Reception PC' });
 const device = {
   users: [{ uid: 1, userId: '101', name: 'One\0\0', role: 0, cardno: 0 }, { uid: 2, userId: '102', name: 'Two', role: 14, cardno: 555 }],
   logs: [{ user_id: '101', record_time: new Date(2026, 9, 11, 8, 5, 0).toString(), type: 1, state: 0 }, { user_id: '102', record_time: new Date(2026, 9, 11, 9, 20, 0).toString(), type: 1, state: 0 }],
-  time: new Date(2026, 9, 11, 7, 0, 0), connects: 0,
+  time: new Date(2026, 9, 11, 7, 0, 0), connects: 0, unlocked: [], restarts: 0, voice: 0,
 };
 const client = {
   getUsers: async () => ({ data: device.users }), getAttendances: async () => ({ data: device.logs }),
-  setUser: async (uid, userId, name) => { device.users.push({ uid, userId, name, role: 0, cardno: 0 }); },
+  setUser: async (uid, userId, name, password, role, cardno) => { device.users = device.users.filter(u => u.uid !== uid); device.users.push({ uid, userId, name, role, cardno }); device.users.sort((a, b) => a.uid - b.uid); },
+  unlockDoor: async seconds => { device.unlocked.push(seconds); }, restart: async () => { device.restarts++; }, voiceTest: async () => { device.voice++; },
+  clearAttendanceLog: async () => { device.logs = []; },
   deleteUser: async uid => { device.users = device.users.filter(u => u.uid !== uid); },
   setTime: async t => { device.time = t; }, getTime: async () => device.time,
   getInfo: async () => ({ userCounts: device.users.length, logCounts: device.logs.length, logCapacity: 100000 }),
@@ -92,6 +94,27 @@ await bridge.cycle();
 assert.equal((await att('punches', { from: '2026-10-11', to: '2026-10-11' })).length, 3);
 assert.deepEqual((await att('commands', { deviceId: uuid(1) }))[0].result, { read: 3, inserted: 0 });
 
+// Door devices: remote opening uses the device's unlock time and runs on the quick command check, without a full sync.
+await att('save_device', { device: { ...(await att('devices')).find(d => d.id === uuid(1)), kind: 'both', doorName: 'Front door', unlockSeconds: 6 } });
+const connectsBefore = device.connects;
+await att('queue_command', { deviceId: uuid(1), kind: 'unlock_door' });
+assert.deepEqual(await bridge.commands(), { commands: 1 });
+assert.deepEqual(device.unlocked, [6]); assert.equal(device.connects, connectsBefore + 1, 'The quick check contacts only the device with a command');
+await att('queue_command', { deviceId: uuid(1), kind: 'update_user', payload: { pin: '103', name: 'Three Admin', role: 14, card: '998877' } });
+await att('queue_command', { deviceId: uuid(1), kind: 'voice_test' });
+await att('queue_command', { deviceId: uuid(1), kind: 'restart' });
+await bridge.commands();
+assert.deepEqual(device.users.find(u => u.userId === '103'), { uid: 3, userId: '103', name: 'Three Admin', role: 14, cardno: 998877 }, 'Users are edited in their own slot');
+assert.equal(device.voice, 1); assert.equal(device.restarts, 1);
+device.logs.push({ user_id: '103', record_time: new Date(2026, 9, 11, 17, 0, 0).toString(), type: 1, state: 1 });
+await att('queue_command', { deviceId: uuid(1), kind: 'clear_logs' });
+await bridge.commands();
+assert.equal(device.logs.length, 0, 'Logs are cleared from the device');
+assert.equal((await att('punches', { from: '2026-10-11', to: '2026-10-11' })).length, 4, 'Every punch was saved before the device was cleared');
+const doorCommands = await att('commands', { deviceId: uuid(1) });
+assert.ok(['unlock_door', 'update_user', 'voice_test', 'restart', 'clear_logs'].every(k => doorCommands.find(c => c.kind === k)?.status === 'done'));
+assert.deepEqual(doorCommands.find(c => c.kind === 'unlock_door').result, { opened: true, seconds: 6 });
+
 // The HTTP client sends the publishable key and the bridge key; a revoked key stops the bridge.
 const sent = [];
 const http = supabaseApi({ supabaseUrl: 'https://example.supabase.co/', publishableKey: 'sb_publishable_x', bridgeKey: key, fetchImpl: async (url, init) => { sent.push([url, init]); return { ok: false, status: 401, json: async () => ({ message: 'مفتاح الجسر غير صالح', code: '28000' }) }; } });
@@ -101,4 +124,4 @@ assert.equal(sent[0][1].headers.apikey, 'sb_publishable_x'); assert.equal(JSON.p
 const bridges = await att('bridges'); await att('revoke_bridge', { id: bridges[0].id });
 await assert.rejects(() => bridge.cycle(), e => e.code === '28000');
 assert.equal(bridges[0].version, 'test');
-console.log('Passed bridge: wall-clock punches, incremental and full sync without duplicates, users and device info, offline reporting, disabled devices skipped, add/delete user by device slot, duplicate add refused, clock sync, failed commands with reasons, HTTP client headers and key revocation.');
+console.log('Passed bridge: door opening with the device unlock time on the quick command check, user edits with cards and admin role, sound test, restart, clearing logs only after saving them, wall-clock punches, incremental and full sync without duplicates, users and device info, offline reporting, disabled devices skipped, add/delete user by device slot, duplicate add refused, clock sync, failed commands with reasons, HTTP client headers and key revocation.');

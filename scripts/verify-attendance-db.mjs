@@ -136,6 +136,35 @@ await assert.rejects(() => bridge(created.key, 'punches', { deviceId: uuid(99), 
 await att(hr.token, 'revoke_bridge', { id: created.id });
 await assert.rejects(() => bridge(created.key, 'config'), e => e.code === '28000', 'Revoked bridges are refused');
 
+// Door devices: type, unlock duration, remote opening only on door devices, full user options, and removal that keeps punches.
+const door = await att(hr.token, 'save_device', { device: { id: uuid(40), name: 'الباب الرئيسي', host: '192.168.1.210', port: 4370, location: 'المدخل', enabled: true, kind: 'access', doorName: 'باب المكتب', unlockSeconds: 7, notes: 'يفتح بالبطاقة', revision: 0 } });
+assert.deepEqual([door.kind, door.doorName, door.unlockSeconds, door.notes], ['access', 'باب المكتب', 7, 'يفتح بالبطاقة']);
+await assert.rejects(() => att(hr.token, 'save_device', { device: { ...door, kind: 'gate', revision: door.revision } }), /نوع الجهاز/);
+await assert.rejects(() => att(hr.token, 'save_device', { device: { ...door, unlockSeconds: 600, revision: door.revision } }));
+const unlock = await att(hr.token, 'queue_command', { deviceId: uuid(40), kind: 'unlock_door', payload: { seconds: 999 } });
+assert.deepEqual(unlock.payload, { seconds: 7, door: 'باب المكتب' }, 'Unlock time comes from the device settings, not the request');
+await assert.rejects(() => att(hr.token, 'queue_command', { deviceId: uuid(30), kind: 'unlock_door' }), /للحضور فقط/);
+await denied(() => att(accountant.token, 'queue_command', { deviceId: uuid(40), kind: 'unlock_door' }));
+await denied(() => att(hrReader.token, 'queue_command', { deviceId: uuid(40), kind: 'unlock_door' }));
+const upd = await att(hr.token, 'queue_command', { deviceId: uuid(40), kind: 'update_user', payload: { pin: '101', name: 'Employee One', role: 14, card: '1234567', extra: 'dropped' } });
+assert.deepEqual(upd.payload, { pin: '101', name: 'Employee One', role: 14, card: '1234567' });
+await assert.rejects(() => att(hr.token, 'queue_command', { deviceId: uuid(40), kind: 'update_user', payload: { pin: '101', name: 'x', role: 3 } }), /البطاقة/);
+await assert.rejects(() => att(hr.token, 'queue_command', { deviceId: uuid(40), kind: 'add_user', payload: { pin: '101', name: 'x', card: '12345678901' } }), /البطاقة/);
+for (const kind of ['restart', 'voice_test', 'clear_logs']) assert.equal((await att(hr.token, 'queue_command', { deviceId: uuid(40), kind })).kind, kind);
+const disabled = await att(hr.token, 'save_device', { device: { ...door, enabled: false, revision: door.revision } });
+await assert.rejects(() => att(hr.token, 'queue_command', { deviceId: uuid(40), kind: 'unlock_door' }), /معطل/);
+await denied(() => att(accountant.token, 'delete_device', { id: uuid(30), revision: 1 }));
+await denied(() => att(hrReader.token, 'delete_device', { id: uuid(30), revision: 1 }));
+await assert.rejects(() => att(hr.token, 'delete_device', { id: uuid(40), revision: disabled.revision - 1 }), e => e.code === '40001', 'Removal checks the current revision');
+const before = (await att(accountant.token, 'punches', { from: '2026-10-01', to: '2026-10-31' })).length;
+const reception = (await att(hr.token, 'devices')).find(d => d.id === uuid(30));
+await att(hr.token, 'delete_device', { id: uuid(30), revision: reception.revision });
+await att(hr.token, 'delete_device', { id: uuid(40), revision: disabled.revision });
+assert.deepEqual((await att(hr.token, 'devices')).map(d => d.id), [], 'Devices are removed with their users and commands');
+const after = await att(accountant.token, 'punches', { from: '2026-10-01', to: '2026-10-31' });
+assert.equal(after.length, before, 'Punches from a removed device are kept'); assert.ok(after.every(p => p.deviceId === null || p.deviceId !== uuid(30)));
+await assert.rejects(() => att(hr.token, 'delete_device', { id: uuid(30), revision: 1 }), /غير موجود/);
+
 // Existing APIs keep working after the migration.
 assert.ok((await dept(hr.token, 'hr', 'records_page', { offset: 0 })).length >= 3);
-console.log('Passed attendance: HR/accounting-only access, device management limited to HR editors, validated settings and revisions, unique fingerprint PINs, timezone-correct imports with duplicate skipping, leave and adjustment projections, hashed one-time bridge keys, command claiming, bridge punches/users/status/results, revocation and existing API compatibility.');
+console.log('Passed attendance: door devices with fixed unlock times, remote opening limited to HR editors and door devices, device-user cards and admin roles, device removal with revision checks that keeps punches, HR/accounting-only access, device management limited to HR editors, validated settings and revisions, unique fingerprint PINs, timezone-correct imports with duplicate skipping, leave and adjustment projections, hashed one-time bridge keys, command claiming, bridge punches/users/status/results, revocation and existing API compatibility.');

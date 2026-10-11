@@ -18,21 +18,30 @@ const stamp = () => new Date().toLocaleString('en-GB');
 const log = message => console.log(`[${stamp()}] ${message}`);
 
 const bridge = createBridge({
-  api: supabaseApi(config), state, log, version: '1.0.0',
+  api: supabaseApi(config), state, log, version: '1.1.0',
   saveState: s => fs.writeFileSync(statePath, JSON.stringify(s, null, 2)),
   usersEveryCycles: Math.max(1, Math.round(3600 / (config.intervalSeconds || 60))),
   connectDevice: async device => {
     const client = new Zkteco(device.host, device.port, config.timeoutMs || 10000, 4000);
     await client.createSocket();
+    // Door relay and restart are protocol commands without helpers in zkteco-js.
+    client.unlockDoor = seconds => { const data = Buffer.alloc(4); data.writeUInt32LE(seconds * 10, 0); return client.executeCmd(31, data); };
+    client.restart = () => client.executeCmd(1004, '').catch(e => { if (!/timeout|closed|reset/i.test(String(e?.message || e))) throw e; });
     return client;
   },
 });
 
 const once = process.argv.includes('--once');
-log(`Mawatheeq Bridge 1.0.0 — كل ${config.intervalSeconds || 60} ثانية${once ? ' (مرة واحدة)' : ''}`);
+const interval = (config.intervalSeconds || 60) * 1000, commandEvery = Math.max(2, config.commandSeconds || 4) * 1000;
+log(`Mawatheeq Bridge 1.1.0 — مزامنة كل ${interval / 1000} ثانية، والأوامر (مثل فتح الباب) كل ${commandEvery / 1000} ثوانٍ${once ? ' (مرة واحدة)' : ''}`);
+const report = e => log(`تعذر الاتصال بمواثيق: ${e.message}${e.code === '28000' ? ' — أنشئ مفتاح جسر جديداً من صفحة الأجهزة.' : ''}`);
+let nextSync = 0;
 for (;;) {
-  try { const r = await bridge.cycle(); if (once) log(`تم: ${r.devices} جهاز، ${r.commands} أمر`); }
-  catch (e) { log(`تعذر الاتصال بمواثيق: ${e.message}${e.code === '28000' ? ' — أنشئ مفتاح جسر جديداً من صفحة الأجهزة.' : ''}`); if (once) process.exit(1); }
+  const now = Date.now();
+  try {
+    if (now >= nextSync) { nextSync = now + interval; const r = await bridge.cycle(); if (once) log(`تم: ${r.devices} جهاز، ${r.commands} أمر`); }
+    else await bridge.commands();
+  } catch (e) { report(e); if (once) process.exit(1); }
   if (once) break;
-  await new Promise(r => setTimeout(r, (config.intervalSeconds || 60) * 1000));
+  await new Promise(r => setTimeout(r, commandEvery));
 }

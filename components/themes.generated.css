@@ -226,6 +226,8 @@
 :root[data-theme=noir] .payroll-mode{background:#1e1c19;color:#a4bbd2}
 :root[data-theme=noir] .payroll-mode.deduct{background:#2b2212;color:#e0c9ae}
 :root[data-theme=noir] .payroll-totals>div{color:#11100e}
+:root[data-theme=noir] .btn.danger{background:#d2a5a9;border-color:#d2a5a9;color:#11100e}
+:root[data-theme=noir] .btn.danger:hover{background:#d7aeb2}
 :root[data-theme=noir] .ambient-spot{background:radial-gradient(circle,#11100eb0 0,#11100e00 68%)}
 :root[data-theme=noir][data-scrolled] .topbar{background:#171613e6}
 :root[data-theme=noir] .sidebar-rail{background:#11100e10}
@@ -382,6 +384,7 @@
 :root[data-theme=ivory] .payroll-mode{background:#f7f8f9}
 :root[data-theme=ivory] .payroll-mode.deduct{background:#f7f7f5}
 :root[data-theme=ivory] .payroll-totals>div{color:#ffffff}
+:root[data-theme=ivory] .btn.danger{color:#ffffff}
 :root[data-theme=ivory][data-scrolled] .topbar{background:#fcfcfbe6}
 :root[data-theme=ivory] .back-to-top{color:#fcfcfb}
 :root[data-theme=ivory] .choice{border:1px solid #dddad6;background:#fefefd}

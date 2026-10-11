@@ -89,13 +89,28 @@ try{
  await click('تعديل جهاز تجريبي');await field('اسم الجهاز','جهاز الاستقبال التجريبي');await click('حفظ الجهاز');await page.getByRole('heading',{name:'جهاز الاستقبال التجريبي',exact:true}).waitFor();
  await click('مزامنة');await toast('مزامنة كاملة للبصمات');await page.getByRole('cell',{name:'بانتظار الجسر',exact:true}).first().waitFor();
  await click('مستخدمو جهاز الاستقبال التجريبي');await dialog().getByRole('button',{name:'إضافة موظف حضور أول (101)'}).click();await toast('إضافة مستخدم إلى الجهاز');await page.keyboard.press('Escape');
- const queued=await att('commands');assert.deepEqual(queued.map(c=>c.kind).sort(),['add_user','sync_logs']);assert.deepEqual(queued.find(c=>c.kind==='add_user').payload,{pin:'101',name:'موظف حضور أول'});
+ const queued=await att('commands');assert.deepEqual(queued.map(c=>c.kind).sort(),['add_user','sync_logs']);assert.deepEqual(queued.find(c=>c.kind==='add_user').payload,{pin:'101',name:'موظف حضور أول',role:0,card:''});
  await page.getByLabel('اسم حاسوب الجسر',{exact:true}).fill('حاسوب تجريبي');await click('إنشاء مفتاح جسر');
  const key=(await dialog().locator('.bridge-key code').innerText()).trim();assert.match(key,/^[0-9a-f]{64}$/);
  await dialog().getByText('"bridgeKey": "'+key+'"',{exact:false}).waitFor();assert.equal(await dialog().getByText('sb_publishable_synthetic',{exact:false}).count(),1,'Config snippet uses only the publishable key');
  await screen('devices');await click('تم النسخ');
  assert.equal(await page.getByText(key).count(),0,'The key is not shown again');
  const bridge=await rpc('mawatheeq_bridge_request',[key,'config','{}']);assert.equal(bridge.devices[0].name,'جهاز الاستقبال التجريبي');
+
+ // Door devices: type, door name and unlock time; opening asks for confirmation and queues a command with the device's time.
+ await click('الأجهزة');await click('تعديل جهاز الاستقبال التجريبي');await dialog().getByLabel('نوع الجهاز',{exact:true}).selectOption('both');
+ await field('اسم الباب','باب المكتب التجريبي');await field('مدة فتح الباب (ثوانٍ)','8');await field('ملاحظات الجهاز','جهاز تجريبي');await click('حفظ الجهاز');await toast('حُفظ الجهاز');
+ await page.getByText('حضور وتحكم بباب · باب المكتب التجريبي').waitFor();
+ await click('فتح باب المكتب التجريبي');await dialog().getByText('لمدة 8 ثوانٍ',{exact:false}).waitFor();await click('فتح الباب الآن');await toast('فتح الباب عن بعد');
+ assert.deepEqual((await att('commands')).find(c=>c.kind==='unlock_door').payload,{seconds:8,door:'باب المكتب التجريبي'});
+ await page.getByRole('button',{name:'جارٍ فتح باب المكتب التجريبي…'}).waitFor();await screen('door-device');
+ await page.getByText('خيارات الجهاز').click();await click('اختبار الصوت');await toast('اختبار الصوت');
+ await click('مستخدمو جهاز الاستقبال التجريبي');await field('رقم المستخدم على الجهاز','205');await field('الاسم على الجهاز','زائر تجريبي');await field('رقم البطاقة (اختياري)','4455');await dialog().getByLabel('الصلاحية على الجهاز',{exact:true}).selectOption('14');await click('إرسال الإضافة');await toast('إضافة مستخدم إلى الجهاز');await page.keyboard.press('Escape');
+ assert.deepEqual((await att('commands')).find(c=>c.kind==='add_user'&&c.payload.pin==='205').payload,{pin:'205',name:'زائر تجريبي',role:14,card:'4455'});
+ // Removing a device asks first and keeps its punches.
+ await click('إضافة جهاز');await field('اسم الجهاز','جهاز للحذف');await field('عنوان IP','192.168.50.11');await click('حفظ الجهاز');await toast('حُفظ الجهاز');
+ await click('تعديل جهاز للحذف');await click('حذف الجهاز');await dialog().getByText('البصمات المسجلة منه تبقى',{exact:false}).waitFor();await page.getByRole('dialog').last().getByRole('button',{name:'حذف الجهاز',exact:true}).click();await toast('حُذف الجهاز');
+ await page.getByRole('heading',{name:'جهاز للحذف'}).waitFor({state:'detached'});assert.equal((await att('devices')).length,1);
 
  // Accounting: payroll estimate in warning mode, details and a printed warning letter.
  await switchTo('المحاسبة');await click('الرواتب والحضور');await toPrevMonth();
@@ -110,6 +125,6 @@ try{
  assert.ok((await page.evaluate(()=>window.__printed)).includes('غياب'),'The letter lists absences');await page.keyboard.press('Escape');
  await click('رواتب الموظفين');await page.getByRole('cell',{name:'600.000 KWD',exact:true}).waitFor();
  await page.setViewportSize({width:390,height:844});await click('الرواتب والحضور');await page.locator('.payroll-panel').waitFor();await screen('payroll-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'Payroll mobile overflow');
- assert.deepEqual(errors,[]);console.log('Passed attendance UI: pay profiles with exact amounts and unique PINs, monthly grid, excuses, unknown PINs, attlog import without duplicates, schedule settings, device add/rename/sync/users, one-time bridge key with publishable-only config, payroll warning mode, printed payroll sheet and warning letter, mobile layout and no runtime errors.');
+ assert.deepEqual(errors,[]);console.log('Passed attendance UI: pay profiles with exact amounts and unique PINs, monthly grid, excuses, unknown PINs, attlog import without duplicates, schedule settings, device add/rename/sync/users, door devices with confirmed remote opening, device-user cards and admin role, device removal, one-time bridge key with publishable-only config, payroll warning mode, printed payroll sheet and warning letter, mobile layout and no runtime errors.');
 }catch(e){await screen('failure');console.error(await page.locator('body').innerText());throw e}
 finally{await browser.close();await db.close();}

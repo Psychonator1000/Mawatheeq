@@ -3,5 +3,6 @@
   "publishableKey": "sb_publishable_REPLACE",
   "bridgeKey": "REPLACE-WITH-THE-KEY-SHOWN-ONCE-IN-MAWATHEEQ",
   "intervalSeconds": 60,
+  "commandSeconds": 4,
   "timeoutMs": 10000
 }

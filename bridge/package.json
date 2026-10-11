@@ -1,6 +1,6 @@
 {
   "name": "mawatheeq-bridge",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Connects ZKTeco fingerprint devices on the office network to Mawatheeq.",
   "type": "module",
