@@ -41,5 +41,19 @@ export function saveAppearance(a: Appearance) {
   try { localStorage.setItem(key, JSON.stringify(a)); } catch { /* Preferences still apply for this visit. */ }
   window.dispatchEvent(new Event('mawatheeq-appearance'));
 }
+/** Any animation at all: not switched off here and not reduced by the device. */
+export const motionAllowed = () => document.documentElement.dataset.motion !== 'off' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
 /** Pointer-driven effects run only with full motion and no reduced-motion preference. */
-export const pointerEffectsOn = () => document.documentElement.dataset.motion === 'full' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const pointerEffectsOn = () => document.documentElement.dataset.motion === 'full' && motionAllowed();
+/** Run a state change inside a view transition when the browser supports it and motion is allowed. */
+export function withViewTransition(update: () => void) {
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => { skipTransition?: () => void } };
+  if (!doc.startViewTransition || !motionAllowed()) { update(); return; }
+  // The change must never depend on the animation: apply it directly if the transition stalls,
+  // and end any transition still running (the page is not interactive during one).
+  let done = false;
+  const run = () => { if (!done) { done = true; update(); } };
+  const transition = doc.startViewTransition(run);
+  setTimeout(run, 400);
+  setTimeout(() => transition?.skipTransition?.(), 1500);
+}

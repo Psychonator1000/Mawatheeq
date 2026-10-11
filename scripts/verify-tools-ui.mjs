@@ -227,6 +227,32 @@ await page.getByText(`إجازات معتمدة ${leaveYear}: 3 يوم`).waitFor
 await page.getByRole('button',{name:'الإجازات',exact:true}).click();
 await page.getByText('3 يوم',{exact:true}).waitFor();
 await page.screenshot({path:artifacts+'/hr.png'});
+// With full motion, effects never block work: ripples, view transitions, tabs and workspace switches stay interactive.
+const lively=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:'no-preference',timezoneId:'Asia/Kuwait'});
+const motion=await lively.newPage();motion.on('pageerror',e=>errors.push('motion: '+e.message));
+await motion.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));
+await motion.route('https://office-fixture.supabase.co/**',async route=>{const req=route.request();if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
+ const name=new URL(req.url()).pathname.split('/').pop(),body=req.postDataJSON(),args=name==='mawatheeq_local_login'?[body.p_username,body.p_password]:[body.p_token,body.p_action,JSON.stringify(body.p_data||{})];
+ try{await route.fulfill({json:await rpc(name,args)})}catch(e){await route.fulfill({status:400,json:{message:e.message,code:e.code||'P0001'}})}});
+await motion.goto(base);
+await motion.getByLabel('اسم المستخدم',{exact:true}).fill('tools_owner');await motion.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');
+await motion.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
+for(const round of [1,2]){
+ await motion.getByRole('button',{name:'فتح القضايا'}).click();
+ await motion.getByRole('heading',{name:'كل قضاياك، في مكان واحد'}).waitFor();
+ await motion.getByRole('button',{name:'حساب tools_owner'}).click();await motion.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
+ await motion.getByRole('button',{name:'فتح المحاسبة'}).click();await motion.getByText('RC-1').waitFor();
+ await motion.getByRole('button',{name:'حساب tools_owner'}).click();await motion.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
+}
+await motion.getByRole('button',{name:'فتح القضايا'}).click();
+await motion.getByRole('heading',{name:'كل قضاياك، في مكان واحد'}).waitFor();
+await motion.goto(base+'#cases');await motion.getByRole('button',{name:/فتح القضية/}).first().click();
+await motion.getByRole('tab',{name:'الطعن والتنفيذ'}).click();
+await motion.getByRole('tabpanel').waitFor();
+await motion.waitForTimeout(1300);
+assert.equal(await motion.locator('.ripple-host').count(),0,'Press ripples remove themselves');
+assert.equal(await motion.evaluate(()=>document.documentElement.dataset.motion),'full');
+await lively.close();
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
+console.log('Passed tools UI: personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
