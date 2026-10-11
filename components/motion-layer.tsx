@@ -12,7 +12,9 @@ const MAGNETIC='.btn.primary,.icon-btn,.back-to-top,.quick-search-trigger';
 const GLOW='.panel,.office-card,.client-card,.person-card,.my-work-item,.device-card,.att-stat';
 const INTERACTIVE='a,button,[role=button],[role=tab],input,select,textarea,label,summary';
 // Rows, cards and list items that sweep in from the scroll direction each time they enter the screen.
-const REACTIVE='tbody tr,.office-card,.client-card,.person-card,.collection-card,.device-card,.att-stat,.stat,.my-work-item,.agenda-item,.notice-list li,.timeline-item,.doc-row,.quick-card,.legend-row,.bar-item,.calendar-day,.comment-list li,.department-metrics>div,.holiday-list li,.bridge-list li,.evidence-row,.help-block,.empty-state,.page-navigation,.pagination';
+const REACTIVE='.office-card,.client-card,.person-card,.collection-card,.device-card,.att-stat,.stat,.my-work-item,.agenda-item,.notice-list li,.timeline-item,.doc-row,.quick-card,.legend-row,.bar-item,.calendar-day,.comment-list li,.department-metrics>div,.holiday-list li,.bridge-list li,.evidence-row,.help-block,.empty-state,.page-navigation,.pagination';
+// Table rows: revealed once, cell by cell, and a spotlight follows the row at the reading line while scrolling.
+const ROWS=':is(.case-table,.office-table)>tbody>tr';
 const HEADINGS='.workspace h1,.workspace h2,.department-content h1,.department-content h2,.workspace-chooser h1';
 
 /** Remember one hovered element per effect and clear its variables when the pointer moves on. */
@@ -91,6 +93,7 @@ export default function MotionLayer() {
    const marks=marksRef.current,line=top+innerHeight*.35;let current=-1;for(let i=0;i<marks.length;i++)if(marks[i].top*se.scrollHeight<=line)current=i;
    if(top>=max-4&&marks.length)current=marks.length-1;
    setActive(current);
+   if(!spotFrame)spotFrame=requestAnimationFrame(spot);
   };
   // Headings become rail markers; re-measured when the page content changes.
   let measureTimer=0;
@@ -112,17 +115,39 @@ export default function MotionLayer() {
     el.style.setProperty('--sr-delay',Math.min(n++,8)*40+'ms');el.classList.add(scrollDir==='down'?'sr-down':'sr-up');
    }
   },{rootMargin:'0px 0px -2% 0px'});
+  const visibleRows=new Set<HTMLElement>(),revealed=new WeakSet<Element>();let spotFrame=0,spotted:HTMLElement|null=null,spotTimer=0;
+  const setSpot=(row:HTMLElement|null)=>{if(row===spotted)return;spotted?.removeAttribute('data-spot');spotted=row;row?.setAttribute('data-spot','')};
+  const spot=()=>{spotFrame=0;
+   if(!motionAllowed()||performance.now()-lastScrollAt>200&&!spotted){setSpot(null);return}
+   const line=innerHeight*.42;let best:HTMLElement|null=null,dist=Infinity;
+   for(const row of visibleRows){const r=row.getBoundingClientRect();const d=r.top<=line&&r.bottom>=line?0:Math.min(Math.abs(r.top-line),Math.abs(r.bottom-line));if(d<dist){dist=d;best=row}}
+   setSpot(dist<120?best:null);clearTimeout(spotTimer);spotTimer=window.setTimeout(()=>setSpot(null),900);
+  };
+  const rowObserver=new IntersectionObserver(entries=>{
+   const scrolling=performance.now()-lastScrollAt<450&&motionAllowed();let n=0;
+   for(const e of entries){const row=e.target as HTMLElement;
+    if(!e.isIntersecting){visibleRows.delete(row);continue}
+    visibleRows.add(row);
+    if(revealed.has(row))continue;
+    revealed.add(row);
+    if(scrolling){row.style.setProperty('--sr-delay',Math.min(n++,6)*45+'ms');row.classList.add('row-reveal')}
+   }
+  });
+  const onRowRevealEnd=(e:AnimationEvent)=>{if(e.animationName==='cell-in'){const row=(e.target as HTMLElement).parentElement;if(row&&e.target===row.lastElementChild)row.classList.remove('row-reveal')}};
+  document.addEventListener('animationend',onRowRevealEnd);
+  const watchedRows=new WeakSet<Element>();
   const watched=new WeakSet<Element>();
   const onRevealEnd=(e:AnimationEvent)=>{const el=e.target as HTMLElement;if(e.animationName.startsWith('sr-'))el.classList.remove('sr-down','sr-up')};
   document.addEventListener('animationend',onRevealEnd);
-  const watch=()=>{for(const el of document.querySelectorAll(REACTIVE))if(!watched.has(el)&&!el.closest('.att-grid')){watched.add(el);reveal.observe(el)}};
+  const watch=()=>{for(const el of document.querySelectorAll(REACTIVE))if(!watched.has(el)&&!el.closest('.att-grid')){watched.add(el);reveal.observe(el)}
+   for(const row of document.querySelectorAll(ROWS))if(!watchedRows.has(row)){watchedRows.add(row);rowObserver.observe(row)}};
   const scheduleMeasure=()=>{if(!measureTimer)measureTimer=window.setTimeout(()=>{watch();measure()},350)};
   const observer=new MutationObserver(scheduleMeasure);observer.observe(document.body,{childList:true,subtree:true});
   const onAppearance=()=>{backdrop?.sync()};
   onScroll();scheduleMeasure();
   addEventListener('pointermove',onMove,{passive:true});addEventListener('pointerdown',onDown,{passive:true});addEventListener('pointerup',onUp,{passive:true});addEventListener('pointercancel',onUp,{passive:true});document.addEventListener('pointerleave',onLeave);
   addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',scheduleMeasure,{passive:true});addEventListener('mawatheeq-appearance',onAppearance);reducedQuery.addEventListener('change',onAppearance);
-  return()=>{cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();document.removeEventListener('animationend',onRevealEnd);backdrop?.stop();bursts?.stop();
+  return()=>{cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
    removeEventListener('pointermove',onMove);removeEventListener('pointerdown',onDown);removeEventListener('pointerup',onUp);removeEventListener('pointercancel',onUp);document.removeEventListener('pointerleave',onLeave);
    removeEventListener('scroll',onScroll);removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
    for(const a of ['data-scrolled','data-scrolling','data-pointer','data-hover-action','data-pressing'])root.removeAttribute(a)};
