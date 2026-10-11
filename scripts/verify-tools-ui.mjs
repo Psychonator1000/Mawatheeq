@@ -162,6 +162,44 @@ assert.equal(await call.getAttribute('href'),'tel:+96599991234','Arabic-digit lo
 assert.equal(await page.getByRole('link',{name:'واتساب منسق تجريبي'}).getAttribute('href'),'https://wa.me/96599991234');
 await page.keyboard.press('Escape');
 
+// Appearance choices apply instantly and persist on this device.
+await page.getByRole('button',{name:'حساب tools_owner'}).click();
+await page.getByRole('button',{name:'المظهر والحركة'}).click();
+await page.getByRole('radio',{name:'كحلي'}).check();
+await page.getByRole('radio',{name:/شبكة وضوء/}).check();
+assert.deepEqual(await page.evaluate(()=>[document.documentElement.dataset.theme,document.documentElement.dataset.backdrop]),['navy','spotlight']);
+await page.getByRole('button',{name:'تم'}).click();
+await page.reload();await page.getByRole('heading',{name:'الموكلون',level:1}).waitFor();
+assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'navy','Theme survives a reload');
+assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.btn.primary')).backgroundColor),'rgb(31, 61, 99)','Primary actions follow the theme');
+await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
+await page.getByRole('button',{name:'استعادة الافتراضي'}).click();await page.getByRole('button',{name:'تم'}).click();
+assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'burgundy');
+
+// Keyboard shortcuts.
+await page.locator('body').press('Shift+Slash');
+await page.getByRole('heading',{name:'اختصارات لوحة المفاتيح'}).waitFor();
+await page.keyboard.press('Escape');
+await page.locator('body').press('Alt+Digit2');
+await page.getByRole('heading',{name:'سجل الأحكام',level:1}).waitFor();
+
+// Closing an edited case asks first; recently opened cases appear in quick search.
+await page.keyboard.press('Control+k');
+const recentGroup=page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'});
+await recentGroup.getByText(/TOOL-0/).waitFor();
+assert.ok(await recentGroup.getByText(/TOOL-2/).isVisible(),'Both recently opened cases are offered');
+await recentGroup.getByText(/TOOL-0/).click();
+const sheet=page.getByRole('dialog').filter({hasText:'CASE FILE · TOOL-0'});
+await sheet.getByLabel('الخصم',{exact:true}).fill('خصم معدل دون حفظ');
+await page.keyboard.press('Escape');
+await page.getByRole('alertdialog').getByText('تغييرات غير محفوظة').waitFor();
+await page.getByRole('button',{name:'متابعة التعديل'}).click();
+assert.equal(await sheet.getByLabel('الخصم',{exact:true}).inputValue(),'خصم معدل دون حفظ','Edits are kept when continuing');
+await page.keyboard.press('Escape');
+await page.getByRole('button',{name:'إغلاق دون حفظ'}).click();
+await sheet.waitFor({state:'hidden'});
+assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-0').payload.opponent,'خصم الأدوات 0','Discarded edits are not saved');
+
 // Account actions live in the avatar menu.
 const openAccount=()=>page.getByRole('button',{name:'حساب tools_owner'}).click();
 await openAccount();
@@ -191,4 +229,4 @@ await page.getByText('3 يوم',{exact:true}).waitFor();
 await page.screenshot({path:artifacts+'/hr.png'});
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, @mention discussion with replies and moderation, and no runtime errors.');
+console.log('Passed tools UI: personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');

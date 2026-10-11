@@ -5,6 +5,10 @@ import '@fontsource-variable/noto-sans-arabic';
 import '../app/globals.css';
 import './pages.css';
 import SharedApp from './shared-app';
+import { applyAppearance, loadAppearance } from '@/lib/appearance';
+
+// Apply saved theme and motion choices before the first paint.
+applyAppearance(loadAppearance());
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

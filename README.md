@@ -30,6 +30,8 @@ The owner requires a free-only setup: keep the public repository, standard GitHu
 - Printable receipt/payment vouchers (KWD amounts in words) and per-currency account statements in accounting.
 - Approved leave days used per employee this year, and day counts on each leave request.
 - Internal discussion on each case and task with @mentions delivered to the notification bell (requires the one-time migration in [the discussion guide](docs/RECORD_COMMENTS.md)).
+- Appearance menu: six colour themes, animated backgrounds that react to the mouse (aurora, dotted spotlight, waves or none) and a motion level (full, calm, off). Scrolling drives a progress line, a condensing top bar and a sidebar rail; cards tilt toward the pointer and panels glide into view. All motion stops when the device asks for reduced motion.
+- Keyboard shortcuts (`?` lists them, `Alt+1…9` jump between sections), recently opened cases in quick search, and a confirmation before closing a case with unsaved edits.
 - Account menu (switch workspace, change password, sign out) behind the avatar; guidance on each page in "كيف يعمل هذا القسم؟", with deadline periods taken from the settings.
 - Numbered pages and direct page jumps, including Arabic numerals.
 - Separate judgment year and month filters, combined with code, client, and opposing-party filters. Select a year, a month across years, or both. Dashboard months open their matching case lists with both date filters selected.
