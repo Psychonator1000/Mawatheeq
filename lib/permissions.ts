@@ -2,7 +2,7 @@ export const SECTIONS = {
   overview: 'نظرة عامة', cases: 'سجل الأحكام', clients: 'الموكلون',
   deadlines: 'المواعيد والمتابعة', analytics: 'التحليل والإحصائيات',
   verification: 'التحقق من القضايا', work: 'المهام والجلسات',
-  conflicts: 'فحص الأطراف', documents: 'إعداد المستندات',
+  conflicts: 'فحص الأطراف', documents: 'المستندات والأدلة',
   secretary: 'السكرتارية', collections: 'التحصيل', accounting: 'المحاسبة', hr: 'الموارد البشرية',
 } as const;
 export type Section = keyof typeof SECTIONS;

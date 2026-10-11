@@ -32,6 +32,12 @@ Any file edit or archive/reopen clears the review. A changed main case makes the
 
 The current claim template is the existing claim following refusal of an order of payment, with service account/telephone details. The screen lists the fields it requires. Files for other case types can be saved, but should not be forced into an inapplicable template. Reviewing a collection source is separate from owner approval of judgment or execution-announcement data.
 
+The order of payment (أمر الأداء) is the source paper: its details are typed once into the collection file, and both outputs, the statement of claim (صحيفة الدعوى) and the document bundle (حافظة المستندات), are produced from that data. A button fills the bundle with the usual documents derived from the file's own details. The earlier PDF-upload page (إعداد المستندات) was removed on 11 October 2026; drafts it saved remain in the database and the owner's full backup.
+
+### Batch printing
+
+The «طباعة جماعية» view in التحصيل, also shown in the secretary workspace, lists files that are reviewed and complete for the chosen paper. Filter by search or hearing dates, tick files (or «تحديد كل الجاهز»), choose bundle, claim or both, and download one Word file per paper type. Each paper is generated through the same server `generate` action as a single paper, so revision checks, export permission and immutable output snapshots apply to every file; failures are listed without stopping the batch. Each document is its own section with page numbers restarting at 1. A secretary needs the التحصيل section and export permission; the section alone grants no case narrative, client profile or other department data.
+
 ## Accounting
 
 Posted entries retain their original amount, currency, date, reference and party. Correct an entry by cancelling it with a reason and posting a replacement. Cancellation preserves the original and records the actor and time. Repeated submission of the same entry ID cannot post a second entry.
