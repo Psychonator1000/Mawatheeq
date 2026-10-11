@@ -38,6 +38,7 @@ jobs:
       - run: pnpm run test:office
       - run: pnpm run test:permissions
       - run: pnpm run test:departments
+      - run: pnpm run test:comments
       - run: pnpm run test:tools
       - name: Install isolated browser test dependency
         run: npm install --prefix "$RUNNER_TEMP/office-browser" --no-save --package-lock=false --ignore-scripts playwright@1.62.1

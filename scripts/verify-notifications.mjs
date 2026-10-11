@@ -41,9 +41,23 @@ assert.deepEqual(notices.map(n => n.tone), [...notices.map(n => n.tone)].sort((a
 assert.equal(buildNotices({ cases, stateOf, work: items, userId: 'me', today, showDeadlines: false, showWork: false }).length, 0, 'Hidden sections produce no alerts');
 assert.ok(buildNotices({ cases, stateOf, work: items, userId: 'me', today, showDeadlines: false, showWork: true }).every(n => n.view === 'work'));
 
+const feed = { lastRead: 5, items: [
+  { id: 7, targetType: 'case', targetId: 'soon', author: 'clerk', body: 'راجع   الإعلان\nقبل الجلسة' },
+  { id: 6, targetType: 'work', targetId: 'today', author: 'lead', body: 'x'.repeat(120) },
+  { id: 5, targetType: 'case', targetId: 'soon', author: 'old', body: 'مقروء' },
+] };
+const withMentions = buildNotices({ cases, stateOf, work: items, userId: 'me', today, showDeadlines: false, showWork: false, mentions: feed });
+assert.deepEqual(withMentions.map(n => n.id), ['mention-6', 'mention-7'], 'Unread mentions only, even when other sections are hidden');
+const caseMention = withMentions.find(n => n.id === 'mention-7');
+assert.equal(caseMention.title, 'أشار إليك clerk'); assert.equal(caseMention.detail, 'راجع الإعلان قبل الجلسة', 'Whitespace collapsed');
+assert.equal(caseMention.caseId, 'soon'); assert.equal(caseMention.mentionId, 7); assert.equal(caseMention.workId, undefined);
+const workMention = withMentions.find(n => n.id === 'mention-6');
+assert.equal(workMention.workId, 'today'); assert.equal(workMention.view, 'work'); assert.equal(workMention.detail.length, 91, 'Long comments are shortened');
+assert.equal(buildNotices({ cases, stateOf, work: items, userId: 'me', today, showDeadlines: false, showWork: false, mentions: null }).length, 0);
+
 const mine = myWork(items, 'me', today, '2026-10-18');
 assert.deepEqual(mine.overdue.map(w => w.id), ['late']);
 assert.deepEqual(mine.today.map(w => w.id), ['urgent', 'today'], 'Untimed work sorts before timed work on the same day');
 assert.deepEqual(mine.upcoming.map(w => w.id), ['future'], 'Upcoming stops at the horizon');
 
-console.log('Passed: personal work alerts, approaching and expired deadlines, today follow-ups, archived/section exclusions, urgency order and personal agenda grouping.');
+console.log('Passed: unread @mention alerts, personal work alerts, approaching and expired deadlines, today follow-ups, archived/section exclusions, urgency order and personal agenda grouping.');

@@ -2,17 +2,24 @@ import type { CaseRecord, caseState } from './domain';
 import type { WorkItem } from './office';
 
 export type NoticeTone = 'danger' | 'warning' | 'info';
-export type Notice = { id: string; tone: NoticeTone; title: string; detail: string; view: string; caseId?: string; workId?: string };
+export type Notice = { id: string; tone: NoticeTone; title: string; detail: string; view: string; caseId?: string; workId?: string; mentionId?: number };
+type MentionFeed = { items: { id: number; targetType: 'case' | 'work'; targetId: string; author: string; body: string }[]; lastRead: number };
 type CaseState = Pick<ReturnType<typeof caseState>, 'alert' | 'remaining'>;
 
 const caseLabel = (c: CaseRecord) => c.code || c.autoNumber || c.clientEntityName || c.client || 'قضية';
 const toneRank: Record<NoticeTone, number> = { danger: 0, warning: 1, info: 2 };
 
 /** In-app alerts built from records the signed-in user can already see. */
-export function buildNotices({ cases, stateOf, work, userId, today, showDeadlines, showWork }: {
-  cases: CaseRecord[]; stateOf: (c: CaseRecord) => CaseState; work: WorkItem[]; userId: string; today: string; showDeadlines: boolean; showWork: boolean;
+export function buildNotices({ cases, stateOf, work, userId, today, showDeadlines, showWork, mentions }: {
+  cases: CaseRecord[]; stateOf: (c: CaseRecord) => CaseState; work: WorkItem[]; userId: string; today: string; showDeadlines: boolean; showWork: boolean; mentions?: MentionFeed | null;
 }): Notice[] {
   const notices: Notice[] = [];
+  for (const m of mentions?.items || []) {
+    if (m.id <= mentions!.lastRead) continue;
+    const text = m.body.replace(/\s+/g, ' ').trim();
+    notices.push({ id: 'mention-' + m.id, tone: 'warning', mentionId: m.id, view: m.targetType === 'case' ? 'cases' : 'work', caseId: m.targetType === 'case' ? m.targetId : undefined, workId: m.targetType === 'work' ? m.targetId : undefined,
+      title: 'أشار إليك ' + m.author, detail: text.length > 90 ? text.slice(0, 90) + '…' : text });
+  }
   const active = cases.filter(c => !c.archived);
   if (showWork) {
     for (const w of work) {

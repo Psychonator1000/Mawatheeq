@@ -36,6 +36,10 @@ const dept=(workspace,record)=>rpc('mawatheeq_department_request',[login.token,'
 await dept('accounting',{id:'66666666-6666-4666-8666-666666666661',workspace:'accounting',kind:'entry',payload:{type:'fee',date:iso(-3),currency:'KWD',amount:'10',reference:'FEE-1',party:'موكل تجريبي',notes:''}});
 await dept('accounting',{id:'66666666-6666-4666-8666-666666666662',workspace:'accounting',kind:'entry',payload:{type:'receipt',date:iso(-1),currency:'KWD',amount:'2.5',reference:'RC-1',party:'موكل تجريبي',notes:'دفعة أولى'}});
 await dept('hr',{id:'77777777-7777-4777-8777-777777777771',workspace:'hr',kind:'employee',payload:{employeeNumber:'E-1',name:'موظف تجريبي',title:'محامٍ',department:'القضايا',phone:'',startDate:'2025-01-01',status:'active',notes:''}});
+const clerk=await office('create_member',{username:'tools_clerk',password:'Temporary-password-123',permissions:{sections:['cases','work'],caseScope:'selected',caseIds:['tools-case-0'],canEdit:true,canExport:false}});
+const clerkSession=await rpc('mawatheeq_local_login',['tools_clerk','Temporary-password-123']);
+await rpc('mawatheeq_local_request',[clerkSession.token,'password',JSON.stringify({currentPassword:'Temporary-password-123',newPassword:'Fixture-password-123'})]);
+await rpc('mawatheeq_comment_request',[clerkSession.token,'post',JSON.stringify({targetType:'case',targetId:'tools-case-0',body:'هل استلمنا صيغة الحكم؟',mentions:[me]})]);
 const leaveYear=today.slice(0,4),leaveStart=leaveYear+'-02-10',leaveEnd=leaveYear+'-02-12';
 await dept('hr',{id:'77777777-7777-4777-8777-777777777772',workspace:'hr',kind:'leave',subjectId:'77777777-7777-4777-8777-777777777771',payload:{type:'سنوية',fromDate:leaveStart,toDate:leaveEnd,status:'approved',notes:'',decisionNote:'معتمدة'}});
 
@@ -48,7 +52,7 @@ await page.route('https://office-fixture.supabase.co/**',async route=>{
  const req=route.request();const url=new URL(req.url());
  if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
  const name=url.pathname.split('/').pop();const body=req.postDataJSON();
- if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
+ if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request','mawatheeq_comment_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
  const args=name==='mawatheeq_local_login'?[body.p_username,body.p_password]:[body.p_token,body.p_action,JSON.stringify(body.p_data||{})];
  try{await route.fulfill({json:await rpc(name,args)})}catch(e){await route.fulfill({status:400,json:{message:e.message,code:e.code||'P0001'}})}
 });
@@ -110,6 +114,27 @@ assert.ok(printed.includes('TOOL-2')&&printed.includes('&lt;b&gt;منطوق تج
 assert.ok(!printed.includes('مهمة متأخرة تجريبية'),'Work linked to another case is not printed');
 await page.keyboard.press('Escape');
 
+// A mention opens the case discussion; replies can mention colleagues and authors can delete their own comments.
+await bell.click();
+await panel.getByText('أشار إليك tools_clerk').click();
+const discussion=page.getByRole('region',{name:'النقاش الداخلي'});
+await discussion.getByText('هل استلمنا صيغة الحكم؟').waitFor();
+await discussion.getByLabel('تعليق جديد').fill('نعم، استلمناها اليوم');
+await discussion.getByLabel('@tools_clerk').check();
+await discussion.getByRole('button',{name:'إرسال التعليق'}).click();
+await discussion.getByText('نعم، استلمناها اليوم').waitFor();
+assert.ok(await discussion.getByRole('list').getByText('@tools_clerk').isVisible(),'Reply shows its mention');
+await page.screenshot({path:artifacts+'/discussion.png'});
+assert.equal((await rpc('mawatheeq_comment_request',[clerkSession.token,'mentions','{}'])).items.length,1,'The mentioned colleague receives the reply');
+await discussion.getByRole('listitem').filter({hasText:'نعم، استلمناها اليوم'}).getByRole('button',{name:'حذف التعليق'}).click();
+await discussion.getByText('حُذف هذا التعليق.').waitFor();
+assert.equal(await discussion.getByRole('listitem').filter({hasText:'هل استلمنا صيغة الحكم؟'}).getByRole('button',{name:'حذف التعليق'}).count(),1,'The office owner can moderate colleagues\' comments');
+await page.keyboard.press('Escape');
+await bell.click();
+await page.waitForFunction(()=>document.querySelector('.notice-panel')&&![...document.querySelectorAll('.notice-item')].some(e=>e.textContent.includes('أشار إليك')),null,{timeout:5000});
+await page.keyboard.press('Escape');
+assert.equal((await rpc('mawatheeq_comment_request',[clerkSession.token,'mentions','{}'])).items.length,0,'A deleted reply leaves the colleague\'s mentions');
+
 // Search finds sections too, and the header fits a phone.
 await page.keyboard.press('Control+k');
 await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('combobox').fill('الإعدادات');
@@ -166,4 +191,4 @@ await page.getByText('3 يوم',{exact:true}).waitFor();
 await page.screenshot({path:artifacts+'/hr.png'});
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days and no runtime errors.');
+console.log('Passed tools UI: personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, @mention discussion with replies and moderation, and no runtime errors.');
