@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { KeyRound, LogOut, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import WorkspaceHub from '@/components/workspace-hub';
+import { AccountContext } from '@/components/account-menu';
 import {workspaceStorageKey} from '@/lib/departments';
 import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, type LocalUser } from '@/lib/local-auth';
 import type { Permissions } from '@/lib/permissions';
@@ -88,11 +89,10 @@ export default function SharedApp() {
 
   const passwordRequired = !!user?.mustChangePassword;
   const passwordForm = user && (passwordRequired || changingPassword);
-  if (ready && user && !passwordForm) return <>
+  if (ready && user && !passwordForm) return <AccountContext.Provider value={{ username: user.username, busy, onChangePassword: () => { setChangingPassword(true); setMessage(''); setError(''); }, onLogout: () => void logout() }}>
     <AuthorizedWorkspace key={user.id} owner={user.role==='owner'} />
-    <div className="account-bar"><span className="account-email" dir="ltr">{user.username}</span><button className="text-link" onClick={() => { setChangingPassword(true); setMessage(''); setError(''); }}><KeyRound size={15} /> تغيير كلمة المرور</button><button className="text-link" disabled={busy} onClick={() => void logout()}><LogOut size={15} /> خروج</button></div>
     {error && <div className="auth-message error" role="alert">{error}</div>}
-  </>;
+  </AccountContext.Provider>;
 
   return <main className="auth-page"><section className="auth-card">
     <div className="brand-mark">M</div><h1>مواثيق</h1><p>مساحة المكتب المشتركة للأحكام والتنفيذ والمستندات.</p>

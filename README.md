@@ -26,6 +26,10 @@ The owner requires a free-only setup: keep the public repository, standard GitHu
 - Ctrl+K quick search across cases, clients, sections and common actions.
 - Month calendar for tasks and hearings, with one-click task creation on a day.
 - Printable case sheet (print or save as PDF) with computed deadlines, procedures and open work.
+- Call and WhatsApp buttons for client contacts (8-digit numbers are treated as Kuwaiti).
+- Printable receipt/payment vouchers (KWD amounts in words) and per-currency account statements in accounting.
+- Approved leave days used per employee this year, and day counts on each leave request.
+- Account menu (switch workspace, change password, sign out) behind the avatar; guidance on each page in "كيف يعمل هذا القسم؟", with deadline periods taken from the settings.
 - Numbered pages and direct page jumps, including Arabic numerals.
 - Separate judgment year and month filters, combined with code, client, and opposing-party filters. Select a year, a month across years, or both. Dashboard months open their matching case lists with both date filters selected.
 - Excel import/export and case-data backup downloads.
