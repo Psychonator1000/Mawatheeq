@@ -38,6 +38,7 @@ jobs:
       - run: pnpm run test:office
       - run: pnpm run test:permissions
       - run: pnpm run test:departments
+      - run: pnpm run test:tools
       - name: Install isolated browser test dependency
         run: npm install --prefix "$RUNNER_TEMP/office-browser" --no-save --package-lock=false --ignore-scripts playwright@1.62.1
       - name: Test office workflows in Chrome
@@ -50,6 +51,7 @@ jobs:
           node -e 'async function ready(){for(let i=0;i<30;i++){try{if((await fetch("http://127.0.0.1:4175/Mawatheeq/")).ok)return}catch{}await new Promise(r=>setTimeout(r,1000))}process.exit(1)}ready()'
           node scripts/verify-office-ui.mjs
           node scripts/verify-workspaces-ui.mjs
+          node scripts/verify-tools-ui.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

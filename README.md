@@ -22,6 +22,10 @@ The owner requires a free-only setup: keep the public repository, standard GitHu
 - Shared records with refresh across users and conflict protection for simultaneous edits.
 - Local username sign-in, in-app password changes, and expiring server-verified sessions.
 - Deadline reminders, client summaries, and analysis charts.
+- In-app notifications for your overdue and today's work, approaching appeal deadlines and today's follow-ups; a personal "My work" panel on the overview.
+- Ctrl+K quick search across cases, clients, sections and common actions.
+- Month calendar for tasks and hearings, with one-click task creation on a day.
+- Printable case sheet (print or save as PDF) with computed deadlines, procedures and open work.
 - Numbered pages and direct page jumps, including Arabic numerals.
 - Separate judgment year and month filters, combined with code, client, and opposing-party filters. Select a year, a month across years, or both. Dashboard months open their matching case lists with both date filters selected.
 - Excel import/export and case-data backup downloads.

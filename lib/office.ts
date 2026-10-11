@@ -29,6 +29,14 @@ export function workBucket(item:Pick<WorkItem,'status'|'dueDate'>,today:string):
  if(!/^\d{4}-\d{2}-\d{2}$/.test(item.dueDate))return 'undated';
  return item.dueDate<today?'overdue':item.dueDate===today?'today':'upcoming';
 }
+/** Date-only cells for a Sunday-first month calendar, padded to whole weeks. */
+export function monthGrid(month:string):string[] {
+ const [y,m]=month.split('-').map(Number),first=new Date(Date.UTC(y,m-1,1)),days=new Date(Date.UTC(y,m,0)).getUTCDate(),offset=first.getUTCDay();
+ return Array.from({length:Math.ceil((offset+days)/7)*7},(_,i)=>new Date(Date.UTC(y,m-1,1+i-offset)).toISOString().slice(0,10));
+}
+export function shiftMonth(month:string,delta:number):string {
+ const [y,m]=month.split('-').map(Number);return new Date(Date.UTC(y,m-1+delta,1)).toISOString().slice(0,7);
+}
 const ignoredFields=new Set(['revision','updatedAt','updated_at','clientEntityName','clientContactName','clientSector','clientNeedsReview']);
 export function changedFields(before:Record<string,unknown>|null,after:Record<string,unknown>) {
  return Array.from(new Set([...Object.keys(before||{}),...Object.keys(after)])).filter(key=>!ignoredFields.has(key)&&JSON.stringify(before?.[key])!==JSON.stringify(after[key]));
