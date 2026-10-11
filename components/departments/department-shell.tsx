@@ -13,6 +13,7 @@ import Secretary from '../secretair';
 import Collections from './collections';
 import Accounting from './accounting';
 import HR from './hr';
+import BatchPrint from './batch-print';
 export default function DepartmentWorkspace({workspace,access}:{workspace:Department;access:Permissions}) {
  const [cases,setCases]=useState<CaseSummary[]>([]),[context,setContext]=useState<OfficeContext|null>(null),[work,setWork]=useState<WorkItem[]>([]);
  const [version,setVersion]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selected,setSelected]=useState<CaseSummary|null>(null);
@@ -25,6 +26,7 @@ export default function DepartmentWorkspace({workspace,access}:{workspace:Depart
  <div className="department-content"><StatusMessage loading={loading} error={error}/>{!loading&&!error&&<>
  {!access.canEdit&&<p className="notice">حسابك للقراءة فقط في هذه المساحة.</p>}
  {workspace==='secretary'&&context&&<Secretary items={work} context={context} records={cases} onChanged={refresh} onOpenCase={setSelected}/>}
+ {workspace==='secretary'&&(access.sections.includes('collections')?<BatchPrint canExport={access.canExport}/>:<section className="panel"><h2>طباعة مستندات التحصيل</h2><p className="subtitle">لطباعة الحوافظ والصحف لعدة ملفات دفعة واحدة، يمنح مسؤول المكتب هذا الحساب قسم «التحصيل» وصلاحية التصدير.</p></section>)}
  {workspace==='collections'&&<Collections key={version} cases={cases} access={access}/>}
  {workspace==='accounting'&&<Accounting key={version} cases={cases} access={access}/>}
  {workspace==='hr'&&<HR key={version} access={access}/>}

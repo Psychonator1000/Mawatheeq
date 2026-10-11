@@ -68,6 +68,9 @@ try{
  await page.getByText(/راجع ui_owner هذه النسخة/).waitFor();
  await downloadWord('إنشاء صحيفة Word','شركة اختبار التحصيل');await downloadWord('إنشاء حافظة Word','عقد تجريبي تمت مراجعته');
  await screen('collections-review-desktop');await click('إغلاق الملف');await screen('collections-desktop');
+ await click('طباعة جماعية');await page.locator('.batch-table').getByText('جاهز',{exact:true}).waitFor();await click('الاثنان معاً');await click('تحديد كل الجاهز');
+ {const files=[];const onDownload=d=>files.push(d);page.on('download',onDownload);await click('إنشاء ملف الطباعة (1)');for(let i=0;i<60&&files.length<2;i++)await page.waitForTimeout(250);page.off('download',onDownload);assert.equal(files.length,2,'batch print downloads one file per paper type');assert.deepEqual(files.map(d=>d.suggestedFilename().split('-2')[0]).sort(),['Mawatheeq-bundles','Mawatheeq-claims']);}
+ await screen('collections-batch-desktop');await click('ملفات التحصيل');
  await switchTo('المحاسبة');await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await field('المبلغ','125.125');await field('مرجع القيد / رقم الإيصال','SYN-FEE-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');await page.getByRole('cell',{name:/SYN-FEE-UI/}).waitFor();
  await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await page.getByLabel('نوع القيد',{exact:true}).selectOption('receipt');await field('المبلغ','25.025');await field('مرجع القيد / رقم الإيصال','SYN-RECEIPT-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');
  await page.getByText('100.100 KWD',{exact:true}).waitFor();await screen('accounting-desktop');

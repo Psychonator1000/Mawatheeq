@@ -44,3 +44,9 @@
 .device-more{border-top:1px solid var(--border);padding-top:10px}.device-more summary{cursor:pointer;font-size:13px;color:var(--brand);list-style:none;display:flex;align-items:center;gap:6px}.device-more summary::before{content:'▸';transition:rotate .2s}.device-more[open] summary::before{rotate:90deg}
 .device-more-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.device-more-actions .btn{font-size:12px;padding:6px 10px;min-height:0}
 .user-actions{display:flex;gap:6px;flex-wrap:wrap}.user-actions .btn{font-size:12px;padding:5px 9px;min-height:0}
+/* Batch printing of collection papers */
+.batch-print .batch-kinds{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px}
+.batch-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.batch-bar .btn.primary{margin-inline-start:auto}
+.batch-progress{height:6px;border-radius:6px;background:color-mix(in srgb,var(--brand) 12%,transparent);overflow:hidden;margin-bottom:12px}.batch-progress i{display:block;height:100%;background:var(--brand);transition:width .3s}
+.batch-table td:first-child,.batch-table th:first-child{width:44px;text-align:center}.batch-table input[type=checkbox]{width:18px;height:18px;accent-color:var(--brand)}
+.batch-print .notice ul{margin:6px 0 0;padding-inline-start:18px}

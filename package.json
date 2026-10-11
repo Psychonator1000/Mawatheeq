@@ -27,7 +27,7 @@
     "test:departments": "node scripts/verify-departments.mjs",
     "test:comments": "node scripts/verify-comments.mjs",
     "test:attendance": "node scripts/verify-attendance-db.mjs && node --experimental-strip-types scripts/verify-attendance.mjs && node scripts/verify-bridge.mjs",
-    "test:tools": "node scripts/build-themes.mjs --check && node --experimental-strip-types scripts/verify-notifications.mjs && node --experimental-strip-types scripts/verify-print.mjs && node --experimental-strip-types scripts/verify-contact-links.mjs && node --experimental-strip-types scripts/verify-leave.mjs"
+    "test:tools": "node scripts/build-themes.mjs --check && node --experimental-strip-types scripts/verify-notifications.mjs && node --experimental-strip-types scripts/verify-print.mjs && node --experimental-strip-types scripts/verify-contact-links.mjs && node --experimental-strip-types scripts/verify-leave.mjs && node --experimental-strip-types scripts/verify-word-merge.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
