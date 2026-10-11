@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { RefreshCw } from 'lucide-react';
 import WorkspaceHub from '@/components/workspace-hub';
 import { AccountContext } from '@/components/account-menu';
+import MotionLayer from '@/components/motion-layer';
 import {workspaceStorageKey} from '@/lib/departments';
 import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, type LocalUser } from '@/lib/local-auth';
 import type { Permissions } from '@/lib/permissions';
@@ -90,11 +91,12 @@ export default function SharedApp() {
   const passwordRequired = !!user?.mustChangePassword;
   const passwordForm = user && (passwordRequired || changingPassword);
   if (ready && user && !passwordForm) return <AccountContext.Provider value={{ username: user.username, busy, onChangePassword: () => { setChangingPassword(true); setMessage(''); setError(''); }, onLogout: () => void logout() }}>
+    <MotionLayer />
     <AuthorizedWorkspace key={user.id} owner={user.role==='owner'} />
     {error && <div className="auth-message error" role="alert">{error}</div>}
   </AccountContext.Provider>;
 
-  return <main className="auth-page"><section className="auth-card">
+  return <><MotionLayer /><main className="auth-page"><section className="auth-card">
     <div className="brand-mark">M</div><h1>مواثيق</h1><p>مساحة المكتب المشتركة للأحكام والتنفيذ والمستندات.</p>
     {!ready ? <p role="status">جارٍ فتح مساحة العمل…</p> : passwordForm ? <>
       <h2>تغيير كلمة المرور</h2><p>{passwordRequired ? 'عيّن كلمة مرور خاصة بك لفتح مساحة المكتب.' : 'تُسجّل الجلسات الأخرى خروجها عند تغيير كلمة المرور.'}</p>
@@ -117,7 +119,7 @@ export default function SharedApp() {
     {message && <div className="auth-message" role="status">{message}</div>}
     {error && <div className="auth-message error" role="alert">{error}</div>}
     {error && !ready && <button className="btn" onClick={() => window.location.reload()}><RefreshCw size={16} /> إعادة المحاولة</button>}
-  </section></main>;
+  </section></main></>;
 }
 
 function AuthorizedWorkspace({owner}:{owner:boolean}) {
