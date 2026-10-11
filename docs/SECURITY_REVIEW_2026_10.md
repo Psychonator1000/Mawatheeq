@@ -18,11 +18,17 @@ The audit still reports findings in the preserved legacy server and development 
 
 Review these deferred development/legacy findings by **23 October 2026**, and before enabling the legacy server or any office-server deployment. No audit ignore rules, forced fixes, new paid services or bulk dependency upgrades were introduced.
 
+### Follow-up, 11 October 2026
+
+The legacy ChatGPT Sites/Cloudflare server, Next.js, Drizzle, Wrangler and vinext were removed (they remain in Git history). Linting now uses the React, React Hooks, jsx-a11y and typescript-eslint plugins directly, at the versions already locked, with the same rule results. No package was added or upgraded; 295 locked packages were removed. `pnpm audit` fell from 62 findings (1 critical, 30 high) to 25 (0 critical, 17 high).
+
+The remaining findings are in development and build tools only: ESLint and its plugins (brace-expansion, js-yaml, @babel/core, browserslist), the Vite development server (esbuild, vite, launch-editor) and the Tailwind build (source-map-js). `fast-uri` arrives through `@hookform/resolvers`, which no application code imports, so it is not in the published bundle. None of these run in the GitHub Pages deployment. Upgrade the development toolchain when locked versions with fixes satisfy the minimum release age, and never expose a development server as an office production server.
+
 ## Concurrent repository edits
 
 The newer secretary-screen draft and configuration were preserved. Missing imports were fixed and the draft's task/history operations use the existing permission-checked work API; it is not a separate database registry or navigation section. Its optional data field does not force unrelated loaders to fabricate data.
 
-The newly added npm lock snapshot is retained as `docs/npm-lock-reference.json`. `package.json`, CI and the existing project policy consistently specify pnpm 11.25.0; `pnpm-lock.yaml` remains the only installation lockfile.
+The newly added npm lock snapshot was retained as `docs/npm-lock-reference.json` until its removal on 11 October 2026. `package.json`, CI and the existing project policy consistently specify pnpm 11.25.0; `pnpm-lock.yaml` remains the only installation lockfile.
 
 ## Release verification
 
