@@ -7,7 +7,7 @@
 /* Administrator permission editor */
 .permissions-dialog{max-width:840px!important}
 .permission-group{border:1px solid #e4d9cb!important;border-radius:12px;padding:18px!important;margin:22px 0!important;min-width:0}
-.permission-group legend{font-weight:700;padding:0 8px;color:#642b3b}
+.permission-group legend{font-weight:700;padding:0 8px;color:var(--brand)}
 .permission-group>.checkbox-line{margin:12px 0}
 .permission-group .subtitle{margin-top:14px;line-height:1.9}
 .permission-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -19,7 +19,7 @@
 .permission-case small{display:block;color:#766354;line-height:1.8}
 .readonly-fields{border:0;padding:0;min-width:0}
 .readonly-fields:disabled input,.readonly-fields:disabled textarea,.readonly-fields:disabled button,.readonly-fields:disabled select{opacity:1;color:#655044;cursor:default}
-.access-scope{margin-bottom:20px;border-inline-start:3px solid #8e5160;padding:10px 15px;background:#f7f0e7;font-size:13px;line-height:1.8}
+.access-scope{margin-bottom:20px;border-inline-start:3px solid var(--brand);padding:10px 15px;background:#f7f0e7;font-size:13px;line-height:1.8}
 @media(max-width:600px){.permission-sections{grid-template-columns:1fr}.permission-group{padding:12px!important}.permission-case{padding:10px}}
 
 .quick-search-trigger{gap:8px;color:#756359;min-height:36px}.quick-search-trigger kbd{font:11px ui-monospace,monospace;border:1px solid #dfd3c5;border-radius:6px;padding:1px 6px;background:#faf6ef;direction:ltr}
@@ -34,10 +34,10 @@
 .calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(96px,1fr));border:1px solid #eee5d8;border-radius:12px;overflow:hidden;min-width:700px}.calendar-weekday{background:#faf6ef;color:#756359;font-size:12px;padding:8px;text-align:center}
 .calendar-day{min-height:104px;border-top:1px solid #eee5d8;border-inline-start:1px solid #eee5d8;padding:6px;display:flex;flex-direction:column;gap:4px;background:#fffdf8}.calendar-day.outside{background:#f7f2ea;color:#a89a8f}.calendar-day.today{box-shadow:inset 0 0 0 2px var(--brand)}
 .calendar-date{display:flex;justify-content:space-between;align-items:center;font-size:12px}.calendar-add{width:22px;height:22px;border-radius:6px;color:var(--brand);font-weight:700;opacity:.55}.calendar-add:hover,.calendar-add:focus-visible{opacity:1;background:#f4ebdf}
-.calendar-time{margin-left:6px;font-variant-numeric:tabular-nums}.calendar-item{display:block;width:100%;text-align:right;font-size:11.5px;line-height:1.5;padding:3px 6px;border-radius:6px;background:#f1e8dc;color:#47392f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.calendar-item.hearing{background:#e8eef6;color:#28456b}.calendar-item.overdue{background:#f8e3e3;color:#8c2530}.calendar-item.closed{opacity:.6;text-decoration:line-through}
+.calendar-time{margin-left:6px;font-variant-numeric:tabular-nums}.calendar-item{display:block;width:100%;text-align:right;font-size:11.5px;line-height:1.5;padding:3px 6px;border-radius:6px;background:#f1e8dc;color:#47392f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.calendar-item.hearing{background:color-mix(in srgb,var(--brand) 13%,#fffdf8);color:var(--brand)}.calendar-item.overdue{background:#f8e3e3;color:#8c2530}.calendar-item.closed{opacity:.6;text-decoration:line-through}
 @media(max-width:760px){.quick-search-trigger span,.quick-search-trigger kbd{display:none}.my-work .panel-head{flex-direction:column}}
 .contact-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;grid-column:1/-1;font-size:12px}.contact-actions .btn{min-height:32px;gap:6px}
-.leave-summary{grid-column:1/-1;margin:12px 0;padding:10px 12px;border-radius:10px;background:#f6f1ea;font-size:13px;color:#47392f}.person-card small+small{color:#5d4c8a}
+.leave-summary{grid-column:1/-1;margin:12px 0;padding:10px 12px;border-radius:10px;background:#f6f1ea;font-size:13px;color:#47392f}.person-card small+small{color:var(--brand)}
 .account-trigger{cursor:pointer;border:none}.account-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:2px}.account-menu{width:240px!important;padding:6px!important}.account-menu-head{display:flex;flex-direction:column;padding:8px 10px 10px;border-bottom:1px solid #eee5d8;margin-bottom:4px}.account-menu-head small{color:#827165;font-size:11px}.account-menu-head b{font-size:14px;text-align:right}
 .account-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:8px;font-size:13px;color:#47392f;text-align:right}.account-menu-item:hover,.account-menu-item:focus-visible{background:#f4ebdf}.account-menu-item.danger{color:#a32e38}.account-menu-item:disabled{opacity:.5}
 .chooser-account{display:flex;justify-content:flex-end;margin-bottom:-12px}

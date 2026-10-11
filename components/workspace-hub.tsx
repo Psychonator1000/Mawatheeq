@@ -1,6 +1,8 @@
 import {useContext,useState} from 'react';
 import {ArrowUpLeft,Scale,CalendarDays,Files,Wallet,UsersRound} from 'lucide-react';
+import {flushSync} from 'react-dom';
 import AccountMenu,{AccountContext} from './account-menu';
+import {withViewTransition} from '@/lib/appearance';
 import {LEGAL_SECTIONS,type Permissions} from '@/lib/permissions';
 import {WORKSPACES,workspaceStorageKey,type WorkspaceId} from '@/lib/departments';
 import Workspace from './workspace';
@@ -10,7 +12,7 @@ const icons={legal:Scale,secretary:CalendarDays,collections:Files,accounting:Wal
 export default function WorkspaceHub({access,owner}:{access:Permissions;owner:boolean}) {
  const allowed=(Object.keys(WORKSPACES) as WorkspaceId[]).filter(id=>owner||(id==='legal'?access.sections.some(s=>LEGAL_SECTIONS.includes(s)):access.sections.includes(id)));
  const [selected,setSelected]=useState<WorkspaceId|null>(()=>{const saved=sessionStorage.getItem(workspaceStorageKey) as WorkspaceId;return allowed.includes(saved)?saved:null});
- function choose(id:WorkspaceId|null){setSelected(id);if(id)sessionStorage.setItem(workspaceStorageKey,id);else sessionStorage.removeItem(workspaceStorageKey);}
+ function choose(id:WorkspaceId|null){withViewTransition(()=>flushSync(()=>setSelected(id)));if(id)sessionStorage.setItem(workspaceStorageKey,id);else sessionStorage.removeItem(workspaceStorageKey);}
  const account=useContext(AccountContext);
  if(selected&&allowed.includes(selected))return <AccountContext.Provider value={account&&{...account,onSwitchWorkspace:()=>choose(null)}}>{selected==='legal'?<Workspace access={access} owner={owner}/>:<DepartmentWorkspace key={selected} workspace={selected} access={access}/>}</AccountContext.Provider>;
  return <main className="workspace-chooser" dir="rtl"><div className="chooser-account"><AccountMenu/></div><header><span className="brand-mark">M</span><span className="eyebrow">مواثيق / مكتب واحد</span><h1>اختر مساحة عملك</h1><p>كل فريق يعمل بأدواته، وجميع السجلات مترابطة.</p></header>
