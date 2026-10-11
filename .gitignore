@@ -58,3 +58,8 @@ next-env.d.ts
 *.sqlite
 *.sqlite3
 *.db
+
+# office server: secrets, data and backups stay on the server
+/office-server/.env
+/office-server/data/
+/office-server/backups/

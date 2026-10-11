@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react';
 import {Fingerprint,Plus,RefreshCw,Users,Clock,Info,KeyRound,Trash2,Wifi,WifiOff,Pencil,DoorOpen,Volume2,Power,Eraser,ShieldCheck,CreditCard} from 'lucide-react';
 import {toast} from 'sonner';
 import {attendanceRequest} from '@/lib/local-auth';
+import {copyText} from '@/lib/polyfills';
 import type {AttEmployee} from '@/lib/attendance';
 import {type AttContext,type AttDevice,type AttDeviceUser,type AttCommand,type AttBridge,type DeviceKind,COMMAND_LABELS,COMMAND_STATUS,DEVICE_KINDS} from '@/lib/attendance-api';
 import {formatDate} from '@/lib/domain';
@@ -75,7 +76,7 @@ export default function DevicesPanel(){
 function BridgeKey({bridgeKey}:{bridgeKey:string}){
  const [config,setConfig]=useState('');
  useEffect(()=>{fetch(new URL('app-config.json',document.baseURI)).then(r=>r.json()).then(c=>setConfig(JSON.stringify({supabaseUrl:c.supabaseUrl,publishableKey:c.supabasePublishableKey,bridgeKey,intervalSeconds:60,commandSeconds:4},null,2))).catch(()=>setConfig(''))},[bridgeKey]);
- const copy=(text:string)=>void navigator.clipboard?.writeText(text).then(()=>toast.success('نُسخ'),()=>toast.error('انسخه يدوياً'));
+ const copy=(text:string)=>void copyText(text).then(()=>toast.success('نُسخ'),()=>toast.error('انسخه يدوياً'));
  return <div className="bridge-key"><code dir="ltr">{bridgeKey}</code><button className="btn" onClick={()=>copy(bridgeKey)}>نسخ المفتاح</button>{config&&<><p className="subtitle">أو انسخ ملف config.json كاملاً:</p><pre dir="ltr">{config}</pre><button className="btn" onClick={()=>copy(config)}>نسخ config.json</button></>}</div>;
 }
 

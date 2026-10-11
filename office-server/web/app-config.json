@@ -1,0 +1,5 @@
+{
+  "office": true,
+  "supabaseUrl": "",
+  "supabasePublishableKey": "office-local"
+}

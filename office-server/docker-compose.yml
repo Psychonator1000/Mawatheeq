@@ -1,0 +1,119 @@
+# Mawatheeq office server: the whole application on one machine inside the office.
+# Free and offline: PostgreSQL, PostgREST, a small PDF file service, the web app, daily backups,
+# and (optionally) the fingerprint/door bridge. Start with start.bat (Windows) or start.sh (Linux).
+name: mawatheeq
+
+x-tools: &tools
+  build: { context: .., dockerfile: office-server/tools/Dockerfile }
+  image: mawatheeq-tools
+  volumes: [ "..:/repo:ro" ]
+  environment: &db-env
+    PGHOST: db
+    PGUSER: postgres
+    PGDATABASE: mawatheeq
+    PGPASSWORD: ${POSTGRES_PASSWORD:?Run start.bat or start.sh first to create .env}
+    TZ: ${TZ:-Asia/Kuwait}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run start.bat or start.sh first to create .env}
+      POSTGRES_DB: mawatheeq
+      TZ: ${TZ:-Asia/Kuwait}
+    volumes: [ "pgdata:/var/lib/postgresql/data" ]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U postgres -d mawatheeq"], interval: 5s, timeout: 5s, retries: 30 }
+
+  # Prepares the database and applies new migrations from supabase/migrations on every start.
+  migrate:
+    <<: *tools
+    command: ["sh", "/repo/office-server/tools/migrate.sh"]
+    environment:
+      <<: *db-env
+      AUTHENTICATOR_PASSWORD: ${AUTHENTICATOR_PASSWORD:?Run start.bat or start.sh first to create .env}
+      FILES_SECRET: ${FILES_SECRET:?Run start.bat or start.sh first to create .env}
+    depends_on: { db: { condition: service_healthy } }
+    restart: "no"
+
+  rest:
+    image: postgrest/postgrest:v12.2.3
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD}@db:5432/mawatheeq
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_DB_CHANNEL_ENABLED: "true"
+      PGRST_OPENAPI_MODE: disabled
+    depends_on: { migrate: { condition: service_completed_successfully } }
+
+  files:
+    <<: *tools
+    restart: unless-stopped
+    command: ["node", "/repo/office-server/files/server.mjs"]
+    environment:
+      REST_URL: http://rest:3000
+      FILES_DIR: /data/files
+      FILES_SECRET: ${FILES_SECRET}
+    volumes: [ "..:/repo:ro", "./data/files:/data/files" ]
+    depends_on: [ rest ]
+
+  web:
+    build: { context: .., dockerfile: office-server/web/Dockerfile }
+    image: mawatheeq-web
+    restart: unless-stopped
+    ports: [ "${HTTP_PORT:-8080}:80" ]
+    depends_on: [ rest, files ]
+
+  # Daily database and PDF backups into ./backups, keeping the last BACKUP_KEEP_DAYS days.
+  backup:
+    <<: *tools
+    restart: unless-stopped
+    command: ["sh", "/repo/office-server/tools/backup.sh", "--loop"]
+    environment:
+      <<: *db-env
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes: [ "..:/repo:ro", "./data/files:/data/files:ro", "./backups:/backups" ]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+
+  # Optional: the fingerprint and door bridge, once a bridge key is created in HR → Devices.
+  bridge:
+    profiles: [ bridge ]
+    build: { context: .., dockerfile: office-server/bridge/Dockerfile }
+    image: mawatheeq-bridge
+    restart: unless-stopped
+    environment:
+      MAWATHEEQ_URL: http://web
+      MAWATHEEQ_PUBLISHABLE_KEY: office-local
+      MAWATHEEQ_BRIDGE_KEY: ${BRIDGE_KEY:-}
+      MAWATHEEQ_STATE_DIR: /state
+      TZ: ${TZ:-Asia/Kuwait}
+    volumes: [ "./data/bridge:/state" ]
+    depends_on: [ web ]
+
+  # One-off tools: docker compose run --rm admin / import / restore (see README.md).
+  admin:
+    <<: *tools
+    profiles: [ tools ]
+    command: ["sh", "/repo/office-server/tools/create-admin.sh"]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+  import:
+    <<: *tools
+    profiles: [ tools ]
+    command: ["sh", "/repo/office-server/tools/import-supabase.sh"]
+    environment:
+      <<: *db-env
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL:-}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+    volumes: [ "..:/repo:ro", "./data/files:/data/files" ]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+  restore:
+    <<: *tools
+    profiles: [ tools ]
+    entrypoint: ["sh", "/repo/office-server/tools/restore.sh"]
+    volumes: [ "..:/repo:ro", "./data/files:/data/files", "./backups:/backups:ro" ]
+    depends_on: { db: { condition: service_healthy } }
+
+volumes:
+  pgdata:

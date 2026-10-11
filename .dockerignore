@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+dist
+dist-pages
+.git
+.sites-runtime
+office-server/.env
+office-server/data
+office-server/backups
+public/tesseract

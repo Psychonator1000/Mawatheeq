@@ -9,11 +9,13 @@ export function loadBackend(): Promise<SupabaseClient> {
   if (!initializing) initializing = (async () => {
     const response = await fetch(assetUrl('/app-config.json'), { cache: 'no-store' });
     if (!response.ok) throw new Error('تعذر تحميل إعدادات مساحة العمل.');
-    const config = await response.json() as { supabaseUrl?: unknown; supabasePublishableKey?: unknown };
+    const config = await response.json() as { supabaseUrl?: unknown; supabasePublishableKey?: unknown; office?: unknown };
+    // The office server serves the app and its API from the same address on the local network.
+    if (config.office === true) config.supabaseUrl = window.location.origin;
     if (typeof config.supabaseUrl !== 'string' || !config.supabaseUrl || typeof config.supabasePublishableKey !== 'string' || !config.supabasePublishableKey) {
       throw new Error('لم تُفعّل مساحة العمل المشتركة بعد. يرجى التواصل مع مسؤول المكتب.');
     }
-    if (new URL(config.supabaseUrl).protocol !== 'https:' || !config.supabasePublishableKey.startsWith('sb_publishable_')) {
+    if (config.office !== true && (new URL(config.supabaseUrl).protocol !== 'https:' || !config.supabasePublishableKey.startsWith('sb_publishable_'))) {
       throw new Error('إعدادات الاتصال تحتاج مراجعة مسؤول المكتب.');
     }
     client = createClient(config.supabaseUrl, config.supabasePublishableKey, {
