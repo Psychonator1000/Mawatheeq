@@ -30,6 +30,7 @@ The owner requires a free-only setup: keep the public repository, standard GitHu
 - Printable receipt/payment vouchers (KWD amounts in words) and per-currency account statements in accounting.
 - Approved leave days used per employee this year, and day counts on each leave request.
 - Internal discussion on each case and task with @mentions delivered to the notification bell (requires the one-time migration in [the discussion guide](docs/RECORD_COMMENTS.md)).
+- Employee attendance from ZKTeco fingerprint devices: monthly attendance grid, excuses, device management through a free office bridge, file import, and payroll estimates with lateness warnings for accounting (requires the one-time migration in [the attendance guide](docs/ATTENDANCE.md)).
 - Appearance menu: six colour themes, animated backgrounds that react to the mouse (aurora, dotted spotlight, waves or none) and a motion level (full, calm, off). Scrolling drives a progress line, a condensing top bar and a sidebar rail; cards tilt toward the pointer and panels glide into view. All motion stops when the device asks for reduced motion.
 - Keyboard shortcuts (`?` lists them, `Alt+1…9` jump between sections), recently opened cases in quick search, and a confirmation before closing a case with unsaved edits.
 - Account menu (switch workspace, change password, sign out) behind the avatar; guidance on each page in "كيف يعمل هذا القسم؟", with deadline periods taken from the settings.

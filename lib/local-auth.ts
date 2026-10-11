@@ -25,7 +25,8 @@ async function sessionRequest<T = unknown>(endpoint: string, action: string, dat
 export const localRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_local_request', action, data);
 export const clientRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_client_request', action, data);
 export const officeRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_office_request', action, data);
-export const commentRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_comment_request', action, data);
+export const attendanceRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_attendance_request', action, data);
+export const commentRequest =<T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_comment_request', action, data);
 export const departmentRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_department_request', action, data);
 export async function restoreSession(): Promise<LocalUser | null> {
   await loadBackend();

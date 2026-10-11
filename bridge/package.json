@@ -1,0 +1,16 @@
+{
+  "name": "mawatheeq-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Connects ZKTeco fingerprint devices on the office network to Mawatheeq.",
+  "type": "module",
+  "main": "mawatheeq-bridge.mjs",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node mawatheeq-bridge.mjs",
+    "check": "node mawatheeq-bridge.mjs --once"
+  },
+  "dependencies": {
+    "zkteco-js": "1.7.2"
+  }
+}
