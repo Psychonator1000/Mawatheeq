@@ -182,6 +182,21 @@ await page.getByRole('button',{name:'استعادة الافتراضي'}).click(
 assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'burgundy');
 assert.equal(await page.evaluate(()=>document.documentElement.dataset.backdrop),'constellation','The living dot network is the default backdrop');
 
+// Easter egg: typing "persona" switches to the hidden theme; typing it again returns to the previous theme,
+// and the hidden theme is listed only while it is active.
+const theme=()=>page.evaluate(()=>document.documentElement.dataset.theme);
+await page.locator('body').click({position:{x:5,y:5}});await page.keyboard.type('persona');
+assert.equal(await theme(),'phantom','The secret word applies the hidden theme');
+await page.keyboard.type('persona');assert.equal(await theme(),'burgundy','Typing it again restores the previous theme');
+await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
+assert.equal(await page.getByRole('radio',{name:'لصوص القلوب'}).count(),0,'Hidden while inactive');await page.getByRole('button',{name:'تم'}).click();
+await page.keyboard.type('persona');assert.equal(await theme(),'phantom');
+await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
+assert.equal(await page.getByRole('radio',{name:'لصوص القلوب'}).count(),1,'Listed while active');
+await page.getByRole('radio',{name:'عنابي مواثيق'}).check();
+assert.equal(await page.getByRole('radio',{name:'لصوص القلوب'}).count(),0,'Choosing another theme hides it again');
+await page.getByRole('button',{name:'تم'}).click();assert.equal(await theme(),'burgundy');
+
 // Keyboard shortcuts.
 await page.locator('body').press('Shift+Slash');
 await page.getByRole('heading',{name:'اختصارات لوحة المفاتيح'}).waitFor();

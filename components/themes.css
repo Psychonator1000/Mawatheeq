@@ -151,7 +151,13 @@
 @keyframes phantom-wipe{from{clip-path:polygon(110% 0,130% 0,110% 100%,90% 100%)}to{clip-path:polygon(-30% 0,130% 0,110% 100%,-50% 100%)}}
 .phantom-splash{position:fixed;inset:0;z-index:96;pointer-events:none;display:grid;place-items:center;background:linear-gradient(118deg,transparent 0 38%,#e60012 38% 62%,transparent 62%);animation:phantom-flash 1.9s ease both}
 .calling-card{background:#fff;color:#000;padding:26px 48px;border:4px solid #000;box-shadow:14px 14px 0 #000;transform:rotate(-6deg);text-align:center;animation:card-slam 1.9s cubic-bezier(.2,1.6,.4,1) both;display:grid;gap:6px}
-.calling-card small{font-style:italic;font-weight:700;color:#e60012;letter-spacing:.2em}.calling-card b{font-size:44px;font-weight:900;font-style:italic}.calling-card span{font-weight:700}
+.calling-card{font-family:'Arial Black','Segoe UI',Impact,sans-serif;max-width:min(92vw,760px)}
+.calling-card small{font-style:italic;font-weight:900;color:#e60012;letter-spacing:.35em;font-size:14px}
+.calling-card b{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;font-size:clamp(26px,4.4vw,46px);font-weight:900;line-height:1.15}
+.calling-card>span{font-weight:900;font-style:italic;letter-spacing:.04em}
+.ransom-word{display:inline-flex;gap:1px}
+.ransom{display:inline-block;padding:0 4px;line-height:1.25}
+.r-w{background:#fff;color:#000;border:2px solid #000}.r-b{background:#000;color:#fff;font-style:italic}.r-r{background:#e60012;color:#fff;font-family:Georgia,serif}
 @keyframes phantom-flash{0%{opacity:0;clip-path:polygon(0 0,0 0,0 100%,0 100%)}15%{opacity:1;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}80%{opacity:1}100%{opacity:0}}
 @keyframes card-slam{0%{scale:3;opacity:0;rotate:-30deg}18%{scale:.95;opacity:1;rotate:0deg}24%{scale:1.04}30%{scale:1}82%{opacity:1}100%{opacity:0;translate:0 -30px}}
 :root[data-motion=off] :is(.egg-splash){display:none}
