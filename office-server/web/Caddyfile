@@ -1,0 +1,44 @@
+# Mawatheeq office server: one address for the app, its API and its PDF files.
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy same-origin
+		-Server
+	}
+
+	# Database API. Sessions are checked inside the database, so no API tokens are passed on.
+	handle_path /rest/v1/* {
+		@internal path /rpc/office_*
+		respond @internal 404
+		request_header -Authorization
+		request_header -Apikey
+		reverse_proxy rest:3000
+	}
+
+	# Original PDFs.
+	handle /functions/v1/* {
+		reverse_proxy files:8000
+	}
+	handle /storage/v1/* {
+		request_body {
+			max_size 27MB
+		}
+		reverse_proxy files:8000
+	}
+
+	# The app itself.
+	handle {
+		root * /srv/app
+		@config path /app-config.json
+		header @config Cache-Control no-store
+		try_files {path} /index.html
+		file_server
+	}
+}

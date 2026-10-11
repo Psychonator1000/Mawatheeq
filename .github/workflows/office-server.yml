@@ -1,0 +1,59 @@
+name: Office server
+
+# Builds and runs the whole office-server package in Docker, exactly as on the office machine,
+# then checks it end to end with synthetic data. Free on GitHub-hosted runners for public repositories.
+on:
+  push:
+    branches: [main]
+    paths: ['office-server/**', 'supabase/migrations/**', 'bridge/**', 'lib/**', 'components/**', 'pages/**', 'package.json', 'pnpm-lock.yaml', '.github/workflows/office-server.yml']
+  pull_request:
+    paths: ['office-server/**', 'supabase/migrations/**', 'bridge/**', 'lib/**', 'components/**', 'pages/**', 'package.json', 'pnpm-lock.yaml', '.github/workflows/office-server.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: office-server-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - name: Start the office server
+        working-directory: office-server
+        run: sh start.sh
+      - name: Wait for the app
+        run: |
+          for i in $(seq 1 60); do curl -sf http://localhost:8080/app-config.json >/dev/null && exit 0; sleep 2; done
+          exit 1
+      - name: Create the owner account
+        working-directory: office-server
+        run: printf 'ci_owner\nCi-synthetic-password-1\n' | docker compose run --rm -T admin
+      - name: End-to-end check
+        run: node office-server/test/smoke.mjs http://localhost:8080 ci_owner Ci-synthetic-password-1
+      - name: Restart applies nothing twice and keeps data
+        working-directory: office-server
+        run: |
+          sh start.sh
+          for i in $(seq 1 60); do curl -sf http://localhost:8080/app-config.json >/dev/null && break; sleep 2; done
+          out=$(docker compose run --rm -T migrate)
+          echo "$out"
+          echo "$out" | grep -q "Database ready"
+          ! echo "$out" | grep -q "Applying"
+          node -e "fetch('http://localhost:8080/rest/v1/rpc/mawatheeq_local_login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({p_username:'ci_owner',p_password:'Ci-synthetic-password-1'})}).then(r=>r.json()).then(d=>{if(!d.token)process.exit(1)})"
+      - name: Daily backup is written
+        working-directory: office-server
+        run: |
+          for i in $(seq 1 30); do ls backups/mawatheeq-*.dump >/dev/null 2>&1 && exit 0; sleep 2; done
+          exit 1
+      - name: The bridge image builds
+        working-directory: office-server
+        run: docker compose --profile bridge build bridge
+      - name: Logs
+        if: failure()
+        working-directory: office-server
+        run: docker compose --profile bridge logs --no-color | tail -200
