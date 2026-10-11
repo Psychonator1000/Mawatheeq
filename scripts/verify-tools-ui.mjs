@@ -173,7 +173,9 @@ await page.reload();await page.getByRole('heading',{name:'الموكلون',leve
 assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'navy','Theme survives a reload');
 assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.btn.primary')).backgroundColor),'rgb(31, 61, 99)','Primary actions follow the theme');
 await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
-await page.getByRole('radio',{name:'أصفر مشمس'}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()),'#8a6500','Yellow theme applies');
+await page.getByRole('radio',{name:'أصفر مشمس'}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()),'#a57400','Yellow theme applies');
+await page.getByRole('radio',{name:'أسود وذهبي'}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(11, 10, 8)','Black and gold darkens the page');
+await page.getByRole('radio',{name:'أبيض وذهبي'}).check();assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'ivory');
 await page.getByRole('radio',{name:'أزرق سماوي'}).check();await page.getByRole('radio',{name:/يراعات مضيئة/}).check();
 assert.deepEqual(await page.evaluate(()=>[document.documentElement.dataset.theme,document.documentElement.dataset.backdrop]),['sky','fireflies']);
 await page.getByRole('button',{name:'استعادة الافتراضي'}).click();await page.getByRole('button',{name:'تم'}).click();

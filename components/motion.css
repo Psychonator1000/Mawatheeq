@@ -5,7 +5,8 @@
 :root[data-theme=plum]{--brand:#5a2d6e;--brand-deep:#4a245b;--brand-ink:#371a44;--brand-hover:#6d3c83;--brand-ring:#9a78ab;--glow-1:#b99ac8;--glow-2:#e0c2d6;--glow-3:#d6cbe8}
 :root[data-theme=copper]{--brand:#8a4a24;--brand-deep:#73391a;--brand-ink:#5a2b12;--brand-hover:#a05a2f;--brand-ring:#c08b67;--glow-1:#e0a87f;--glow-2:#ecd0a3;--glow-3:#e8b9a0}
 :root[data-theme=graphite]{--brand:#33393f;--brand-deep:#272c31;--brand-ink:#1c2024;--brand-hover:#464e56;--brand-ring:#7d868f;--glow-1:#a9b4bf;--glow-2:#d3cbbd;--glow-3:#c4ccd4}
-:root[data-theme=sunflower]{--brand:#8a6500;--brand-deep:#6e5000;--brand-ink:#4a3600;--brand-hover:#a07800;--brand-ring:#c9a640;--glow-1:#ffd23f;--glow-2:#ffe89a;--glow-3:#fff0b8;--background:#f8f3e2}
+:root[data-theme=sunflower]{--brand:#a57400;--brand-deep:#8a6100;--brand-ink:#4a3600;--brand-hover:#b98400;--brand-ring:#f0c040;--glow-1:#ffe14d;--glow-2:#fff0a0;--glow-3:#ffd6a0;--background:#fffbea}
+:root[data-theme=ivory]{--brand:#9a7413;--brand-deep:#7d5d0e;--brand-ink:#5a430a;--brand-hover:#b38a1f;--brand-ring:#d6b55a;--glow-1:#f3d77a;--glow-2:#fbedc0;--glow-3:#fff7e0;--background:#fbfaf7}
 :root[data-theme=sky]{--brand:#1d6fa5;--brand-deep:#175b88;--brand-ink:#0f3f60;--brand-hover:#2a84bf;--brand-ring:#6fb2dc;--glow-1:#8fd3ff;--glow-2:#c4e9ff;--glow-3:#dff3ff;--background:#eef4f7}
 :root[data-theme=teal]{--brand:#0f6e6a;--brand-deep:#0b5956;--brand-ink:#073f3d;--brand-hover:#16857f;--brand-ring:#5fb3ad;--glow-1:#7ee0d2;--glow-2:#bdeee4;--glow-3:#e6dcb8;--background:#eef4f1}
 :root[data-theme=sunset]{--brand:#b0451f;--brand-deep:#923819;--brand-ink:#652611;--brand-hover:#c4562c;--brand-ring:#e0906b;--glow-1:#ffb27a;--glow-2:#ffd6a8;--glow-3:#f7b8a8;--background:#f8f0e8}
@@ -193,13 +194,10 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 :root[data-motion=full][data-scrolling] :is(.workspace,.department-content) :is(.stats>.stat,.department-metrics>div,.att-stat):nth-child(even){transform:translate3d(0,calc(var(--scroll-v,0)*-22px),0)}
 :root[data-motion=full] :is(.workspace,.department-content) :is(.panel,.stats>.stat,.department-metrics>div,.office-cards>*,.device-card,.att-stat,.quick-card,.page-head,.department-hero){transition:transform .7s cubic-bezier(.2,.9,.25,1.15),box-shadow .25s,background-color .2s}
 @supports (animation-timeline: view()){
- /* Small cards flow in from below and recede as they leave the top. */
- :root[data-motion=full] :is(.stats>.stat,.department-metrics>div,.office-cards>*,.device-card,.att-stat,.quick-card,.client-card,.person-card,.collection-card){animation:card-flow linear both;animation-timeline:view();animation-range:cover 0% cover 100%}
  /* Heroes drift and their icons turn as the page scrolls away from them. */
  :root[data-motion=full] :is(.department-hero>svg,.page-head .eyebrow){animation:hero-drift linear both;animation-timeline:scroll();animation-range:0 420px}
  :root[data-motion=full] :is(.panel-head h2,.department-toolbar>h2,.att-section h2){animation:heading-in linear both;animation-timeline:view();animation-range:entry 10% entry 70%}
 }
-@keyframes card-flow{0%{opacity:0;translate:0 42px;scale:.94;filter:blur(2px)}10%{opacity:1;translate:0 0;scale:1;filter:none}86%{opacity:1;translate:0 0;scale:1}100%{opacity:.35;translate:0 -18px;scale:.97}}
 @keyframes hero-drift{to{translate:0 50px;rotate:-14deg;scale:.85;opacity:.35}}
 @keyframes heading-in{from{opacity:0;translate:-28px 0;letter-spacing:.06em}to{opacity:1;translate:0 0;letter-spacing:normal}}
 /* Titles carry a slow sheen in the theme colours. */
@@ -225,3 +223,23 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 :root[data-motion=off] :is(.cursor-halo,.burst-canvas),:root[data-motion=calm] .cursor-halo{display:none}
 :root[data-motion=off] .scroll-rail{animation:none}
 @media (prefers-reduced-motion:reduce){.cursor-halo,.burst-canvas{display:none}.sidebar-brand .brand-mark{rotate:none}.rail-comet{transition:none}:is(.department-hero h1,.page-head h1){animation:none;background-position:0 0}}
+
+/* Scroll reactions for rows, cards and list items: each sweeps in from the scroll direction when it enters. */
+.sr-down{animation:sr-down .62s cubic-bezier(.2,.85,.25,1.08) var(--sr-delay,0ms) both}
+.sr-up{animation:sr-up .62s cubic-bezier(.2,.85,.25,1.08) var(--sr-delay,0ms) both}
+tbody tr.sr-down{animation-name:sr-row-down}tbody tr.sr-up{animation-name:sr-row-up}
+@keyframes sr-down{from{opacity:0;translate:0 44px;scale:.94;filter:blur(3px)}}
+@keyframes sr-up{from{opacity:0;translate:0 -44px;scale:.94;filter:blur(3px)}}
+@keyframes sr-row-down{from{opacity:0;transform:perspective(900px) rotateX(-32deg) translateY(26px);filter:blur(2px)}}
+@keyframes sr-row-up{from{opacity:0;transform:perspective(900px) rotateX(32deg) translateY(-26px);filter:blur(2px)}}
+:root[data-motion=calm] :is(.sr-down,.sr-up){animation-duration:.35s}
+:root[data-motion=calm] :is(.sr-down,.sr-up,tbody tr.sr-down,tbody tr.sr-up){animation-name:sr-fade}
+@keyframes sr-fade{from{opacity:0}}
+/* While scrolling, rows and items trail behind in a wave and spring back. */
+:root[data-motion=full][data-scrolling] :is(tbody tr,.my-work-item,.agenda-item,.client-card,.person-card,.collection-card,.timeline-item,.doc-row,.legend-row,.bar-item,.notice-list li,.comment-list li){transform:translate3d(0,calc(var(--scroll-v,0)*-16px),0)}
+:root[data-motion=full] :is(tbody tr,.my-work-item,.agenda-item,.client-card,.person-card,.collection-card,.timeline-item,.doc-row,.legend-row,.bar-item,.notice-list li,.comment-list li){transition:transform .55s cubic-bezier(.2,.9,.25,1.2),background-color .2s,box-shadow .25s}
+:root[data-motion=full] :is(tbody tr,.client-card,.person-card,.legend-row,.bar-item):nth-child(5n+2){transition-duration:.65s,.2s,.25s}
+:root[data-motion=full] :is(tbody tr,.client-card,.person-card,.legend-row,.bar-item):nth-child(5n+3){transition-duration:.75s,.2s,.25s}
+:root[data-motion=full] :is(tbody tr,.client-card,.person-card,.legend-row,.bar-item):nth-child(5n+4){transition-duration:.85s,.2s,.25s}
+:root[data-motion=full] :is(tbody tr,.client-card,.person-card,.legend-row,.bar-item):nth-child(5n){transition-duration:.95s,.2s,.25s}
+.att-grid tbody tr{transform:none!important}
