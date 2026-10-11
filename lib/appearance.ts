@@ -1,7 +1,9 @@
 // Per-device display preferences. Purely cosmetic: never affects records or permissions.
 export const THEMES = {
   burgundy: { label: 'عنابي مواثيق', swatch: '#74283b', accent: '#d8b98f' },
-  sunflower: { label: 'أصفر مشمس', swatch: '#8a6500', accent: '#ffd23f' },
+  noir: { label: 'أسود وذهبي', swatch: '#0b0a08', accent: '#d4af37' },
+  ivory: { label: 'أبيض وذهبي', swatch: '#c99d2e', accent: '#ffffff' },
+  sunflower: { label: 'أصفر مشمس', swatch: '#ffc928', accent: '#fff3b0' },
   sky: { label: 'أزرق سماوي', swatch: '#1d6fa5', accent: '#8fd3ff' },
   navy: { label: 'كحلي', swatch: '#1f3d63', accent: '#b9cbe0' },
   teal: { label: 'فيروزي', swatch: '#0f6e6a', accent: '#7ee0d2' },

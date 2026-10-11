@@ -3,12 +3,16 @@ import {ArrowUp} from 'lucide-react';
 import {motionAllowed,pointerEffectsOn} from '@/lib/appearance';
 import {createBackdrop,createBursts,type FxState} from './motion-fx';
 import './motion.css';
+import './themes.generated.css';
+import './themes.css';
 
 const RIPPLE='.btn,.icon-btn,.nav-button,.office-card,.stat,.workspace-option,.client-card,.person-card,.calendar-add,.account-menu-item,.notice-item,.choice,.my-work-item,.back-to-top,.text-link,.number-link,.legend-row,[role=tab],.att-cell,.chip-toggle,.rail-mark,.device-card';
 const STRONG='.btn.primary,.back-to-top,.workspace-option,.stat.featured';
 const MAGNETIC='.btn.primary,.icon-btn,.back-to-top,.quick-search-trigger';
 const GLOW='.panel,.office-card,.client-card,.person-card,.my-work-item,.device-card,.att-stat';
 const INTERACTIVE='a,button,[role=button],[role=tab],input,select,textarea,label,summary';
+// Rows, cards and list items that sweep in from the scroll direction each time they enter the screen.
+const REACTIVE='tbody tr,.office-card,.client-card,.person-card,.collection-card,.device-card,.att-stat,.stat,.my-work-item,.agenda-item,.notice-list li,.timeline-item,.doc-row,.quick-card,.legend-row,.bar-item,.calendar-day,.comment-list li,.department-metrics>div,.holiday-list li,.bridge-list li,.evidence-row,.help-block,.empty-state,.page-navigation,.pagination';
 const HEADINGS='.workspace h1,.workspace h2,.department-content h1,.department-content h2,.workspace-chooser h1';
 
 /** Remember one hovered element per effect and clear its variables when the pointer moves on. */
@@ -27,6 +31,7 @@ export default function MotionLayer() {
  useEffect(()=>{
   const root=document.documentElement,reducedQuery=matchMedia('(prefers-reduced-motion: reduce)');
   let frame=0,x=-999,y=-999,tilt:HTMLElement|null=null,magnet:HTMLElement|null=null,glow:HTMLElement|null=null,pointerOn=false;
+  let scrollDir='down',lastScrollAt=0;
   let lastTop=scrollY,lastTime=performance.now(),velocity=0,velFrame=0,settle=0,lastTick=0;
   const fx:FxState={mode:'',motion:'',reduced:false,pointerX:-999,pointerY:-999,pointerOn:false,scrollV:0};
   const state=()=>{fx.mode=root.dataset.backdrop||'constellation';fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches;fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
@@ -75,11 +80,13 @@ export default function MotionLayer() {
    root.style.setProperty('--scroll-v',velocity.toFixed(3));root.style.setProperty('--scroll-speed',Math.min(1,Math.abs(velocity)).toFixed(3));
    if(velocity!==0)velFrame=requestAnimationFrame(tickVelocity);else{lastTick=0;clearTimeout(settle);settle=window.setTimeout(()=>root.removeAttribute('data-scrolling'),120)}};
   const onScroll=()=>{
+   const prevTop=lastTop;
    const se=document.scrollingElement||root,max=se.scrollHeight-se.clientHeight,top=se.scrollTop,now=performance.now();
    root.style.setProperty('--scroll-progress',max>0?Math.min(1,top/max).toFixed(4):'0');
    root.toggleAttribute('data-scrolled',top>12);
    setShowTop(top>700);setScrollable(max>320);
    if(pointerEffectsOn()){const v=Math.max(-1,Math.min(1,(top-lastTop)/Math.max(8,now-lastTime)/2.4));velocity=velocity*.5+v*.5;root.setAttribute('data-scrolling','');if(!velFrame)velFrame=requestAnimationFrame(tickVelocity)}
+   if(top!==prevTop){scrollDir=top>prevTop?'down':'up';lastScrollAt=now}
    lastTop=top;lastTime=now;
    const marks=marksRef.current,line=top+innerHeight*.35;let current=-1;for(let i=0;i<marks.length;i++)if(marks[i].top*se.scrollHeight<=line)current=i;
    if(top>=max-4&&marks.length)current=marks.length-1;
@@ -95,13 +102,27 @@ export default function MotionLayer() {
    if(!same){marksRef.current=found;setMarks(found)}
    onScroll();
   };
-  const scheduleMeasure=()=>{if(!measureTimer)measureTimer=window.setTimeout(measure,350)};
+  // Elements entering because of a scroll (not a filter or page change) sweep in from that direction, staggered.
+  const reveal=new IntersectionObserver(entries=>{
+   const scrolling=performance.now()-lastScrollAt<450&&motionAllowed();let n=0;
+   for(const e of entries){const el=e.target as HTMLElement;
+    if(!e.isIntersecting){el.classList.remove('sr-down','sr-up');continue}
+    if(!scrolling)continue;
+    el.classList.remove('sr-down','sr-up');void el.offsetWidth;
+    el.style.setProperty('--sr-delay',Math.min(n++,8)*40+'ms');el.classList.add(scrollDir==='down'?'sr-down':'sr-up');
+   }
+  },{rootMargin:'0px 0px -2% 0px'});
+  const watched=new WeakSet<Element>();
+  const onRevealEnd=(e:AnimationEvent)=>{const el=e.target as HTMLElement;if(e.animationName.startsWith('sr-'))el.classList.remove('sr-down','sr-up')};
+  document.addEventListener('animationend',onRevealEnd);
+  const watch=()=>{for(const el of document.querySelectorAll(REACTIVE))if(!watched.has(el)&&!el.closest('.att-grid')){watched.add(el);reveal.observe(el)}};
+  const scheduleMeasure=()=>{if(!measureTimer)measureTimer=window.setTimeout(()=>{watch();measure()},350)};
   const observer=new MutationObserver(scheduleMeasure);observer.observe(document.body,{childList:true,subtree:true});
   const onAppearance=()=>{backdrop?.sync()};
   onScroll();scheduleMeasure();
   addEventListener('pointermove',onMove,{passive:true});addEventListener('pointerdown',onDown,{passive:true});addEventListener('pointerup',onUp,{passive:true});addEventListener('pointercancel',onUp,{passive:true});document.addEventListener('pointerleave',onLeave);
   addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',scheduleMeasure,{passive:true});addEventListener('mawatheeq-appearance',onAppearance);reducedQuery.addEventListener('change',onAppearance);
-  return()=>{cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();backdrop?.stop();bursts?.stop();
+  return()=>{cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();document.removeEventListener('animationend',onRevealEnd);backdrop?.stop();bursts?.stop();
    removeEventListener('pointermove',onMove);removeEventListener('pointerdown',onDown);removeEventListener('pointerup',onUp);removeEventListener('pointercancel',onUp);document.removeEventListener('pointerleave',onLeave);
    removeEventListener('scroll',onScroll);removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
    for(const a of ['data-scrolled','data-scrolling','data-pointer','data-hover-action','data-pressing'])root.removeAttribute(a)};

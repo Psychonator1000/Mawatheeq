@@ -1,0 +1,41 @@
+/* Hand-tuned parts of the black-and-gold, white-and-gold and sunny themes. Loaded after themes.generated.css. */
+/* Black and gold */
+:root[data-theme=noir]{color-scheme:dark;--brand:#d4af37;--brand-deep:#8a6d1c;--brand-ink:#0d0c0a;--brand-hover:#e3c35a;--brand-ring:#a8862b;--glow-1:#b8902a;--glow-2:#5e4a17;--glow-3:#2a2210;--background:#0b0a08;--card:#15130f;--popover:#1a1813;--primary-foreground:#15120a;--accent-foreground:#e3c35a;
+ --sidebar:#080706;--sidebar-foreground:#d9cba6;--sidebar-primary:#d4af37;--sidebar-primary-foreground:#0d0c0a;--sidebar-accent:#1f1b12;--sidebar-accent-foreground:#f3e2ad;--sidebar-border:#d4af3726;--sidebar-ring:#d4af37}
+:root[data-theme=noir] .brand-en{color:#f3e2ad}
+:root[data-theme=noir] :is(.brand-ar,.nav-section,.sidebar-foot){color:#a8946a}
+:root[data-theme=noir] .brand-mark{color:#d4af37;border-color:#d4af3780}
+:root[data-theme=noir] .nav-button[data-active=true]{background:linear-gradient(135deg,#e3c35a,#b8902a)!important;color:#0d0c0a!important;box-shadow:0 6px 20px -8px #d4af3780}
+:root[data-theme=noir] [data-slot=sidebar-container]{border-inline-start:1px solid #d4af3733}
+:root[data-theme=noir] .btn.primary,:root[data-theme=noir] .stat.featured{background:linear-gradient(135deg,#e6c65c,#b8902a);border-color:#c9a338}
+:root[data-theme=noir] .stat.featured :is(.stat-label,.stat-foot,.stat-label svg){color:#3a2e0d}
+:root[data-theme=noir] [data-sonner-toast]{background:#1a1813!important;color:#ded9d0!important;border-color:#2e2b25!important}
+:root[data-theme=noir] :is(.field input,.field textarea,.field select,select,input,textarea){color-scheme:dark}
+:root[data-theme=noir] .panel:hover{box-shadow:0 18px 40px -26px #d4af3755}
+/* White and gold */
+:root[data-theme=ivory]{--sidebar:#ffffff;--sidebar-foreground:#5c4a1e;--sidebar-primary:#9a7413;--sidebar-primary-foreground:#ffffff;--sidebar-accent:#f7efd9;--sidebar-accent-foreground:#7d5d0e;--sidebar-border:#ece4cf;--sidebar-ring:#c9a338}
+:root[data-theme=ivory] .brand-en{color:#7d5d0e}
+:root[data-theme=ivory] :is(.brand-ar,.nav-section,.sidebar-foot){color:#a08a5a}
+:root[data-theme=ivory] .brand-mark{color:#9a7413;border-color:#d9c27f}
+:root[data-theme=ivory] .nav-count{border-color:#0000001a}
+:root[data-theme=ivory] .nav-button[data-active=true]{background:linear-gradient(135deg,#fbf1d4,#f3e2ad)!important;color:#5a430a!important}
+:root[data-theme=ivory] [data-slot=sidebar-container]{border-inline-start:1px solid #ece4cf;box-shadow:-10px 0 30px -24px #9a741355}
+:root[data-theme=ivory] .sidebar-rail{background:#9a74131a}
+:root[data-theme=ivory] .btn.primary,:root[data-theme=ivory] .stat.featured,:root[data-theme=ivory] .back-to-top{background:linear-gradient(135deg,#c99d2e,#9a7413);border-color:#a88020}
+/* Light, sunny yellow */
+:root[data-theme=sunflower]{--sidebar:#ffd640;--sidebar-foreground:#4a3600;--sidebar-primary:#4a3600;--sidebar-primary-foreground:#ffe680;--sidebar-accent:#ffe27a;--sidebar-accent-foreground:#3a2a00;--sidebar-border:#00000014;--sidebar-ring:#a57400;--primary-foreground:#3d2e00}
+:root[data-theme=sunflower] [data-slot=sidebar-container]{background:linear-gradient(180deg,#ffdc55,#ffcf2e)}
+:root[data-theme=sunflower] .brand-en{color:#3a2a00}
+:root[data-theme=sunflower] :is(.brand-ar,.nav-section,.sidebar-foot){color:#6e5410}
+:root[data-theme=sunflower] .brand-mark{color:#4a3600;border-color:#4a360066}
+:root[data-theme=sunflower] .nav-count{border-color:#00000026}
+:root[data-theme=sunflower] .nav-button[data-active=true]{background:#fff8d6!important;color:#4a3600!important}
+:root[data-theme=sunflower] .sidebar-rail{background:#00000012}
+:root[data-theme=sunflower] :is(.btn.primary,.stat.featured,.back-to-top){background:linear-gradient(135deg,#ffd84a,#ffbf1f);border-color:#f0b400;color:#3d2e00}
+:root[data-theme=sunflower] .btn.primary:hover{background:linear-gradient(135deg,#ffe066,#ffc93a)}
+:root[data-theme=sunflower] .stat.featured :is(.stat-label,.stat-foot,.stat-label svg){color:#6e5410}
+:root[data-theme=sunflower] .department-brand .brand-mark{background:#ffc928;color:#3d2e00;border-color:#f0b400}
+:root[data-theme=sunflower] .payroll-totals>div{background:linear-gradient(135deg,#ffd84a,#ffbf1f);color:#3d2e00}
+/* Department accents in the dark theme. */
+:root[data-theme=noir] [class*=theme-]{--dept-soft:color-mix(in srgb,var(--brand) 12%,#15130f)}
+:root[data-theme=noir] .department-hero p{color:#b8ab92}
