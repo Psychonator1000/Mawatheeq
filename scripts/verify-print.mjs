@@ -38,3 +38,17 @@ assert.ok(statement.includes('<th colspan="5">الإجمالي</th><td class="am
 assert.ok(statement.includes('(الأتعاب − المقبوضات)</th><td class="amount">7500 KWD</td>') && statement.includes('بعد المصروفات</th><td class="amount">1750 KWD</td>'));
 assert.ok(statementHtml([], 'KWD', '', () => '', money, '', '').includes('لا توجد قيود مرحلة'));
 console.log('Passed printing: escaped case sheets, ordered procedures and case-only work; escaped vouchers with void marking; currency-specific statements with exact totals excluding void entries.');
+
+const { payrollHtml, warningLetterHtml } = await import('../lib/print.ts');
+const big = BigInt;
+const payRow = (name, currency, extra = {}) => ({ employee: { name, employeeNumber: 'E-' + name.length, currency }, scheduledDays: 20, presentDays: 18, absentDays: 2, leaveDays: 0, lateDays: 3, lateMinutes: 75, earlyMinutes: 10, excessMinutes: 25, overtimeMinutes: 0,
+  salaryMinor: big(600000), lateDeductionMinor: big(0), absenceDeductionMinor: big(0), overtimePayMinor: big(0), netMinor: big(600000), potentialDeductionMinor: big(41250), warnings: ['غياب 2 يوم <b>'], days: [{ date: '2026-10-11', kind: 'absent', first: null, last: null, lateMinutes: 0, earlyMinutes: 0 }, { date: '2026-10-12', kind: 'present', first: '08:00', last: '16:00', lateMinutes: 0, earlyMinutes: 0 }], ...extra });
+const payroll = payrollHtml([payRow('موظف <script>', 'KWD'), payRow('ثاني', 'KWD'), payRow('ثالث', 'USD', { salaryMinor: big(100000), netMinor: big(100000), potentialDeductionMinor: big(0) })], 'أكتوبر 2026', 'warn', money, '11/10/2026', 'ui_owner');
+assert.ok(!payroll.includes('<script>') && payroll.includes('موظف &lt;script&gt;'), 'Payroll names are escaped');
+assert.ok(payroll.includes('العملة KWD') && payroll.includes('العملة USD') && payroll.includes('1200000 KWD') && payroll.includes('82500 KWD') && payroll.includes('100000 USD'), 'Totals stay separate per currency');
+assert.ok(payroll.includes('خصم محتمل (تنبيه فقط)') && payroll.includes('لا تُخصم'), 'Warning mode never presents deductions as applied');
+assert.ok(payrollHtml([payRow('a', 'KWD')], 'x', 'deduct', money, '', '').includes('<th>الخصومات</th>'));
+const letter = warningLetterHtml(payRow('موظف', 'KWD'), 'أكتوبر 2026', { absent: 'غائب', present: 'حاضر' }, '11/10/2026', '');
+assert.ok(letter.includes('11/10/2026') && letter.includes('<td>غائب</td>') && !letter.includes('12/10/2026'), 'Only problem days are listed, dated DD/MM/YYYY');
+assert.ok(letter.includes('غياب 2 يوم &lt;b&gt;'), 'Warnings are escaped');
+console.log('Passed payroll sheet and warning letter: escaping, per-currency totals, warn vs deduct wording and problem-day listing.');

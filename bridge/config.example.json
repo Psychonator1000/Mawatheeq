@@ -1,0 +1,7 @@
+{
+  "supabaseUrl": "https://REPLACE-WITH-PROJECT.supabase.co",
+  "publishableKey": "sb_publishable_REPLACE",
+  "bridgeKey": "REPLACE-WITH-THE-KEY-SHOWN-ONCE-IN-MAWATHEEQ",
+  "intervalSeconds": 60,
+  "timeoutMs": 10000
+}

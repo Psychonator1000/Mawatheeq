@@ -1,5 +1,6 @@
 import type { CaseRecord } from './domain';
 import type { WorkItem } from './office';
+import type { MonthSummary } from './attendance';
 
 const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
 const dmy = (iso: string) => /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : iso;
@@ -71,6 +72,38 @@ export function statementHtml(entries: LedgerEntry[], currency: string, scope: s
 <tr class="total"><th colspan="5">الإجمالي</th>${sum(totals.fee)}${sum(totals.receipt)}${sum(totals.expense)}</tr></table>
 <table><tr class="total"><th>الأتعاب المتبقية (الأتعاب − المقبوضات)</th>${sum(totals.fee - totals.receipt)}</tr><tr><th>صافي المقبوضات بعد المصروفات</th>${sum(totals.receipt - totals.expense)}</tr></table>
 <p>القيود الملغاة لا تدخل في الكشف.</p>${footer(printedAt, printedBy)}`);
+}
+
+type PayrollRow = Pick<MonthSummary, 'scheduledDays' | 'presentDays' | 'absentDays' | 'leaveDays' | 'lateDays' | 'lateMinutes' | 'earlyMinutes' | 'excessMinutes' | 'overtimeMinutes' | 'salaryMinor' | 'lateDeductionMinor' | 'absenceDeductionMinor' | 'overtimePayMinor' | 'netMinor' | 'potentialDeductionMinor' | 'warnings'> & { employee: { name: string; employeeNumber: string; currency: string } };
+const hm = (n: number) => n <= 0 ? '0' : `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+
+/** Monthly payroll estimate grouped by currency. In warning mode deductions are listed as potential only. */
+export function payrollHtml(rows: PayrollRow[], monthLabel: string, deductionMode: 'warn' | 'deduct', money: Money, printedAt: string, printedBy: string): string {
+  const currencies = [...new Set(rows.map(r => r.employee.currency))].sort();
+  const tables = currencies.map(currency => {
+    const list = rows.filter(r => r.employee.currency === currency);
+    const sum = (k: 'salaryMinor' | 'lateDeductionMinor' | 'absenceDeductionMinor' | 'overtimePayMinor' | 'netMinor' | 'potentialDeductionMinor') => list.reduce((t, r) => t + r[k], BigInt(0));
+    const amount = (v: bigint) => `<td class="amount">${escape(money(v, currency))}</td>`;
+    const body = list.map(r => `<tr><td>${escape(r.employee.name)}<br><small>${escape(r.employee.employeeNumber)}</small></td><td>${r.presentDays}/${r.scheduledDays}</td><td>${r.absentDays}</td><td>${r.leaveDays}</td><td class="nowrap">${r.lateDays} · ${escape(hm(r.lateMinutes + r.earlyMinutes))}</td><td class="nowrap">${escape(hm(r.excessMinutes))}</td><td class="nowrap">${escape(hm(r.overtimeMinutes))}</td>${amount(r.salaryMinor)}${amount(deductionMode === 'deduct' ? r.lateDeductionMinor + r.absenceDeductionMinor : r.potentialDeductionMinor)}${amount(r.overtimePayMinor)}${amount(r.netMinor)}</tr>`).join('');
+    return `<h2>العملة ${escape(currency)}</h2><table class="list"><tr><th>الموظف</th><th>الحضور</th><th>غياب</th><th>إجازة</th><th>تأخير وخروج مبكر</th><th>تجاوز السماحية</th><th>إضافي</th><th>الراتب</th><th>${deductionMode === 'deduct' ? 'الخصومات' : 'خصم محتمل (تنبيه فقط)'}</th><th>بدل إضافي</th><th>الصافي التقديري</th></tr>${body}
+<tr class="total"><th colspan="7">الإجمالي (${list.length} موظف)</th>${amount(sum('salaryMinor'))}${amount(deductionMode === 'deduct' ? sum('lateDeductionMinor') + sum('absenceDeductionMinor') : sum('potentialDeductionMinor'))}${amount(sum('overtimePayMinor'))}${amount(sum('netMinor'))}</tr></table>`;
+  }).join('');
+  const notes = rows.filter(r => r.warnings.length).map(r => `<li><b>${escape(r.employee.name)}:</b> ${r.warnings.map(escape).join('؛ ')}</li>`).join('');
+  return page('كشف الرواتب ' + monthLabel, `<header><h1>كشف الرواتب التقديري</h1><p>${escape(monthLabel)} · ${deductionMode === 'deduct' ? 'الخصومات مطبقة حسب إعدادات الدوام' : 'وضع التنبيه: لا تُخصم أي مبالغ من الراتب'}</p></header>
+${tables || '<p>لا يوجد موظفون نشطون.</p>'}${notes ? `<h2>تنبيهات</h2><ul>${notes}</ul>` : ''}
+<p>تقدير محسوب من سجل البصمات والإجازات المعتمدة، ويُراجع قبل الصرف.</p><div class="signatures"><div>الموارد البشرية</div><div>المحاسب</div><div>الاعتماد</div></div>${footer(printedAt, printedBy)}`);
+}
+
+/** An attendance warning letter for one employee and month. */
+export function warningLetterHtml(row: PayrollRow & { days: { date: string; kind: string; first: string | null; last: string | null; lateMinutes: number; earlyMinutes: number }[] }, monthLabel: string, labels: Record<string, string>, printedAt: string, printedBy: string): string {
+  const issues = row.days.filter(d => d.kind === 'absent' || d.kind === 'missing' || d.lateMinutes > 0 || d.earlyMinutes > 0);
+  const lines = issues.map(d => `<tr><td class="nowrap">${escape(dmy(d.date))}</td><td>${escape(labels[d.kind] || d.kind)}</td><td class="nowrap">${escape(d.first || '—')}</td><td class="nowrap">${escape(d.last || '—')}</td><td class="nowrap">${escape(hm(d.lateMinutes))}</td><td class="nowrap">${escape(hm(d.earlyMinutes))}</td></tr>`).join('');
+  return page('إنذار حضور ' + row.employee.name, `<header><h1>إنذار بشأن الحضور والانصراف</h1><p>مواثيق للمحاماة · ${escape(monthLabel)}</p></header>
+<table><tr><th>الموظف</th><td>${escape(row.employee.name)}</td></tr><tr><th>الرقم الوظيفي</th><td>${escape(row.employee.employeeNumber)}</td></tr></table>
+<p>نود إحاطتكم بأن سجل الحضور للشهر المذكور أظهر ما يلي:</p><ul>${row.warnings.map(w => `<li>${escape(w)}</li>`).join('')}</ul>
+${lines ? `<h2>تفاصيل الأيام</h2><table class="list"><tr><th>التاريخ</th><th>الحالة</th><th>الدخول</th><th>الخروج</th><th>تأخير</th><th>خروج مبكر</th></tr>${lines}</table>` : ''}
+<p>نأمل الالتزام بمواعيد الدوام الرسمية، وتقديم ما يبرر أي غياب أو تأخير إلى الموارد البشرية.</p>
+<div class="signatures"><div>الموارد البشرية</div><div>توقيع الموظف بالعلم</div><div>التاريخ</div></div>${footer(printedAt, printedBy)}`);
 }
 
 /** Open a same-origin print window with already-escaped HTML. */
