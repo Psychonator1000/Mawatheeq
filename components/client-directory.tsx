@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Building2, Users, Plus, Search, Save, Trash2, ArrowUpLeft, Merge, LoaderCircle } from 'lucide-react';
+import { Building2, Users, Plus, Search, Save, Trash2, ArrowUpLeft, Merge, LoaderCircle, Phone, MessageCircle } from 'lucide-react';
+import { phoneLinks } from '@/lib/contact-links';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
@@ -60,7 +61,7 @@ export function ClientEditor({ entity, clients, records = [], canMerge, readOnly
       const used = records.some(c => c.clientEntityId === draft.id && c.clientContactId === person.id);
       return <section className="client-contact" key={person.id}><div className="client-section-heading"><b>الشخص {index + 1}</b><button type="button" className="icon-btn" aria-label={`إزالة ${person.name || 'الشخص'}`} title={used ? 'مرتبط بقضية؛ غيّر ارتباطها أولاً' : 'إزالة الشخص'} disabled={used} onClick={() => set('contacts', draft.contacts.filter(p => p.id !== person.id))}><Trash2 size={16}/></button></div>
         <div className="form-grid"><Field label="اسم الشخص" value={person.name} onChange={v => patch('name', v)}/><Field label="صفته / دوره لدى الموكل" value={person.role} onChange={v => patch('role', v)} placeholder="موظف متابعة، مفوض، ممثل قانوني…"/>
-          <Field label="رقم التواصل (اختياري)" value={person.phone || ''} onChange={v => patch('phone', v)}/><Field label="ملاحظات الشخص" value={person.notes || ''} onChange={v => patch('notes', v)}/>
+          <Field label="رقم التواصل (اختياري)" value={person.phone || ''} onChange={v => patch('phone', v)}/><ContactActions name={person.name} phone={person.phone || ''}/><Field label="ملاحظات الشخص" value={person.notes || ''} onChange={v => patch('notes', v)}/>
           <label className="checkbox-line wide"><input type="checkbox" checked={Boolean(person.needsReview)} onChange={e => patch('needsReview', e.target.checked)}/> بيانات الشخص تحتاج مراجعة</label></div>
       </section>;
     })}
@@ -110,4 +111,11 @@ export default function ClientDirectory({ clients, records, canMerge, readOnly=f
       {!filtered.length&&<Empty/>}<PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></section>
     {selected&&<ClientEditor readOnly={readOnly} key={selected.id} entity={selected} clients={clients} records={records} canMerge={canMerge} onClose={()=>setSelected(null)} onSaved={onSaved} onMerged={onReload} onOpenCase={onOpenCase} onShowCases={onShowCases} onAddCase={onAddCase}/>}
   </>;
+}
+
+/** Call and WhatsApp shortcuts for a stored contact number; hidden until the number is usable. */
+export function ContactActions({ name, phone }: { name: string; phone: string }) {
+  const links = phoneLinks(phone);
+  if (!links) return phone.trim() ? <p className="contact-actions muted">تحقق من الرقم لإظهار أزرار الاتصال.</p> : null;
+  return <div className="contact-actions"><a className="btn" href={links.tel} aria-label={`اتصال بـ ${name || 'الشخص'}`}><Phone size={15}/> اتصال</a><a className="btn" href={links.whatsapp} target="_blank" rel="noopener noreferrer" aria-label={`واتساب ${name || 'الشخص'}`}><MessageCircle size={15}/> واتساب</a><span className="mono muted" dir="ltr">{links.phone}</span></div>;
 }

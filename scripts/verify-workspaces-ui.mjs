@@ -44,7 +44,7 @@ const field=async(label,value)=>page.getByRole('dialog').getByLabel(label,{exact
 const dept=(workspace,action,data={})=>rpc('mawatheeq_department_request',[login.token,action,JSON.stringify({workspace,...data})]);
 const screen=async name=>page.screenshot({path:artifacts+'/'+name+'.png',fullPage:true});
 async function enter(name){await click('فتح '+name);await page.getByRole('button',{name:'تحديث',exact:true}).waitFor();}
-async function switchTo(name){await click('تغيير مساحة العمل');await click('فتح '+name);}
+async function switchTo(name){await page.getByRole('button',{name:/^حساب /}).click();await click('تغيير مساحة العمل');await click('فتح '+name);}
 async function pickToday(label){await page.getByRole('dialog').getByRole('button',{name:label,exact:true}).click();await page.locator('.date-popover').getByRole('button',{name:'اليوم',exact:true}).click();}
 async function downloadWord(button,expected){
  const promise=page.waitForEvent('download');await click(button);const download=await promise;
@@ -89,13 +89,13 @@ try{
  assert.equal(calls.slice(before).some(c=>c.name==='mawatheeq_local_request'&&c.action==='cases_page'),false);
  assert.equal(await staff.getByRole('button',{name:'ملف تحصيل جديد',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'تصدير القائمة',exact:true}).count(),0);
  await staff.getByRole('button',{name:'فتح الملف',exact:true}).click();assert.equal(await staff.getByLabel('العنوان',{exact:true}).isDisabled(),true);assert.equal(await staff.getByRole('button',{name:'تسجيل مراجعة المصدر',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).count(),0);await staff.keyboard.press('Escape');
- await staff.getByRole('button',{name:'خروج',exact:true}).click();await staff.getByLabel('اسم المستخدم',{exact:true}).fill('dept_ui_reader');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await staff.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();
+ await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'خروج',exact:true}).click();await staff.getByLabel('اسم المستخدم',{exact:true}).fill('dept_ui_reader');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await staff.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();
  await staff.evaluate(()=>sessionStorage.setItem('mawatheeq.workspace.v1','legal'));await staff.reload();await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),2,'Forged workspace preference cannot grant legal access');
- await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();await staff.getByLabel('كلمة المرور الحالية',{exact:true}).fill('Unsaved-password-from-previous-user');
+ await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();await staff.getByLabel('كلمة المرور الحالية',{exact:true}).fill('Unsaved-password-from-previous-user');
  const otherTab=await sc.newPage();await configurePage(otherTab);await otherTab.goto(base);
  await otherTab.evaluate(token=>localStorage.setItem('mawatheeq.local-session.v1',token),login.token);
  await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),5);
- await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();assert.equal(await staff.getByLabel('كلمة المرور الحالية',{exact:true}).inputValue(),'','Cross-tab session replacement clears old password inputs');
+ await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();assert.equal(await staff.getByLabel('كلمة المرور الحالية',{exact:true}).inputValue(),'','Cross-tab session replacement clears old password inputs');
  assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, precise ledger/void, employee/leave forms, department-only readonly access, responsive layouts and no runtime errors.');
 }catch(e){await screen('failure');console.error(await page.locator('body').innerText());throw e}
 finally{

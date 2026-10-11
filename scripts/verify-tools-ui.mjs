@@ -31,6 +31,13 @@ const work=(id,extra)=>office('save_work',{item:{id,revision:0,caseId:'tools-cas
 await work('11111111-1111-4111-8111-111111111111',{title:'مهمة متأخرة تجريبية',dueDate:iso(-2)});
 await work('22222222-2222-4222-8222-222222222222',{title:'جلسة اليوم التجريبية',kind:'hearing',dueTime:'09:30',location:'المحكمة الكلية'});
 await work('33333333-3333-4333-8333-333333333333',{title:'مهمة الأسبوع القادم',dueDate:iso(3)});
+await rpc('mawatheeq_client_request',[login.token,'save',JSON.stringify({client:{id:'44444444-4444-4444-8444-444444444444',name:'شركة اتصال تجريبية',kind:'organization',sector:'other',contacts:[{id:'55555555-5555-4555-8555-555555555555',name:'منسق تجريبي',role:'متابعة',phone:'٩٩٩٩ ١٢٣٤',notes:''}],aliases:[],notes:'',needsReview:false,revision:0}})]);
+const dept=(workspace,record)=>rpc('mawatheeq_department_request',[login.token,'save_record',JSON.stringify({workspace,record:{revision:0,caseId:'',subjectId:'',...record}})]);
+await dept('accounting',{id:'66666666-6666-4666-8666-666666666661',workspace:'accounting',kind:'entry',payload:{type:'fee',date:iso(-3),currency:'KWD',amount:'10',reference:'FEE-1',party:'موكل تجريبي',notes:''}});
+await dept('accounting',{id:'66666666-6666-4666-8666-666666666662',workspace:'accounting',kind:'entry',payload:{type:'receipt',date:iso(-1),currency:'KWD',amount:'2.5',reference:'RC-1',party:'موكل تجريبي',notes:'دفعة أولى'}});
+await dept('hr',{id:'77777777-7777-4777-8777-777777777771',workspace:'hr',kind:'employee',payload:{employeeNumber:'E-1',name:'موظف تجريبي',title:'محامٍ',department:'القضايا',phone:'',startDate:'2025-01-01',status:'active',notes:''}});
+const leaveYear=today.slice(0,4),leaveStart=leaveYear+'-02-10',leaveEnd=leaveYear+'-02-12';
+await dept('hr',{id:'77777777-7777-4777-8777-777777777772',workspace:'hr',kind:'leave',subjectId:'77777777-7777-4777-8777-777777777771',payload:{type:'سنوية',fromDate:leaveStart,toDate:leaveEnd,status:'approved',notes:'',decisionNote:'معتمدة'}});
 
 const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce',timezoneId:'Asia/Kuwait'});
@@ -112,6 +119,51 @@ await page.setViewportSize({width:390,height:844});
 await page.goto(base+'#overview');await page.reload();await mine.getByText('مهمة متأخرة تجريبية').waitFor();
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'No horizontal viewport overflow on mobile');
 await page.screenshot({path:artifacts+'/mobile-overview.png',fullPage:true});
+assert.equal(await page.locator('.account-bar,.legal-workspace-switch').count(),0,'No floating account controls over page content');
+await page.setViewportSize({width:1440,height:1000});
+
+// The guide page and duplicate shortcut cards are gone; guidance sits on each page and follows the settings.
+assert.equal(await page.locator('.quick-card').count(),0);
+assert.equal(await page.getByText('دليل الاستخدام').count(),0);
+await page.goto(base+'#deadlines');await page.reload();
+await page.getByText('كيف يعمل هذا القسم؟').click();
+await page.getByText(/حكم أول درجة 30 يوماً، الاستئناف 60 يوماً/).waitFor();
+
+// Client contacts can be called or messaged from the profile.
+await page.goto(base+'#clients');await page.reload();
+await page.getByRole('button',{name:/شركة اتصال تجريبية/}).click();
+const call=page.getByRole('link',{name:'اتصال بـ منسق تجريبي'});
+assert.equal(await call.getAttribute('href'),'tel:+96599991234','Arabic-digit local number becomes an international call link');
+assert.equal(await page.getByRole('link',{name:'واتساب منسق تجريبي'}).getAttribute('href'),'https://wa.me/96599991234');
+await page.keyboard.press('Escape');
+
+// Account actions live in the avatar menu.
+const openAccount=()=>page.getByRole('button',{name:'حساب tools_owner'}).click();
+await openAccount();
+for(const name of ['تغيير مساحة العمل','تغيير كلمة المرور','خروج'])assert.ok(await page.getByRole('button',{name,exact:true}).isVisible(),name+' in account menu');
+await page.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
+
+// Accounting prints a statement and a receipt voucher.
+const stubPrint=()=>page.evaluate(()=>{window.__printed='';window.open=()=>({document:{write:h=>{window.__printed+=h},close(){}},focus(){},print(){}})});
+await page.getByRole('button',{name:'فتح المحاسبة'}).click();
+await page.getByText('RC-1').waitFor();await stubPrint();
+await page.getByRole('button',{name:'طباعة كشف حساب'}).click();
+await page.waitForFunction(()=>window.__printed.includes('كشف حساب'));
+let finance=await page.evaluate(()=>window.__printed);
+assert.ok(finance.includes('10.000 KWD')&&finance.includes('2.500 KWD')&&finance.includes('7.500 KWD'),'Statement totals and outstanding fees');
+await page.getByRole('row',{name:/RC-1/}).getByRole('button',{name:'فتح القيد'}).click();
+await stubPrint();await page.getByRole('button',{name:'طباعة السند'}).click();
+finance=await page.evaluate(()=>window.__printed);
+assert.ok(finance.includes('<h1>سند قبض</h1>')&&finance.includes('ديناران كويتيان وخمسمائة فلس'),'Receipt voucher with amount in words');
+await page.keyboard.press('Escape');
+
+// HR shows approved leave used this year and request lengths.
+await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
+await page.getByRole('button',{name:'فتح الموارد البشرية'}).click();
+await page.getByText(`إجازات معتمدة ${leaveYear}: 3 يوم`).waitFor();
+await page.getByRole('button',{name:'الإجازات',exact:true}).click();
+await page.getByText('3 يوم',{exact:true}).waitFor();
+await page.screenshot({path:artifacts+'/hr.png'});
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, mobile header and no runtime errors.');
+console.log('Passed tools UI: personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days and no runtime errors.');
