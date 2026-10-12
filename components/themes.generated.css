@@ -226,6 +226,9 @@
 :root[data-theme=noir] .chat-badge{background:#e0ad99;color:#11100e}
 :root[data-theme=noir] .chat-ref.user{color:#a4c4da;background:#a4c4da1a}
 :root[data-theme=noir] .chat-leave{color:#d2a5a9}
+:root[data-theme=noir] .case-table-rows>tbody>tr.case-row:hover{background:#1d1b18}
+:root[data-theme=noir] .case-id small,:root[data-theme=noir] .case-when small{color:#bab3ae}
+:root[data-theme=noir] .case-lawyer{color:#cfc7c1}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
 :root[data-theme=noir] .workspace-option-top small{color:#544f45}
@@ -532,6 +535,9 @@
 :root[data-theme=phantom] .chat-badge{background:#e5c8bc;color:#0d0d0d}
 :root[data-theme=phantom] .chat-ref.user{color:#c3d6e2;background:#c3d6e21a}
 :root[data-theme=phantom] .chat-leave{color:#ddc3c5}
+:root[data-theme=phantom] .case-table-rows>tbody>tr.case-row:hover{background:#151515}
+:root[data-theme=phantom] .case-id small,:root[data-theme=phantom] .case-when small{color:#cecac7}
+:root[data-theme=phantom] .case-lawyer{color:#ded9d6}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .workspace-option-top small{color:#3d3d3d}
@@ -757,6 +763,7 @@
 :root[data-theme=ivory] .venue-choice .checkbox-line:has(input:checked){background:#f8f8f7}
 :root[data-theme=ivory] .chat-bubble{color:#ffffff}
 :root[data-theme=ivory] .chat-badge{color:#ffffff}
+:root[data-theme=ivory] .case-table-rows>tbody>tr.case-row:hover{background:#f9f9f8}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
 :root[data-theme=ivory] .department-topbar{background:#fefefed9}
 :root[data-theme=ivory] .department-brand .brand-mark{color:#faf9f8}
@@ -981,6 +988,7 @@
 :root[data-theme=phantom-light] .venue-choice .checkbox-line:has(input:checked){background:#fcfcfc}
 :root[data-theme=phantom-light] .chat-bubble{color:#ffffff}
 :root[data-theme=phantom-light] .chat-badge{color:#ffffff}
+:root[data-theme=phantom-light] .case-table-rows>tbody>tr.case-row:hover{background:#fdfdfd}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
 :root[data-theme=phantom-light] .workspace-option{border:1px solid #fafaf9;background:#fefefe;color:#403c39}
 :root[data-theme=phantom-light] .workspace-option-top small{color:#aba8a4}
@@ -1429,6 +1437,9 @@
 :root[data-mode=dark] .chat-suggest small{color:var(--muted-foreground)}
 :root[data-mode=dark] .chat-suggest [aria-selected=true] button,:root[data-mode=dark] .chat-suggest button:hover{background:color-mix(in srgb,var(--brand) 10%,transparent)}
 :root[data-mode=dark] .chat-leave{color:#dba7ac}
+:root[data-mode=dark] .case-table-rows>tbody>tr.case-row:hover{background:#1f1c18}
+:root[data-mode=dark] .case-id small,:root[data-mode=dark] .case-when small{color:#c2b9b3}
+:root[data-mode=dark] .case-lawyer{color:#d5cbc5}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}
