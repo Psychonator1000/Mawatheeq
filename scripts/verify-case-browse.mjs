@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { emptyCase } from '../lib/domain.ts';
-import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber } from '../lib/case-browse.ts';
+import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT } from '../lib/case-browse.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
 
 const fixture = (id, fields) => ({ ...emptyCase(), id, ...fields });
@@ -101,3 +101,14 @@ assert.equal(caseLinkFilters('#insurance').category,'insurance');
 assert.equal(caseLinkFilters('#cases?category=invalid').category,'');
 const entityLink=caseLinkFilters(caseFiltersHash({category:'telecom',clientEntityId:'entity-a',month:'09'}));
 assert.equal(entityLink.category,'telecom'); assert.equal(entityLink.clientEntityId,'entity-a'); assert.equal(entityLink.month,'09');
+
+// Column sorting: empty values last in both directions, numbers numerically, ties newest first.
+{const mk=(id,extra)=>({...emptyCase(),id,...extra});
+ const rows=[mk('a',{autoNumber:'900',client:'بنك',lawyer:'سالم',date:'2026-01-01'}),mk('b',{autoNumber:'1000',client:'أمانة',lawyer:'',date:'2026-03-01'}),mk('c',{autoNumber:'',client:'',lawyer:'أحمد',date:'2026-02-01'})];
+ const ids=(sort,rem)=>sortCases(rows,sort,rem).map(c=>c.id).join('');
+ assert.equal(ids(DEFAULT_CASE_SORT),'bca','Default: newest judgment first');
+ assert.equal(ids({key:'number',dir:1}),'abc','Auto numbers sort numerically; empty last');
+ assert.equal(ids({key:'number',dir:-1}),'bac','Empty stays last when descending');
+ assert.equal(ids({key:'lawyer',dir:1}),'cab');
+ const rem={a:-40,b:3,c:null};assert.equal(ids({key:'remaining',dir:1},c=>rem[c.id]),'abc','Unknown remaining days go last');
+ assert.equal(rows.map(c=>c.id).join(''),'abc','The input list is not reordered');}

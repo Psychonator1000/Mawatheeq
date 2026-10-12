@@ -288,3 +288,31 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .case-when .mono{font-weight:500}
 .case-badges{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .case-lawyer{font-size:13px;color:#5d4a3d;max-width:180px}
+/* Denser case rows: review state as a dot, level and next hearing as small chips, sortable headers. */
+.case-table-rows td{padding-block:12px}
+.case-table-rows .party strong{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.review-dot{width:9px;height:9px;flex-shrink:0;border-radius:50%;border:1.5px solid #c9b8a5;background:transparent;display:inline-block}
+.review-dot.verified{border-color:#4f8a73;background:#4f8a73}
+.review-dot.needs_review,.review-dot.outdated{border-color:#c48a2c;background:#e7b45a}
+.level-tag{display:inline-block;margin-top:4px;padding:0 7px;border-radius:999px;font-size:11px;line-height:1.7;background:#efe3d3;color:#7a4b2e;font-weight:600}
+.level-tag.top{background:var(--brand);color:#fff}
+.hearing-chip{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:1px 8px;border-radius:999px;font-size:11.5px;background:#eef1ea;color:#3f6150}
+.hearing-chip.today{background:#fbeccd;color:#8a5a12;font-weight:600}
+.tag.faded{background:#efebe6;color:#9a8b7e}
+.sort-head{display:inline-flex;align-items:center;gap:5px;border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}
+.sort-head svg{opacity:.35}.sort-head:hover svg,.sort-head.on svg{opacity:1}.sort-head.on{color:var(--brand);font-weight:600}
+/* Phones: each case is a card; cells label themselves. */
+@media(max-width:700px){
+ .case-table-rows thead{display:none}
+ .case-table-rows,.case-table-rows tbody{display:block;width:100%;min-width:0!important}
+ .case-table-rows>tbody>tr.case-row>td.party{max-width:none;min-width:0}
+ .case-table-rows>tbody>tr.case-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;padding:14px;margin-bottom:10px;border:1px solid #e4d9cb;border-radius:14px;background:#fffdf8}
+ .case-table-rows>tbody>tr.case-row>td{display:block;min-width:0;width:auto;padding:0!important;border:0!important;max-width:none;white-space:normal}
+ .case-table-rows>tbody>tr.case-row>td[data-label]::before{content:attr(data-label);display:block;font-size:11px;color:#8a7768;margin-bottom:2px}
+ .case-table-rows>tbody>tr.case-row>td.case-id{order:1}
+ .case-table-rows>tbody>tr.case-row>td.case-remaining{order:2;justify-self:end;text-align:end}
+ .case-table-rows>tbody>tr.case-row>td.party{order:3;grid-column:1/-1;padding-block:8px!important;border-block:1px solid #eee5d8!important}
+ .case-table-rows>tbody>tr.case-row>td.case-when{order:4}
+ .case-table-rows>tbody>tr.case-row>td.case-status{order:5;justify-self:end}
+ .case-table-rows>tbody>tr.case-row>td.case-lawyer{order:6;grid-column:1/-1}
+}
