@@ -1,5 +1,6 @@
 'use client';
 import {useState} from 'react';
+import {suggestions} from '@/lib/choices';
 import {CalendarPlus,Gavel,Scale} from 'lucide-react';
 import {toast} from 'sonner';
 import {type CaseRecord,type Procedure,formatDate,todayISO} from '@/lib/domain';
@@ -54,7 +55,7 @@ export default function CaseSessions({c,canEdit,canSchedule,busy,username,assign
    <fieldset disabled={busy||saving}><div className="form-grid">
     <DateField label="تاريخ الجلسة" value={s.date} onChange={v=>set('date',v)}/>
     <div className="field" role="radiogroup" aria-label="جهة الجلسة"><span>الجهة</span><div className="venue-choice">{VENUES.map(v=><label key={v} className="checkbox-line"><input type="radio" name="session-venue" checked={s.venue===v} onChange={()=>{set('venue',v);set('decision','')}}/>{v}</label>)}</div></div>
-    <Field label={s.venue==='إدارة الخبراء'?'مكتب الخبير / الخبير':'الدائرة / القاعة'} value={s.court} onChange={v=>set('court',v)}/>
+    <Field label={s.venue==='إدارة الخبراء'?'مكتب الخبير / الخبير':'الدائرة / القاعة'} value={s.court} onChange={v=>set('court',v)} suggestions={suggestions(c.procedures,p=>p.venue===s.venue?p.court:'',s.venue==='إدارة الخبراء'?[]:[String(c.court||'')].filter(Boolean))}/>
     <label className="field"><span>قرار الجلسة</span><Choice label="قرار الجلسة" empty="اختر القرار" value={s.decision} onChange={v=>set('decision',v)} options={options}/></label>
     <Field label="تفاصيل القرار (اختياري)" value={s.details} onChange={v=>set('details',v)} wide/>
     {needsNext&&<><DateField label={d?.next==='judgment'?'موعد النطق بالحكم':'موعد الجلسة القادمة'} value={s.nextDate} onChange={v=>set('nextDate',v)}/><Field label="الوقت (اختياري)" type="time" value={s.nextTime} onChange={v=>set('nextTime',v)}/></>}

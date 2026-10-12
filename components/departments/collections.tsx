@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
+import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf} from '@/lib/choices';
 import {Files,Plus,FileCheck2,ListChecks} from 'lucide-react';
 import BatchPrint from './batch-print';
 import {suggestedEvidence} from '@/lib/document-tools';
@@ -10,7 +11,7 @@ import {blankDocument,amountInWords} from '@/lib/document-fields';
 import {COLLECTION_FIELDS,missingDocumentFields} from '@/lib/collection-documents';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
-import {Field,DateField,Empty,saveBlob} from '../shared';
+import {Field,DateField,Empty,saveBlob,Choice} from '../shared';
 import {OfficeSelect,officeTime} from '../office-shared';
 import PageNavigation from '../page-navigation';
 import {CasePicker,DepartmentHistory,StatusMessage,useRecords,exportCsv} from './shared';
@@ -54,7 +55,7 @@ function CollectionEditor({initial,cases,access,onClose,onChanged,nav,onNavigate
  <p className="subtitle">دوّن البيانات كما وردت في المصدر. الحقول غير المعروفة تبقى فارغة، وتُراجع البيانات قبل إنشاء المستندات.</p>
  <form id="collection-form" onSubmit={e=>{e.preventDefault();void mutate('save_record',{record:draft})}}><fieldset disabled={busy||!editable}>
  <CasePicker cases={cases} value={draft.caseId} disabled={!!saved.revision} onChange={id=>{const c=cases.find(c=>c.id===id);setDraft(r=>({...r,caseId:id,payload:{...r.payload,code:c?.code||'',company:c?clientName(c):'',defendant:c?.opponent||''}}))}}/>
- {COLLECTION_FIELDS.map(([title,fields])=><section className="department-form-section" key={title}><h3>{title}</h3><div className="form-grid">{fields.map(([key,label])=>key.toLowerCase().includes('date')?<DateField key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>set(key,v)}/>:<Field key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>set(key,v)}/>)}</div></section>)}
+ {COLLECTION_FIELDS.map(([title,fields])=><section className="department-form-section" key={title}><h3>{title}</h3><div className="form-grid">{fields.map(([key,label])=>key.toLowerCase().includes('date')?<DateField key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>{set(key,v);if(key==='hearingDate'&&weekdayOf(v))set('hearingDay',weekdayOf(v))}}/>:key==='hearingDay'?<label key={key} className="field"><span>{label}</span><Choice label={label} value={String(draft.payload[key]||'')} onChange={v=>set(key,v)} options={[...new Set([...WEEKDAYS,String(draft.payload[key]||'')])]}/></label>:<Field key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>set(key,v)} suggestions={key==='nationality'?NATIONALITIES:key==='court'||key==='hearingCourt'?COURTS:undefined} type={key==='phone'?'tel':'text'}/>)}</div></section>)}
  <section className="department-form-section"><h3>مستندات الحافظة</h3><p className="subtitle">أضف وصف المستندات المتوفرة فعلاً وحدد ما يدخل الحافظة. لا يلزم رفع PDF.</p>{editable&&<button type="button" className="btn" onClick={()=>{const standard=suggestedEvidence(draft.payload).map(e=>({...e,included:true}));const extra=draft.payload.evidence.filter(e=>!standard.some(x=>x.id===e.id));set('evidence',[...standard,...extra])}}><ListChecks size={15}/> إدراج المستندات المعتادة من بيانات الملف</button>}{draft.payload.evidence.map((e,i)=><div className="evidence-row" key={e.id}><label className="checkbox-line"><input type="checkbox" checked={e.included} onChange={ev=>set('evidence',draft.payload.evidence.map((x,j)=>j===i?{...x,included:ev.target.checked}:x))}/> تضمين المستند {i+1}</label><Field label={'وصف المستند '+(i+1)} value={e.description} onChange={v=>set('evidence',draft.payload.evidence.map((x,j)=>j===i?{...x,description:v}:x))}/><DateField label={'تاريخ المستند '+(i+1)} value={e.date} onChange={v=>set('evidence',draft.payload.evidence.map((x,j)=>j===i?{...x,date:v}:x))}/><Field label={'عدد صفحات المستند '+(i+1)} type="number" value={String(e.pages)} onChange={v=>set('evidence',draft.payload.evidence.map((x,j)=>j===i?{...x,pages:Number(v)}:x))}/><button type="button" className="text-link" onClick={()=>set('evidence',draft.payload.evidence.filter((_,j)=>j!==i))}>إزالة المستند {i+1}</button></div>)}{draft.payload.evidence.length<100&&<button type="button" className="btn" onClick={()=>set('evidence',[...draft.payload.evidence,{id:crypto.randomUUID(),included:true,date:'',description:'',pages:1}])}>إضافة مستند للحافظة</button>}</section>
  <Field label="مرجع المصدر الذي تمت مطابقته" value={draft.payload.sourceReference} onChange={v=>set('sourceReference',v)} placeholder="رقم الملف أو العقد، الجهة، وتاريخ الاطلاع"/><Field label="ملاحظات التحصيل" value={draft.payload.notes} onChange={v=>set('notes',v)} multiline/>
  </fieldset></form>

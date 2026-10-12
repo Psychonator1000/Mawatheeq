@@ -11,6 +11,7 @@ import { formatDate } from '@/lib/domain';
 import { normalizeSearch } from '@/lib/case-browse';
 import { clampPage } from '@/lib/pagination';
 import { Field, Empty, api } from './shared';
+import { CONTACT_ROLES, suggestions } from '@/lib/choices';
 import PageNavigation from './page-navigation';
 
 type EditorProps = {
@@ -20,6 +21,7 @@ type EditorProps = {
   nav?: WindowNav; onNavigate?: (dir: 'prev' | 'next') => void; enter?: Enter;
 };
 export function ClientEditor({ entity, clients, records = [], canMerge, readOnly=false, onClose, onSaved, onMerged, onOpenCase, onShowCases, onAddCase, nav, onNavigate, enter }: EditorProps) {
+  const contactRoles = useMemo(() => suggestions(clients.flatMap(c => c.contacts), p => p.role, CONTACT_ROLES, 100), [clients]);
   const [draft, setDraft] = useState(entity), [busy, setBusy] = useState(false), [targetId, setTargetId] = useState('');
   const [casePage, setCasePage] = useState(1);
   const linked = records.filter(c => c.clientEntityId === draft.id), target = clients.find(c => c.id === targetId);
@@ -68,8 +70,8 @@ export function ClientEditor({ entity, clients, records = [], canMerge, readOnly
       const patch = (key: string, value: string | boolean) => set('contacts', draft.contacts.map(p => p.id === person.id ? { ...p, [key]: value } : p));
       const used = records.some(c => c.clientEntityId === draft.id && c.clientContactId === person.id);
       return <section className="client-contact" key={person.id}><div className="client-section-heading"><b>الشخص {index + 1}</b><button type="button" className="icon-btn" aria-label={`إزالة ${person.name || 'الشخص'}`} title={used ? 'مرتبط بقضية؛ غيّر ارتباطها أولاً' : 'إزالة الشخص'} disabled={used} onClick={() => set('contacts', draft.contacts.filter(p => p.id !== person.id))}><Trash2 size={16}/></button></div>
-        <div className="form-grid"><Field label="اسم الشخص" value={person.name} onChange={v => patch('name', v)}/><Field label="صفته / دوره لدى الموكل" value={person.role} onChange={v => patch('role', v)} placeholder="موظف متابعة، مفوض، ممثل قانوني…"/>
-          <Field label="رقم التواصل (اختياري)" value={person.phone || ''} onChange={v => patch('phone', v)}/><ContactActions name={person.name} phone={person.phone || ''}/><Field label="ملاحظات الشخص" value={person.notes || ''} onChange={v => patch('notes', v)}/>
+        <div className="form-grid"><Field label="اسم الشخص" value={person.name} onChange={v => patch('name', v)}/><Field label="صفته / دوره لدى الموكل" suggestions={contactRoles} value={person.role} onChange={v => patch('role', v)} placeholder="موظف متابعة، مفوض، ممثل قانوني…"/>
+          <Field type="tel" label="رقم التواصل (اختياري)" value={person.phone || ''} onChange={v => patch('phone', v)}/><ContactActions name={person.name} phone={person.phone || ''}/><Field label="ملاحظات الشخص" value={person.notes || ''} onChange={v => patch('notes', v)}/>
           <label className="checkbox-line wide"><input type="checkbox" checked={Boolean(person.needsReview)} onChange={e => patch('needsReview', e.target.checked)}/> بيانات الشخص تحتاج مراجعة</label></div>
       </section>;
     })}

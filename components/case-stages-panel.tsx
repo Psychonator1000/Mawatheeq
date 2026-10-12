@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import {COURTS} from '@/lib/choices';
 import {ArrowUpLeft,Lock,RotateCcw,Scale} from 'lucide-react';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {type CaseRecord,formatDate,todayISO} from '@/lib/domain';
@@ -20,7 +21,7 @@ export function MoveStageDialog({c,busy,onClose,onMove}:{c:CaseRecord;busy:boole
    <DateField label="تاريخ الطعن / النقل" value={d.movedOn} onChange={v=>set('movedOn',v)}/>
    <Field label={'رقم القضية في '+LEVEL_TITLE[to]} value={d.caseNumber} onChange={v=>set('caseNumber',v)} placeholder="يمكن إضافته لاحقاً"/>
    <Field label="الرقم الآلي" value={d.autoNumber} onChange={v=>set('autoNumber',v)}/>
-   <Field label="المحكمة / الدائرة" value={d.court} onChange={v=>set('court',v)} wide/>
+   <Field label="المحكمة / الدائرة" suggestions={COURTS} value={d.court} onChange={v=>set('court',v)} wide/>
    <Field label="ملاحظة النقل (اختياري)" value={d.note} onChange={v=>set('note',v)} multiline wide/>
   </div>{c.date?null:<p className="notice">لم يُسجل تاريخ حكم {LEVEL_TITLE[from]}. يمكنك النقل الآن، لكن يُفضل تسجيل الحكم أولاً ليبقى في سجل الدرجة.</p>}
   <div className="actions"><button type="submit" className="btn primary" disabled={busy||!d.appealedBy}>نقل إلى {LEVEL_TITLE[to]} وحفظ الملف</button><button type="button" className="btn" onClick={onClose}>إلغاء</button></div></fieldset></form>
