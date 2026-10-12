@@ -225,6 +225,9 @@ assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"o
 const openAccount=()=>page.getByRole('button',{name:'حساب tools_owner'}).click();
 await openAccount();
 for(const name of ['تغيير مساحة العمل','تغيير كلمة المرور','خروج'])assert.ok(await page.getByRole('button',{name,exact:true}).isVisible(),name+' in account menu');
+await page.getByRole('button',{name:'نصائح واختصارات'}).click();await page.getByRole('heading',{name:'نصائح مواثيق'}).waitFor();
+for(const keys of ['Ctrl + K','Alt + 1 … 9','Shift + T','Ctrl + B'])assert.ok(await page.getByRole('dialog').getByText(keys,{exact:true}).isVisible(),keys+' listed in tips');
+await page.getByRole('button',{name:'فهمت'}).click();await openAccount();
 await page.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
 
 // Accounting prints a statement and a receipt voucher.
@@ -273,6 +276,13 @@ await motion.getByRole('tabpanel').waitFor();
 await motion.waitForTimeout(1300);
 assert.equal(await motion.locator('.ripple-host').count(),0,'Press ripples remove themselves');
 assert.equal(await motion.locator('canvas.burst-canvas').count(),1);assert.equal(await motion.locator('.ambient-canvas').isVisible(),true,'The constellation backdrop is drawn');
+// Rows scrolled into view flip in cell by cell (split-flap), then drop the effect class.
+await motion.keyboard.press('Escape');await motion.setViewportSize({width:1280,height:380});await motion.goto(base+'#cases');await motion.reload();await motion.getByRole('button',{name:/فتح القضية/}).first().waitFor({state:'attached'});
+await motion.evaluate(()=>{scrollTo(0,0);window.__flips=new Set();document.addEventListener('animationstart',e=>{if(e.animationName.startsWith('cell-flip'))window.__flips.add(e.target.parentElement)})});await motion.waitForTimeout(600);
+for(let i=0;i<8;i++){await motion.mouse.wheel(0,120);await motion.waitForTimeout(90)}
+await motion.waitForTimeout(250);assert.ok(await motion.evaluate(()=>window.__flips.size)>0,'Rows entering while scrolling flip in');
+await motion.waitForTimeout(2200);assert.equal(await motion.locator('tr.row-reveal').count(),0,'The flip class is removed after the animation');
+await motion.setViewportSize({width:1280,height:900});
 await motion.mouse.wheel(0,600);await motion.waitForTimeout(1500);
 assert.equal(await motion.evaluate(()=>document.documentElement.hasAttribute('data-scrolling')),false,'Scroll-reactive lag settles after scrolling stops');
 assert.equal(await motion.evaluate(()=>document.documentElement.dataset.motion),'full');
