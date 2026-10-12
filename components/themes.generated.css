@@ -255,7 +255,6 @@
 :root[data-theme=noir] .roll-panel{border:1px solid #2f2c27;background:#191714}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
-:root[data-theme=noir] .workspace-option-top small{color:#544f45}
 :root[data-theme=noir] .workspace-option p{color:#c4bbaa}
 :root[data-theme=noir] .workspace-footnote{color:#c2b9a7}
 :root[data-theme=noir] .department-topbar{background:#131210d9}
@@ -608,7 +607,6 @@
 :root[data-theme=phantom] .roll-panel{border:1px solid #222222;background:#121212}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
-:root[data-theme=phantom] .workspace-option-top small{color:#3d3d3d}
 :root[data-theme=phantom] .workspace-option p{color:#cdcdcd}
 :root[data-theme=phantom] .workspace-footnote{color:#cbcbcb}
 :root[data-theme=phantom] .department-topbar{background:#0e0e0ed9}
@@ -1127,7 +1125,6 @@
 :root[data-theme=phantom-light] .roll-panel{border:1px solid #dbd8d4;background:#fefefd}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
 :root[data-theme=phantom-light] .workspace-option{border:1px solid #fafaf9;background:#fefefe;color:#403c39}
-:root[data-theme=phantom-light] .workspace-option-top small{color:#aba8a4}
 :root[data-theme=phantom-light] .workspace-option p{color:#757270}
 :root[data-theme=phantom-light] .workspace-footnote{color:#7d7874}
 :root[data-theme=phantom-light] .department-topbar{background:#ffffffd9}
@@ -1619,7 +1616,6 @@
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}
 :root[data-mode=dark] .workspace-option-top{color:var(--dept)}
-:root[data-mode=dark] .workspace-option-top small{color:#4b423b}
 :root[data-mode=dark] .workspace-option p{color:#c2bdb8}
 :root[data-mode=dark] .workspace-enter{color:var(--dept)}
 :root[data-mode=dark] .workspace-footnote{color:#c2bab3}

@@ -4,11 +4,11 @@ import {departmentRequest} from './local-auth';
 export type Department = 'secretary'|'collections'|'accounting'|'hr';
 export type WorkspaceId = 'legal'|Department;
 export const WORKSPACES = {
- legal:{name:'القضايا',description:'ملفات القضايا، الموكلون، التنفيذ والتحليل',mark:'01'},
- secretary:{name:'السكرتارية',description:'أجندة المكتب، الجلسات وتوزيع المهام',mark:'02'},
- collections:{name:'التحصيل',description:'ملفات المطالبات وإعداد صحيفة الدعوى والحافظة',mark:'03'},
- accounting:{name:'المحاسبة',description:'الأتعاب والمقبوضات والمصروفات',mark:'04'},
- hr:{name:'الموارد البشرية',description:'ملفات الموظفين والإجازات',mark:'05'},
+ legal:{name:'القضايا',description:'ملفات القضايا، الموكلون، التنفيذ والتحليل'},
+ secretary:{name:'السكرتارية',description:'أجندة المكتب، الجلسات وتوزيع المهام'},
+ collections:{name:'التحصيل',description:'ملفات المطالبات وإعداد صحيفة الدعوى والحافظة'},
+ accounting:{name:'المحاسبة',description:'الأتعاب والمقبوضات والمصروفات'},
+ hr:{name:'الموارد البشرية',description:'ملفات الموظفين والإجازات'},
 };
 export type CaseSummary = Pick<CaseRecord,'id'|'code'|'autoNumber'|'client'|'clientGroup'|'clientEntityName'|'opponent'|'revision'|'archived'>;
 export type DepartmentRecord<P=Record<string,string>> = {
