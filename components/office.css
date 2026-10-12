@@ -144,3 +144,4 @@
 .stage-card.closed[open]{box-shadow:0 8px 24px -18px #0006}.stage-card>.btn{margin-top:12px}
 .step-open{all:unset;display:flex;align-items:inherit;gap:inherit;width:100%;cursor:pointer;border-radius:8px}.step-open:focus-visible{outline:2px solid var(--brand);outline-offset:2px}.step.done .step-open:hover .step-text b{text-decoration:underline}
 .stage-number{font-size:11px;padding:2px 8px}
+.lawyer-select{gap:6px;margin:0}.lawyer-select>.field{margin:0}

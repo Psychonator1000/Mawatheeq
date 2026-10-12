@@ -281,6 +281,20 @@ assert.equal(saved.stage,'استئناف');assert.equal(saved.stages.length,1);a
 await lv.getByRole('tab',{name:/بيانات الحكم/}).click();await lv.locator('.progress-steps .step.done').getByRole('button').click();
 assert.equal(await lv.getByRole('tab',{name:/درجات التقاضي/}).getAttribute('aria-selected'),'true','A finished level opens its record');
 await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
+// The lawyer is picked from the office's lawyers, or typed when new; the case list offers it afterwards.
+await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-0/).click();
+const lw=page.locator('[data-record-window]');await lw.locator('.case-pin').getByText('TOOL-0').waitFor();
+await lw.getByRole('combobox',{name:'المحامي'}).click();await page.getByRole('option',{name:'اسم آخر…'}).click();
+await lw.getByLabel('اسم المحامي',{exact:true}).fill('ا/ محامٍ تجريبي');await page.keyboard.press('Control+s');
+await page.waitForFunction(async()=>true);await lw.locator('.case-facts').getByText('ا/ محامٍ تجريبي').waitFor();
+await page.waitForTimeout(800);assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-0').payload.lawyer,'ا/ محامٍ تجريبي','A new lawyer name is saved');
+await page.keyboard.press('Escape');await lw.waitFor({state:'hidden'});
+await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-2/).click();
+await lw.locator('.case-pin').getByText('TOOL-2').waitFor();await lw.getByRole('combobox',{name:'المحامي'}).click();await page.getByRole('option',{name:'ا/ محامٍ تجريبي'}).click();
+assert.equal(await lw.getByLabel('اسم المحامي',{exact:true}).count(),0,'A listed lawyer needs no typing');
+await page.keyboard.press('Control+s');await page.waitForTimeout(800);
+assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-2').payload.lawyer,'ا/ محامٍ تجريبي','The listed lawyer is saved');
+await page.screenshot({path:artifacts+'/lawyer-picker.png'});await page.keyboard.press('Escape');await lw.waitFor({state:'hidden'});
 await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('combobox').fill('2026/302');
 await page.getByRole('dialog',{name:'بحث سريع'}).getByText(/TOOL-2/).first().waitFor();await page.keyboard.press('Escape');
 
@@ -370,4 +384,4 @@ assert.equal(await page.evaluate(()=>new Promise(res=>{const r=indexedDB.open('m
 await page.reload();await page.getByRole('button',{name:'فتح مساحة العمل',exact:true}).waitFor();
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: court levels (move to appeal, closed read-only record, pinned numbers, search by earlier number), instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
+console.log('Passed tools UI: lawyer picker (listed and new names), court levels (move to appeal, closed read-only record, pinned numbers, search by earlier number), instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
