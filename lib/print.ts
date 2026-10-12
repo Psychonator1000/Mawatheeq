@@ -36,15 +36,22 @@ ${footer(printedAt, printedBy)}`);
 }
 
 const footer = (printedAt: string, printedBy: string) => `<footer>طُبع من مواثيق في ${escape(printedAt)}${printedBy ? ' بواسطة ' + escape(printedBy) : ''}. ملف داخلي سري.</footer>`;
-function page(title: string, body: string) {
+/**
+ * Printed pages have no browser margin, so the browser cannot add its own header and footer (page address, title, date).
+ * The page spacing comes instead from a frame table whose empty head and foot rows repeat on every printed page.
+ */
+function page(title: string, body: string, landscape = false) {
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escape(title)}</title><style>
-body{font-family:'Noto Sans Arabic',Tahoma,Arial,sans-serif;color:#2b211c;margin:32px;font-size:13px;line-height:1.6}
+@page{size:A4 ${landscape ? 'landscape' : 'portrait'};margin:0}
+body{font-family:'Noto Sans Arabic',Tahoma,Arial,sans-serif;color:#2b211c;margin:0;padding:0 14mm;font-size:13px;line-height:1.6}
+@media screen{body{padding:24px 32px}.print-frame>thead,.print-frame>tfoot{display:none}}
+.print-frame{width:100%;border-collapse:collapse}.print-frame>thead td,.print-frame>tfoot td{height:12mm;border:0;padding:0}.print-frame>tbody>tr>td{border:0;padding:0}
 header{border-bottom:2px solid #74283b;padding-bottom:12px;margin-bottom:8px}h1{font-size:22px;margin:0}header p{margin:4px 0 0;color:#6b5a50}
 h2{font-size:15px;color:#74283b;margin:20px 0 6px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd2c6;padding:6px 8px;text-align:right;vertical-align:top}
 th{background:#f6f1ea;width:28%;font-weight:600}.list th{width:auto}.nowrap{white-space:nowrap}.amount{direction:ltr;text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
 .total td,.total th{font-weight:700;background:#f6f1ea}.signatures{display:flex;justify-content:space-between;gap:24px;margin-top:48px}.signatures div{flex:1;border-top:1px solid #8a7a70;padding-top:6px;text-align:center;color:#6b5a50}
 .void{color:#a32e38;font-weight:700;border:2px solid #a32e38;padding:6px 10px;display:inline-block;margin-top:8px}footer{margin-top:24px;color:#8a7a70;font-size:11px}
-@media print{body{margin:12mm}h2{break-after:avoid}tr{break-inside:avoid}}</style></head><body>${body}</body></html>`;
+@media print{body{margin:12mm}h2{break-after:avoid}tr{break-inside:avoid}}</style></head><body><table class="print-frame"><thead><tr><td></td></tr></thead><tfoot><tr><td></td></tr></tfoot><tbody><tr><td>${body}</td></tr></tbody></table></body></html>`;
 }
 
 type Money = (minor: string | bigint, currency: string) => string;
@@ -141,4 +148,25 @@ export function hearingRollHtml(date: string, rows: RollRow[], printedAt: string
   for (const r of [...rows].sort((a, b) => (a.location + a.time).localeCompare(b.location + b.time))) groups.set(r.location || 'المكان غير محدد', [...(groups.get(r.location || 'المكان غير محدد') || []), r]);
   const body = [...groups].map(([place, list]) => `<h2>${escape(place)} (${list.length})</h2><table class="list"><tr><th>الوقت</th><th>القضية</th><th>الأطراف</th><th>رقم القضية</th><th>الدرجة</th><th>المحامي المسؤول</th><th>القرار السابق / ملاحظات</th><th>قرار الجلسة</th></tr>${list.map(r => `<tr><td class="nowrap">${escape(r.time || '—')}</td><td class="nowrap">${escape(r.caseRef)}</td><td>${escape(r.parties)}</td><td class="nowrap">${escape(r.caseNumber)}</td><td class="nowrap">${escape(r.level)}</td><td>${escape(r.assignee)}</td><td>${escape(r.notes)}</td><td style="width:18%"></td></tr>`).join('')}</table>`).join('');
   return page('رول الجلسات ' + dmy(date), `<header><h1>رول الجلسات</h1><p>${escape(dmy(date))} · ${rows.length} جلسة</p></header>${body || '<p>لا توجد جلسات في هذا اليوم.</p>'}${footer(printedAt, printedBy)}`);
+}
+
+export type JudgmentRollRow = { autoNumber: string; code: string; client: string; opponent: string; caseNumber: string; level: string; date: string; type: string; outcome: string; remaining: string; status: string; lawyer: string };
+export type RollGroupKey = '' | 'client' | 'lawyer' | 'outcome' | 'status' | 'level' | 'month';
+export const ROLL_GROUPS: [RollGroupKey, string][] = [['', 'بدون تجميع'], ['client', 'الموكل'], ['lawyer', 'المحامي'], ['outcome', 'نتيجة الحكم'], ['status', 'حالة الملف'], ['level', 'درجة التقاضي'], ['month', 'شهر الحكم']];
+/** Groups roll rows in first-seen order; rows without a value go to a final «غير محدد» group. */
+export function groupRoll(rows: JudgmentRollRow[], key: RollGroupKey): [string, JudgmentRollRow[]][] {
+  if (!key) return [['', rows]];
+  const label = (r: JudgmentRollRow) => key === 'month' ? (/^\d{4}-\d{2}/.test(r.date) ? r.date.slice(5, 7) + '/' + r.date.slice(0, 4) : '') : String(r[key] || '').trim();
+  const groups = new Map<string, JudgmentRollRow[]>();
+  for (const r of rows) { const k = label(r); groups.set(k, [...(groups.get(k) || []), r]); }
+  const blank = groups.get(''); groups.delete('');
+  return [...groups, ...(blank ? [['غير محدد', blank] as [string, JudgmentRollRow[]]] : [])];
+}
+/** «رول الأحكام»: a printable list of judgments, optionally grouped, in landscape. */
+export function judgmentRollHtml(title: string, scope: string, groups: [string, JudgmentRollRow[]][], printedAt: string, printedBy: string): string {
+  const total = groups.reduce((n, [, list]) => n + list.length, 0);
+  let index = 0;
+  const table = (list: JudgmentRollRow[]) => `<table class="list roll"><thead><tr><th>م</th><th>الرقم الآلي</th><th>الكود</th><th>الموكل</th><th>الخصم</th><th>رقم القضية</th><th>تاريخ الحكم</th><th>نوع الحكم</th><th>النتيجة</th><th>المتبقي للطعن</th><th>حالة الملف</th><th>المحامي</th></tr></thead><tbody>${list.map(r => `<tr><td class="nowrap">${++index}</td><td class="nowrap">${escape(r.autoNumber || '—')}</td><td class="nowrap">${escape(r.code || '—')}</td><td>${escape(r.client)}</td><td>${escape(r.opponent)}</td><td>${escape(r.caseNumber || '—')}${r.level && r.level !== 'أول درجة' ? `<br><small>${escape(r.level)}</small>` : ''}</td><td class="nowrap">${escape(dmy(r.date) || '—')}</td><td>${escape(r.type)}</td><td>${escape(r.outcome)}</td><td class="nowrap">${escape(r.remaining)}</td><td>${escape(r.status)}</td><td>${escape(r.lawyer || '—')}</td></tr>`).join('')}</tbody></table>`;
+  const body = groups.map(([label, list]) => `${label ? `<h2>${escape(label)} (${list.length})</h2>` : ''}${table(list)}`).join('');
+  return page(title, `<style>.roll{font-size:11px}.roll th{white-space:nowrap}.roll thead{display:table-header-group}.roll tr{break-inside:avoid}.roll small{color:#6b5a50}h2{break-after:avoid}</style><header><h1>${escape(title)}</h1><p>${escape(scope)} · ${total} حكم</p></header>${total ? body : '<p>لا توجد أحكام في هذا النطاق.</p>'}${footer(printedAt, printedBy)}`, true);
 }

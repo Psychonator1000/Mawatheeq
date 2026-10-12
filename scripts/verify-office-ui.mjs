@@ -54,6 +54,17 @@ try{
  await page.getByRole('button',{name:/^القضية/}).click();let ns=await numbers();assert.deepEqual(ns,[...ns].sort((a,b)=>a-b),'Ascending auto numbers');assert.equal(await page.locator('th[aria-sort=ascending]').count(),1);
  await page.getByRole('button',{name:/^القضية/}).click();ns=await numbers();assert.deepEqual(ns,[...ns].sort((a,b)=>b-a),'Descending auto numbers');
  await page.getByRole('button',{name:/^الحكم/}).click();
+ // «رول الأحكام»: pick two cases, preview, group, print only those without the site address.
+ const firstTwo=(await page.locator('tbody tr.case-row .number-link').allInnerTexts()).slice(0,2);
+ for(const i of [0,1])await page.locator('tbody tr.case-row').nth(i).getByRole('checkbox').check();
+ await page.locator('.pick-bar').getByText('تم تحديد 2 قضية').waitFor();await page.locator('.pick-bar').getByRole('button',{name:/رول الأحكام للمحدد/}).click();
+ const roll=page.getByRole('dialog');await roll.getByRole('radio',{name:/القضايا المحددة/}).isChecked().then(v=>assert.equal(v,true,'Selected cases are the default scope'));
+ await roll.getByLabel('التجميع').selectOption('outcome');await page.frameLocator('.roll-preview').getByRole('heading',{name:/لصالحنا|غير محدد|غير صالحنا/}).first().waitFor();
+ await page.screenshot({path:artifacts+'/judgment-roll.png'});
+ await page.evaluate(()=>{window.__printed='';window.__mawatheeqPrint=h=>{window.__printed+=h}});await roll.getByRole('button',{name:/طباعة الرول/}).click();
+ {const printed=await page.evaluate(()=>window.__printed);assert.ok(firstTwo.every(n=>printed.includes('>'+n+'<')),'Both selected cases are printed');assert.ok(printed.includes('2 حكم')&&printed.includes('landscape;margin:0'),'Only the selection, landscape, no browser header');}
+ await roll.getByRole('radio',{name:/القضايا المعروضة/}).check();await page.frameLocator('.roll-preview').getByText(/25 حكم/).waitFor();
+ await roll.getByRole('button',{name:'إغلاق',exact:true}).first().click();await page.locator('.pick-bar').getByRole('button',{name:'إلغاء التحديد'}).click();
  await page.setViewportSize({width:390,height:844});await page.locator('tbody tr.case-row').first().scrollIntoViewIfNeeded();await page.screenshot({path:artifacts+'/case-list-mobile.png'});await page.setViewportSize({width:1440,height:1000});
  await go('إضافة قضية');const sheet=page.getByRole('dialog');await sheet.getByLabel('كود المكتب',{exact:true}).fill('NEW-FORM');await sheet.getByLabel('الرقم الآلي',{exact:true}).fill('9000');
  // The existing client selector is a native select.

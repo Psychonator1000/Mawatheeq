@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { caseSheetHtml, voucherHtml, statementHtml } from '../lib/print.ts';
+import { caseSheetHtml, voucherHtml, statementHtml, judgmentRollHtml, groupRoll } from '../lib/print.ts';
 
 const record = {
   id: 'print-case', code: 'TEST-1', autoNumber: '1001', client: 'شركة اختبار', clientGroup: '', clientEntityName: 'شركة اختبار <b>', opponent: 'خصم "تجريبي"',
@@ -52,3 +52,15 @@ const letter = warningLetterHtml(payRow('موظف', 'KWD'), 'أكتوبر 2026',
 assert.ok(letter.includes('11/10/2026') && letter.includes('<td>غائب</td>') && !letter.includes('12/10/2026'), 'Only problem days are listed, dated DD/MM/YYYY');
 assert.ok(letter.includes('غياب 2 يوم &lt;b&gt;'), 'Warnings are escaped');
 console.log('Passed payroll sheet and warning letter: escaping, per-currency totals, warn vs deduct wording and problem-day listing.');
+
+// «رول الأحكام»: grouped, escaped, numbered across groups, landscape, and no browser header/footer (no page address).
+{const row=(n,extra)=>({autoNumber:String(n),code:'C-'+n,client:'موكل',opponent:'خصم',caseNumber:'',level:'',date:'2026-09-0'+n,type:'حكم أول درجة',outcome:'لصالحنا',remaining:'5 يوم',status:'قيد المتابعة',lawyer:'',...extra});
+ const rows=[row(1,{lawyer:'سالم'}),row(2,{lawyer:''}),row(3,{lawyer:'سالم',client:'<b>شركة</b>'})];
+ const groups=groupRoll(rows,'lawyer');assert.deepEqual(groups.map(([g,l])=>[g,l.length]),[['سالم',2],['غير محدد',1]],'Groups keep order; blanks go last');
+ assert.deepEqual(groupRoll(rows,'month').map(([g])=>g),['09/2026']);assert.equal(groupRoll(rows,'')[0][1].length,3);
+ const roll=judgmentRollHtml('رول الأحكام','القضايا المحددة',groups,'13/10/2026','ui_owner');
+ assert.ok(!roll.includes('<b>شركة') && roll.includes('&lt;b&gt;شركة'),'Roll text is escaped');
+ assert.ok(roll.includes('size:A4 landscape;margin:0'),'Landscape with no browser margin, so no page address is printed');
+ assert.ok(roll.includes('<td class="nowrap">3</td>') && roll.includes('3 حكم') && roll.includes('<h2>سالم (2)</h2>'),'Numbered across groups with counts');
+ assert.ok(!/github/i.test(roll) && !/github/i.test(html),'Printed pages never carry the site address');}
+console.log('Passed judgment roll printing.');
