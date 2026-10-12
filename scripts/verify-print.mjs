@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { caseSheetHtml, voucherHtml, statementHtml, judgmentRollHtml, groupRoll } from '../lib/print.ts';
+import { caseSheetHtml, voucherHtml, statementHtml, judgmentRollHtml } from '../lib/print.ts';
+import { filterRoll, sortRoll, groupRoll, rollCell, EMPTY_ROLL_FILTER, ROLL_COLUMNS, DEFAULT_ROLL_COLUMNS } from '../lib/judgment-roll.ts';
 
 const record = {
   id: 'print-case', code: 'TEST-1', autoNumber: '1001', client: 'شركة اختبار', clientGroup: '', clientEntityName: 'شركة اختبار <b>', opponent: 'خصم "تجريبي"',
@@ -53,14 +54,18 @@ assert.ok(letter.includes('11/10/2026') && letter.includes('<td>غائب</td>') 
 assert.ok(letter.includes('غياب 2 يوم &lt;b&gt;'), 'Warnings are escaped');
 console.log('Passed payroll sheet and warning letter: escaping, per-currency totals, warn vs deduct wording and problem-day listing.');
 
-// «رول الأحكام»: grouped, escaped, numbered across groups, landscape, and no browser header/footer (no page address).
-{const row=(n,extra)=>({autoNumber:String(n),code:'C-'+n,client:'موكل',opponent:'خصم',caseNumber:'',level:'',date:'2026-09-0'+n,type:'حكم أول درجة',outcome:'لصالحنا',remaining:'5 يوم',status:'قيد المتابعة',lawyer:'',...extra});
- const rows=[row(1,{lawyer:'سالم'}),row(2,{lawyer:''}),row(3,{lawyer:'سالم',client:'<b>شركة</b>'})];
- const groups=groupRoll(rows,'lawyer');assert.deepEqual(groups.map(([g,l])=>[g,l.length]),[['سالم',2],['غير محدد',1]],'Groups keep order; blanks go last');
- assert.deepEqual(groupRoll(rows,'month').map(([g])=>g),['09/2026']);assert.equal(groupRoll(rows,'')[0][1].length,3);
- const roll=judgmentRollHtml('رول الأحكام','القضايا المحددة',groups,'13/10/2026','ui_owner');
+// «رول الأحكام»: filters, sorting, grouping, cells, escaping, landscape, no browser header/footer.
+{const base={id:'',autoNumber:'',code:'',caseNumber:'',level:'أول درجة',client:'موكل',role:'',opponent:'خصم',court:'',hall:'',subject:'',date:'',type:'',outcome:'لصالحنا',remaining:'',status:'',appeal:'',lawyer:'',lastAction:'',nextHearing:'',nextHearingDate:'',executionStage:'',notes:'',categories:[]};
+ const rows=[{...base,id:'a',autoNumber:'10',date:'2026-09-01',lawyer:'سالم',court:'المحكمة الكلية',nextHearingDate:'2026-10-20'},{...base,id:'b',autoNumber:'9',date:'2026-08-15',lawyer:'',categories:['execution']},{...base,id:'c',autoNumber:'11',date:'2025-09-03',lawyer:'سالم',client:'<b>شركة</b>',outcome:'غير صالحنا'}];
+ assert.deepEqual(filterRoll(rows,{...EMPTY_ROLL_FILTER,year:'2026'}).map(r=>r.id),['a','b']);assert.deepEqual(filterRoll(rows,{...EMPTY_ROLL_FILTER,month:'09'}).map(r=>r.id),['a','c'],'Month alone matches every year');
+ assert.deepEqual(filterRoll(rows,{...EMPTY_ROLL_FILTER,from:'2026-08-20',to:'2026-12-31'}).map(r=>r.id),['a']);assert.deepEqual(filterRoll(rows,{...EMPTY_ROLL_FILTER,category:'execution'}).map(r=>r.id),['b']);
+ assert.deepEqual(filterRoll(rows,{...EMPTY_ROLL_FILTER,hearingFrom:'2026-10-01'}).map(r=>r.id),['a'],'Hearing range needs a hearing');assert.deepEqual(filterRoll(rows,{...EMPTY_ROLL_FILTER,court:'الكلية'}).map(r=>r.id),['a']);
+ assert.deepEqual(sortRoll(rows,'number').map(r=>r.id),['b','a','c']);assert.equal(sortRoll(rows,'hearing')[0].id,'a');
+ const groups=groupRoll(sortRoll(rows,'date-desc'),'lawyer');assert.deepEqual(groups.map(([g,l])=>[g,l.length]),[['سالم',2],['غير محدد',1]],'Groups keep order; blanks go last');
+ assert.deepEqual(rollCell(rows[0],'date'),['01/09/2026','']);assert.deepEqual(rollCell(rows[0],'caseNumber'),['—','أول درجة']);
+ const cols=DEFAULT_ROLL_COLUMNS;const roll=judgmentRollHtml('رول الأحكام','القضايا المحددة',cols.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)[1]),groups.map(([g,l])=>[g,l.map(r=>cols.map(c=>rollCell(r,c)))]),'13/10/2026','ui_owner');
  assert.ok(!roll.includes('<b>شركة') && roll.includes('&lt;b&gt;شركة'),'Roll text is escaped');
  assert.ok(roll.includes('size:A4 landscape;margin:0'),'Landscape with no browser margin, so no page address is printed');
- assert.ok(roll.includes('<td class="nowrap">3</td>') && roll.includes('3 حكم') && roll.includes('<h2>سالم (2)</h2>'),'Numbered across groups with counts');
+ assert.ok(roll.includes('<td class="nowrap">3</td>') && roll.includes('3 قضية') && roll.includes('<h2>سالم (2)</h2>') && roll.includes('المحكمة / الدائرة / الدور'),'Numbered across groups with counts and the court column');
  assert.ok(!/github/i.test(roll) && !/github/i.test(html),'Printed pages never carry the site address');}
 console.log('Passed judgment roll printing.');

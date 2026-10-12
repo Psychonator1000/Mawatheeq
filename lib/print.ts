@@ -150,23 +150,15 @@ export function hearingRollHtml(date: string, rows: RollRow[], printedAt: string
   return page('رول الجلسات ' + dmy(date), `<header><h1>رول الجلسات</h1><p>${escape(dmy(date))} · ${rows.length} جلسة</p></header>${body || '<p>لا توجد جلسات في هذا اليوم.</p>'}${footer(printedAt, printedBy)}`);
 }
 
-export type JudgmentRollRow = { autoNumber: string; code: string; client: string; role?: string; opponent: string; caseNumber: string; level: string; date: string; type: string; outcome: string; remaining: string; status: string; lawyer: string };
-export type RollGroupKey = '' | 'client' | 'role' | 'type' | 'lawyer' | 'outcome' | 'status' | 'level' | 'month';
-export const ROLL_GROUPS: [RollGroupKey, string][] = [['', 'بدون تجميع'], ['client', 'الموكل'], ['role', 'صفة الموكل'], ['type', 'نوع الحكم'], ['lawyer', 'المحامي'], ['outcome', 'نتيجة الحكم'], ['status', 'حالة الملف'], ['level', 'درجة التقاضي'], ['month', 'شهر الحكم']];
-/** Groups roll rows in first-seen order; rows without a value go to a final «غير محدد» group. */
-export function groupRoll(rows: JudgmentRollRow[], key: RollGroupKey): [string, JudgmentRollRow[]][] {
-  if (!key) return [['', rows]];
-  const label = (r: JudgmentRollRow) => key === 'month' ? (/^\d{4}-\d{2}/.test(r.date) ? r.date.slice(5, 7) + '/' + r.date.slice(0, 4) : '') : String(r[key] || '').trim();
-  const groups = new Map<string, JudgmentRollRow[]>();
-  for (const r of rows) { const k = label(r); groups.set(k, [...(groups.get(k) || []), r]); }
-  const blank = groups.get(''); groups.delete('');
-  return [...groups, ...(blank ? [['غير محدد', blank] as [string, JudgmentRollRow[]]] : [])];
-}
-/** «رول الأحكام»: a printable list of judgments, optionally grouped, in landscape. */
-export function judgmentRollHtml(title: string, scope: string, groups: [string, JudgmentRollRow[]][], printedAt: string, printedBy: string): string {
+/**
+ * «رول الأحكام»: a numbered, grouped list in landscape. Cells are [main text, smaller second line]; the caller chooses
+ * the columns. Smaller type is used when many columns are printed so the roll stays on the page width.
+ */
+export function judgmentRollHtml(title: string, scope: string, headers: string[], groups: [string, [string, string][][]][], printedAt: string, printedBy: string): string {
   const total = groups.reduce((n, [, list]) => n + list.length, 0);
   let index = 0;
-  const table = (list: JudgmentRollRow[]) => `<table class="list roll"><thead><tr><th>م</th><th>الرقم الآلي</th><th>الكود</th><th>الموكل</th><th>الخصم</th><th>رقم القضية</th><th>تاريخ الحكم</th><th>نوع الحكم</th><th>النتيجة</th><th>المتبقي للطعن</th><th>حالة الملف</th><th>المحامي</th></tr></thead><tbody>${list.map(r => `<tr><td class="nowrap">${++index}</td><td class="nowrap">${escape(r.autoNumber || '—')}</td><td class="nowrap">${escape(r.code || '—')}</td><td>${escape(r.client)}${r.role ? `<br><small>${escape(r.role)}</small>` : ''}</td><td>${escape(r.opponent)}</td><td>${escape(r.caseNumber || '—')}${r.level && r.level !== 'أول درجة' ? `<br><small>${escape(r.level)}</small>` : ''}</td><td class="nowrap">${escape(dmy(r.date) || '—')}</td><td>${escape(r.type)}</td><td>${escape(r.outcome)}</td><td class="nowrap">${escape(r.remaining)}</td><td>${escape(r.status)}</td><td>${escape(r.lawyer || '—')}</td></tr>`).join('')}</tbody></table>`;
+  const size = headers.length > 14 ? 9 : headers.length > 10 ? 10 : 11;
+  const table = (list: [string, string][][]) => `<table class="list roll"><thead><tr><th>م</th>${headers.map(h => `<th>${escape(h)}</th>`).join('')}</tr></thead><tbody>${list.map(row => `<tr><td class="nowrap">${++index}</td>${row.map(([main, sub]) => `<td>${escape(main)}${sub ? `<br><small>${escape(sub)}</small>` : ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   const body = groups.map(([label, list]) => `${label ? `<h2>${escape(label)} (${list.length})</h2>` : ''}${table(list)}`).join('');
-  return page(title, `<style>.roll{font-size:11px}.roll th{white-space:nowrap}.roll thead{display:table-header-group}.roll tr{break-inside:avoid}.roll small{color:#6b5a50}h2{break-after:avoid}</style><header><h1>${escape(title)}</h1><p>${escape(scope)} · ${total} حكم</p></header>${total ? body : '<p>لا توجد أحكام في هذا النطاق.</p>'}${footer(printedAt, printedBy)}`, true);
+  return page(title, `<style>.roll{font-size:${size}px}.roll th{white-space:nowrap}.roll thead{display:table-header-group}.roll tr{break-inside:avoid}.roll small{color:#6b5a50}h2{break-after:avoid}</style><header><h1>${escape(title)}</h1><p>${escape(scope)} · ${total} قضية</p></header>${total ? body : '<p>لا توجد قضايا في هذا النطاق.</p>'}${footer(printedAt, printedBy)}`, true);
 }
