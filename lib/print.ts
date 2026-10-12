@@ -35,23 +35,45 @@ ${workRows ? `<h2>المهام والجلسات المفتوحة</h2><table clas
 ${footer(printedAt, printedBy)}`);
 }
 
-const footer = (printedAt: string, printedBy: string) => `<footer>طُبع من مواثيق في ${escape(printedAt)}${printedBy ? ' بواسطة ' + escape(printedBy) : ''}. ملف داخلي سري.</footer>`;
+const footer = (printedAt: string, printedBy: string) => `<footer><span>طُبع من نظام مواثيق في ${escape(printedAt)}${printedBy ? ' بواسطة ' + escape(printedBy) : ''}</span><span>ملف داخلي سري</span></footer>`;
+/** The office logo, redrawn in type: «مواثيق» in Ruqaa calligraphy («مو» in the logo's maroon) inside a gold-ringed seal. */
+const SEAL = `<div class="seal" aria-hidden="true"><span class="seal-ar"><span class="mo">مو</span>اثيق</span><span class="seal-en">MAWATHEEQ</span></div>`;
 /**
  * Printed pages have no browser margin, so the browser cannot add its own header and footer (page address, title, date).
- * The page spacing comes instead from a frame table whose empty head and foot rows repeat on every printed page.
+ * The page spacing comes instead from a frame table whose empty head and foot rows repeat on every printed page. The
+ * frame's single row must be allowed to break across pages, or the browser moves it to page 2 and leaves page 1 blank.
  */
 function page(title: string, body: string, landscape = false) {
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escape(title)}</title><style>
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escape(title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Cormorant+Garamond:wght@600;700&family=Noto+Kufi+Arabic:wght@600;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap"><style>
 @page{size:A4 ${landscape ? 'landscape' : 'portrait'};margin:0}
-body{font-family:'Noto Sans Arabic',Tahoma,Arial,sans-serif;color:#2b211c;margin:0;padding:0 14mm;font-size:13px;line-height:1.6}
-@media screen{body{padding:24px 32px}.print-frame>thead,.print-frame>tfoot{display:none}}
-.print-frame{width:100%;border-collapse:collapse}.print-frame>thead td,.print-frame>tfoot td{height:12mm;border:0;padding:0}.print-frame>tbody>tr>td{border:0;padding:0}
-header{border-bottom:2px solid #74283b;padding-bottom:12px;margin-bottom:8px}h1{font-size:22px;margin:0}header p{margin:4px 0 0;color:#6b5a50}
-h2{font-size:15px;color:#74283b;margin:20px 0 6px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd2c6;padding:6px 8px;text-align:right;vertical-align:top}
-th{background:#f6f1ea;width:28%;font-weight:600}.list th{width:auto}.nowrap{white-space:nowrap}.amount{direction:ltr;text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
-.total td,.total th{font-weight:700;background:#f6f1ea}.signatures{display:flex;justify-content:space-between;gap:24px;margin-top:48px}.signatures div{flex:1;border-top:1px solid #8a7a70;padding-top:6px;text-align:center;color:#6b5a50}
-.void{color:#a32e38;font-weight:700;border:2px solid #a32e38;padding:6px 10px;display:inline-block;margin-top:8px}footer{margin-top:24px;color:#8a7a70;font-size:11px}
-@media print{body{margin:12mm}h2{break-after:avoid}tr{break-inside:avoid}}</style></head><body><table class="print-frame"><thead><tr><td></td></tr></thead><tfoot><tr><td></td></tr></tfoot><tbody><tr><td>${body}</td></tr></tbody></table></body></html>`;
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:'Noto Sans Arabic',Tahoma,Arial,sans-serif;color:#2a201b;margin:0;padding:0 13mm;font-size:12.5px;line-height:1.55;background:#fff}
+@media screen{body{padding:26px 34px}.print-frame>thead,.print-frame>tfoot{display:none}}
+.print-frame{width:100%;border-collapse:collapse}.print-frame>thead td,.print-frame>tfoot td{height:11mm;border:0;padding:0;background:none}.print-frame>tbody>tr{break-inside:auto}.print-frame>tbody>tr>td{border:0;padding:0;background:none}
+.watermark{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;opacity:.035;z-index:-1;font-family:'Aref Ruqaa',serif;font-weight:700;font-size:190px;color:#5a1a2b}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:10px;border-bottom:2px solid #6e1f33;position:relative;margin-bottom:6px}
+.brand::after{content:'';position:absolute;left:0;right:0;bottom:-5px;height:1px;background:#c9a24a}
+.brand-id{display:flex;align-items:center;gap:14px}
+.seal{width:66px;height:66px;flex-shrink:0;border-radius:50%;background:#fff;border:1.6px solid #c9a24a;box-shadow:0 0 0 3px #fff,0 0 0 4px #6e1f33;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.seal-ar{font-family:'Aref Ruqaa','Noto Kufi Arabic',serif;font-weight:700;font-size:21px;line-height:1.05;white-space:nowrap;color:#1d1714}.seal-ar .mo{color:#8a2d2a}
+.seal-en{font-family:'Cormorant Garamond',Georgia,serif;font-weight:700;font-size:6.6px;letter-spacing:.14em;color:#3a2b25}
+.brand-name strong{display:block;font-family:'Noto Kufi Arabic','Noto Sans Arabic',Tahoma,sans-serif;font-size:15.5px;font-weight:700;color:#5a1a2b;line-height:1.45}
+.brand-name small{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-size:10px;letter-spacing:.2em;color:#a8873e;font-weight:700;direction:ltr;text-align:right}
+.brand-meta{font-size:10px;color:#8a7568;text-align:left;line-height:1.7}
+header{margin:16px 0 10px}h1{font-family:'Noto Kufi Arabic','Noto Sans Arabic',Tahoma,sans-serif;font-size:19px;font-weight:700;margin:0;color:#2a201b}header p{margin:3px 0 0;color:#76645a;font-size:11.5px}
+h2{font-size:13px;color:#6e1f33;margin:16px 0 6px;padding-inline-start:8px;border-inline-start:3px solid #c9a24a;break-after:avoid}
+table{width:100%;border-collapse:collapse}th,td{border:1px solid #e3d8ca;padding:5px 7px;text-align:right;vertical-align:top;overflow-wrap:anywhere}
+th{background:#f6efe5;width:28%;font-weight:600;color:#4a3a30}.list th{width:auto}
+.list thead th{background:#6e1f33;color:#fff;border-color:#6e1f33;font-weight:600;font-size:.95em}
+.list thead{display:table-header-group}.list tbody tr{break-inside:avoid}.list tbody tr:nth-child(even) td{background:#fbf8f3}
+.nowrap{white-space:nowrap}.amount{direction:ltr;text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.total td,.total th{font-weight:700;background:#f3e9dc}.signatures{display:flex;justify-content:space-between;gap:24px;margin-top:48px}.signatures div{flex:1;border-top:1px solid #8a7a70;padding-top:6px;text-align:center;color:#6b5a50}
+.void{color:#a32e38;font-weight:700;border:2px solid #a32e38;padding:6px 10px;display:inline-block;margin-top:8px}
+footer{margin-top:18px;padding-top:8px;border-top:1px solid #e3d8ca;display:flex;justify-content:space-between;gap:12px;color:#8a7a70;font-size:10px}
+</style></head><body><div class="watermark" aria-hidden="true">مواثيق</div><table class="print-frame"><thead><tr><td></td></tr></thead><tfoot><tr><td></td></tr></tfoot><tbody><tr><td>
+<div class="brand"><div class="brand-id">${SEAL}<div class="brand-name"><strong>مواثيق للاستشارات القانونية وأعمال المحاماة</strong><small>MAWATHEEQ · LEGAL CONSULTANTS &amp; LAW FIRM</small></div></div><div class="brand-meta">${escape(title)}<br>للاستخدام الداخلي</div></div>
+${body}</td></tr></tbody></table></body></html>`;
 }
 
 type Money = (minor: string | bigint, currency: string) => string;
@@ -154,13 +176,15 @@ export function hearingRollHtml(date: string, rows: RollRow[], printedAt: string
  * «رول الأحكام»: a numbered, grouped list in landscape. Cells are [main text, smaller second line]; the caller chooses
  * the columns. Smaller type is used when many columns are printed so the roll stays on the page width.
  */
-export function judgmentRollHtml(title: string, scope: string, headers: string[], groups: [string, [string, string][][]][], printedAt: string, printedBy: string): string {
+export function judgmentRollHtml(title: string, scope: string, headers: string[], groups: [string, [string, string][][]][], printedAt: string, printedBy: string, widths: number[] = []): string {
   const total = groups.reduce((n, [, list]) => n + list.length, 0);
   let index = 0;
   const size = headers.length > 14 ? 9 : headers.length > 10 ? 10 : 11;
-  const table = (list: [string, string][][]) => `<table class="list roll"><thead><tr><th>م</th>${headers.map(h => `<th>${escape(h)}</th>`).join('')}</tr></thead><tbody>${list.map(row => `<tr><td class="nowrap">${++index}</td>${row.map(([main, sub]) => `<td>${escape(main)}${sub ? `<br><small>${escape(sub)}</small>` : ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const sum = widths.reduce((n, w) => n + w, 0);
+  const cols = sum ? `<colgroup><col style="width:24px">${widths.map(w => `<col style="width:${(w / sum * 100).toFixed(2)}%">`).join('')}</colgroup>` : '';
+  const table = (list: [string, string][][]) => `<table class="list roll">${cols}<thead><tr><th>م</th>${headers.map(h => `<th>${escape(h)}</th>`).join('')}</tr></thead><tbody>${list.map(row => `<tr><td class="nowrap">${++index}</td>${row.map(([main, sub]) => `<td>${escape(main)}${sub ? `<br><small>${escape(sub)}</small>` : ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   const body = groups.map(([label, list]) => `${label ? `<h2>${escape(label)} (${list.length})</h2>` : ''}${table(list)}`).join('');
-  return page(title, `<style>.roll{font-size:${size}px}.roll th{white-space:nowrap}.roll thead{display:table-header-group}.roll tr{break-inside:avoid}.roll small{color:#6b5a50}h2{break-after:avoid}</style><header><h1>${escape(title)}</h1><p>${escape(scope)} · ${total} قضية</p></header>${total ? body : '<p>لا توجد قضايا في هذا النطاق.</p>'}${footer(printedAt, printedBy)}`, true);
+  return page(title, `<style>.roll{font-size:${size}px;table-layout:fixed}.roll th{white-space:normal;line-height:1.3}.roll th:first-child,.roll td:first-child{text-align:center;padding-inline:2px}.roll td{overflow-wrap:break-word;word-break:normal;padding:4px 5px}.roll td small{font-size:.9em}.roll thead{display:table-header-group}.roll tr{break-inside:avoid}.roll small{color:#6b5a50}h2{break-after:avoid}</style><header><h1>${escape(title)}</h1><p>${escape(scope)} · ${total} قضية</p></header>${total ? body : '<p>لا توجد قضايا في هذا النطاق.</p>'}${footer(printedAt, printedBy)}`, true);
 }
 
 /** A simple printable table (file statements, a file's account statement…), escaped, with optional totals rows. */

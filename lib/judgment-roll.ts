@@ -7,12 +7,13 @@ export type RollCase = {
 };
 export type RollColumn = keyof Omit<RollCase, 'id' | 'categories' | 'nextHearingDate' | 'level' | 'role' | 'hall'>;
 /** Every column the roll can print, in print order, and whether it is on by default. */
-export const ROLL_COLUMNS: [RollColumn, string, boolean][] = [
-  ['autoNumber', 'الرقم الآلي', true], ['code', 'الكود', true], ['caseNumber', 'رقم القضية / الدرجة', true],
-  ['client', 'الموكل وصفته', true], ['opponent', 'الخصم', true], ['court', 'المحكمة / الدائرة / الدور', true], ['subject', 'موضوع الدعوى', true],
-  ['date', 'تاريخ الحكم', true], ['type', 'نوع الحكم', true], ['outcome', 'النتيجة', true], ['remaining', 'المتبقي للطعن', true],
-  ['status', 'حالة الملف', true], ['appeal', 'حالة الطعن', false], ['lastAction', 'آخر إجراء', true], ['nextHearing', 'الجلسة القادمة', true],
-  ['lawyer', 'المحامي', true], ['executionStage', 'مرحلة التنفيذ', false], ['notes', 'ملاحظات', false],
+/** Every column the roll can print, in print order, whether it is on by default, and its relative print width. */
+export const ROLL_COLUMNS: [RollColumn, string, boolean, number][] = [
+  ['autoNumber', 'الرقم الآلي', true, 1.4], ['code', 'الكود', true, .8], ['caseNumber', 'رقم القضية / الدرجة', true, 1.3],
+  ['client', 'الموكل وصفته', true, 2], ['opponent', 'الخصم', true, 1.8], ['court', 'المحكمة / الدائرة / الدور', true, 2], ['subject', 'موضوع الدعوى', true, 1.8],
+  ['date', 'تاريخ الحكم', true, 1.3], ['type', 'نوع الحكم', true, 1.1], ['outcome', 'النتيجة', true, 1], ['remaining', 'المتبقي للطعن', true, 1.1],
+  ['status', 'حالة الملف', true, 1.3], ['appeal', 'حالة الطعن', false, 1.1], ['lastAction', 'آخر إجراء', true, 2], ['nextHearing', 'الجلسة القادمة', true, 1.6],
+  ['lawyer', 'المحامي', true, 1.1], ['executionStage', 'مرحلة التنفيذ', false, 1.3], ['notes', 'ملاحظات', false, 2.2],
 ];
 export const DEFAULT_ROLL_COLUMNS = ROLL_COLUMNS.filter(c => c[2]).map(c => c[0]);
 
