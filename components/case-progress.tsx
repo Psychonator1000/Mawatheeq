@@ -1,6 +1,6 @@
 import {Check} from 'lucide-react';
 import {type CaseRecord,type Rules,caseState,formatDate,elapsedDaysLabel} from '@/lib/domain';
-import {LEVELS,LEVEL_TYPE,currentLevel,stagesOf,type CaseStage} from '@/lib/case-stages';
+import {LEVELS,LEVEL_TYPE,LEVEL_LABEL,currentLevel,stagesOf,type CaseStage} from '@/lib/case-stages';
 import {Badge} from './shared';
 
 type Step={label:string;value:string;note?:string;state:'done'|'current'|'next'|'todo'|'late';stage?:CaseStage};
@@ -14,10 +14,10 @@ export default function CaseProgress({c,rules,asOf,onStage}:{c:CaseRecord;rules:
  const appealed=st.appeal==='تم',final=st.days===0&&!!c.date,late=!appealed&&!final&&st.remaining!==null&&st.remaining<0;
  const deadline=st.awaiting?'بانتظار حكم هذه الدرجة':appealed?'تم الطعن':final?'حكم نهائي':st.remaining===null?'مهلة الطعن غير معروفة':st.remaining<0?'انتهت مهلة الطعن':`متبقٍ للطعن ${st.remaining} يوم`;
  const steps:Step[]=LEVELS.map((l,i)=>{const done=[...stages].reverse().find(s=>s.level===l);
-  return i<level?{label:l,value:done?.date?formatDate(done.date)+(done.outcome&&done.outcome!=='غير محدد'?' · '+done.outcome:''):'صدر الحكم',note:done?.caseNumber||undefined,state:'done',stage:done}
-  :i===level?{label:l,value:c.date?formatDate(c.date):st.awaiting?'بانتظار الحكم':'تاريخ الحكم غير مسجل',note:st.awaiting?undefined:deadline,state:late?'late':final?'done':'current'}
-  :i===level+1&&appealed?{label:l,value:'تم الطعن — انقل الملف',state:'next'}
-  :{label:l,value:'—',state:'todo'}});
+  return i<level?{label:LEVEL_LABEL[l],value:done?.date?formatDate(done.date)+(done.outcome&&done.outcome!=='غير محدد'?' · '+done.outcome:''):'صدر الحكم',note:done?.caseNumber||undefined,state:'done',stage:done}
+  :i===level?{label:LEVEL_LABEL[l],value:c.date?formatDate(c.date):st.awaiting?'بانتظار الحكم':'تاريخ الحكم غير مسجل',note:st.awaiting?undefined:deadline,state:late?'late':final?'done':'current'}
+  :i===level+1&&appealed?{label:LEVEL_LABEL[l],value:'تم الطعن — انقل الملف',state:'next'}
+  :{label:LEVEL_LABEL[l],value:'—',state:'todo'}});
  // How much of the appeal window has gone (0–100), while it is running.
  const window=!other&&st.days&&st.remaining!==null&&!appealed?Math.min(100,Math.max(0,Math.round((st.days-st.remaining)/st.days*100))):null;
  const latest=[...(c.procedures||[])].filter(p=>p.text).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];

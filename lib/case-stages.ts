@@ -8,7 +8,10 @@ export const LEVELS = ['ابتدائي', 'استئناف', 'تمييز'] as cons
 export type Level = typeof LEVELS[number];
 /** The judgment type a level ends with. */
 export const LEVEL_TYPE: Record<Level, string> = { 'ابتدائي': 'حكم أول درجة', 'استئناف': 'حكم استئناف', 'تمييز': 'حكم تمييز' };
-export const LEVEL_TITLE: Record<Level, string> = { 'ابتدائي': 'الدرجة الأولى', 'استئناف': 'الاستئناف', 'تمييز': 'التمييز' };
+export const LEVEL_TITLE: Record<Level, string> = { 'ابتدائي': 'أول درجة', 'استئناف': 'الاستئناف', 'تمييز': 'التمييز' };
+/** Short names for steps and tags. The stored value «ابتدائي» is called «أول درجة» in the office. */
+export const LEVEL_LABEL: Record<Level, string> = { 'ابتدائي': 'أول درجة', 'استئناف': 'استئناف', 'تمييز': 'تمييز' };
+export const levelLabel = (l: string) => LEVEL_LABEL[l as Level] || l;
 
 export type CaseStage = {
   id: string; level: Level;

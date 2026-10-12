@@ -273,7 +273,7 @@ const closedLevel=lv.locator('.stage-card.closed');await closedLevel.getByText('
 assert.ok(await closedLevel.getByText('الخصم',{exact:true}).isVisible(),'The closed level records who appealed');
 assert.ok(await closedLevel.getByText('tools_owner',{exact:true}).isVisible(),'The server records who closed the level');
 assert.ok(await lv.locator('.case-pin').getByText('2026/77 مدني استئناف').isVisible(),'The new level\'s case number is pinned');
-assert.ok(await lv.locator('.case-pin').getByText('ابتدائي: 2026/302').isVisible(),'Earlier case numbers stay visible');
+assert.ok(await lv.locator('.case-pin').getByText('أول درجة: 2026/302').isVisible(),'Earlier case numbers stay visible');
 assert.ok(await lv.locator('.progress-steps .step.current').getByText('بانتظار الحكم').isVisible(),'The appeal is waiting for its judgment');
 await page.screenshot({path:artifacts+'/case-levels.png'});
 const saved=(await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-2').payload;
@@ -281,6 +281,28 @@ assert.equal(saved.stage,'استئناف');assert.equal(saved.stages.length,1);a
 await lv.getByRole('tab',{name:/بيانات الحكم/}).click();await lv.locator('.progress-steps .step.done').getByRole('button').click();
 assert.equal(await lv.getByRole('tab',{name:/درجات التقاضي/}).getAttribute('aria-selected'),'true','A finished level opens its record');
 await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
+// Sessions: an adjournment is logged in the case's level, closes today's hearing, schedules the next one (pinned and in the timeline), and the day's roll prints it.
+{await page.keyboard.press('Control+k');const qs=page.getByRole('dialog',{name:'بحث سريع'});await qs.getByRole('combobox').fill('TOOL-1');await qs.getByRole('option',{name:/TOOL-1/}).first().click();
+ const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();
+ await sw.locator('.case-quick').getByRole('button',{name:/تسجيل جلسة/}).click();
+ await sw.getByRole('combobox',{name:'قرار الجلسة'}).click();await page.getByRole('option',{name:'تأجيل للإعلان',exact:true}).click();
+ assert.equal(await sw.getByRole('button',{name:'تسجيل الجلسة'}).isDisabled(),true,'An adjournment needs the next session date');
+ await sw.getByRole('button',{name:/^موعد الجلسة القادمة/}).click();await page.locator('.date-popover').getByRole('button',{name:'اليوم',exact:true}).click();
+ await sw.getByLabel('الوقت (اختياري)',{exact:true}).fill('10:30');await sw.getByRole('button',{name:'تسجيل الجلسة'}).click();
+ await sw.locator('.session-table').getByText('تأجيل للإعلان').waitFor();await sw.locator('.next-hearing').getByText(/10:30/).waitFor({timeout:8000});
+ const saved=(await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-1').payload;
+ const logged=saved.procedures.find(p=>p.kind==='جلسة');assert.equal(logged.decision,'تأجيل للإعلان');assert.equal(logged.followup,today);assert.equal(logged.recordedBy,'tools_owner');
+ await page.screenshot({path:artifacts+'/sessions.png'});
+ await sw.getByRole('tab',{name:'السير الزمني'}).click();await sw.locator('.tl-item.session').getByText('جلسة: تأجيل للإعلان').waitFor();
+ assert.ok(await sw.locator('.tl-item.hearing').filter({hasText:'جلسة · أول درجة'}).count()>=1,'The scheduled session is on the timeline');
+ await page.screenshot({path:artifacts+'/timeline.png'});
+ assert.equal(await sw.getByRole('tab',{name:'المالية'}).count(),1,'Accounting users see the case finances');await sw.getByRole('tab',{name:'المالية'}).click();await sw.getByText(/لا توجد حركات مالية مسجلة لهذه القضية/).waitFor();
+ await page.keyboard.press('Escape');await sw.waitFor({state:'hidden'});
+ await page.evaluate(()=>{location.hash='work'});await page.getByRole('heading',{name:'المهام والجلسات',level:1}).waitFor();
+ await page.evaluate(()=>{window.__printed='';window.__mawatheeqPrint=h=>{window.__printed+=h}});
+ await page.getByRole('button',{name:/^يوم رول الجلسات/}).click();await page.locator('.date-popover').getByRole('button',{name:'اليوم',exact:true}).click();
+ await page.getByRole('button',{name:/طباعة رول الجلسات/}).click();const roll=await page.evaluate(()=>window.__printed);
+ assert.ok(roll.includes('رول الجلسات')&&roll.includes('TOOL-1')&&roll.includes('10:30'),'The roll lists the day\'s hearings');}
 // The lawyer is picked from the office's lawyers, or typed when new; the case list offers it afterwards.
 await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-0/).click();
 const lw=page.locator('[data-record-window]');await lw.locator('.case-pin').getByText('TOOL-0').waitFor();
@@ -384,4 +406,4 @@ assert.equal(await page.evaluate(()=>new Promise(res=>{const r=indexedDB.open('m
 await page.reload();await page.getByRole('button',{name:'فتح مساحة العمل',exact:true}).waitFor();
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: lawyer picker (listed and new names), court levels (move to appeal, closed read-only record, pinned numbers, search by earlier number), instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
+console.log('Passed tools UI: sessions (decision, next hearing scheduled and pinned, timeline, finance tab, hearings roll), lawyer picker (listed and new names), court levels (move to appeal, closed read-only record, pinned numbers, search by earlier number), instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');

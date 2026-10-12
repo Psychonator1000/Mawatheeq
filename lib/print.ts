@@ -25,7 +25,7 @@ export function caseSheetHtml(c: CaseRecord, timing: { label: string; value: str
   const procedureRows = procedures.map(p => `<tr><td class="nowrap">${escape(dmy(p.date))}</td><td>${escape(p.text)}</td><td>${escape(p.lawyer)}</td><td class="nowrap">${escape(dmy(p.followup || ''))}</td></tr>`).join('');
   const open = work.filter(w => w.caseId === c.id && w.status !== 'done' && w.status !== 'cancelled').sort((a, b) => (a.dueDate + a.dueTime).localeCompare(b.dueDate + b.dueTime));
   const stages = Array.isArray(c.stages) ? c.stages as { level: string; caseNumber: string; court: string; date: string; outcome: string; ruling: string; appealedBy: string; procedures?: { date: string; text: string }[] }[] : [];
-  const stageRows = stages.map(st => `<tr><td class="nowrap">${escape(st.level)}</td><td class="nowrap">${escape(st.caseNumber)}</td><td>${escape(st.court)}</td><td class="nowrap">${escape(dmy(st.date))}</td><td>${escape(st.outcome)}</td><td>${escape(st.ruling)}</td><td>${escape(st.appealedBy)}</td><td>${(st.procedures || []).length}</td></tr>`).join('');
+  const stageRows = stages.map(st => `<tr><td class="nowrap">${escape(st.level === 'ابتدائي' ? 'أول درجة' : st.level)}</td><td class="nowrap">${escape(st.caseNumber)}</td><td>${escape(st.court)}</td><td class="nowrap">${escape(dmy(st.date))}</td><td>${escape(st.outcome)}</td><td>${escape(st.ruling)}</td><td>${escape(st.appealedBy)}</td><td>${(st.procedures || []).length}</td></tr>`).join('');
   const workRows = open.map(w => `<tr><td class="nowrap">${escape(dmy(w.dueDate))} ${escape(w.dueTime)}</td><td>${escape(w.kind === 'hearing' ? 'جلسة' : 'مهمة')}</td><td>${escape(w.title)}</td><td>${escape(w.location)}</td></tr>`).join('');
   return page('ملف القضية ' + (c.code || c.autoNumber || ''), `<header><h1>${escape(client || 'ملف قضية')}</h1><p>${escape([c.code, c.autoNumber && 'الرقم الآلي ' + c.autoNumber, c.opponent && 'ضد ' + c.opponent].filter(Boolean).join(' · '))}</p></header>
 ${timingRows ? `<h2>المواعيد المحسوبة</h2><table>${timingRows}</table>` : ''}${body}
@@ -132,4 +132,13 @@ export function printHtml(html: string): boolean {
   const go = () => { win.focus(); win.print(); setTimeout(cleanup, 60000); };
   if (doc.fonts?.ready) void doc.fonts.ready.then(() => setTimeout(go, 50)); else setTimeout(go, 200);
   return true;
+}
+
+export type RollRow = { time: string; title: string; location: string; caseRef: string; parties: string; caseNumber: string; level: string; assignee: string; notes: string };
+/** The day's hearings roll (رول الجلسات), grouped by court or expert office, in time order. */
+export function hearingRollHtml(date: string, rows: RollRow[], printedAt: string, printedBy: string): string {
+  const groups = new Map<string, RollRow[]>();
+  for (const r of [...rows].sort((a, b) => (a.location + a.time).localeCompare(b.location + b.time))) groups.set(r.location || 'المكان غير محدد', [...(groups.get(r.location || 'المكان غير محدد') || []), r]);
+  const body = [...groups].map(([place, list]) => `<h2>${escape(place)} (${list.length})</h2><table class="list"><tr><th>الوقت</th><th>القضية</th><th>الأطراف</th><th>رقم القضية</th><th>الدرجة</th><th>المحامي المسؤول</th><th>القرار السابق / ملاحظات</th><th>قرار الجلسة</th></tr>${list.map(r => `<tr><td class="nowrap">${escape(r.time || '—')}</td><td class="nowrap">${escape(r.caseRef)}</td><td>${escape(r.parties)}</td><td class="nowrap">${escape(r.caseNumber)}</td><td class="nowrap">${escape(r.level)}</td><td>${escape(r.assignee)}</td><td>${escape(r.notes)}</td><td style="width:18%"></td></tr>`).join('')}</table>`).join('');
+  return page('رول الجلسات ' + dmy(date), `<header><h1>رول الجلسات</h1><p>${escape(dmy(date))} · ${rows.length} جلسة</p></header>${body || '<p>لا توجد جلسات في هذا اليوم.</p>'}${footer(printedAt, printedBy)}`);
 }
