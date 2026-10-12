@@ -242,19 +242,18 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 :root[data-motion=full] :is(.client-card,.person-card,.legend-row,.bar-item):nth-child(5n){transition-duration:.95s,.2s,.25s}
 .att-grid tbody tr{transform:none!important}
 
-/* Table rows: the first time they scroll into view, each cell flips down like a split-flap board, one after the
-   other, from the scroll direction, with a light sweeping across the row and a pop on the case number. Only cells
-   are transformed, never the row, so rows never separate from the table. A soft spotlight follows the reading line. */
-.row-reveal>td{transform-origin:50% 0;backface-visibility:hidden;animation:cell-flip .7s cubic-bezier(.2,.75,.25,1) both,cell-shine 1s ease-out both;animation-delay:calc(var(--sr-delay,0ms) + var(--ci,0) * 40ms);background-image:linear-gradient(100deg,transparent 35%,color-mix(in srgb,var(--brand) 18%,transparent) 50%,transparent 65%);background-size:300% 100%;background-repeat:no-repeat}
-.row-reveal.row-up>td{transform-origin:50% 100%;animation-name:cell-flip-up,cell-shine}
-.row-reveal>td:nth-child(2){--ci:1}.row-reveal>td:nth-child(3){--ci:2}.row-reveal>td:nth-child(4){--ci:3}.row-reveal>td:nth-child(5){--ci:4}.row-reveal>td:nth-child(6){--ci:5}.row-reveal>td:nth-child(n+7){--ci:6}
-.row-reveal .number-link{animation:number-pop .6s cubic-bezier(.3,1.7,.5,1) both;animation-delay:calc(var(--sr-delay,0ms) + 180ms)}
-@keyframes cell-flip{0%{opacity:0;transform:perspective(700px) rotateX(-92deg)}40%{opacity:1}68%{transform:perspective(700px) rotateX(12deg)}85%{transform:perspective(700px) rotateX(-4deg)}100%{transform:none}}
-@keyframes cell-flip-up{0%{opacity:0;transform:perspective(700px) rotateX(92deg)}40%{opacity:1}68%{transform:perspective(700px) rotateX(-12deg)}85%{transform:perspective(700px) rotateX(4deg)}100%{transform:none}}
-@keyframes cell-shine{from{background-position:100% 0}to{background-position:0 0}}
-@keyframes number-pop{0%{scale:.55;opacity:0}55%{scale:1.15;opacity:1}100%{scale:1}}
-:root[data-motion=calm] .row-reveal>td{animation:sr-fade .3s both;background-image:none}
-:root[data-motion=calm] .row-reveal .number-link{animation:none}
+/* Table rows: the first time they scroll into view while scrolling, each row rises in as one piece with a soft spring,
+   glows briefly and draws an accent bar on its leading edge; rows cascade one after another down the list.
+   Every cell of a row shares the same timing, so the row never breaks apart, and the row element itself is never
+   transformed, so it stays attached to the table. A soft spotlight follows the reading line. */
+:is(.case-table,.office-table)>tbody>tr.row-reveal{animation:row-glow 1.3s ease-out both;animation-delay:var(--sr-delay,0ms)}
+.row-reveal>td{animation:row-rise .75s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--sr-delay,0ms)}
+.row-reveal.row-up>td{animation-name:row-rise-up}
+@keyframes row-rise{0%{opacity:0;translate:0 26px;filter:blur(3px)}55%{opacity:1;filter:none}75%{translate:0 -3px}100%{translate:0 0}}
+@keyframes row-rise-up{0%{opacity:0;translate:0 -26px;filter:blur(3px)}55%{opacity:1;filter:none}75%{translate:0 3px}100%{translate:0 0}}
+@keyframes row-glow{0%{background-color:color-mix(in srgb,var(--brand) 12%,transparent);box-shadow:inset 0 0 0 transparent}35%{background-color:color-mix(in srgb,var(--brand) 10%,transparent);box-shadow:inset -5px 0 0 var(--brand)}100%{background-color:transparent;box-shadow:inset 0 0 0 transparent}}
+:root[data-motion=calm] .row-reveal>td{animation:sr-fade .3s both}
+:root[data-motion=calm] :is(.case-table,.office-table)>tbody>tr.row-reveal{animation:none}
 :is(.case-table,.office-table)>tbody>tr{transition:background-color .35s ease,box-shadow .35s ease}
 :is(.case-table,.office-table)>tbody>tr[data-spot]{background-color:color-mix(in srgb,var(--brand) 7%,transparent);box-shadow:inset -4px 0 0 var(--brand)}
 :is(.case-table,.office-table)>tbody>tr[data-spot] .number-link{text-shadow:0 0 14px color-mix(in srgb,var(--brand) 35%,transparent)}
