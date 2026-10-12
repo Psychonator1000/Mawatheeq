@@ -53,6 +53,7 @@ export default function MotionLayer() {
    if(magnet){const r=magnet.getBoundingClientRect(),mx=(x-r.left)/r.width-.5,my=(y-r.top)/r.height-.5;
     magnet.style.setProperty('--mag-x',(mx*6).toFixed(2)+'px');magnet.style.setProperty('--mag-y',(my*5).toFixed(2)+'px')}
    if(glow){const r=glow.getBoundingClientRect();glow.style.setProperty('--gx',(x-r.left).toFixed(0)+'px');glow.style.setProperty('--gy',(y-r.top).toFixed(0)+'px')}};
+  let hoverOn=false;
   const onMove=(e:PointerEvent)=>{
    if(e.pointerType!=='mouse'||!pointerEffectsOn()){if(pointerOn){pointerOn=false;root.removeAttribute('data-pointer')}return}
    x=e.clientX;y=e.clientY;if(!pointerOn){pointerOn=true;root.setAttribute('data-pointer','')}
@@ -60,7 +61,8 @@ export default function MotionLayer() {
    tilt=trackTilt(t?.closest('[data-tilt]') as HTMLElement|null);
    magnet=trackMagnet(t?.closest(MAGNETIC) as HTMLElement|null);
    glow=trackGlow(t?.closest(GLOW) as HTMLElement|null);
-   root.toggleAttribute('data-hover-action',!!t?.closest(INTERACTIVE));
+   // Only the cursor circle changes, never the whole page, so moving the mouse stays cheap.
+   const hover=!!t?.closest(INTERACTIVE);if(hoverOn!==hover){hoverOn=hover;document.querySelector('.cursor-halo')?.toggleAttribute('data-hover',hover)}
    if(!frame&&!document.hidden)frame=requestAnimationFrame(paint);
   };
   const onLeave=()=>{tilt=trackTilt(null);magnet=trackMagnet(null);glow=trackGlow(null);pointerOn=false;root.removeAttribute('data-pointer')};
@@ -68,7 +70,7 @@ export default function MotionLayer() {
   const onDown=(e:PointerEvent)=>{
    if(!motionAllowed()||e.button>0)return;
    const el=e.target instanceof Element?e.target.closest(RIPPLE) as HTMLElement|null:null;
-   root.setAttribute('data-pressing','');
+   document.querySelector('.cursor-halo')?.setAttribute('data-press','');
    if(!el||(el as HTMLButtonElement).disabled){backdrop?.pulse(e.clientX,e.clientY);return}
    if(getComputedStyle(el).position==='static')el.style.position='relative';
    const r=el.getBoundingClientRect(),size=Math.max(r.width,r.height)*2.2;
@@ -79,7 +81,7 @@ export default function MotionLayer() {
    wave.addEventListener('animationend',()=>host.remove(),{once:true});setTimeout(()=>host.remove(),1200);
    bursts?.fire(e.clientX,e.clientY,Math.min(r.width,r.height)+40,!!el.closest(STRONG));backdrop?.pulse(e.clientX,e.clientY);
   };
-  const onUp=()=>root.removeAttribute('data-pressing');
+  const onUp=()=>document.querySelector('.cursor-halo')?.removeAttribute('data-press');
   // Scroll speed drives the content's elastic lag, the rail comet and the backdrop drift.
   const tickVelocity=(now:number)=>{velFrame=0;
    velocity*=Math.pow(.86,Math.min(6,(now-(lastTick||now-16))/16));lastTick=now;if(Math.abs(velocity)<.01)velocity=0;
@@ -177,13 +179,17 @@ export default function MotionLayer() {
    };
    perfStop=window.setTimeout(()=>{perfFrame=requestAnimationFrame(sample)},2500);
   }
+  // If the browser loses a drawing surface (a graphics reset, seen as the page flashing blank), go light for good.
+  const onContextLost=()=>{if(root.dataset.perf==='lite')return;markSlow();saveAppearance(loadAppearance());toast.message('خُففت المؤثرات لأن بطاقة الرسوميات في هذا الجهاز لا تتحملها.',{description:'يمكنك تغيير ذلك من «المظهر والحركة» ← الأداء.'})};
+  const canvases=[ambient.current,burst.current].filter((c):c is HTMLCanvasElement=>!!c);
+  for(const c of canvases)c.addEventListener('contextlost',onContextLost);
   onScroll();scheduleMeasure();
   addEventListener('pointermove',onMove,{passive:true});addEventListener('pointerdown',onDown,{passive:true});addEventListener('pointerup',onUp,{passive:true});addEventListener('pointercancel',onUp,{passive:true});document.addEventListener('pointerleave',onLeave);
   addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',scheduleMeasure,{passive:true});addEventListener('mawatheeq-appearance',onAppearance);reducedQuery.addEventListener('change',onAppearance);
-  return()=>{cancelAnimationFrame(perfFrame);clearTimeout(perfStop);cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
+  return()=>{for(const c of canvases)c.removeEventListener('contextlost',onContextLost);cancelAnimationFrame(perfFrame);clearTimeout(perfStop);cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
    removeEventListener('pointermove',onMove);removeEventListener('pointerdown',onDown);removeEventListener('pointerup',onUp);removeEventListener('pointercancel',onUp);document.removeEventListener('pointerleave',onLeave);
    removeEventListener('keydown',onKey);clearTimeout(splashTimer);removeEventListener('scroll',onScroll);removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
-   for(const a of ['data-scrolled','data-scrolling','data-pointer','data-hover-action','data-pressing'])root.removeAttribute(a)};
+   for(const a of ['data-scrolled','data-scrolling','data-pointer'])root.removeAttribute(a)};
  },[]);
  const jump=(m:Mark)=>{const top=m.el.getBoundingClientRect().top+scrollY-96;scrollTo({top,behavior:motionAllowed()?'smooth':'auto'})};
  return <>
