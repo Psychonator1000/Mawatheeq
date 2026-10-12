@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { emptyCase } from '../lib/domain.ts';
 import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT } from '../lib/case-browse.ts';
 import { suggestions, weekdayOf, CLIENT_ROLES } from '../lib/choices.ts';
+import { fils, kwd, position, dueStatements, FILE_STATUSES } from '../lib/collections.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
 
 const fixture = (id, fields) => ({ ...emptyCase(), id, ...fields });
@@ -119,3 +120,11 @@ assert.deepEqual(suggestions([{v:' بنك  الكويت '},{v:'شركة'},{v:'ب
 assert.equal(weekdayOf('2026-10-13'),'الثلاثاء','Weekday from a date-only value without timezone shifts');assert.equal(weekdayOf(''),'');
 assert.ok(CLIENT_ROLES.includes('مدعي')&&CLIENT_ROLES.includes('مدعى عليه'));
 console.log('Passed choices: suggestions and weekdays.');
+
+// Collections money in exact fils and the file's financial position.
+assert.equal(fils('153.75'),153750);assert.equal(fils('0.001'),1);assert.equal(fils('1.2345'),0,'More than three decimals is rejected');assert.equal(kwd(153750),'153.750');assert.equal(kwd(-5),'-0.005');
+{const pos=position({amount:'150',orderFee:'3.75'},[{type:'payment',amount:'50.5',status:'posted'},{type:'external',amount:'10',status:'posted'},{type:'expense',amount:'2.25',status:'posted'},{type:'payment',amount:'99',status:'void'}]);
+ assert.deepEqual(pos,{claim:150000,fee:3750,total:153750,paid:60500,external:10000,expenses:2250,remaining:93250,net:58250},'Cancelled payments do not count');}
+assert.deepEqual(dueStatements([{payload:{status:'notDone',reviewDate:'2026-10-13'}},{payload:{status:'done',reviewDate:'2026-10-01'}},{payload:{status:'postponed',reviewDate:'2026-10-20'}},{payload:{status:'postponed',reviewDate:'2026-10-01'},archived:true}],'2026-10-13').length,1);
+assert.ok(FILE_STATUSES.includes('تحصيل ودي'));
+console.log('Passed collections money and follow-up helpers.');

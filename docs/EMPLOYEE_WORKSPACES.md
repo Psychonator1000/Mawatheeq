@@ -34,6 +34,17 @@ The current claim template is the existing claim following refusal of an order o
 
 The order of payment (أمر الأداء) is the source paper: its details are typed once into the collection file, and both outputs, the statement of claim (صحيفة الدعوى) and the document bundle (حافظة المستندات), are produced from that data. A button fills the bundle with the usual documents derived from the file's own details. The earlier PDF-upload page (إعداد المستندات) was removed on 11 October 2026; drafts it saved remain in the database and the owner's full backup.
 
+### Follow-up (13 October 2026)
+
+Modelled on the office's previous collections system. A file window has tabs: بيانات الملف, الأطراف والمطالبة, الحافظة والمستندات, إفادات الملف, الوضع المالي, السجل.
+
+- **File data**: file status and execution-file status (fixed lists), assigned employee, arrival date, batch number, accounting contract, debt reason, required action, order-of-payment fee (added to the claim), instalment, total instalments, delay days, overdue amount, promissory note amount and dates, four free tags (ترقيم 1–4), and closing date and reason. These follow-up fields are not source data for the papers: changing only them keeps a valid source review. Any other change clears it as before.
+- **File statements (إفادات)**: categories اتصالات, تنفيذ, عناوين خصوم and إداري. Each statement records the action (from a list, or typed), review date, status (منجز / غير منجز / مؤجل) and text. Calls also record the number, the party called and the method (phone/WhatsApp), with call and WhatsApp links. The server stamps who wrote each statement and when. Statements can be corrected or removed; the history keeps both. Statements that are not done and whose review date has come appear in «المتابعات المستحقة».
+- **Financial position**: payments on the file, payments made directly to the client (سداد خارجي) and expenses, in exact fils. Total claim = claim + order-of-payment fee. Remaining = total claim − paid (including external payments). Net collected = paid − expenses. Posted payments are never edited; they are cancelled with a reason, and the cancellation is audited. «طباعة كشف حساب الملف» prints the file's account statement.
+- **List**: dashboard totals (claims, collected, remaining, due follow-ups, files needing source review), status chips, filters by batch and assigned employee, and searching by tags and phone. Tick files to distribute or transfer them to an employee, or change their status, in one step. «التحصيلات» lists all payments with type and date filters and totals, and can be printed.
+
+Statements and payments are department records linked to their file (`subject_id`) and carry its case, so the collections section and case scope govern them exactly like the file. Migration `20261013120000_collection_followup.sql`.
+
 ### Batch printing
 
 The «طباعة جماعية» view in التحصيل, also shown in the secretary workspace, lists files that are reviewed and complete for the chosen paper. Filter by search or hearing dates, tick files (or «تحديد كل الجاهز»), choose bundle, claim or both, and download one Word file per paper type. Each paper is generated through the same server `generate` action as a single paper, so revision checks, export permission and immutable output snapshots apply to every file; failures are listed without stopping the batch. Each document is its own section with page numbers restarting at 1. A secretary needs the التحصيل section and export permission; the section alone grants no case narrative, client profile or other department data.

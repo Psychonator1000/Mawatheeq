@@ -12,11 +12,13 @@ export const WORKSPACES = {
 };
 export type CaseSummary = Pick<CaseRecord,'id'|'code'|'autoNumber'|'client'|'clientGroup'|'clientEntityName'|'opponent'|'revision'|'archived'>;
 export type DepartmentRecord<P=Record<string,string>> = {
- id:string;workspace:Exclude<Department,'secretary'>;kind:'file'|'entry'|'employee'|'leave';
+ id:string;workspace:Exclude<Department,'secretary'>;kind:'file'|'entry'|'employee'|'leave'|'statement'|'payment';
  caseId:string;subjectId:string;payload:P;revision:number;archived:boolean;createdAt:string;updatedAt:string;createdBy:string;updatedBy:string;
  review:{recordRevision:number;caseRevision:number;reviewer:string;createdAt:string;sourceReference:string}|null;
 };
-export type CollectionData = DocumentData & {sourceReference:string;notes:string};
+/** Follow-up fields of a collection file (status, assignee, instalments, tags, closing). Changing only these keeps the source review. */
+export const FOLLOW_FIELDS = ['fileStatus','executionStatus','arrivalDate','debtReason','installment','installmentsTotal','delayDays','overdueAmount','batchNumber','accountingContract','orderFee','promissoryAmount','promissoryDate','promissoryDueDate','tag1','tag2','tag3','tag4','requiredAction','closedDate','closedReason','assignedTo'] as const;
+export type CollectionData = DocumentData & {sourceReference:string;notes:string} & Partial<Record<typeof FOLLOW_FIELDS[number],string>>;
 export type CollectionRecord = DepartmentRecord<CollectionData>;
 export type LedgerData = {type:'fee'|'receipt'|'expense';date:string;currency:Currency;amount:string;amountMinor:string;reference:string;party:string;notes:string;status:'posted'|'void';voidReason:string};
 export type LedgerRecord = DepartmentRecord<LedgerData>;
