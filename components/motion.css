@@ -68,7 +68,7 @@ body{transition:background-color .6s}
 .my-work-item:hover,.calendar-item:hover{transform:translateY(-1px)}
 
 /* Cards lean toward the pointer (full motion only). */
-:root[data-motion=full] [data-tilt]{transform-style:preserve-3d;transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s}
+:root[data-motion=full] [data-tilt]{transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s}
 :root[data-motion=full] [data-tilt]:hover{transform:perspective(900px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) translateY(-3px);box-shadow:0 18px 40px -24px #35101c55}
 :root[data-motion=full] .stat[data-tilt]::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(260px circle at var(--glare-x,50%) var(--glare-y,50%),#ffffff40,transparent 60%);opacity:0;transition:opacity .3s}
 :root[data-motion=full] .stat[data-tilt]:hover::after{opacity:1}
