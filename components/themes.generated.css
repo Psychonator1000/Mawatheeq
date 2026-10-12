@@ -1234,6 +1234,7 @@
 :root[data-mode=dark] .device-more summary{color:var(--brand)}
 :root[data-mode=dark] .batch-progress{background:color-mix(in srgb,var(--brand) 12%,transparent)}
 :root[data-mode=dark] .batch-progress i{background:var(--brand)}
+:root[data-mode=dark] .person-account{color:var(--muted-foreground)}
 :root[data-mode=dark] .ambient-blob.one{background:radial-gradient(circle,var(--glow-1) 0,transparent 66%)}
 :root[data-mode=dark] .ambient-blob.two{background:radial-gradient(circle,var(--glow-2) 0,transparent 66%)}
 :root[data-mode=dark] .ambient-blob.three{background:radial-gradient(circle,var(--glow-3) 0,transparent 66%)}

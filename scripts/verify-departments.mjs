@@ -122,6 +122,15 @@ assert.equal((await dept(accountant.token,'accounting','records_page')).length,1
 // HR authority is independent of cases and never grants login administration.
 let employee=await save(hr,'hr',record('hr','employee',{employeeNumber:'SYN-1',name:'Synthetic Employee',title:'Assistant',department:'Office',phone:'',startDate:'2026-01-01',status:'active',notes:'Sensitive employee note'}));
 await assert.rejects(()=>save(hr,'hr',record('hr','employee',employee.payload)),e=>e.code==='23505');
+// Every account can have one linked HR file; HR sees active accounts (names only), other departments do not.
+const staffList=await dept(hr.token,'hr','staff_accounts');assert.ok(staffList.some(a=>a.username==='hr_staff'));assert.equal(Object.keys(staffList[0]).sort().join(),'displayName,id,role,username');
+await denied(()=>dept(accountant.token,'accounting','staff_accounts'));await denied(()=>dept(accountant.token,'hr','staff_accounts'));
+const accountantId=staffList.find(a=>a.username==='accountant').id;
+const linked=await save(hr,'hr',record('hr','employee',{employeeNumber:'SYN-ACC',name:'accountant',title:'',department:'',phone:'',startDate:'',status:'active',notes:'',accountId:accountantId}));
+assert.equal(linked.payload.accountId,accountantId);
+await assert.rejects(()=>save(hr,'hr',record('hr','employee',{employeeNumber:'SYN-ACC2',name:'Duplicate',status:'active',accountId:accountantId})),e=>e.code==='23505','one HR file per account');
+await assert.rejects(()=>save(hr,'hr',record('hr','employee',{employeeNumber:'SYN-ACC3',name:'Ghost',status:'active',accountId:'00000000-0000-4000-8000-000000000000'})),/غير موجود/);
+assert.equal((await save(hr,'hr',record('hr','employee',{employeeNumber:'SYN-NOACC',name:'Unlinked',status:'active'}))).payload.accountId,'','the account link stays optional');
 await denied(()=>dept(legal.token,'hr','records_page'));
 await denied(()=>action(accountant,'hr','history',employee));
 await denied(()=>office(hr.token,'create_member',{username:'forbidden',password:'Synthetic-password-123'}));
@@ -142,4 +151,4 @@ const backup=await dept(owner.token,'collections','backup_page',{kind:'outputs'}
 assert.equal(backup.length,2);assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
 await office(owner.token,'set_member_access',{id:collector.user.id,revision:collector.member.permissions?.revision||1,permissions:grants([])});
 await assert.rejects(()=>dept(collector.token,'collections','records_page'),e=>e.code==='28000','Grant changes revoke active department sessions');
-await db.close();console.log('Passed departments: scoped summaries, shared secretary work, collection review/output snapshots, stale edits, exact money/void trail, HR isolation/leave overlap, private grants and session revocation.');
+await db.close();console.log('Passed departments: scoped summaries, shared secretary work, collection review/output snapshots, stale edits, exact money/void trail, HR isolation/leave overlap, account-linked HR files, private grants and session revocation.');
