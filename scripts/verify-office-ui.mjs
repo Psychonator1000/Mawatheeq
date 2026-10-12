@@ -111,6 +111,7 @@ try{
  await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).waitFor();
  // The lawyer's account follows his name on the cases: «قضاياه فقط» is selected and new cases are included.
  await page.evaluate(()=>{location.hash='settings'});await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText(/قضاياه فقط: 5 قضية/).waitFor();
+ await page.getByLabel('بحث في فريق المكتب').fill('سالم');assert.equal(await page.locator('.office-staff tbody tr').count(),1,'Staff search finds the lawyer by name');await page.getByLabel('بحث في فريق المكتب').fill('');
  await page.evaluate(()=>{location.hash='settings'});await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
  assert.equal(await page.getByRole('radio',{name:/قضاياه فقط/}).isChecked(),true,'Bulk lawyer accounts see their own cases by name');
  assert.equal(await page.getByRole('checkbox',{name:'قضايا ا/ سالم تجريبي'}).isChecked(),true);

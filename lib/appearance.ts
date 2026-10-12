@@ -152,9 +152,28 @@ export function weakDevice(): boolean {
   const n = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
   return (n.hardwareConcurrency || 8) <= 4 || (n.deviceMemory || 8) <= 4 || !!n.connection?.saveData || noGraphicsCard();
 }
-/** Remembered when the app measured slow frames on this device, so later visits start light. */
-export const markedSlow = () => { try { return localStorage.getItem(SLOW_KEY) === '1'; } catch { return false; } };
-export const markSlow = () => { try { localStorage.setItem(SLOW_KEY, '1'); } catch { /* Applies for this visit only. */ } };
+/**
+ * Remembered when the app measured repeated slow frames or graphics resets on this device, so later visits start
+ * light. It lasts a week, then the device is measured again (a busy moment should not switch effects off for good).
+ * The older permanent marker from before this rule is ignored.
+ */
+const SLOW_DAYS = 7;
+type SlowMark = { at: number; reason: 'frames' | 'graphics' };
+const readSlow = (): SlowMark | null => { try { const m = JSON.parse(localStorage.getItem(SLOW_KEY) || 'null') as SlowMark | null; return m && typeof m.at === 'number' && Date.now() - m.at < SLOW_DAYS * 864e5 ? m : null; } catch { return null; } };
+export const markedSlow = () => !!readSlow();
+export const markSlow = (reason: SlowMark['reason'] = 'frames') => { try { localStorage.setItem(SLOW_KEY, JSON.stringify({ at: Date.now(), reason })); } catch { /* Applies for this visit only. */ } };
+export const clearSlow = () => { try { localStorage.removeItem(SLOW_KEY); } catch { /* Nothing stored. */ } };
+/** Why automatic light mode is on, in the owner's words, or '' when it is off. */
+export function liteReason(): string {
+  const n = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
+  if (noGraphicsCard()) return 'المتصفح يعمل دون بطاقة الرسوميات (تسريع الأجهزة متوقف في إعدادات المتصفح).';
+  if ((n.hardwareConcurrency || 8) <= 4) return `المعالج بعدد أنوية قليل (${n.hardwareConcurrency}).`;
+  if ((n.deviceMemory || 8) <= 4) return `ذاكرة الجهاز قليلة (${n.deviceMemory} GB).`;
+  if (n.connection?.saveData) return 'وضع توفير البيانات مفعّل في المتصفح.';
+  const m = readSlow(); if (!m) return '';
+  const until = new Date(m.at + SLOW_DAYS * 864e5).toLocaleDateString('ar-KW');
+  return (m.reason === 'graphics' ? 'تكررت إعادة تشغيل الرسوميات أثناء الاستخدام' : 'قاس التطبيق بطئاً متكرراً في الحركة') + ` — يُعاد القياس تلقائياً بعد ${until}.`;
+}
 /** Light mode: chosen explicitly, or automatic on a weak or measured-slow device. */
 export const liteMode = (a: Pick<Appearance, 'performance'>) => a.performance === 'lite' || (a.performance === 'auto' && (weakDevice() || markedSlow()));
 /** Pointer-driven effects run only with full motion and no reduced-motion preference. */

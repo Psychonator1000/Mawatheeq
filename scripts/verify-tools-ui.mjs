@@ -398,6 +398,21 @@ assert.equal(await motion.evaluate(()=>document.documentElement.dataset.perf),'l
 assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.ambient-canvas')).display),'none','light mode stops the animated backdrop');
 assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.topbar')).backdropFilter),'none','light mode drops glass blur');
 await lively.close();
+// Automatic light mode on a strong PC: the old permanent "slow" flag is ignored; a fresh one explains itself and can be cleared.
+{const strong=await context.newPage();
+ await strong.addInitScript(()=>{Object.defineProperty(navigator,'hardwareConcurrency',{get:()=>16});Object.defineProperty(navigator,'deviceMemory',{get:()=>16});
+  const real=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(t,...r){if(t==='webgl')return {getExtension:n=>n==='WEBGL_debug_renderer_info'?{UNMASKED_RENDERER_WEBGL:1}:null,getParameter:()=>'ANGLE (NVIDIA GeForce RTX)',RENDERER:2};return real.call(this,t,...r)};
+  try{const k='mawatheeq.appearance.v1',a=JSON.parse(localStorage.getItem(k)||'{}');localStorage.setItem(k,JSON.stringify({...a,performance:'auto'}))}catch{/* test setup */}});
+ await strong.goto(base);await strong.evaluate(()=>localStorage.setItem('mawatheeq.slow-device','1'));await strong.reload();await strong.waitForTimeout(600);
+ assert.notEqual(await strong.evaluate(()=>document.documentElement.dataset.perf),'lite','The old permanent slow flag no longer forces light mode');
+ await strong.evaluate(()=>localStorage.setItem('mawatheeq.slow-device',JSON.stringify({at:Date.now(),reason:'graphics'})));await strong.reload();await strong.waitForTimeout(600);
+ assert.equal(await strong.evaluate(()=>document.documentElement.dataset.perf),'lite','A fresh measurement applies light mode');
+ await strong.getByRole('button',{name:'حساب tools_owner'}).click();await strong.getByRole('button',{name:'المظهر والحركة'}).click();
+ await strong.getByText(/تكررت إعادة تشغيل الرسوميات/).waitFor();await strong.screenshot({path:artifacts+'/perf-reason.png'});
+ await strong.getByRole('button',{name:'إعادة تفعيل المؤثرات وقياس الجهاز من جديد'}).click();
+ assert.notEqual(await strong.evaluate(()=>document.documentElement.dataset.perf),'lite','Re-enabling brings the effects back');
+ assert.equal(await strong.evaluate(()=>localStorage.getItem('mawatheeq.slow-device')),null);
+ await strong.evaluate(()=>{const k='mawatheeq.appearance.v1',a=JSON.parse(localStorage.getItem(k)||'{}');localStorage.setItem(k,JSON.stringify({...a,performance:'full'}))});await strong.close();}
 // Signing out deletes the stored account and every stored copy of its records from this browser.
 await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('menuitem',{name:/خروج/}).or(page.getByRole('button',{name:/^خروج/})).first().click();
 await page.getByRole('button',{name:'فتح مساحة العمل',exact:true}).waitFor();await page.waitForTimeout(300);
@@ -406,4 +421,4 @@ assert.equal(await page.evaluate(()=>new Promise(res=>{const r=indexedDB.open('m
 await page.reload();await page.getByRole('button',{name:'فتح مساحة العمل',exact:true}).waitFor();
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: sessions (decision, next hearing scheduled and pinned, timeline, finance tab, hearings roll), lawyer picker (listed and new names), court levels (move to appeal, closed read-only record, pinned numbers, search by earlier number), instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
+console.log('Passed tools UI: automatic light mode explains itself and expires on strong PCs, sessions (decision, next hearing scheduled and pinned, timeline, finance tab, hearings roll), lawyer picker (listed and new names), court levels (move to appeal, closed read-only record, pinned numbers, search by earlier number), instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
