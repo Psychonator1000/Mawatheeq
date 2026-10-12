@@ -25,7 +25,7 @@ const local=(action,data)=>rpc('mawatheeq_local_request',[login.token,action,JSO
 const office=(action,data={})=>rpc('mawatheeq_office_request',[login.token,action,JSON.stringify(data)]);
 const iso=d=>new Date(Date.now()+d*864e5).toLocaleDateString('en-CA',{timeZone:'Asia/Kuwait'});
 const today=iso(0);
-for(let i=0;i<3;i++)await local('save_case',{case:{id:'tools-case-'+i,code:'TOOL-'+i,autoNumber:String(7000+i),client:'شركة أدوات تجريبية',clientGroup:'شركة أدوات تجريبية',opponent:'خصم الأدوات '+i,date:i===0?iso(-27):'2026-01-05',type:'حكم أول درجة',outcome:'لصالحنا',ruling:'<b>منطوق تجريبي</b>',procedures:[],revision:0}});
+for(let i=0;i<3;i++)await local('save_case',{case:{id:'tools-case-'+i,code:'TOOL-'+i,autoNumber:String(7000+i),caseNumber:'2026/'+(300+i),client:'شركة أدوات تجريبية',clientGroup:'شركة أدوات تجريبية',opponent:'خصم الأدوات '+i,date:i===0?iso(-27):'2026-01-05',type:'حكم أول درجة',outcome:'لصالحنا',ruling:'<b>منطوق تجريبي</b>',procedures:[],revision:0}});
 const me=(await office('context')).user.id;
 const work=(id,extra)=>office('save_work',{item:{id,revision:0,caseId:'tools-case-1',title:'عمل '+id,kind:'task',dueDate:today,dueTime:'',assigneeId:me,priority:'normal',status:'open',location:'',notes:'',completionNote:'',...extra}});
 await work('11111111-1111-4111-8111-111111111111',{title:'مهمة متأخرة تجريبية',dueDate:iso(-2)});
@@ -104,7 +104,12 @@ const search=page.getByRole('dialog',{name:'بحث سريع'});
 await search.getByRole('combobox').fill('7002');
 await search.getByText('TOOL-2 · شركة أدوات تجريبية').waitFor();
 await page.keyboard.press('Enter');
-await page.getByText('CASE FILE · TOOL-2').waitFor();
+await page.locator('.case-pin').getByText('خصم الأدوات 2').waitFor();
+// The case file keeps company, opponent, case number and progress pinned while the rest scrolls.
+{const pin=page.locator('.case-pin');assert.ok(await pin.getByText('2026/302').isVisible(),'case number in the pinned header');assert.equal(await pin.locator('.progress-steps .step').count(),3);
+ await page.locator('.detail-sheet').evaluate(e=>e.scrollTo(0,e.scrollHeight));await page.waitForTimeout(200);
+ const box=await pin.boundingBox();assert.ok(box&&box.y>=-1&&box.y<5,'the case header stays pinned at the top while scrolling');assert.ok(await pin.getByText('شركة أدوات تجريبية').isVisible());
+ await page.locator('.detail-sheet').evaluate(e=>e.scrollTo(0,0));}
 
 // Printable case sheet uses escaped case text.
 await page.evaluate(()=>{window.__printed='';window.open=()=>({document:{write:h=>{window.__printed+=h},close(){}},focus(){},print(){}})});
@@ -215,7 +220,7 @@ const recentGroup=page.getByRole('dialog',{name:'بحث سريع'}).getByRole('g
 await recentGroup.getByText(/TOOL-0/).waitFor();
 assert.ok(await recentGroup.getByText(/TOOL-2/).isVisible(),'Both recently opened cases are offered');
 await recentGroup.getByText(/TOOL-0/).click();
-const sheet=page.getByRole('dialog').filter({hasText:'CASE FILE · TOOL-0'});
+const sheet=page.getByRole('dialog').filter({has:page.locator('.case-pin').getByText('TOOL-0')});
 await sheet.getByLabel('الخصم',{exact:true}).fill('خصم معدل دون حفظ');
 await page.keyboard.press('Escape');
 await page.getByRole('alertdialog').getByText('تغييرات غير محفوظة').waitFor();
