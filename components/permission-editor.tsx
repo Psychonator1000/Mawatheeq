@@ -1,6 +1,6 @@
 'use client';
 import {useState} from 'react';
-import {SECTIONS,LEGAL_SECTIONS,type Permissions,type Section} from '@/lib/permissions';
+import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,workspacesOf,type Permissions,type Section} from '@/lib/permissions';
 import {type CaseRecord} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -12,7 +12,13 @@ export default function PermissionEditor({value,onChange,records}:{value:Permiss
  const pages=Math.max(1,Math.ceil(filtered.length/10)),current=Math.min(page,pages),rows=filtered.slice((current-1)*10,current*10);
  const patch=(next:Partial<Permissions>)=>onChange({...value,...next});
  const toggle=(id:string,checked:boolean)=>patch({caseIds:checked?[...value.caseIds,id]:value.caseIds.filter(x=>x!==id)});
+ const opens=workspacesOf(value);
  return <div className="permission-editor">
+  <fieldset className="permission-group"><legend>الصفحات التي يراها</legend>
+   <div className="permission-presets" role="group" aria-label="قوالب الصفحات">{PAGE_PRESETS.map(([label,sections])=>{const on=sections.length===value.sections.length&&sections.every(s=>value.sections.includes(s));return <button type="button" key={label} className={'btn '+(on?'primary':'')} aria-pressed={on} onClick={()=>patch({sections})}>{label}</button>})}</div>
+   <p className="permission-summary" role="status">{opens.length?<>سيرى هذا الحساب: <b>{opens.map(p=>WORKSPACE_LABELS[p]).join('، ')}</b>{opens.length===1?' — ويفتحها مباشرة عند الدخول.':'.'}</>:'لن يرى هذا الحساب أي صفحة حتى تختار له صفحات.'}</p>
+   <p className="subtitle">اختر قالباً أو حدد الصفحات بالتفصيل أدناه. يمكنك الجمع بين أكثر من صفحة.</p>
+  </fieldset>
   <fieldset className="permission-group"><legend>نطاق القضايا</legend>
    <label className="checkbox-line"><input type="radio" name="caseScope" checked={value.caseScope==='selected'} onChange={()=>patch({caseScope:'selected',sections:value.sections.filter(s=>s!=='documents')})}/>قضايا أختارها فقط</label>
    <label className="checkbox-line"><input type="radio" name="caseScope" checked={value.caseScope==='all'} onChange={()=>patch({caseScope:'all'})}/>جميع القضايا الحالية والمستقبلية</label>
@@ -23,8 +29,8 @@ export default function PermissionEditor({value,onChange,records}:{value:Permiss
     {!value.caseIds.length&&<p className="notice">لن تظهر لهذا المستخدم أي قضية حتى تختار له قضايا.</p>}
    </>}
   </fieldset>
-  {[false,true].map(legal=><fieldset className="permission-group" key={String(legal)}><legend>{legal?'أقسام مساحة القضايا':'بيئات العمل الإضافية'}</legend><div className="permission-sections">{Object.entries(SECTIONS).filter(([id])=>LEGAL_SECTIONS.includes(id as Section)===legal).map(([id,label])=><label className="checkbox-line" key={id}><input type="checkbox" checked={value.sections.includes(id as Section)} disabled={id==='documents'&&value.caseScope!=='all'} onChange={e=>patch({sections:e.target.checked?[...value.sections,id as Section]:value.sections.filter(s=>s!==id)})}/>{label}</label>)}</div>
-   <p className="subtitle">بيئات العمل الإضافية تتيح ملخص القضية وأدوات القسم فقط. كل قسم يعرض القضايا المسموحة فقط. إخفاء قسم لا يحجب حقول القضية المتاحة من قسم آخر. مرفقات القضايا ضمن «التحقق»؛ مكتبة إعداد المستندات غير المصنفة تتطلب جميع القضايا.</p>
+  {[false,true].map(legal=><fieldset className="permission-group" key={String(legal)}><legend>{legal?'أقسام صفحة القضايا (الرئيسية)':'صفحات الأقسام الأخرى'}</legend><div className="permission-sections">{Object.entries(SECTIONS).filter(([id])=>LEGAL_SECTIONS.includes(id as Section)===legal).map(([id,label])=><label className="checkbox-line" key={id}><input type="checkbox" checked={value.sections.includes(id as Section)} disabled={id==='documents'&&value.caseScope!=='all'} onChange={e=>patch({sections:e.target.checked?[...value.sections,id as Section]:value.sections.filter(s=>s!==id)})}/>{label}</label>)}</div>
+   <p className="subtitle">صفحات الأقسام الأخرى تتيح ملخص القضية وأدوات القسم فقط، وكل صفحة تعرض القضايا المسموحة فقط. إخفاء قسم لا يحجب حقول القضية المتاحة من قسم آخر. مرفقات القضايا ضمن «التحقق»، و«المستندات والأدلة» تتطلب جميع القضايا.</p>
   </fieldset>)}
   <fieldset className="permission-group"><legend>العمليات المسموحة</legend>
    <label className="checkbox-line"><input type="checkbox" checked={value.canEdit} onChange={e=>patch({canEdit:e.target.checked})}/>السماح بالتعديل في الأقسام المتاحة</label>

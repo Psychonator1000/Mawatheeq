@@ -1,12 +1,13 @@
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
 
 /** Bump when adding entries so the account menu shows its dot again. */
-export const WHATS_NEW_VERSION='2026-10-11';
+export const WHATS_NEW_VERSION='2026-10-12';
 const KEY='mawatheeq.whats-new.seen';
 export const whatsNewUnseen=()=>{try{return localStorage.getItem(KEY)!==WHATS_NEW_VERSION}catch{return false}};
 export const markWhatsNewSeen=()=>{try{localStorage.setItem(KEY,WHATS_NEW_VERSION)}catch{/* Still shown next time. */}};
 
 const ITEMS:[string,string,string][]=[
+ ['👤','إدارة الحسابات','غيّر اسم أي مستخدم (واسمك أيضاً)، واختر كلمة مرور دائمة للموظف، وحدد صفحاته بقوالب جاهزة مثل «السكرتارية فقط». من له صفحة واحدة تفتح له مباشرة.'],
  ['🖨️','طباعة جماعية للتحصيل','تُدخل بيانات أمر الأداء مرة واحدة، ثم تطبع السكرتارية صحف الدعوى وحوافظ المستندات لعدة ملفات في ملف Word واحد. أُزيلت صفحة رفع PDF.'],
  ['🖥️','خادم المكتب','يمكن تشغيل مواثيق كاملاً على جهاز داخل المكتب، مع نسخ احتياطي يومي.'],
  ['🚪','أجهزة الأبواب','فتح الأبواب عن بعد، وتعديل الأجهزة وحذفها، وبطاقات المستخدمين من صفحة الأجهزة.'],
