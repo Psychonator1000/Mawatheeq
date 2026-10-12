@@ -1,8 +1,8 @@
 // Per-device display preferences. Purely cosmetic: never affects records or permissions.
 export const THEMES = {
   burgundy: { label: 'عنابي مواثيق', swatch: '#74283b', accent: '#d8b98f' },
-  noir: { label: 'أسود وذهبي', swatch: '#0b0a08', accent: '#d4af37' },
-  ivory: { label: 'أبيض وذهبي', swatch: '#c99d2e', accent: '#ffffff' },
+  // One gold theme: black and gold in dark mode, white and gold in light mode.
+  noir: { label: 'ذهبي', swatch: '#0b0a08', accent: '#d4af37' },
   sunflower: { label: 'أصفر مشمس', swatch: '#ffc928', accent: '#fff3b0' },
   royal: { label: 'أزرق وذهبي', swatch: '#163a66', accent: '#d4af37' },
   sky: { label: 'أزرق سماوي (Aero)', swatch: '#2fa8e8', accent: '#c8f0a8' },
@@ -53,12 +53,12 @@ export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'co
 /** Themes whose own look is dark. */
 const DARK_NATIVE = new Set<string>(['noir', 'phantom']);
 /**
- * The stylesheet theme and mode actually applied. Black-and-gold and white-and-gold are each other's dark and
- * light versions; Persona has its own light "paper" version; every other theme gets a generated dark version.
+ * The stylesheet theme and mode actually applied. The gold theme is black and gold when dark and white and gold
+ * when light; Persona has its own light "paper" version; every other theme gets a generated dark version.
  */
 export function resolveTheme(a: Pick<Appearance, 'theme' | 'mode'>): { theme: string; dark: boolean; mode: '' | 'dark' } {
   const dark = a.mode === 'dark' || (a.mode === 'auto' && DARK_NATIVE.has(a.theme));
-  if (a.theme === 'noir' || a.theme === 'ivory') return { theme: dark ? 'noir' : 'ivory', dark, mode: '' };
+  if (a.theme === 'noir') return { theme: dark ? 'noir' : 'ivory', dark, mode: '' };
   if (a.theme === 'phantom') return { theme: dark ? 'phantom' : 'phantom-light', dark, mode: '' };
   return { theme: a.theme, dark, mode: dark ? 'dark' : '' };
 }
@@ -68,12 +68,13 @@ export function loadAppearance(): Appearance {
   try {
     const saved = JSON.parse(localStorage.getItem(key) || '{}');
     return {
-      theme: saved.theme in THEMES ? saved.theme : DEFAULT_APPEARANCE.theme,
+      // The former separate white-and-gold theme is now the gold theme in light mode.
+      theme: saved.theme === 'ivory' ? 'noir' : saved.theme in THEMES ? saved.theme : DEFAULT_APPEARANCE.theme,
       backdrop: saved.backdrop in BACKDROPS ? saved.backdrop : DEFAULT_APPEARANCE.backdrop,
       motion: saved.motion in MOTION_LEVELS ? saved.motion : DEFAULT_APPEARANCE.motion,
       text: saved.text in TEXT_SIZES ? saved.text : DEFAULT_APPEARANCE.text,
       density: saved.density in DENSITIES ? saved.density : DEFAULT_APPEARANCE.density,
-      mode: saved.mode in MODES ? saved.mode : DEFAULT_APPEARANCE.mode,
+      mode: saved.theme === 'ivory' && (saved.mode ?? 'auto') === 'auto' ? 'light' : saved.mode in MODES ? saved.mode : DEFAULT_APPEARANCE.mode,
       follower: saved.follower in FOLLOWERS ? saved.follower : DEFAULT_APPEARANCE.follower,
       cursor: saved.cursor in CURSORS ? saved.cursor : DEFAULT_APPEARANCE.cursor,
       unlocked: Array.isArray(saved.unlocked) ? saved.unlocked.filter((t: string) => t in THEMES) : [],
@@ -94,7 +95,7 @@ const svgUrl = (svg: string, x: number, y: number, fallback: string) => `url("da
 function applyThemedCursor(theme: string, dark: boolean) {
   const root = document.documentElement, css = getComputedStyle(root);
   const brand = css.getPropertyValue('--brand').trim() || '#74283b';
-  const accent = (THEMES as Record<string, ThemeInfo>)[theme]?.accent || css.getPropertyValue('--glow-2').trim() || '#d8b98f';
+  const accent = (THEMES as Record<string, ThemeInfo>)[theme === 'ivory' ? 'noir' : theme]?.accent || css.getPropertyValue('--glow-2').trim() || '#d8b98f';
   const edge = dark ? '#0b0b0b' : '#ffffff';
   const arrow = 'M6 3v21.5l5.6-5.3 3.8 8.4 3.6-1.6-3.8-8.3h7.7z';
   const shape = (fill: string, stroke: string, extra = '') => `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">${extra}<path d="${arrow}" fill="${fill}" stroke="${stroke}" stroke-width="1.7" stroke-linejoin="round"/></svg>`;
