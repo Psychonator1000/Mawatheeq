@@ -123,6 +123,7 @@
 :root[data-theme=noir] .office-attachments{border:1px solid #302d28}
 :root[data-theme=noir] .office-attachments>summary{color:#c9bdb7}
 :root[data-theme=noir] .permission-group{border:1px solid #2f2c27!important}
+:root[data-theme=noir] .permission-summary{background:#1d1b18;color:#ddd8cd}
 :root[data-theme=noir] .permission-cases{border:1px solid #2f2c27}
 :root[data-theme=noir] .permission-case{border-bottom:1px solid #25231e}
 :root[data-theme=noir] .permission-case small{color:#c4bcb6}
@@ -373,6 +374,7 @@
 :root[data-theme=phantom] .office-attachments{border:1px solid #232323}
 :root[data-theme=phantom] .office-attachments>summary{color:#d9d2cf}
 :root[data-theme=phantom] .permission-group{border:1px solid #222222!important}
+:root[data-theme=phantom] .permission-summary{background:#151515;color:#e4e4e4}
 :root[data-theme=phantom] .permission-cases{border:1px solid #222222}
 :root[data-theme=phantom] .permission-case{border-bottom:1px solid #1b1b1b}
 :root[data-theme=phantom] .permission-case small{color:#d5d1ce}
@@ -580,6 +582,7 @@
 :root[data-theme=ivory] .legend-row:is(button):hover,:root[data-theme=ivory] .bar-item:is(button):hover{background:#f9f9f8}
 :root[data-theme=ivory] .office-attachments{border:1px solid #dad7d2}
 :root[data-theme=ivory] .permission-group{border:1px solid #dbd8d4!important}
+:root[data-theme=ivory] .permission-summary{background:#f9f9f8}
 :root[data-theme=ivory] .permission-cases{border:1px solid #dbd8d4}
 :root[data-theme=ivory] .permission-case{border-bottom:1px solid #e8e5e2}
 :root[data-theme=ivory] .access-scope{background:#f9f9f8}

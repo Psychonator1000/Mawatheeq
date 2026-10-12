@@ -9,6 +9,9 @@
 .permission-group{border:1px solid #e4d9cb!important;border-radius:12px;padding:18px!important;margin:22px 0!important;min-width:0}
 .permission-group legend{font-weight:700;padding:0 8px;color:var(--brand)}
 .permission-group>.checkbox-line{margin:12px 0}
+.permission-presets{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}
+.permission-presets .btn{padding:6px 12px;font-size:.9em}
+.permission-summary{margin:4px 0 6px;padding:10px 12px;border-radius:10px;background:#f7f1e8;color:#3b2f25;line-height:1.7}
 .permission-group .subtitle{margin-top:14px;line-height:1.9}
 .permission-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .permission-cases{border:1px solid #e4d9cb;border-radius:9px;margin-top:12px;overflow:hidden}
