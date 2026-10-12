@@ -96,7 +96,7 @@ body{transition:background-color .6s}
 .choice input{accent-color:var(--brand)}.choice small{display:block;color:#827165;font-size:11.5px;line-height:1.6}
 .swatch-dot{width:22px;height:22px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 2px #ffffff80}
 .choice-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.shortcuts-dialog kbd{font:12px ui-monospace,monospace;border:1px solid #dfd3c5;border-bottom-width:2px;border-radius:6px;padding:2px 8px;background:#faf6ef;white-space:nowrap}
+.shortcuts-dialog kbd,.tips-dialog kbd{font:12px ui-monospace,monospace;border:1px solid #dfd3c5;border-bottom-width:2px;border-radius:6px;padding:2px 8px;background:#faf6ef;white-space:nowrap}
 .auth-card .brand-mark{color:var(--brand);border-color:color-mix(in srgb,var(--brand) 45%,#c59e7c)}
 
 /* ── Press, hover and slide effects ── */
@@ -242,12 +242,19 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 :root[data-motion=full] :is(.client-card,.person-card,.legend-row,.bar-item):nth-child(5n){transition-duration:.95s,.2s,.25s}
 .att-grid tbody tr{transform:none!important}
 
-/* Table rows: revealed once, cell after cell, the first time they scroll into view (no row transforms,
-   so rows never separate from the table). A soft spotlight follows the row at the reading line while scrolling. */
-.row-reveal>td{animation:cell-in .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--sr-delay,0ms) + var(--ci,0) * 28ms)}
+/* Table rows: the first time they scroll into view, each cell flips down like a split-flap board, one after the
+   other, from the scroll direction, with a light sweeping across the row and a pop on the case number. Only cells
+   are transformed, never the row, so rows never separate from the table. A soft spotlight follows the reading line. */
+.row-reveal>td{transform-origin:50% 0;backface-visibility:hidden;animation:cell-flip .7s cubic-bezier(.2,.75,.25,1) both,cell-shine 1s ease-out both;animation-delay:calc(var(--sr-delay,0ms) + var(--ci,0) * 40ms);background-image:linear-gradient(100deg,transparent 35%,color-mix(in srgb,var(--brand) 18%,transparent) 50%,transparent 65%);background-size:300% 100%;background-repeat:no-repeat}
+.row-reveal.row-up>td{transform-origin:50% 100%;animation-name:cell-flip-up,cell-shine}
 .row-reveal>td:nth-child(2){--ci:1}.row-reveal>td:nth-child(3){--ci:2}.row-reveal>td:nth-child(4){--ci:3}.row-reveal>td:nth-child(5){--ci:4}.row-reveal>td:nth-child(6){--ci:5}.row-reveal>td:nth-child(n+7){--ci:6}
-@keyframes cell-in{from{opacity:0;translate:0 10px}}
-:root[data-motion=calm] .row-reveal>td{animation-name:sr-fade;animation-duration:.3s}
+.row-reveal .number-link{animation:number-pop .6s cubic-bezier(.3,1.7,.5,1) both;animation-delay:calc(var(--sr-delay,0ms) + 180ms)}
+@keyframes cell-flip{0%{opacity:0;transform:perspective(700px) rotateX(-92deg)}40%{opacity:1}68%{transform:perspective(700px) rotateX(12deg)}85%{transform:perspective(700px) rotateX(-4deg)}100%{transform:none}}
+@keyframes cell-flip-up{0%{opacity:0;transform:perspective(700px) rotateX(92deg)}40%{opacity:1}68%{transform:perspective(700px) rotateX(-12deg)}85%{transform:perspective(700px) rotateX(4deg)}100%{transform:none}}
+@keyframes cell-shine{from{background-position:100% 0}to{background-position:0 0}}
+@keyframes number-pop{0%{scale:.55;opacity:0}55%{scale:1.15;opacity:1}100%{scale:1}}
+:root[data-motion=calm] .row-reveal>td{animation:sr-fade .3s both;background-image:none}
+:root[data-motion=calm] .row-reveal .number-link{animation:none}
 :is(.case-table,.office-table)>tbody>tr{transition:background-color .35s ease,box-shadow .35s ease}
 :is(.case-table,.office-table)>tbody>tr[data-spot]{background-color:color-mix(in srgb,var(--brand) 7%,transparent);box-shadow:inset -4px 0 0 var(--brand)}
 :is(.case-table,.office-table)>tbody>tr[data-spot] .number-link{text-shadow:0 0 14px color-mix(in srgb,var(--brand) 35%,transparent)}
@@ -274,8 +281,11 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 .case-copy-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .topbar-clock{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted-foreground);display:flex;align-items:center;gap:6px}.topbar-clock b{color:var(--foreground);font-weight:600}
 .greeting{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted-foreground);margin-bottom:4px}.greeting b{color:var(--brand)}
-.whats-new-dot{width:8px;height:8px;border-radius:50%;background:#e0453a;margin-inline-start:auto;box-shadow:0 0 0 0 #e0453a88;animation:pulse-ring 1.8s ease-out infinite}
-.whats-new-list{list-style:none;padding:0;margin:0;display:grid;gap:10px}.whats-new-list li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:12px;font-size:13px;line-height:1.8}.whats-new-list li>span{font-size:18px;line-height:1.4}
-.whats-new-list b{display:block}
+.tips-dot{width:8px;height:8px;border-radius:50%;background:#e0453a;margin-inline-start:auto;box-shadow:0 0 0 0 #e0453a88;animation:pulse-ring 1.8s ease-out infinite}
+.tips-list{list-style:none;padding:0;margin:0;display:grid;gap:10px}.tips-list li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:12px;font-size:13px;line-height:1.8}.tips-list li>span{font-size:18px;line-height:1.4}
+.tips-list b{display:block}
 @media(max-width:950px){.topbar-clock{display:none}}
 .account-trigger{position:relative}.avatar-dot{position:absolute;top:-1px;inset-inline-end:-1px;width:9px;height:9px;border-radius:50%;background:#e0453a;border:2px solid var(--background)}
+
+.tips-heading{font-size:14px;margin:6px 0 2px;color:var(--brand)}
+.tips-dialog .shortcuts-table td:first-child{width:1%;white-space:nowrap}

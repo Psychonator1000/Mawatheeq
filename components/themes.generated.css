@@ -236,7 +236,7 @@
 :root[data-theme=noir][data-motion=full] .stat[data-tilt]::after{background:radial-gradient(260px circle at var(--glare-x,50%) var(--glare-y,50%),#11100e40,transparent 60%)}
 :root[data-theme=noir] .choice{border:1px solid #2e2b25;background:#141210}
 :root[data-theme=noir] .choice small{color:#c4bbaa}
-:root[data-theme=noir] .shortcuts-dialog kbd{border:1px solid #33302a;background:#191714}
+:root[data-theme=noir] .shortcuts-dialog kbd,:root[data-theme=noir] .tips-dialog kbd{border:1px solid #33302a;background:#191714}
 :root[data-theme=noir] .auth-card .brand-mark{border-color:color-mix(in srgb,var(--brand) 45%,#615042)}
 :root[data-theme=noir] .btn.primary .ripple,:root[data-theme=noir] .back-to-top .ripple,:root[data-theme=noir] .nav-button .ripple{background:radial-gradient(circle,#11100e66 0,#11100e26 45%,transparent 70%)}
 :root[data-theme=noir] .btn.primary::before{background:linear-gradient(110deg,transparent 30%,#11100e38 48%,transparent 66%)}
@@ -248,7 +248,7 @@
 :root[data-theme=noir] .connection-banner.offline{background:#d2a5a9;color:#11100e}
 :root[data-theme=noir] .connection-banner.online{background:#b5d4c2;color:#11100e}
 :root[data-theme=noir] .copy-chip.copied{background:#b5d4c2;color:#11100e;border-color:#b5d4c2}
-:root[data-theme=noir] .whats-new-dot{background:#82413c}
+:root[data-theme=noir] .tips-dot{background:#82413c}
 :root[data-theme=noir] .avatar-dot{background:#82413c}
 /* phantom */
 :root[data-theme=phantom]{--background:#161616;--foreground:#e5e5e5;--card:#0f0f0f;--card-foreground:#e5e5e5;--popover:#0f0f0f;--popover-foreground:#e5e5e5;--primary-foreground:#121212;--muted:#1a1a1a;--muted-foreground:#cbcbcb;--accent:#1d1d1d;--destructive:#ddc3c5;--border:#212121;--input:#282828}
@@ -487,7 +487,7 @@
 :root[data-theme=phantom][data-motion=full] .stat[data-tilt]::after{background:radial-gradient(260px circle at var(--glare-x,50%) var(--glare-y,50%),#0d0d0d40,transparent 60%)}
 :root[data-theme=phantom] .choice{border:1px solid #212121;background:#0f0f0f}
 :root[data-theme=phantom] .choice small{color:#cccccc}
-:root[data-theme=phantom] .shortcuts-dialog kbd{border:1px solid #262626;background:#131313}
+:root[data-theme=phantom] .shortcuts-dialog kbd,:root[data-theme=phantom] .tips-dialog kbd{border:1px solid #262626;background:#131313}
 :root[data-theme=phantom] .auth-card .brand-mark{border-color:color-mix(in srgb,var(--brand) 45%,#504032)}
 :root[data-theme=phantom] .btn.primary .ripple,:root[data-theme=phantom] .back-to-top .ripple,:root[data-theme=phantom] .nav-button .ripple{background:radial-gradient(circle,#0d0d0d66 0,#0d0d0d26 45%,transparent 70%)}
 :root[data-theme=phantom] .btn.primary::before{background:linear-gradient(110deg,transparent 30%,#0d0d0d38 48%,transparent 66%)}
@@ -499,7 +499,7 @@
 :root[data-theme=phantom] .connection-banner.offline{background:#ddc3c5;color:#0d0d0d}
 :root[data-theme=phantom] .connection-banner.online{background:#cee0d6;color:#0d0d0d}
 :root[data-theme=phantom] .copy-chip.copied{background:#cee0d6;color:#0d0d0d;border-color:#cee0d6}
-:root[data-theme=phantom] .whats-new-dot{background:#6c2f2a}
+:root[data-theme=phantom] .tips-dot{background:#6c2f2a}
 :root[data-theme=phantom] .avatar-dot{background:#6c2f2a}
 /* ivory */
 :root[data-theme=ivory]{--background:#f9f8f8;--card:#fefdfd;--popover:#fefdfd;--primary-foreground:#fcfcfb;--muted:#f5f5f5;--accent:#e5e2de;--border:#dddad6;--input:#d2cec9}
@@ -646,7 +646,7 @@
 :root[data-theme=ivory][data-scrolled] .topbar{background:#fcfcfbe6}
 :root[data-theme=ivory] .back-to-top{color:#fcfcfb}
 :root[data-theme=ivory] .choice{border:1px solid #dddad6;background:#fefefd}
-:root[data-theme=ivory] .shortcuts-dialog kbd{border:1px solid #d6d2ce;background:#fbfbfa}
+:root[data-theme=ivory] .shortcuts-dialog kbd,:root[data-theme=ivory] .tips-dialog kbd{border:1px solid #d6d2ce;background:#fbfbfa}
 :root[data-theme=ivory] .field input:focus,:root[data-theme=ivory] .field textarea:focus,:root[data-theme=ivory] .field select:focus,:root[data-theme=ivory] .comment-form textarea:focus{background:#ffffff}
 :root[data-theme=ivory] .rail-comet{background:radial-gradient(circle at 50% 50%,#ffffff 0 18%,var(--brand) 60%)}
 :root[data-theme=ivory] .rail-mark.past::before{background:color-mix(in srgb,var(--brand) 55%,#ffffff)}
