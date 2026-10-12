@@ -113,7 +113,7 @@ await page.locator('.case-pin').getByText('خصم الأدوات 2').waitFor();
  await page.locator('.case-main').evaluate(e=>e.scrollTo(0,0));}
 
 // Printable case sheet uses escaped case text.
-await page.evaluate(()=>{window.__printed='';window.open=()=>({document:{write:h=>{window.__printed+=h},close(){}},focus(){},print(){}})});
+await page.evaluate(()=>{window.__printed='';window.__mawatheeqPrint=h=>{window.__printed+=h}});
 await page.getByRole('button',{name:'طباعة الملف'}).click();
 const printed=await page.evaluate(()=>window.__printed);
 assert.ok(printed.includes('TOOL-2')&&printed.includes('&lt;b&gt;منطوق تجريبي&lt;/b&gt;')&&!printed.includes('<b>منطوق'),'Case sheet is printed with escaped text');
@@ -245,7 +245,7 @@ await openAccount();await page.getByRole('button',{name:'الوضع الفاتح
 await page.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
 
 // Accounting prints a statement and a receipt voucher.
-const stubPrint=()=>page.evaluate(()=>{window.__printed='';window.open=()=>({document:{write:h=>{window.__printed+=h},close(){}},focus(){},print(){}})});
+const stubPrint=()=>page.evaluate(()=>{window.__printed='';window.__mawatheeqPrint=h=>{window.__printed+=h}});
 await page.getByRole('button',{name:'فتح المحاسبة'}).click();
 await page.getByText('RC-1').waitFor();await stubPrint();
 await page.getByRole('button',{name:'طباعة كشف حساب'}).click();
