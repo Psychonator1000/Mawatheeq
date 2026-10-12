@@ -38,4 +38,16 @@ assert.equal(elapsedDaysLabel(null),'غير محدد');
  const third=moveToNextLevel({...moved,date:'2026-05-01',outcome:'لصالحنا'},{caseNumber:'2026/9 تمييز',autoNumber:'333',court:'التمييز',appealedBy:'نحن',movedOn:'2026-05-10',note:'طعن'},'s2');
  assert.equal(currentLevel(third),'تمييز');assert.equal(stagesOf(third).length,2);assert.throws(()=>moveToNextLevel(third,{caseNumber:'',autoNumber:'',court:'',appealedBy:'',movedOn:'',note:''}));
 }
-console.log('Passed: court levels (move, closed snapshot, waiting status, undo rules), elapsed/remaining counters, selected report dates, execution timing, today, overdue, future, missing and invalid dates, leap years and DST boundaries.');
+{const {matchLawyer,visibleCases,lawyerLabels}=await import('../lib/lawyer-match.ts');
+ const recs=[{id:'1',lawyer:'ا/ ايه'},{id:'2',lawyer:'ا/ ايه'},{id:'3',lawyer:'ا/ جمال الخطيب'},{id:'4',lawyer:'المحامى يوسف الشطى'},{id:'5',lawyer:''},{id:'6',lawyer:'ا/ محمد'},{id:'7',lawyer:'ا/ محمد يحيى'}];
+ const labels=lawyerLabels(recs).map(([l])=>l);assert.deepEqual(lawyerLabels(recs)[0],['ا/ ايه',2]);
+ assert.equal(matchLawyer('ا/ ايه زينهم',labels),'ا/ ايه','An account name with an extra surname finds the shorter case name');
+ assert.equal(matchLawyer('المحامي يوسف الشطي',labels),'المحامى يوسف الشطى','Spelling variants match');
+ assert.equal(matchLawyer('ا/ جمال',labels),'ا/ جمال الخطيب','A shortened account name finds the full case name when unique');
+ assert.equal(matchLawyer('ا/ محمد',labels),'ا/ محمد','Exact beats near');assert.equal(matchLawyer('ا/ محمد علي',labels),'ا/ محمد');
+ assert.equal(matchLawyer('ا/ نور',labels),undefined,'No guessing when nothing matches');assert.equal(matchLawyer('',labels),undefined);
+ assert.equal(matchLawyer('ا/',['ا/ ايه','ا/ جمال الخطيب']),undefined,'Several candidates: no guess');
+ assert.equal(visibleCases({caseScope:'selected',caseIds:[],lawyerNames:['ا/ ايه']},recs),2);
+ assert.equal(visibleCases({caseScope:'selected',caseIds:['3'],lawyerNames:['ا/ ايه']},recs),3);
+ assert.equal(visibleCases({caseScope:'selected',caseIds:[]},recs),0);assert.equal(visibleCases({caseScope:'all',caseIds:[]},recs),7);}
+console.log('Passed: lawyer name matching (variants, extended/shortened names, no guessing), court levels (move, closed snapshot, waiting status, undo rules), elapsed/remaining counters, selected report dates, execution timing, today, overdue, future, missing and invalid dates, leap years and DST boundaries.');
