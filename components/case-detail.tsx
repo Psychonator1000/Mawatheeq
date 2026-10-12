@@ -1,11 +1,11 @@
 'use client';
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {useRef,useState} from 'react';
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '@/components/ui/sheet';
 import {Tabs,TabsList,TabsTrigger,TabsContent} from '@/components/ui/tabs';
 import {Checkbox} from '@/components/ui/checkbox';
 import {AlertDialog,AlertDialogTrigger,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertDialogDescription,AlertDialogFooter,AlertDialogCancel,AlertDialogAction} from '@/components/ui/alert-dialog';
 import {Save,Plus,Archive,RotateCcw,LoaderCircle,ShieldCheck,Printer,ChevronRight,ChevronLeft,ListPlus,Gavel} from 'lucide-react';
-import {takeCaseOrigin} from '@/lib/case-origin';
+import {useWindowOrigin,useWindowKeys} from './record-window';
 import {CaseRecord,Rules,caseState,EXECUTION_NOTES,TYPES,formatDate,todayISO,elapsedDaysLabel,remainingDaysLabel} from '@/lib/domain';
 import {caseSheetHtml,printHtml} from '@/lib/print';
 import type {WorkItem} from '@/lib/office';
@@ -36,15 +36,11 @@ export default function CaseDetail({record,rules,clients,initialTab='case',canEd
  const field=(key:string,label:string,wide=false,multiline=false)=><Field key={key} label={label} value={String(c[key]||'')} onChange={v=>set(key,v)} wide={wide} multiline={multiline}/>;
  const guarded=(label:string,run:()=>void)=>{if(dirty&&canEdit)setPending({label,run});else run()};
  const go=(dir:'prev'|'next')=>{const target=dir==='prev'?nav?.prev:nav?.next;if(target&&onNavigate)guarded('الانتقال دون حفظ',()=>onNavigate(target,dir))};
- // The window grows out of the row it was opened from.
- useLayoutEffect(()=>{const el=windowRef.current,o=takeCaseOrigin();if(!el||!o)return;const r=el.getBoundingClientRect();el.style.setProperty('--dx',`${o.x-(r.left+r.width/2)}px`);el.style.setProperty('--dy',`${o.y-(r.top+r.height/2)}px`)},[]);
+ useWindowOrigin(windowRef);
  // Fast workflow: Ctrl+S saves; Alt+→ / Alt+← move to the previous / next case in the list.
- useEffect(()=>{const key=(e:KeyboardEvent)=>{
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(canEdit&&!busy)void save();return}
-  if(e.altKey&&!e.ctrlKey&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){e.preventDefault();go(e.key==='ArrowRight'?'prev':'next')}};
-  addEventListener('keydown',key);return()=>removeEventListener('keydown',key)});
+ useWindowKeys(windowRef,{save:()=>{if(canEdit&&!busy)void save()},go});
  return <><AlertDialog open={!!pending} onOpenChange={v=>{if(!v)setPending(null)}}><AlertDialogContent dir="rtl"><AlertDialogHeader><AlertDialogTitle>تغييرات غير محفوظة</AlertDialogTitle><AlertDialogDescription>عدّلت بيانات هذه القضية ولم تحفظها بعد. هل تريد إغلاق الملف دون حفظ؟</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>متابعة التعديل</AlertDialogCancel><AlertDialogAction onClick={()=>{const p=pending;setPending(null);p?.run()}}>{pending?.label||'متابعة دون حفظ'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
- <Sheet open onOpenChange={v=>{if(!v)guarded('إغلاق دون حفظ',onClose)}}><SheetContent side="left" className="detail-sheet case-window" data-enter={enter} ref={windowRef} dir="rtl"><SheetHeader className="case-pin">
+ <Sheet open onOpenChange={v=>{if(!v)guarded('إغلاق دون حفظ',onClose)}}><SheetContent side="left" className="detail-sheet case-window" data-enter={enter} data-record-window ref={windowRef} dir="rtl"><SheetHeader className="case-pin">
   {/* Pinned while the rest of the file scrolls: who, against whom, which case, and where it stands. */}
   <div className="case-pin-top"><div className="case-pin-names"><SheetTitle>{entity?.name||clientName(c)||'قضية جديدة'}</SheetTitle><SheetDescription><span className="vs">ضد</span> {c.opponent||'الخصم غير مسجل'}</SheetDescription></div>
    <div className="case-pin-id"><small>رقم القضية</small>{c.caseNumber?<CopyChip label="رقم القضية" value={String(c.caseNumber)}/>:<b className="muted">غير مسجل</b>}<div className="case-pin-codes">{c.code&&<CopyChip label="كود المكتب" value={c.code}/>}{c.autoNumber&&<CopyChip label="الرقم الآلي" value={c.autoNumber}/>}{c.insurance&&<span className="tag"><ShieldCheck size={13}/> تأمين</span>}</div></div></div>

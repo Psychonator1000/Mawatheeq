@@ -1187,6 +1187,8 @@
 @media(max-width:900px){:root[data-mode=dark] .case-window>.case-pin{border-bottom:1px solid var(--border)}
 }
 :root[data-mode=dark] .case-window .step-text{background:transparent}
+:root[data-mode=dark] .record-window .record-eyebrow{color:var(--brand)}
+:root[data-mode=dark] .record-window .case-pin .amount-words{color:var(--muted-foreground)}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

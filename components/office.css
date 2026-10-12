@@ -121,3 +121,12 @@
  .case-window .case-pin-names h2{font-size:18px}.case-keys{display:none}}
 .case-window .step-text{background:transparent}
 .case-window>.case-main{grid-template-columns:minmax(0,1fr);min-width:0}
+/* Record windows for clients, tasks and department files share the case window: pinned essentials on the side, the rest scrolls. */
+.detail-sheet.record-window[data-size=compact]{inset:3vh max(2vw,calc((100vw - 1080px)/2))!important;grid-template-columns:minmax(270px,330px) minmax(0,1fr)}
+.record-window fieldset{border:0;min-width:0;padding:0;margin:0}
+.record-window .record-eyebrow{display:block;font-size:11px;letter-spacing:.04em;color:var(--brand);font-weight:600;margin-bottom:2px}
+.record-window>.case-main>form{display:grid;gap:18px}.record-window>.case-main .form-grid{margin:0}
+.record-window .case-pin .contact-actions{margin:0;flex-wrap:wrap}.record-window .case-pin .amount-words{margin:0;font-size:12px;color:var(--muted-foreground);line-height:1.8}
+.record-window .case-pin .notice{margin:0;font-size:12px}
+.record-window>.detail-actions{display:flex;flex-wrap:wrap;gap:8px}
+@media(max-width:900px){.detail-sheet.record-window[data-size=compact]{inset:0!important;grid-template-columns:1fr}}
