@@ -49,6 +49,12 @@ try{
  await go('سجل الأحكام');await page.getByRole('button',{name:'الصفحة 2',exact:true}).click();assert.equal(await page.locator('tbody tr').count(),5);
  // A click anywhere on a row opens the case.
  await page.screenshot({path:artifacts+'/case-list.png'});await page.locator('tbody tr.case-row').first().locator('td.party').click();await page.getByRole('dialog').waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
+ // Sortable headers: numbers ascending, then descending; back to newest judgment first.
+ const numbers=async()=>(await page.locator('tbody tr.case-row .number-link').allInnerTexts()).map(Number);
+ await page.getByRole('button',{name:/^القضية/}).click();let ns=await numbers();assert.deepEqual(ns,[...ns].sort((a,b)=>a-b),'Ascending auto numbers');assert.equal(await page.locator('th[aria-sort=ascending]').count(),1);
+ await page.getByRole('button',{name:/^القضية/}).click();ns=await numbers();assert.deepEqual(ns,[...ns].sort((a,b)=>b-a),'Descending auto numbers');
+ await page.getByRole('button',{name:/^الحكم/}).click();
+ await page.setViewportSize({width:390,height:844});await page.locator('tbody tr.case-row').first().scrollIntoViewIfNeeded();await page.screenshot({path:artifacts+'/case-list-mobile.png'});await page.setViewportSize({width:1440,height:1000});
  await go('إضافة قضية');const sheet=page.getByRole('dialog');await sheet.getByLabel('كود المكتب',{exact:true}).fill('NEW-FORM');await sheet.getByLabel('الرقم الآلي',{exact:true}).fill('9000');
  // The existing client selector is a native select.
  await sheet.getByLabel('الموكل / الجهة',{exact:true}).selectOption({index:1});
