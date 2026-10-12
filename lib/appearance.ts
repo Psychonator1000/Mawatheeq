@@ -36,8 +36,32 @@ export const MOTION_LEVELS = {
   calm: { label: 'هادئة', hint: 'حركة خفيفة دون إمالة أو تتبع للمؤشر' },
   off: { label: 'متوقفة', hint: 'بدون أي حركة' },
 } as const;
-export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; density: keyof typeof DENSITIES; unlocked: string[]; previous?: keyof typeof THEMES };
-export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', density: 'comfortable', unlocked: [] };
+export const MODES = {
+  auto: { label: 'حسب السمة', hint: 'الوضع الأصلي لكل سمة' },
+  light: { label: 'فاتح' },
+  dark: { label: 'داكن' },
+} as const;
+export const FOLLOWERS = {
+  ring: { label: 'حلقة صغيرة' }, dot: { label: 'نقطة' }, diamond: { label: 'معيّن' }, off: { label: 'بدون', hint: 'إخفاء الشكل الذي يتبع المؤشر' },
+} as const;
+export const CURSORS = {
+  themed: { label: 'بألوان السمة', hint: 'مؤشر الفأرة يتلون مع السمة' },
+  system: { label: 'مؤشر النظام' },
+} as const;
+export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; density: keyof typeof DENSITIES; mode: keyof typeof MODES; follower: keyof typeof FOLLOWERS; cursor: keyof typeof CURSORS; unlocked: string[]; previous?: keyof typeof THEMES };
+export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', density: 'comfortable', mode: 'auto', follower: 'ring', cursor: 'themed', unlocked: [] };
+/** Themes whose own look is dark. */
+const DARK_NATIVE = new Set<string>(['noir', 'phantom']);
+/**
+ * The stylesheet theme and mode actually applied. Black-and-gold and white-and-gold are each other's dark and
+ * light versions; Persona has its own light "paper" version; every other theme gets a generated dark version.
+ */
+export function resolveTheme(a: Pick<Appearance, 'theme' | 'mode'>): { theme: string; dark: boolean; mode: '' | 'dark' } {
+  const dark = a.mode === 'dark' || (a.mode === 'auto' && DARK_NATIVE.has(a.theme));
+  if (a.theme === 'noir' || a.theme === 'ivory') return { theme: dark ? 'noir' : 'ivory', dark, mode: '' };
+  if (a.theme === 'phantom') return { theme: dark ? 'phantom' : 'phantom-light', dark, mode: '' };
+  return { theme: a.theme, dark, mode: dark ? 'dark' : '' };
+}
 const key = 'mawatheeq.appearance.v1';
 
 export function loadAppearance(): Appearance {
@@ -49,6 +73,9 @@ export function loadAppearance(): Appearance {
       motion: saved.motion in MOTION_LEVELS ? saved.motion : DEFAULT_APPEARANCE.motion,
       text: saved.text in TEXT_SIZES ? saved.text : DEFAULT_APPEARANCE.text,
       density: saved.density in DENSITIES ? saved.density : DEFAULT_APPEARANCE.density,
+      mode: saved.mode in MODES ? saved.mode : DEFAULT_APPEARANCE.mode,
+      follower: saved.follower in FOLLOWERS ? saved.follower : DEFAULT_APPEARANCE.follower,
+      cursor: saved.cursor in CURSORS ? saved.cursor : DEFAULT_APPEARANCE.cursor,
       unlocked: Array.isArray(saved.unlocked) ? saved.unlocked.filter((t: string) => t in THEMES) : [],
       previous: saved.previous in THEMES ? saved.previous : undefined,
     };
@@ -56,7 +83,35 @@ export function loadAppearance(): Appearance {
 }
 export function applyAppearance(a: Appearance) {
   const root = document.documentElement;
-  root.dataset.theme = a.theme; root.dataset.backdrop = a.backdrop; root.dataset.motion = a.motion; root.dataset.text = a.text; root.dataset.density = a.density;
+  const view = resolveTheme(a);
+  root.dataset.theme = view.theme; root.dataset.backdrop = a.backdrop; root.dataset.motion = a.motion; root.dataset.text = a.text; root.dataset.density = a.density;
+  root.dataset.follower = a.follower; root.dataset.cursor = a.cursor;
+  if (view.mode) root.dataset.mode = view.mode; else delete root.dataset.mode;
+  if (a.cursor === 'themed') applyThemedCursor(view.theme, view.dark); else { root.style.removeProperty('--cursor-arrow'); root.style.removeProperty('--cursor-hand'); }
+}
+const svgUrl = (svg: string, x: number, y: number, fallback: string) => `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${x} ${y}, ${fallback}`;
+/** Draws the mouse pointer in the current theme's colours (an arrow, and a filled variant over clickable things). */
+function applyThemedCursor(theme: string, dark: boolean) {
+  const root = document.documentElement, css = getComputedStyle(root);
+  const brand = css.getPropertyValue('--brand').trim() || '#74283b';
+  const accent = (THEMES as Record<string, ThemeInfo>)[theme]?.accent || css.getPropertyValue('--glow-2').trim() || '#d8b98f';
+  const edge = dark ? '#0b0b0b' : '#ffffff';
+  const arrow = 'M6 3v21.5l5.6-5.3 3.8 8.4 3.6-1.6-3.8-8.3h7.7z';
+  const shape = (fill: string, stroke: string, extra = '') => `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">${extra}<path d="${arrow}" fill="${fill}" stroke="${stroke}" stroke-width="1.7" stroke-linejoin="round"/></svg>`;
+  let normal: string, hand: string;
+  if (theme.startsWith('phantom')) {
+    // Comic-style: a hard red arrow with a black outline and an offset shadow.
+    const shadow = `<path d="${arrow}" transform="translate(2.5 2.5)" fill="${theme === 'phantom' ? '#ffffff' : '#000000'}"/>`;
+    normal = shape('#e60012', '#000000', shadow); hand = shape(theme === 'phantom' ? '#ffffff' : '#000000', '#e60012', shadow.replace(/fill="[^"]+"/, 'fill="#e60012"'));
+  } else if (theme === 'sky') {
+    // Aero: a glossy blue arrow with a white rim.
+    const gloss = '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfeaff"/><stop offset=".45" stop-color="#3fb3f0"/><stop offset="1" stop-color="#0d6fb0"/></linearGradient><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9ffd0"/><stop offset=".5" stop-color="#8fdc5a"/><stop offset="1" stop-color="#3f9a24"/></linearGradient></defs>';
+    normal = shape('url(#g)', '#ffffff', gloss); hand = shape('url(#h)', '#ffffff', gloss);
+  } else {
+    normal = shape(brand, edge); hand = shape(accent, brand);
+  }
+  root.style.setProperty('--cursor-arrow', svgUrl(normal, 6, 3, 'auto'));
+  root.style.setProperty('--cursor-hand', svgUrl(hand, 6, 3, 'pointer'));
 }
 export function saveAppearance(a: Appearance) {
   applyAppearance(a);

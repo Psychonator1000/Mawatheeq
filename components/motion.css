@@ -172,7 +172,7 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 :root:is([data-backdrop=constellation],[data-backdrop=fireflies]) .ambient-spot{opacity:.35}
 .burst-canvas{position:fixed;inset:0;width:100vw;height:100vh;z-index:95;pointer-events:none}
 /* A soft halo trails the mouse and swells over anything clickable. */
-.cursor-halo{position:fixed;left:0;top:0;z-index:94;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;pointer-events:none;border:1.5px solid color-mix(in srgb,var(--brand) 45%,transparent);background:radial-gradient(circle,color-mix(in srgb,var(--glow-1) 22%,transparent),transparent 70%);translate:var(--cx,-100px) var(--cy,-100px);opacity:0;scale:.6;transition:translate .16s cubic-bezier(.2,.8,.2,1),scale .25s cubic-bezier(.3,1.5,.5,1),opacity .3s,background-color .25s,border-color .25s}
+.cursor-halo{position:fixed;left:0;top:0;z-index:94;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;pointer-events:none;border:1.5px solid color-mix(in srgb,var(--brand) 45%,transparent);background:radial-gradient(circle,color-mix(in srgb,var(--glow-1) 22%,transparent),transparent 70%);translate:var(--cx,-100px) var(--cy,-100px);opacity:0;scale:.6;transition:translate .16s cubic-bezier(.2,.8,.2,1),scale .25s cubic-bezier(.3,1.5,.5,1),opacity .3s,background-color .25s,border-color .25s}
 @media (pointer:fine){:root[data-motion=full][data-pointer] .cursor-halo{opacity:1;scale:1}:root[data-motion=full][data-pointer][data-hover-action] .cursor-halo{scale:1.55;border-color:color-mix(in srgb,var(--brand) 70%,transparent);background-color:color-mix(in srgb,var(--brand) 7%,transparent)}:root[data-motion=full][data-pointer][data-pressing] .cursor-halo{scale:.75;transition-duration:.08s}}
 /* Section rail: a minimap of the page's headings with a comet that stretches with scroll speed. */
 .scroll-rail{position:fixed;left:7px;top:18vh;height:64vh;width:22px;z-index:40;display:flex;justify-content:center;animation:rail-in .6s cubic-bezier(.2,.8,.2,1) both}
@@ -288,3 +288,14 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 
 .tips-heading{font-size:14px;margin:6px 0 2px;color:var(--brand)}
 .tips-dialog .shortcuts-table td:first-child{width:1%;white-space:nowrap}
+
+/* Cursor follower shape (or none), chosen in «المظهر والحركة». */
+:root[data-follower=dot] .cursor-halo{width:8px;height:8px;margin:-4px 0 0 -4px;border:none;background:var(--brand)}
+:root[data-follower=dot][data-hover-action] .cursor-halo{background:var(--brand-hover)}
+:root[data-follower=diamond] .cursor-halo{width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:2px;rotate:45deg;background:color-mix(in srgb,var(--brand) 12%,transparent)}
+:root[data-follower=off] .cursor-halo{display:none!important}
+/* Mouse pointer drawn in the theme colours; text fields keep the text cursor. */
+:root[data-cursor=themed],:root[data-cursor=themed] body{cursor:var(--cursor-arrow,auto)}
+:root[data-cursor=themed] :is(a[href],button:not(:disabled),[role=button],[role=tab],[role=option],[role=menuitem],[role=menuitemradio],[role=checkbox],[role=radio],[role=switch],summary,select,label,input[type=checkbox],input[type=radio],input[type=range],input[type=color],input[type=file],.choice,[data-tilt],.copy-chip,.rail-mark,.att-cell,.permission-case,.number-link,.client-card,.office-card,.workspace-option){cursor:var(--cursor-hand,pointer)}
+:root[data-cursor=themed] :is(input:not([type=checkbox],[type=radio],[type=range],[type=color],[type=file],[type=button],[type=submit]),textarea,[contenteditable=true]){cursor:text}
+:root[data-cursor=themed] :is(button:disabled,[aria-disabled=true]){cursor:not-allowed}

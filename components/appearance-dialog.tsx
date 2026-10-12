@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
-import {BACKDROPS,DENSITIES,DEFAULT_APPEARANCE,MOTION_LEVELS,TEXT_SIZES,THEMES,isHidden,loadAppearance,saveAppearance,type Appearance} from '@/lib/appearance';
+import {BACKDROPS,CURSORS,DENSITIES,DEFAULT_APPEARANCE,FOLLOWERS,MODES,MOTION_LEVELS,TEXT_SIZES,THEMES,isHidden,loadAppearance,saveAppearance,type Appearance} from '@/lib/appearance';
 
 /** Colour theme, background animation and motion level; saved on this device and applied instantly. */
 export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
@@ -13,8 +13,11 @@ export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
    <label key={id} className="choice"><input type="radio" name={key} value={id} checked={value[key]===id} onChange={()=>set(key,id as Appearance[K])}/>{o.swatch&&<span className="swatch-dot" style={{background:`linear-gradient(135deg,${o.accent||o.swatch} 0 38%,${o.swatch} 62%)`}}/>}<span>{o.label}{o.hint&&<small>{o.hint}</small>}</span></label>)}</div></fieldset>;
  return <Dialog open onOpenChange={open=>!open&&onClose()}><DialogContent dir="rtl" className="office-dialog appearance-dialog"><DialogHeader><DialogTitle>المظهر والحركة</DialogTitle><DialogDescription>تُحفظ اختياراتك على هذا الجهاز وتطبق فوراً، ولا تؤثر على السجلات أو الزملاء.</DialogDescription></DialogHeader>
   {group('theme','لون الواجهة',visibleThemes,true)}
+  {group('mode','فاتح أو داكن',MODES)}
   {group('backdrop','الخلفية المتحركة',BACKDROPS)}
   {group('motion','مستوى الحركة',MOTION_LEVELS)}
+  {group('cursor','مؤشر الفأرة',CURSORS)}
+  {group('follower','الشكل الذي يتبع المؤشر',FOLLOWERS)}
   {group('text','حجم الخط',TEXT_SIZES)}
   {group('density','كثافة العرض',DENSITIES)}
   <p className="subtitle">إذا كان جهازك مضبوطاً على تقليل الحركة، تبقى الواجهة ثابتة مهما كان الاختيار.</p>

@@ -183,7 +183,7 @@ export function createBursts(canvas: HTMLCanvasElement) {
         const a = i / count * Math.PI * 2 + (Math.random() - .5) * .5, dist = reach * (.55 + Math.random() * .7), start = 4 + Math.random() * 8;
         return { x, y, ox: Math.cos(a) * start, oy: Math.sin(a) * start, dx: Math.cos(a) * dist, dy: Math.sin(a) * dist, r: .9 + Math.random() * 1.7, delay: Math.random() * 90, color: Math.random() < .55 ? p.brand : mix(p.glow1, p.brand, .3) };
       });
-      const theme = document.documentElement.dataset.theme, shape = theme === 'phantom' ? 'shard' : theme === 'sky' ? 'bubble' : 'dot';
+      const theme = document.documentElement.dataset.theme, shape = theme?.startsWith('phantom') ? 'shard' : theme === 'sky' ? 'bubble' : 'dot';
       if (shape === 'shard') for (const sp of sparks) { sp.dx *= 1.5; sp.dy *= 1.5; sp.color = Math.random() < .5 ? [230, 0, 18] : Math.random() < .5 ? [0, 0, 0] : [255, 255, 255]; }
       bursts.push({ x, y, born: performance.now(), sparks, ring: reach * .9, color: p.brand, strong, shape });
       if (!frame) frame = requestAnimationFrame(draw);
