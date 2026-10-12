@@ -145,3 +145,20 @@
 .step-open{all:unset;display:flex;align-items:inherit;gap:inherit;width:100%;cursor:pointer;border-radius:8px}.step-open:focus-visible{outline:2px solid var(--brand);outline-offset:2px}.step.done .step-open:hover .step-text b{text-decoration:underline}
 .stage-number{font-size:11px;padding:2px 8px}
 .lawyer-select{gap:6px;margin:0}.lawyer-select>.field{margin:0}
+/* Sessions, timeline, finance and the hearings roll. */
+.next-hearing{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0;font-size:12.5px;padding:7px 10px;border-radius:10px;background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--foreground)}
+.case-sessions{display:grid;gap:14px;margin-top:18px}.session-form{border:1px solid var(--border);border-radius:14px;padding:14px 16px;background:var(--card);display:grid;gap:10px}
+.session-form .section-title,.case-sessions>.section-title{display:flex;align-items:center;gap:6px;margin:0}.session-form fieldset{display:grid;gap:10px}.session-form .btn.primary{justify-self:start}
+.venue-choice{display:flex;gap:14px;flex-wrap:wrap;min-height:45px;align-items:center}
+.session-table td small{display:block;color:var(--muted-foreground);font-size:12px}
+.case-timeline{display:grid;gap:14px;margin-top:18px}.timeline-list{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.tl-item{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding-bottom:14px}
+.tl-item::before{content:'';position:absolute;inset-inline-start:13px;top:26px;bottom:0;width:2px;background:var(--border)}.tl-item:last-child::before{display:none}
+.tl-month{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--brand);margin:6px 0 4px}
+.tl-dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--card);border:1px solid var(--border);color:var(--muted-foreground);z-index:1}
+.tl-item.session .tl-dot,.tl-item.hearing .tl-dot{color:var(--brand);border-color:color-mix(in srgb,var(--brand) 40%,var(--border))}.tl-item.judgment .tl-dot,.tl-item.level .tl-dot{background:var(--brand);color:#fff;border-color:var(--brand)}
+.tl-body{display:grid;gap:3px;min-width:0}.tl-head{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}.tl-body p{margin:0;font-size:13px;color:var(--muted-foreground);line-height:1.8}.tl-body small{font-size:11px;color:var(--muted-foreground)}
+.tl-item.overdue .tl-body b{color:#a8562a}
+.case-finance{display:grid;gap:14px;margin-top:18px}
+.roll-print{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:6px 0 10px}.roll-print .field{margin:0;min-width:200px;max-width:260px}
+.case-window .detail-tabs{flex-wrap:wrap;height:auto!important;justify-content:flex-start;row-gap:4px}.case-window .detail-tabs>[role=tab]{flex:0 0 auto}

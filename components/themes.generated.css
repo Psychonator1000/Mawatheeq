@@ -184,6 +184,8 @@
 :root[data-theme=noir] .step.late .step-text b{color:#d2a5a9}
 :root[data-theme=noir] .appeal-window.urgent i{background:#e0ad99}
 :root[data-theme=noir] .step.late .step-text em{color:#d2a5a9}
+:root[data-theme=noir] .tl-item.judgment .tl-dot,:root[data-theme=noir] .tl-item.level .tl-dot{color:#11100e}
+:root[data-theme=noir] .tl-item.overdue .tl-body b{color:#d4b4a3}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
 :root[data-theme=noir] .workspace-option-top small{color:#544f45}
@@ -448,6 +450,8 @@
 :root[data-theme=phantom] .step.late .step-text b{color:#ddc3c5}
 :root[data-theme=phantom] .appeal-window.urgent i{background:#e5c8bc}
 :root[data-theme=phantom] .step.late .step-text em{color:#ddc3c5}
+:root[data-theme=phantom] .tl-item.judgment .tl-dot,:root[data-theme=phantom] .tl-item.level .tl-dot{color:#0d0d0d}
+:root[data-theme=phantom] .tl-item.overdue .tl-body b{color:#deccc2}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .workspace-option-top small{color:#3d3d3d}
@@ -645,6 +649,7 @@
 :root[data-theme=ivory] .issued-password code{background:#f9f9f8;border:1px dashed #c8c2bb}
 :root[data-theme=ivory] .lawyer-accounts td input{border:1px solid #d2cec9}
 :root[data-theme=ivory] .step.late .step-dot{color:#ffffff}
+:root[data-theme=ivory] .tl-item.judgment .tl-dot,:root[data-theme=ivory] .tl-item.level .tl-dot{color:#ffffff}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
 :root[data-theme=ivory] .department-topbar{background:#fefefed9}
 :root[data-theme=ivory] .department-brand .brand-mark{color:#faf9f8}
@@ -835,6 +840,7 @@
 :root[data-theme=phantom-light] .issued-password code{background:#fdfdfd;border:1px dashed #c7c2bc}
 :root[data-theme=phantom-light] .lawyer-accounts td input{border:1px solid #d1ceca}
 :root[data-theme=phantom-light] .step.late .step-dot{color:#ffffff}
+:root[data-theme=phantom-light] .tl-item.judgment .tl-dot,:root[data-theme=phantom-light] .tl-item.level .tl-dot{color:#ffffff}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
 :root[data-theme=phantom-light] .workspace-option{border:1px solid #fafaf9;background:#fefefe;color:#403c39}
 :root[data-theme=phantom-light] .workspace-option-top small{color:#aba8a4}
@@ -1197,6 +1203,17 @@
 :root[data-mode=dark] .stage-facts{background:color-mix(in srgb,var(--muted) 60%,transparent)}
 :root[data-mode=dark] .stage-facts dt{color:var(--muted-foreground)}
 :root[data-mode=dark] .step-open:focus-visible{outline:2px solid var(--brand)}
+:root[data-mode=dark] .next-hearing{background:color-mix(in srgb,var(--brand) 8%,transparent);color:var(--foreground)}
+:root[data-mode=dark] .session-form{border:1px solid var(--border);background:var(--card)}
+:root[data-mode=dark] .session-table td small{color:var(--muted-foreground)}
+:root[data-mode=dark] .tl-item::before{background:var(--border)}
+:root[data-mode=dark] .tl-month{color:var(--brand)}
+:root[data-mode=dark] .tl-dot{background:var(--card);border:1px solid var(--border);color:var(--muted-foreground)}
+:root[data-mode=dark] .tl-item.session .tl-dot,:root[data-mode=dark] .tl-item.hearing .tl-dot{color:var(--brand);border-color:color-mix(in srgb,var(--brand) 40%,var(--border))}
+:root[data-mode=dark] .tl-item.judgment .tl-dot,:root[data-mode=dark] .tl-item.level .tl-dot{background:var(--brand);color:#131313;border-color:var(--brand)}
+:root[data-mode=dark] .tl-body p{color:var(--muted-foreground)}
+:root[data-mode=dark] .tl-body small{color:var(--muted-foreground)}
+:root[data-mode=dark] .tl-item.overdue .tl-body b{color:#ddb9a5}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

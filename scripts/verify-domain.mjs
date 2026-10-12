@@ -50,4 +50,14 @@ assert.equal(elapsedDaysLabel(null),'غير محدد');
  assert.equal(visibleCases({caseScope:'selected',caseIds:[],lawyerNames:['ا/ ايه']},recs),2);
  assert.equal(visibleCases({caseScope:'selected',caseIds:['3'],lawyerNames:['ا/ ايه']},recs),3);
  assert.equal(visibleCases({caseScope:'selected',caseIds:[]},recs),0);assert.equal(visibleCases({caseScope:'all',caseIds:[]},recs),7);}
-console.log('Passed: lawyer name matching (variants, extended/shortened names, no guessing), court levels (move, closed snapshot, waiting status, undo rules), elapsed/remaining counters, selected report dates, execution timing, today, overdue, future, missing and invalid dates, leap years and DST boundaries.');
+{const {sessionProcedure,decisionOf,nextVenue,nextSessionTitle,isSession,DECISIONS}=await import('../lib/sessions.ts');
+ const base={date:'2026-10-12',venue:'المحكمة',court:' الدائرة 3 ',decision:'تأجيل للإعلان',details:'',nextDate:'2026-11-02',nextTime:'09:00',recordedBy:'owner'};
+ const p=sessionProcedure(base,'s1');assert.deepEqual([p.kind,p.court,p.text,p.followup,p.nextTime,p.decision],['جلسة','الدائرة 3','تأجيل للإعلان','2026-11-02','09:00','تأجيل للإعلان']);assert.equal(isSession(p),true);
+ assert.equal(sessionProcedure({...base,details:'لعدم الإعلان'}).text,'تأجيل للإعلان — لعدم الإعلان');
+ const j=sessionProcedure({...base,decision:'صدور الحكم'});assert.equal(j.followup,'','A judgment has no next session');assert.equal(decisionOf('المحكمة','صدور الحكم').judgment,true);
+ assert.equal(nextSessionTitle({...base,decision:'حجز للحكم'},'ابتدائي',{code:'X1',autoNumber:''}),'النطق بالحكم · ابتدائي · X1');
+ assert.equal(nextVenue({...base,decision:'إحالة إلى إدارة الخبراء'}),'إدارة الخبراء','A referral moves the next session to the experts');
+ assert.equal(nextVenue({...base,venue:'إدارة الخبراء',decision:'إيداع التقرير'}),'المحكمة');
+ assert.equal(sessionProcedure({...base,venue:'إدارة الخبراء',decision:'معاينة'}).kind,'جلسة خبراء');
+ assert.equal(isSession({id:'x',date:'',text:'إجراء'}),false);assert.ok(DECISIONS.every(d=>d.label));}
+console.log('Passed: session decisions (next session, judgment, experts), lawyer name matching (variants, extended/shortened names, no guessing), court levels (move, closed snapshot, waiting status, undo rules), elapsed/remaining counters, selected report dates, execution timing, today, overdue, future, missing and invalid dates, leap years and DST boundaries.');
