@@ -1,4 +1,5 @@
-import {useContext,useState} from 'react';
+import {useContext,useEffect,useState} from 'react';
+import {OPEN_EVENT,pendingOpen} from '@/lib/open-record';
 import {ArrowUpLeft,Scale,CalendarDays,Files,Wallet,UsersRound} from 'lucide-react';
 import {flushSync} from 'react-dom';
 import AccountMenu,{AccountContext} from './account-menu';
@@ -15,6 +16,8 @@ export default function WorkspaceHub({access,owner}:{access:Permissions;owner:bo
  const only=allowed.length===1?allowed[0]:null;
  const [selected,setSelected]=useState<WorkspaceId|null>(()=>{const saved=sessionStorage.getItem(workspaceStorageKey) as WorkspaceId;return allowed.includes(saved)?saved:only});
  function choose(id:WorkspaceId|null){withViewTransition(()=>flushSync(()=>setSelected(id)));if(id)sessionStorage.setItem(workspaceStorageKey,id);else sessionStorage.removeItem(workspaceStorageKey);}
+ // A record opened from chat or elsewhere is shown in the case workspace.
+ useEffect(()=>{const on=()=>{if(pendingOpen()&&allowed.includes('legal')&&selected!=='legal')choose('legal')};addEventListener(OPEN_EVENT,on);return()=>removeEventListener(OPEN_EVENT,on)});
  const account=useContext(AccountContext);
  const current=selected&&allowed.includes(selected)?selected:only;
  if(current)return <AccountContext.Provider value={account&&{...account,onSwitchWorkspace:only?undefined:()=>choose(null)}}>{current==='legal'?<Workspace access={access} owner={owner}/>:<DepartmentWorkspace key={current} workspace={current} access={access}/>}</AccountContext.Provider>;

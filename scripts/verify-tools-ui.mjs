@@ -49,16 +49,26 @@ const context=await browser.newContext({viewport:{width:1440,height:1000},reduce
 await context.addInitScript(()=>{try{const k='mawatheeq.appearance.v1',a=JSON.parse(localStorage.getItem(k)||'{}');if(!a.performance){a.performance='full';localStorage.setItem(k,JSON.stringify(a))}}catch{/* test setup */}});
 const page=await context.newPage();const errors=[];
 page.on('pageerror',e=>errors.push(e.message));
-await page.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));
-let slowServer=0;
-await page.route('https://office-fixture.supabase.co/**',async route=>{
- const req=route.request();if(slowServer)await new Promise(r=>setTimeout(r,slowServer));const url=new URL(req.url());
- if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
- const name=url.pathname.split('/').pop();const body=req.postDataJSON();
- if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request','mawatheeq_comment_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
- const args=name==='mawatheeq_local_login'?[body.p_username,body.p_password]:[body.p_token,body.p_action,JSON.stringify(body.p_data||{})];
- try{await route.fulfill({json:await rpc(name,args)})}catch(e){await route.fulfill({status:400,json:{message:e.message,code:e.code||'P0001'}})}
-});
+let slowServer=0;const uploads=[];
+// The synthetic backend for every page in a context: database calls, the files function and chat storage uploads.
+async function wireFixture(ctx){
+ await ctx.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));
+ await ctx.route('https://office-fixture.supabase.co/**',async route=>{
+  const req=route.request();if(slowServer)await new Promise(r=>setTimeout(r,slowServer));const url=new URL(req.url());
+  if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
+  if(url.pathname.includes('/storage/v1/object/upload/sign/mawatheeq-chat/')){uploads.push(url.pathname);return route.fulfill({json:{Key:url.pathname}})}
+  if(url.pathname.includes('/storage/v1/object/sign/mawatheeq-chat/'))return route.fulfill({contentType:'application/pdf',body:'%PDF-1.4 synthetic'});
+  const name=url.pathname.split('/').pop();const body=req.postDataJSON();
+  if(name==='local-files'){const upload=body.action==='chat_upload';
+   try{const r=await rpc('mawatheeq_chat_request',[body.sessionToken,upload?'file_upload':'file_download',JSON.stringify(upload?{conversationId:body.conversationId,name:body.name,size:body.size,mime:body.mime}:{path:body.path})]);
+    return route.fulfill({json:upload?{path:r.path,token:'synthetic'}:{path:r.path,url:'https://office-fixture.supabase.co/storage/v1/object/sign/mawatheeq-chat/'+r.path+'?token=synthetic'}})}
+   catch(e){return route.fulfill({json:{error:e.message}})}}
+  if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request','mawatheeq_comment_request','mawatheeq_chat_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
+  const args=name==='mawatheeq_local_login'?[body.p_username,body.p_password]:[body.p_token,body.p_action,JSON.stringify(body.p_data||{})];
+  try{await route.fulfill({json:await rpc(name,args)})}catch(e){await route.fulfill({status:400,json:{message:e.message,code:e.code||'P0001'}})}
+ });
+}
+await wireFixture(context);
 const base='http://127.0.0.1:4175/Mawatheeq/';
 await page.goto(base);
 await page.getByLabel('اسم المستخدم',{exact:true}).fill('tools_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');
@@ -398,6 +408,39 @@ assert.equal(await motion.evaluate(()=>document.documentElement.dataset.perf),'l
 assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.ambient-canvas')).display),'none','light mode stops the animated backdrop');
 assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.topbar')).backdropFilter),'none','light mode drops glass blur');
 await lively.close();
+// Staff chat: the owner writes to a colleague with a case reference; the colleague sees the unread badge, opens the
+// case from the reference, and replies with a file; the owner downloads it and starts a group.
+{const bubble=page.getByRole('button',{name:/^المحادثات/});await page.goto(base+'#overview');await bubble.click();
+ const panel=page.getByRole('dialog',{name:'المحادثات'});
+ await panel.getByRole('button',{name:'محادثة جديدة'}).click();await panel.getByRole('button',{name:/tools_clerk/}).click();
+ const box=panel.getByLabel('نص الرسالة');await box.click();await box.pressSequentially('مرحبا، راجع #TOOL-0');
+ await panel.getByRole('option',{name:/#TOOL-0/}).waitFor();await box.press('Enter');await box.pressSequentially('اليوم');
+ assert.equal(await box.inputValue(),'مرحبا، راجع #TOOL-0 اليوم','Choosing a suggestion inserts the reference');await box.press('Enter');
+ await panel.locator('.chat-msg.mine .chat-ref').getByText('#TOOL-0').waitFor();
+ await page.screenshot({path:artifacts+'/chat-owner.png'});
+ const clerkCtx=await browser.newContext({viewport:{width:1280,height:900},reducedMotion:'reduce',timezoneId:'Asia/Kuwait'});await wireFixture(clerkCtx);
+ const cp=await clerkCtx.newPage();cp.on('pageerror',e=>errors.push('clerk: '+e.message));await cp.goto(base);
+ await cp.getByLabel('اسم المستخدم',{exact:true}).fill('tools_clerk');await cp.getByLabel('كلمة المرور',{exact:true}).fill('Fixture-password-123');await cp.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
+ const cb=cp.getByRole('button',{name:'المحادثات، 1 غير مقروءة'});await cb.waitFor({timeout:15000});await cb.click();
+ const cpanel=cp.getByRole('dialog',{name:'المحادثات'});await cpanel.getByRole('button',{name:/tools_owner/}).click();
+ await cpanel.locator('.chat-ref').getByText('#TOOL-0').click();
+ await cp.locator('[data-record-window] .case-pin').getByText('TOOL-0').waitFor();assert.equal(await cpanel.count(),0,'Opening a reference shows the case');
+ await cp.keyboard.press('Escape');await cp.locator('[data-record-window]').waitFor({state:'hidden'});
+ await cp.getByRole('button',{name:/^المحادثات/}).click();await cpanel.getByLabel('نص الرسالة').waitFor(); // Reopening returns to the same conversation
+ await cpanel.locator('input[type=file]').setInputFiles({name:'memo.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')});
+ await cpanel.getByLabel('نص الرسالة').fill('المذكرة مرفقة');await cpanel.getByRole('button',{name:'إرسال'}).click();
+ await cpanel.locator('.chat-msg.mine .chat-file').getByText('memo.pdf').waitFor();assert.equal(uploads.length,1,'The file went to chat storage');
+ await panel.locator('.chat-msg:not(.mine) .chat-file').getByText('memo.pdf').waitFor({timeout:15000});
+ const [popup]=await Promise.all([page.waitForEvent('popup'),panel.locator('.chat-file').getByText('memo.pdf').click()]);await popup.close();
+ // Edit within 15 minutes; groups with a system note.
+ await panel.locator('.chat-msg.mine').first().hover();await panel.getByRole('button',{name:'تعديل الرسالة'}).first().click();
+ await panel.getByLabel('نص الرسالة').fill('مرحبا، راجع #TOOL-0 اليوم من فضلك');await panel.getByRole('button',{name:'حفظ التعديل'}).click();
+ await panel.getByText('عُدّلت',{exact:false}).first().waitFor();
+ await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();await panel.getByRole('button',{name:'مجموعة جديدة'}).click();
+ await panel.getByLabel('اسم المجموعة').fill('فريق الأدوات');await panel.getByRole('checkbox').first().check();await panel.getByRole('button',{name:/إنشاء المجموعة/}).click();
+ await panel.getByText(/أنشأ tools_owner المجموعة مع/).waitFor();await page.screenshot({path:artifacts+'/chat-group.png'});
+ await page.keyboard.press('Escape');await panel.waitFor({state:'hidden'});
+ await clerkCtx.close();}
 // Automatic light mode on a strong PC: the old permanent "slow" flag is ignored; a fresh one explains itself and can be cleared.
 {const strong=await context.newPage();
  await strong.addInitScript(()=>{Object.defineProperty(navigator,'hardwareConcurrency',{get:()=>16});Object.defineProperty(navigator,'deviceMemory',{get:()=>16});
@@ -421,4 +464,4 @@ assert.equal(await page.evaluate(()=>new Promise(res=>{const r=indexedDB.open('m
 await page.reload();await page.getByRole('button',{name:'فتح مساحة العمل',exact:true}).waitFor();
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: automatic light mode explains itself and expires on strong PCs, sessions (decision, next hearing scheduled and pinned, timeline, finance tab, hearings roll), lawyer picker (listed and new names), court levels (move to appeal, closed read-only record, pinned numbers, search by earlier number), instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
+console.log('Passed tools UI: staff chat (references, unread badge, open case from chat, file upload/download, edit, groups), automatic light mode explains itself and expires on strong PCs, sessions (decision, next hearing scheduled and pinned, timeline, finance tab, hearings roll), lawyer picker (listed and new names), court levels (move to appeal, closed read-only record, pinned numbers, search by earlier number), instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
