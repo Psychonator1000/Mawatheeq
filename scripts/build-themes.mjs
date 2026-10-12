@@ -1,5 +1,6 @@
-// Generates components/themes.generated.css: black-and-gold ("noir") and white-and-gold ("ivory")
-// versions of every hard-coded colour in the app's stylesheets, so each page follows those themes.
+// Generates components/themes.generated.css: black-and-gold ("noir"), white-and-gold ("ivory") and Persona
+// versions of every hard-coded colour in the app's stylesheets, a dark mode for every light theme (tinted with
+// that theme's own colour), and Persona's light "paper" version, so each page follows the chosen look.
 // Run `node scripts/build-themes.mjs` after editing styles; `--check` fails when the file is stale (CI).
 import fs from 'node:fs';
 
@@ -27,6 +28,12 @@ const hslToHex = ({ h, s, l, a }) => {
   return '#' + [r, g, b].map(v => Math.round(Math.min(1, Math.max(0, v + m)) * 255).toString(16).padStart(2, '0')).join('') + a;
 };
 const clamp = v => Math.min(1, Math.max(0, v));
+const toHex = n => Math.round(Math.min(255, Math.max(0, n))).toString(16).padStart(2, '0');
+const normalize = value => value
+  .replace(/rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+%?))?\s*\)/g, (_, r, g, b, a) => '#' + toHex(+r) + toHex(+g) + toHex(+b) + (a === undefined ? '' : toHex((a.endsWith('%') ? parseFloat(a) / 100 : +a) * 255)))
+  .replace(/(^|[\s,(])white(?=$|[\s,);!])/g, '$1#ffffff').replace(/(^|[\s,(])black(?=$|[\s,);!])/g, '$1#000000');
+const HEX = /#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b/g, HAS_HEX = /#[0-9a-fA-F]{3,8}\b/;
+const recolor = (value, fn) => normalize(value).replace(HEX, m => hslToHex(fn(hexToHsl(m))));
 const chroma = c => c.s * (1 - Math.abs(2 * c.l - 1));
 const THEMES = {
   // Black and gold: light surfaces become near-blacks, dark text becomes soft parchment; coloured tags keep their hue.
@@ -62,33 +69,111 @@ function parse(css) {
   return out;
 }
 const splitTop = (text, sep) => { const parts = []; let depth = 0, cur = ''; for (const ch of text) { if (ch === '(') depth++; if (ch === ')') depth--; if (ch === sep && !depth) { parts.push(cur); cur = ''; } else cur += ch; } if (cur.trim()) parts.push(cur); return parts; };
-const scope = (selector, theme) => splitTop(selector, ',').map(s => {
+// A `background` shorthand resets background-clip, which would turn gradient text into a solid block, so the
+// rule's own clip settings are repeated after it.
+const CLIP = /^(-webkit-)?background-clip$|^-webkit-text-fill-color$/;
+const withClip = (out, body) => out.some(d => d.startsWith('background:')) ? [...out, ...decls(body).filter(([p]) => CLIP.test(p)).map(([p, v]) => `${p}:${v}`)] : out;
+// Puts a rule under an extra condition on the root element, e.g. [data-theme=noir] or [data-mode=dark].
+const scope = (selector, attr) => splitTop(selector, ',').map(s => {
   s = s.trim();
-  if (s.startsWith(':root')) return `:root[data-theme=${theme}]` + s.slice(5);
-  if (/^html\b/.test(s)) return `:root[data-theme=${theme}]` + s.slice(4);
-  return `:root[data-theme=${theme}] ${s}`;
+  if (s.startsWith(':root')) return `:root${attr}` + s.slice(5);
+  if (/^html\b/.test(s)) return `:root${attr}` + s.slice(4);
+  return `:root${attr} ${s}`;
 }).join(',');
+const decls = body => splitTop(body, ';').map(d => d.trim()).filter(Boolean).map(d => { const k = d.indexOf(':'); return [d.slice(0, k).trim(), d.slice(k + 1).trim()]; });
 
-function themed(rules, theme, fn) {
+/** Colour declarations of every rule, recoloured by `fn`, under `attr`. Theme-specific rules are left alone. */
+// With `keepOrder`, colour declarations without fixed colours (e.g. `background:var(--brand)` on an active state)
+// are repeated under the same condition, so a recoloured base rule never outranks its own state variants.
+function themed(rules, attr, fn, skipVars = SKIP_VARS, skipSelector = null, keepOrder = false) {
   let css = '';
   for (const r of rules) {
-    if (r.at) { const inner = themed(r.rules, theme, fn); if (inner) css += `${r.at}{${inner}}\n`; continue; }
-    if (r.selector.includes('[data-theme') || r.selector.includes('::view-transition')) continue;
-    const decls = splitTop(r.body, ';').map(d => d.trim()).filter(Boolean).flatMap(d => {
-      const k = d.indexOf(':'), prop = d.slice(0, k).trim(), value = d.slice(k + 1).trim();
-      if (!COLOR_PROPS.test(prop) || SKIP_VARS.test(prop) || !/#[0-9a-fA-F]{3,8}\b/.test(value)) return [];
-      const next = value.replace(/#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b/g, m => hslToHex(fn(hexToHsl(m))));
+    if (r.at) { const inner = themed(r.rules, attr, fn, skipVars, skipSelector, keepOrder); if (inner) css += `${r.at}{${inner}}\n`; continue; }
+    if (r.selector.includes('[data-theme') || r.selector.includes('::view-transition') || skipSelector?.test(r.selector)) continue;
+    const out = decls(r.body).flatMap(([prop, value]) => {
+      if (!COLOR_PROPS.test(prop) || skipVars.test(prop)) return [];
+      if (!HAS_HEX.test(normalize(value))) return keepOrder && !prop.startsWith('--') && /var\(|currentColor|transparent|inherit/.test(value) ? [`${prop}:${value}`] : [];
+      const next = recolor(value, fn);
       return next === value ? [] : [`${prop}:${next}`];
     });
-    if (decls.length) css += `${scope(r.selector, theme)}{${decls.join(';')}}\n`;
+    if (out.length) css += `${scope(r.selector, attr)}{${withClip(out, r.body).join(';')}}\n`;
+  }
+  return css;
+}
+
+// Dark mode for the light themes: surfaces become deep and text light, keeping each colour's own hue.
+// The sidebar is already dark in every light theme, so its rules and variables are kept.
+const night = c => {
+  const colourful = chroma(c) > .12;
+  return c.l >= .5
+    ? { ...c, l: clamp((colourful ? .13 : .075) + (1 - c.l) * .55), s: colourful ? c.s * .6 : Math.min(c.s, .12) }
+    : { ...c, l: clamp(.93 - c.l * .42), s: colourful ? c.s * .75 : Math.min(c.s, .12) };
+};
+const NIGHT_SKIP_VARS = /^--(brand|glow|sidebar|chart|dept|k|kb|s|ax|ay|cx|cy|gx|gy|mag|tilt|glare|scroll|cursor)/;
+const LIGHT_SIDEBAR = ['sunflower', 'sky'];
+const SIDEBAR = /sidebar|\.nav-|\.brand-(?:ar|en|mark)|\.egg-splash|\.calling-card|\.aero-splash/;
+const LIGHT_THEMES = ['burgundy', 'navy', 'emerald', 'plum', 'copper', 'graphite', 'sunflower', 'royal', 'sky', 'teal', 'sunset', 'rose', 'indigo'];
+const hsl = (h, s, l) => hslToHex({ h, s, l, a: '' });
+/** Per-theme dark variables: surfaces tinted with the theme's own colour, and a brighter brand for dark backgrounds. */
+function nightVars(theme, brand) {
+  const { h, s } = hexToHsl(brand), tint = Math.min(s, .5);
+  const b = hexToHsl(brand), bright = { ...b, l: Math.max(b.l, .66), s: Math.min(b.s, .7) };
+  const v = {
+    '--background': hsl(h, tint * .45, .075), '--card': hsl(h, tint * .4, .11), '--popover': hsl(h, tint * .4, .11),
+    '--muted': hsl(h, tint * .3, .165), '--secondary': hsl(h, tint * .3, .165), '--accent': hsl(h, tint * .4, .19),
+    '--border': hsl(h, tint * .3, .22), '--input': hsl(h, tint * .3, .26),
+    '--foreground': hsl(h, .08, .92), '--card-foreground': hsl(h, .08, .92), '--popover-foreground': hsl(h, .08, .92),
+    '--secondary-foreground': hsl(h, .1, .88), '--muted-foreground': hsl(h, .08, .66), '--primary-foreground': hsl(h, .3, .1),
+    '--brand': hslToHex(bright), '--brand-hover': hslToHex({ ...bright, l: Math.min(.8, bright.l + .07) }), '--brand-ink': hsl(h, .25, .94),
+    '--brand-deep': hslToHex({ ...b, l: Math.min(b.l, .2) }),
+  };
+  const sel = theme === 'burgundy' ? ':root[data-mode=dark]:not([data-theme]),:root[data-mode=dark][data-theme=burgundy]' : `:root[data-mode=dark][data-theme=${theme}]`;
+  return `${sel}{color-scheme:dark;${Object.entries(v).map(([k, x]) => `${k}:${x}`).join(';')}}\n`;
+}
+/** Theme-specific rules (from themes.css) recoloured for dark mode, under [data-mode=dark]. */
+function nightThemeRules(rules, themes) {
+  let css = '';
+  for (const r of rules) {
+    if (r.at) { const inner = nightThemeRules(r.rules, themes); if (inner) css += `${r.at}{${inner}}\n`; continue; }
+    const theme = r.selector.match(/\[data-theme=([a-z-]+)\]/)?.[1];
+    if (!theme || !themes.includes(theme) || r.selector.includes('::view-transition')) continue;
+    // A sidebar that is already dark keeps its look; light sidebars (sunflower, Aero) are darkened with the page.
+    const lightSidebar = LIGHT_SIDEBAR.includes(theme);
+    if (!lightSidebar && SIDEBAR.test(r.selector)) continue;
+    const out = decls(r.body).flatMap(([prop, value]) => COLOR_PROPS.test(prop) && (!NIGHT_SKIP_VARS.test(prop) || (lightSidebar && prop.startsWith('--sidebar'))) && HAS_HEX.test(normalize(value)) ? [`${prop}:${recolor(value, night)}`] : []);
+    if (out.length) css += `${r.selector.replaceAll('[data-theme=', '[data-mode=dark][data-theme=')}{${withClip(out, r.body).join(';')}}\n`;
+  }
+  return css;
+}
+
+// Persona's light version: paper-white surfaces and black ink, red untouched.
+const paper = c => c.l >= .85 ? { ...c, l: clamp(c.l + (1 - c.l) * .85), s: c.s * .1 } : c.l >= .6 ? { ...c, s: c.s * .25 } : chroma(c) > .12 ? c : { ...c, s: c.s * .3 };
+const swapInk = c => chroma(c) > .12 ? c : { ...c, l: 1 - c.l, s: 0 };
+/** Persona's own rules copied in full for the light version, with black and white swapped. */
+function paperPersona(rules) {
+  let css = '';
+  for (const r of rules) {
+    if (r.at) { const inner = paperPersona(r.rules); if (inner) css += `${r.at}{${inner}}\n`; continue; }
+    if (!r.selector.includes('[data-theme=phantom]')) continue;
+    const out = decls(r.body).map(([prop, value]) => prop === 'color-scheme' ? 'color-scheme:light' : COLOR_PROPS.test(prop) || /shadow|clip|gradient/.test(prop) || /#|rgb|white|black/.test(value) ? `${prop}:${recolor(value, swapInk)}` : `${prop}:${value}`);
+    css += `${r.selector.replaceAll('[data-theme=phantom]', '[data-theme=phantom-light]')}{${out.join(';')}}\n`;
   }
   return css;
 }
 
 const rules = SOURCES.flatMap(f => parse(fs.readFileSync(f, 'utf8')));
+const themeRules = parse(fs.readFileSync('components/themes.css', 'utf8'));
+// Each light theme's brand colour, from its variable block (`:root,:root[data-theme=burgundy]` is the default).
+const brands = Object.fromEntries(rules.filter(r => r.selector && /^:root(,|\[data-theme=)/.test(r.selector) && /--brand:\s*#/.test(r.body))
+  .map(r => [r.selector.match(/\[data-theme=([a-z-]+)\]/)?.[1] || 'burgundy', r.body.match(/--brand:\s*(#[0-9a-fA-F]{3,8})/)[1]]));
+const missing = LIGHT_THEMES.filter(t => !brands[t]);
+if (missing.length) { console.error('No --brand colour found for: ' + missing.join(', ')); process.exit(1); }
 const result = '/* Generated by scripts/build-themes.mjs from the app stylesheets. Do not edit by hand. */\n'
-  + Object.entries(THEMES).map(([name, fn]) => `/* ${name} */\n` + themed(rules, name, fn)).join('');
+  + Object.entries(THEMES).map(([name, fn]) => `/* ${name} */\n` + themed(rules, `[data-theme=${name}]`, fn)).join('')
+  + '/* phantom-light */\n' + themed(rules, '[data-theme=phantom-light]', paper) + paperPersona(themeRules)
+  + '/* dark mode for light themes */\n' + themed(rules, '[data-mode=dark]', night, NIGHT_SKIP_VARS, SIDEBAR, true)
+  + nightThemeRules(themeRules, LIGHT_THEMES) + LIGHT_THEMES.map(t => nightVars(t, brands[t])).join('');
 if (process.argv.includes('--check')) {
   if (!fs.existsSync(OUT) || fs.readFileSync(OUT, 'utf8') !== result) { console.error(OUT + ' is out of date. Run: node scripts/build-themes.mjs'); process.exit(1); }
-  console.log('Passed theme check: generated black-and-gold and white-and-gold styles match the stylesheets.');
+  console.log('Passed theme check: generated theme, dark-mode and Persona light styles match the stylesheets.');
 } else { fs.writeFileSync(OUT, result); console.log(`Wrote ${OUT} (${result.length} bytes).`); }

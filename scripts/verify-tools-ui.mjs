@@ -194,6 +194,9 @@ await page.keyboard.type('persona');assert.equal(await theme(),'phantom');
 await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
 assert.equal(await page.getByRole('radio',{name:'لصوص القلوب'}).count(),1,'Listed while active');
 await page.getByRole('radio',{name:'عنابي مواثيق'}).check();
+await page.getByRole('radio',{name:/^بدون إخفاء الشكل/}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.cursor-halo')).display),'none','the cursor follower can be hidden');
+await page.getByRole('radio',{name:'نقطة',exact:true}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.cursor-halo')).width),'8px');
+await page.getByRole('radio',{name:'حلقة صغيرة',exact:true}).check();
 assert.equal(await page.getByRole('radio',{name:'لصوص القلوب'}).count(),0,'Choosing another theme hides it again');
 await page.getByRole('button',{name:'تم'}).click();assert.equal(await theme(),'burgundy');
 
@@ -228,6 +231,9 @@ for(const name of ['تغيير مساحة العمل','تغيير كلمة ال�
 await page.getByRole('button',{name:'نصائح واختصارات'}).click();await page.getByRole('heading',{name:'نصائح مواثيق'}).waitFor();
 for(const keys of ['Ctrl + K','Alt + 1 … 9','Shift + T','Ctrl + B'])assert.ok(await page.getByRole('dialog').getByText(keys,{exact:true}).isVisible(),keys+' listed in tips');
 await page.getByRole('button',{name:'فهمت'}).click();await openAccount();
+await page.getByRole('button',{name:'الوضع الداكن',exact:true}).click();assert.equal(await page.evaluate(()=>document.documentElement.dataset.mode),'dark','light themes switch to their dark version');
+assert.match(await page.evaluate(()=>getComputedStyle(document.body).cursor),/^url\("data:image\/svg\+xml/,'the mouse pointer is drawn in the theme colours');
+await openAccount();await page.getByRole('button',{name:'الوضع الفاتح',exact:true}).click();assert.equal(await page.evaluate(()=>document.documentElement.dataset.mode),undefined);await openAccount();
 await page.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
 
 // Accounting prints a statement and a receipt voucher.
