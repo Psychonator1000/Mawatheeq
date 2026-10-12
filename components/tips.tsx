@@ -1,7 +1,7 @@
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
 
 /** Bump when adding tips so the account menu shows its dot again. */
-export const TIPS_VERSION='2026-10-12c';
+export const TIPS_VERSION='2026-10-12d';
 const KEY='mawatheeq.tips.seen';
 export const tipsUnseen=()=>{try{return localStorage.getItem(KEY)!==TIPS_VERSION}catch{return false}};
 export const markTipsSeen=()=>{try{localStorage.setItem(KEY,TIPS_VERSION)}catch{/* Still shown next time. */}};
@@ -14,6 +14,8 @@ export const SHORTCUTS:[string,string][]=[
  ['Ctrl + B','إخفاء القائمة الجانبية أو إظهارها (وضع التركيز)'],
  ['Shift + T','العودة إلى أعلى الصفحة'],
  ['Esc','إغلاق النافذة أو الملف المفتوح'],
+ ['Ctrl + S','حفظ ملف القضية المفتوح'],
+ ['Alt + → / ←','القضية السابقة / التالية في القائمة دون إغلاق الملف'],
  ['↑ ↓ ثم Enter','التنقل بين نتائج البحث السريع وفتح النتيجة'],
 ];
 const TIPS:[string,string,string][]=[

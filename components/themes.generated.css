@@ -1177,6 +1177,16 @@
 :root[data-mode=dark] .step.current .step-text em{color:var(--brand)}
 :root[data-mode=dark] .step.late .step-text em{color:#dba7ac}
 :root[data-mode=dark] .progress-other b{color:var(--brand)}
+:root[data-mode=dark] .case-facts{background:color-mix(in srgb,var(--muted) 70%,transparent)}
+:root[data-mode=dark] .case-facts dt{color:var(--muted-foreground)}
+:root[data-mode=dark] .detail-sheet.case-window{border:1px solid var(--border)}
+:root[data-mode=dark] .case-window>.case-pin{border-inline-end:1px solid var(--border);background:linear-gradient(170deg,color-mix(in srgb,var(--brand) 9%,var(--card)),var(--card) 55%)}
+:root[data-mode=dark] .case-nav{color:var(--muted-foreground)}
+:root[data-mode=dark] .case-keys{color:var(--muted-foreground)}
+:root[data-mode=dark] .case-keys kbd{border:1px solid var(--border);background:var(--card)}
+@media(max-width:900px){:root[data-mode=dark] .case-window>.case-pin{border-bottom:1px solid var(--border)}
+}
+:root[data-mode=dark] .case-window .step-text{background:transparent}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

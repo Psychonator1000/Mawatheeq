@@ -107,9 +107,10 @@ await page.keyboard.press('Enter');
 await page.locator('.case-pin').getByText('خصم الأدوات 2').waitFor();
 // The case file keeps company, opponent, case number and progress pinned while the rest scrolls.
 {const pin=page.locator('.case-pin');assert.ok(await pin.getByText('2026/302').isVisible(),'case number in the pinned header');assert.equal(await pin.locator('.progress-steps .step').count(),3);
- await page.locator('.detail-sheet').evaluate(e=>e.scrollTo(0,e.scrollHeight));await page.waitForTimeout(200);
- const box=await pin.boundingBox();assert.ok(box&&box.y>=-1&&box.y<5,'the case header stays pinned at the top while scrolling');assert.ok(await pin.getByText('شركة أدوات تجريبية').isVisible());
- await page.locator('.detail-sheet').evaluate(e=>e.scrollTo(0,0));}
+ await page.waitForTimeout(700);const before=await pin.boundingBox();
+ await page.locator('.case-main').evaluate(e=>e.scrollTo(0,e.scrollHeight));await page.waitForTimeout(200);
+ const box=await pin.boundingBox();assert.ok(before&&box&&Math.abs(box.y-before.y)<2,'the case essentials stay in place while the fields scroll');assert.ok(await pin.getByText('شركة أدوات تجريبية').isVisible());
+ await page.locator('.case-main').evaluate(e=>e.scrollTo(0,0));}
 
 // Printable case sheet uses escaped case text.
 await page.evaluate(()=>{window.__printed='';window.open=()=>({document:{write:h=>{window.__printed+=h},close(){}},focus(){},print(){}})});
@@ -286,6 +287,9 @@ await motion.getByRole('heading',{name:'كل قضاياك، في مكان واح
 await motion.goto(base+'#cases');await motion.getByRole('button',{name:/فتح القضية/}).first().click();
 await motion.getByRole('tab',{name:'الطعن والتنفيذ'}).click();
 await motion.getByRole('tabpanel').waitFor();
+{const code=async()=>(await motion.locator('.case-pin-codes').innerText()).match(/TOOL-\d/)?.[0];const first=await code();
+ await motion.keyboard.press('Alt+ArrowLeft');await motion.waitForTimeout(500);const second=await code();assert.ok(first&&second&&first!==second,'Alt+← moves to the next case without closing');
+ await motion.keyboard.press('Alt+ArrowRight');await motion.waitForTimeout(500);assert.equal(await code(),first,'Alt+→ returns to the previous case');}
 await motion.waitForTimeout(1300);
 assert.equal(await motion.locator('.ripple-host').count(),0,'Press ripples remove themselves');
 assert.equal(await motion.locator('canvas.burst-canvas').count(),1);assert.equal(await motion.locator('.ambient-canvas').isVisible(),true,'The constellation backdrop is drawn');
