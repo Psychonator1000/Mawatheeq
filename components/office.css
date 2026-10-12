@@ -51,3 +51,8 @@
 .comment-body{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13.5px;line-height:1.8}.comment-mentions{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
 .comment-form{display:flex;flex-direction:column;gap:10px}.comment-form textarea{width:100%;border:1px solid #dcd0bf;border-radius:10px;padding:10px;font:inherit;background:#fffdf8;resize:vertical}.comment-form .btn{align-self:flex-start;gap:6px}
 .mention-picker{display:flex;flex-wrap:wrap;gap:8px;border:none;padding:0;margin:0}.mention-picker legend{font-size:12px;color:#756359;margin-bottom:6px}.mention-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #dfd3c5;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}.mention-chip:has(input:checked){background:#f4ebdf;border-color:var(--brand)}
+.switch-banner{position:fixed;inset-inline:0;bottom:0;z-index:120;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:10px 16px;background:var(--brand);color:#fff;font-size:14px;box-shadow:0 -6px 24px #0003}
+.switch-banner .btn{background:#fff;color:var(--brand);border-color:transparent}
+.password-row{display:flex;gap:6px;align-items:stretch}.password-row input{flex:1;min-width:0}
+.issued-password{display:grid;gap:12px;padding:6px 0}.issued-password code{display:block;padding:12px 14px;border-radius:10px;background:#f7f1e8;border:1px dashed #d6c4ad;font-size:18px;letter-spacing:.5px;text-align:center;user-select:all}
+.lawyer-accounts td input{width:100%;min-width:120px;padding:6px 8px;border:1px solid #dcd0bf;border-radius:8px;background:transparent;color:inherit}

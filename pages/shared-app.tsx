@@ -5,8 +5,11 @@ import { AccountContext } from '@/components/account-menu';
 import MotionLayer from '@/components/motion-layer';
 import ConnectionStatus from '@/components/connection-status';
 import {workspaceStorageKey} from '@/lib/departments';
-import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, type LocalUser } from '@/lib/local-auth';
+import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, isSwitchedSession, returnToOwner, type LocalUser } from '@/lib/local-auth';
 import type { Permissions } from '@/lib/permissions';
+
+/** After leaving a staff account, the owner lands back on the staff list they switched from. */
+function backToStaffList() { sessionStorage.setItem(workspaceStorageKey, 'legal'); history.replaceState(null, '', '#settings'); }
 
 export default function SharedApp() {
   const [ready, setReady] = useState(false);
@@ -79,6 +82,8 @@ export default function SharedApp() {
   }
   async function logout() {
     setBusy(true);
+    // Signing out of a staff account the owner switched into returns to the owner's own session.
+    if (isSwitchedSession()) { backToStaffList(); try { await returnToOwner(); } finally { setBusy(false); } return; }
     try { await signOut(); }
     catch { /* The local session is cleared even when the network is unavailable. */ }
     finally {
@@ -94,6 +99,7 @@ export default function SharedApp() {
   if (ready && user && !passwordForm) return <AccountContext.Provider value={{ username: user.username, busy, onChangePassword: () => { setChangingPassword(true); setMessage(''); setError(''); }, onLogout: () => void logout() }}>
     <MotionLayer />
     <ConnectionStatus />
+    {user.role !== 'owner' && isSwitchedSession() && <div className="switch-banner" role="status"><span>أنت الآن داخل حساب <b dir="ltr">{user.username}</b> بصلاحياته فقط.</span><button className="btn" disabled={busy} onClick={() => { setBusy(true); backToStaffList(); void returnToOwner().finally(() => setBusy(false)); }}>العودة إلى حسابي</button></div>}
     <AuthorizedWorkspace key={user.id} owner={user.role==='owner'} />
     {error && <div className="auth-message error" role="alert">{error}</div>}
   </AccountContext.Provider>;

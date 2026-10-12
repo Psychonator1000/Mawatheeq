@@ -21,7 +21,7 @@ await db.query("insert into mawatheeq_private.accounts(username,password_hash,mu
 await db.exec("insert into public.mawatheeq_members(user_id,role) select id,'owner' from mawatheeq_private.accounts;set role anon");
 const rpc=async(name,args)=>(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
 const login=await rpc('mawatheeq_local_login',['ui_owner','Synthetic-password-123']);
-for(let i=0;i<25;i++)await rpc('mawatheeq_local_request',[login.token,'save_case',JSON.stringify({case:{id:'ui-case-'+i,code:'TEST-'+i,autoNumber:String(1000+i),client:'شركة اختبار الواجهة',clientGroup:'شركة اختبار الواجهة',opponent:'خصم تجريبي '+i,date:'2026-09-01',type:i===0?'':'حكم أول درجة',outcome:'لصالحنا',ruling:'حكم تجريبي لا يمثل بيانات حقيقية',notificationDate:'2026-09-10',appealConfirmation:'لا يوجد',procedures:[],revision:0}})]);
+for(let i=0;i<25;i++)await rpc('mawatheeq_local_request',[login.token,'save_case',JSON.stringify({case:{id:'ui-case-'+i,code:'TEST-'+i,autoNumber:String(1000+i),client:'شركة اختبار الواجهة',clientGroup:'شركة اختبار الواجهة',opponent:'خصم تجريبي '+i,date:'2026-09-01',type:i===0?'':'حكم أول درجة',outcome:'لصالحنا',ruling:'حكم تجريبي لا يمثل بيانات حقيقية',notificationDate:'2026-09-10',appealConfirmation:'لا يوجد',lawyer:i>=20?'ا/ سالم تجريبي':'',procedures:[],revision:0}})]);
 const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
 const page=await context.newPage();const errors=[];const calls=[];
@@ -67,7 +67,7 @@ try{
  await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-2');await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).check();
  assert.equal(await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).isChecked(),false);
  await page.locator('.permission-summary').getByText('ويفتحها مباشرة',{exact:false}).waitFor();
- await page.screenshot({path:artifacts+'/permission-editor-desktop.png',fullPage:true});await go('حفظ الحساب');await page.getByRole('cell',{name:'ui_staff',exact:true}).waitFor();
+ await page.screenshot({path:artifacts+'/permission-editor-desktop.png',fullPage:true});await go('حفظ الحساب');await page.getByText('Temporary-synthetic-123',{exact:true}).waitFor();await go('تم');await page.getByRole('cell',{name:'ui_staff',exact:true}).waitFor();
  await go('التحليل والإحصائيات');await page.screenshot({path:artifacts+'/office-analytics-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});await page.reload();await page.getByRole('heading',{name:'التحليل والإحصائيات',exact:true}).waitFor();await page.screenshot({path:artifacts+'/office-analytics-mobile.png',fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'No horizontal viewport overflow on mobile');
@@ -95,11 +95,20 @@ try{
  // Owner renames the staff account and sets a permanent password; the staff member signs in with the new name directly.
  const staffRow=()=>page.getByRole('row').filter({has:page.getByRole('cell',{name:/^ui_staff/})});
  await staffRow().getByRole('button',{name:'تغيير الاسم',exact:true}).click();await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_clerk');await go('حفظ الاسم');await page.getByRole('cell',{name:'ui_clerk',exact:true}).waitFor();
- await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_clerk',exact:true})}).getByRole('button',{name:'كلمة المرور',exact:true}).click();await page.getByLabel('كلمة المرور',{exact:true}).fill('Permanent-synthetic-123');await go('حفظ الحساب');await page.getByRole('dialog').waitFor({state:'hidden'});
+ await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_clerk',exact:true})}).getByRole('button',{name:'كلمة المرور',exact:true}).click();await page.getByRole('button',{name:'توليد',exact:true}).click();assert.match(await page.getByLabel('كلمة المرور',{exact:true}).inputValue(),/^[A-Z][a-z]{3}-\d{4}-[A-Z][a-z]{3}-[A-Z][a-z]{3}$/);await page.getByLabel('كلمة المرور',{exact:true}).fill('Permanent-synthetic-123');await go('حفظ الحساب');await page.locator('.issued-password code').getByText('Permanent-synthetic-123',{exact:true}).waitFor();await go('تم');await page.getByRole('dialog').waitFor({state:'hidden'});
  await staff.reload();await staff.getByRole('heading',{name:'تسجيل الدخول',exact:true}).waitFor();
  await staff.getByLabel('اسم المستخدم',{exact:true}).fill('ui_clerk');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Permanent-synthetic-123');await staffGo('فتح مساحة العمل');await staff.getByRole('button',{name:/^سجل الأحكام/}).first().waitFor();assert.equal(await staff.locator('.workspace-chooser').count(),0,'a single workspace opens directly');
  assert.equal(await staff.getByLabel('كلمة المرور الجديدة',{exact:true}).count(),0,'a permanent password is not forced to change');
  await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_owner',exact:true})}).getByRole('button',{name:'تغيير كلمة مروري',exact:true}).waitFor();
- assert.deepEqual(errors,[]);console.log('Passed office UI: account rename and permanent staff password, form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');
+ // Lawyer accounts from case lawyer names, then owner-only switching into the account and back.
+ await go('حسابات المحامين');await page.getByLabel('اسم الدخول ا/ سالم تجريبي',{exact:true}).waitFor();await page.getByLabel('اسم الدخول ا/ سالم تجريبي',{exact:true}).fill('salem.ui');await go('إنشاء 1 حساب');
+ await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText('ا/ سالم تجريبي',{exact:true}).waitFor();
+ page.once('dialog',d=>void d.accept());await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'الدخول بحسابه',exact:true}).click();
+ await page.locator('.switch-banner').getByText('salem.ui',{exact:true}).waitFor();await page.evaluate(()=>{location.hash='cases'});await page.getByRole('heading',{name:'سجل الأحكام',exact:true}).waitFor();
+ assert.equal(await page.locator('.case-table tbody tr').count(),5,'the lawyer sees only the cases under their name');assert.equal(await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).count(),0);
+ await page.screenshot({path:artifacts+'/switched-user-desktop.png'});
+ await page.locator('.switch-banner').getByRole('button',{name:'العودة إلى حسابي',exact:true}).click();await page.locator('.switch-banner').waitFor({state:'detached'});
+ await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).waitFor();
+ assert.deepEqual(errors,[]);console.log('Passed office UI: lawyer accounts, owner switch-to-user and return, generated passwords, account rename and permanent staff password, form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');
 }catch(e){await page.screenshot({path:artifacts+'/office-ui-failure.png',fullPage:true});console.error(await page.locator('body').innerText());throw e}
 finally{await browser.close();await db.close()}
