@@ -117,7 +117,7 @@ try{
  const row=page.getByRole('row').filter({hasText:'موظف حضور أول'});await row.waitFor();
  assert.ok((await row.innerText()).includes('600.000 KWD'),'Warning mode keeps the full salary as the net estimate');
  await page.getByText('وضع التنبيه',{exact:false}).first().waitFor();await screen('payroll');
- await page.evaluate(()=>{window.__printed='';window.open=()=>({document:{write:h=>{window.__printed+=h},close(){}},focus(){},print(){}})});
+ await page.evaluate(()=>{window.__printed='';window.__mawatheeqPrint=h=>{window.__printed+=h}});
  await click('طباعة كشف الرواتب');await page.waitForFunction(()=>window.__printed.includes('كشف الرواتب التقديري'));
  const sheet=await page.evaluate(()=>window.__printed);assert.ok(sheet.includes('موظف حضور أول')&&sheet.includes('خصم محتمل (تنبيه فقط)'));
  await click('تفاصيل موظف حضور أول');await dialog().getByText('الصافي التقديري',{exact:true}).waitFor();

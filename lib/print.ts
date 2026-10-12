@@ -107,9 +107,26 @@ ${lines ? `<h2>تفاصيل الأيام</h2><table class="list"><tr><th>الت�
 }
 
 /** Open a same-origin print window with already-escaped HTML. */
+/**
+ * Prints a standalone page through a hidden frame, so no extra window or tab is left open whether the person prints
+ * or cancels. `window.__mawatheeqPrint`, when set (browser tests), receives the page instead of the print dialog.
+ */
 export function printHtml(html: string): boolean {
-  const w = window.open('', '_blank');
-  if (!w) return false;
-  w.document.write(html); w.document.close(); w.focus(); w.print();
+  const capture = (window as unknown as { __mawatheeqPrint?: (html: string) => void }).__mawatheeqPrint;
+  if (typeof capture === 'function') { capture(html); return true; }
+  document.querySelectorAll('iframe[data-print-frame]').forEach(f => f.remove());
+  const frame = document.createElement('iframe');
+  frame.setAttribute('data-print-frame', ''); frame.setAttribute('aria-hidden', 'true'); frame.tabIndex = -1;
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.append(frame);
+  const win = frame.contentWindow, doc = frame.contentDocument;
+  if (!win || !doc) { frame.remove(); return false; }
+  doc.open(); doc.write(html); doc.close();
+  let done = false;
+  const cleanup = () => { if (done) return; done = true; setTimeout(() => frame.remove(), 500); };
+  win.addEventListener('afterprint', cleanup);
+  // Wait for the page's fonts so Arabic text prints correctly, then open the print dialog.
+  const go = () => { win.focus(); win.print(); setTimeout(cleanup, 60000); };
+  if (doc.fonts?.ready) void doc.fonts.ready.then(() => setTimeout(go, 50)); else setTimeout(go, 200);
   return true;
 }
