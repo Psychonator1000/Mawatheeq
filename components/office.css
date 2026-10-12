@@ -279,3 +279,12 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .chat-info{padding:4px 12px 14px;gap:8px}.chat-inline{display:grid;gap:8px}.chat-inline .chat-field{margin:0}.chat-members{margin:0;padding-inline-start:18px;font-size:13.5px;line-height:1.9}.chat-leave{margin-top:12px;color:#a32e38}
 @media(max-width:640px){.chat-bubble{bottom:14px;inset-inline-end:14px;width:52px;height:52px}.chat-panel{inset:0;width:auto;height:auto;bottom:0;border-radius:0}}
 :root[data-perf=lite] .chat-panel{animation:none}
+/* Case lists: one click target per row. The number leads, the code sits under it; date and age share a cell. */
+.case-table-rows>tbody>tr.case-row{cursor:pointer}
+.case-table-rows>tbody>tr.case-row:hover{background:#f7f1e8}
+.case-table-rows td{vertical-align:middle}
+.case-id{white-space:nowrap}.case-id .number-link{font-size:15px;font-weight:650}
+.case-id small,.case-when small{display:block;margin-top:3px;font-size:11.5px;color:#8a7768}
+.case-when .mono{font-weight:500}
+.case-badges{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.case-lawyer{font-size:13px;color:#5d4a3d;max-width:180px}

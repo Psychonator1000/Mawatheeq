@@ -47,6 +47,8 @@ try{
  await page.getByText('من التحليل:',{exact:false}).waitFor();assert.match(page.url(),/analysisField=type/);assert.equal(await page.locator('tbody tr').count(),1);
  await page.reload();await page.getByText('من التحليل:',{exact:false}).waitFor();assert.equal(await page.locator('tbody tr').count(),1);
  await go('سجل الأحكام');await page.getByRole('button',{name:'الصفحة 2',exact:true}).click();assert.equal(await page.locator('tbody tr').count(),5);
+ // A click anywhere on a row opens the case.
+ await page.screenshot({path:artifacts+'/case-list.png'});await page.locator('tbody tr.case-row').first().locator('td.party').click();await page.getByRole('dialog').waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'hidden'});
  await go('إضافة قضية');const sheet=page.getByRole('dialog');await sheet.getByLabel('كود المكتب',{exact:true}).fill('NEW-FORM');await sheet.getByLabel('الرقم الآلي',{exact:true}).fill('9000');
  // The existing client selector is a native select.
  await sheet.getByLabel('الموكل / الجهة',{exact:true}).selectOption({index:1});
