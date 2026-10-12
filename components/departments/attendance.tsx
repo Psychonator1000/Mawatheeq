@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
+import {HOLIDAYS} from '@/lib/choices';
 import {ChevronRight,ChevronLeft,Upload,Printer,Plus,RefreshCw,Trash2,Pencil,Settings2} from 'lucide-react';
 import {toast} from 'sonner';
 import {attendanceRequest} from '@/lib/local-auth';
@@ -99,7 +100,7 @@ export function AttendanceSettingsPanel(){
    <label className="checkbox-line"><input type="checkbox" checked={draft.absenceDeduction} onChange={e=>set('absenceDeduction',e.target.checked)}/> خصم أيام الغياب دون إجازة أو عذر (في وضع الخصم فقط)</label></div>
   <div className="department-form-section"><h3>العمل الإضافي</h3><label className="checkbox-line"><input type="checkbox" checked={draft.overtime.enabled} onChange={e=>set('overtime',{...draft.overtime,enabled:e.target.checked})}/> احتساب بدل العمل الإضافي</label><div className="form-grid"><Field label="معامل الساعة الإضافية" type="number" value={String(draft.overtime.multiplier)} onChange={v=>set('overtime',{...draft.overtime,multiplier:Math.min(3,Math.max(1,Number(v)||1))})}/><Field label="أقل مدة تُحتسب (دقائق)" type="number" value={String(draft.overtime.minMinutes)} onChange={v=>set('overtime',{...draft.overtime,minMinutes:Math.min(600,num(v))})}/></div></div>
   <div className="department-form-section"><h3>العطل الرسمية</h3><ul className="holiday-list">{[...draft.holidays].sort((a,b)=>a.date.localeCompare(b.date)).map(h=><li key={h.date}><span>{formatDate(h.date)} — {h.name}</span><button type="button" className="icon-btn" aria-label={'حذف عطلة '+h.name} onClick={()=>set('holidays',draft.holidays.filter(x=>x.date!==h.date))}><Trash2 size={15}/></button></li>)}{!draft.holidays.length&&<li className="subtitle">لا توجد عطل مسجلة.</li>}</ul>
-   <div className="form-grid"><DateField label="تاريخ العطلة" value={holiday.date} onChange={v=>setHoliday(h=>({...h,date:v}))}/><Field label="اسم العطلة" value={holiday.name} onChange={v=>setHoliday(h=>({...h,name:v}))}/></div><button type="button" className="btn" disabled={!holiday.date||!holiday.name.trim()||draft.holidays.some(h=>h.date===holiday.date)} onClick={()=>{set('holidays',[...draft.holidays,{date:holiday.date,name:holiday.name.trim()}]);setHoliday({date:'',name:''})}}><Plus size={15}/> إضافة العطلة</button></div>
+   <div className="form-grid"><DateField label="تاريخ العطلة" value={holiday.date} onChange={v=>setHoliday(h=>({...h,date:v}))}/><Field label="اسم العطلة" suggestions={HOLIDAYS} value={holiday.name} onChange={v=>setHoliday(h=>({...h,name:v}))}/></div><button type="button" className="btn" disabled={!holiday.date||!holiday.name.trim()||draft.holidays.some(h=>h.date===holiday.date)} onClick={()=>{set('holidays',[...draft.holidays,{date:holiday.date,name:holiday.name.trim()}]);setHoliday({date:'',name:''})}}><Plus size={15}/> إضافة العطلة</button></div>
   {ctx.canEdit&&<button type="submit" className="btn primary" disabled={draft.start>=draft.end}>حفظ إعدادات الدوام</button>}
  </fieldset></form></section>;
 }

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { emptyCase } from '../lib/domain.ts';
 import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT } from '../lib/case-browse.ts';
+import { suggestions, weekdayOf, CLIENT_ROLES } from '../lib/choices.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
 
 const fixture = (id, fields) => ({ ...emptyCase(), id, ...fields });
@@ -112,3 +113,9 @@ assert.equal(entityLink.category,'telecom'); assert.equal(entityLink.clientEntit
  assert.equal(ids({key:'lawyer',dir:1}),'cab');
  const rem={a:-40,b:3,c:null};assert.equal(ids({key:'remaining',dir:1},c=>rem[c.id]),'abc','Unknown remaining days go last');
  assert.equal(rows.map(c=>c.id).join(''),'abc','The input list is not reordered');}
+
+// Typing suggestions and fixed choices.
+assert.deepEqual(suggestions([{v:' بنك  الكويت '},{v:'شركة'},{v:'بنك الكويت'},{v:''}],r=>r.v,['شركة']),['شركة','بنك الكويت'],'Base list first, then used values by frequency, spaces squashed, no blanks or duplicates');
+assert.equal(weekdayOf('2026-10-13'),'الثلاثاء','Weekday from a date-only value without timezone shifts');assert.equal(weekdayOf(''),'');
+assert.ok(CLIENT_ROLES.includes('مدعي')&&CLIENT_ROLES.includes('مدعى عليه'));
+console.log('Passed choices: suggestions and weekdays.');
