@@ -162,3 +162,5 @@
 .case-finance{display:grid;gap:14px;margin-top:18px}
 .roll-print{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:6px 0 10px}.roll-print .field{margin:0;min-width:200px;max-width:260px}
 .case-window .detail-tabs{flex-wrap:wrap;height:auto!important;justify-content:flex-start;row-gap:4px}.case-window .detail-tabs>[role=tab]{flex:0 0 auto}
+.perf-reason{display:grid;gap:8px;justify-items:start}.perf-reason .subtitle{margin:0}
+.staff-search{margin:0 0 12px;max-width:420px}.staff-search small{white-space:nowrap;color:var(--muted-foreground);font-size:12px}

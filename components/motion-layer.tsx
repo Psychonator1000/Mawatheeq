@@ -165,22 +165,28 @@ export default function MotionLayer() {
   // Automatic light mode: watch the first seconds of real use; if frames keep dropping, lighten the effects for good.
   let perfFrame=0,perfStop=0;
   if(loadAppearance().performance==='auto'&&root.dataset.perf!=='lite'&&!navigator.webdriver){
-   let last=0,frames=0,slowFrames=0,windows=0,badWindows=0,windowStart=performance.now();
+   // Only frames seen while the page is visible and focused count: a covered or background window is throttled by the
+   // browser, and the first seconds are spent loading records, so neither says anything about the device.
+   let last=0,frames=0,slowFrames=0,windows=0,badWindows=0,windowStart=performance.now(),skipped=false;
    const sample=(now:number)=>{
-    if(last&&!document.hidden){frames++;if(now-last>50)slowFrames++}
-    last=document.hidden?0:now;
+    const watching=!document.hidden&&document.hasFocus();
+    if(!watching)skipped=true;
+    if(last&&watching){frames++;if(now-last>50)slowFrames++}
+    last=watching?now:0;
     if(now-windowStart>=3000){
-     const fps=frames/((now-windowStart)/1000);if(frames>20&&(fps<32||slowFrames/frames>.2))badWindows++;
-     windows++;frames=0;slowFrames=0;windowStart=now;
-     if(badWindows>=2){markSlow();saveAppearance(loadAppearance());toast.message('خُففت المؤثرات لتسريع التطبيق على هذا الجهاز.',{description:'يمكنك تغيير ذلك من «المظهر والحركة» ← الأداء.'});return}
+     const fps=frames/((now-windowStart)/1000);if(!skipped&&frames>20&&(fps<30||slowFrames/frames>.25))badWindows++;
+     windows++;frames=0;slowFrames=0;windowStart=now;skipped=false;
+     if(badWindows>=3){markSlow('frames');saveAppearance(loadAppearance());toast.message('خُففت المؤثرات لتسريع التطبيق على هذا الجهاز.',{description:'يمكنك تغيير ذلك من «المظهر والحركة» ← الأداء.'});return}
      if(windows>=6)return;
     }
     perfFrame=requestAnimationFrame(sample);
    };
-   perfStop=window.setTimeout(()=>{perfFrame=requestAnimationFrame(sample)},2500);
+   perfStop=window.setTimeout(()=>{perfFrame=requestAnimationFrame(sample)},6000);
   }
   // If the browser loses a drawing surface (a graphics reset, seen as the page flashing blank), go light for good.
-  const onContextLost=()=>{if(root.dataset.perf==='lite')return;markSlow();saveAppearance(loadAppearance());toast.message('خُففت المؤثرات لأن بطاقة الرسوميات في هذا الجهاز لا تتحملها.',{description:'يمكنك تغيير ذلك من «المظهر والحركة» ← الأداء.'})};
+  // Chrome also drops drawing surfaces of tabs left in the background; only repeated losses while the page is in view count.
+  let visibleLosses=0;
+  const onContextLost=()=>{if(root.dataset.perf==='lite'||document.hidden||++visibleLosses<2)return;markSlow('graphics');saveAppearance(loadAppearance());toast.message('خُففت المؤثرات لأن بطاقة الرسوميات في هذا الجهاز لا تتحملها.',{description:'يمكنك تغيير ذلك من «المظهر والحركة» ← الأداء.'})};
   const canvases=[ambient.current,burst.current].filter((c):c is HTMLCanvasElement=>!!c);
   for(const c of canvases)c.addEventListener('contextlost',onContextLost);
   onScroll();scheduleMeasure();

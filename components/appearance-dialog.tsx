@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
-import {BACKDROPS,CURSORS,DENSITIES,DEFAULT_APPEARANCE,FOLLOWERS,MODES,MOTION_LEVELS,PERFORMANCE,liteMode,TEXT_SIZES,THEMES,isHidden,loadAppearance,saveAppearance,type Appearance} from '@/lib/appearance';
+import {BACKDROPS,CURSORS,DENSITIES,DEFAULT_APPEARANCE,FOLLOWERS,MODES,MOTION_LEVELS,PERFORMANCE,liteMode,liteReason,markedSlow,clearSlow,TEXT_SIZES,THEMES,isHidden,loadAppearance,saveAppearance,type Appearance} from '@/lib/appearance';
 
 /** Colour theme, background animation and motion level; saved on this device and applied instantly. */
 export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
@@ -17,7 +17,8 @@ export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
   {group('backdrop','الخلفية المتحركة',BACKDROPS)}
   {group('motion','مستوى الحركة',MOTION_LEVELS)}
   {group('performance','الأداء',PERFORMANCE)}
-  {value.performance==='auto'&&liteMode(value)&&<p className="subtitle">الوضع الخفيف مفعّل تلقائياً على هذا الجهاز لتسريع التطبيق.</p>}
+  {value.performance==='auto'&&liteMode(value)&&<div className="perf-reason"><p className="subtitle">الوضع الخفيف مفعّل تلقائياً على هذا الجهاز: {liteReason()}</p>
+   {markedSlow()&&<button type="button" className="btn" onClick={()=>{clearSlow();const v={...value};setValue(v);saveAppearance(v)}}>إعادة تفعيل المؤثرات وقياس الجهاز من جديد</button>}<p className="subtitle">أو اختر «كامل» لتشغيل كل المؤثرات دائماً على هذا الجهاز.</p></div>}
   {group('cursor','مؤشر الفأرة',CURSORS)}
   {group('follower','الشكل الذي يتبع المؤشر',FOLLOWERS)}
   {group('text','حجم الخط',TEXT_SIZES)}
