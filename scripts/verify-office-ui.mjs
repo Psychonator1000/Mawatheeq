@@ -123,6 +123,21 @@ try{
  assert.equal(await page.getByRole('radio',{name:/قضاياه فقط/}).isChecked(),true,'Bulk lawyer accounts see their own cases by name');
  assert.equal(await page.getByRole('checkbox',{name:'قضايا ا/ سالم تجريبي'}).isChecked(),true);
  await page.getByText(/يرى 5 قضية الآن/).waitFor();await page.screenshot({path:artifacts+'/lawyer-scope.png'});await page.keyboard.press('Escape');
+ // Delegated admin: «مدير» ticks every power the owner holds; the owner unticks backups.
+ await page.evaluate(()=>{location.hash='settings'});await go('إضافة موظف');await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_deputy');await page.getByLabel('كلمة المرور',{exact:true}).fill('Deputy-synthetic-123');
+ await page.getByRole('radio',{name:/^مدير/}).click();
+ for(const p of ['إدارة الموظفين والصلاحيات','الاعتماد وتصحيح الدرجات','إعدادات المكتب والاستيراد','النسخة الكاملة للبيانات','مراجعة المحادثات والتعليقات'])assert.equal(await page.getByRole('checkbox',{name:new RegExp('^'+p)}).isChecked(),true,'Manager gets '+p);
+ await page.getByRole('checkbox',{name:/^النسخة الكاملة للبيانات/}).uncheck();await page.screenshot({path:artifacts+'/admin-powers.png'});
+ await go('حفظ الحساب');await go('تم');await page.getByRole('row').filter({has:page.getByText('ui_deputy',{exact:true})}).getByText(/مسؤول: .*إدارة الموظفين والصلاحيات/).waitFor();
+ {const ctx2=await browser.newContext({viewport:{width:1360,height:900},reducedMotion:'reduce'});const dep=await ctx2.newPage();await configurePage(dep);
+  await dep.goto(base);await dep.getByLabel('اسم المستخدم',{exact:true}).fill('ui_deputy');await dep.getByLabel('كلمة المرور',{exact:true}).fill('Deputy-synthetic-123');await dep.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
+  await dep.getByRole('button',{name:'فتح القضايا'}).click();await dep.evaluate(()=>{location.hash='settings'});await dep.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();
+  assert.equal(await dep.getByRole('heading',{name:'نسخة كاملة للبيانات'}).count(),0,'No backup without the backup power');await dep.getByRole('heading',{name:'مدد احتساب المواعيد'}).waitFor();
+  const ownerRow=dep.getByRole('row').filter({has:dep.getByText('ui_owner',{exact:true})});assert.equal(await ownerRow.getByRole('button').count(),0,'The owner account cannot be managed by an admin');
+  await dep.getByRole('row').filter({has:dep.getByText('ui_deputy',{exact:true})}).getByText(/حسابك/).waitFor();
+  await dep.getByRole('row').filter({has:dep.getByText('ui_clerk',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
+  assert.equal(await dep.getByRole('checkbox',{name:/^النسخة الكاملة للبيانات/}).isDisabled(),true,'An admin cannot grant a power they lack');
+  await dep.screenshot({path:artifacts+'/admin-deputy.png'});await ctx2.close();}
  assert.deepEqual(errors,[]);console.log('Passed office UI: lawyer accounts following their name on the cases, owner switch-to-user and return, generated passwords, account rename and permanent staff password, form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');
 }catch(e){await page.screenshot({path:artifacts+'/office-ui-failure.png',fullPage:true});console.error(await page.locator('body').innerText());throw e}
 finally{await browser.close();await db.close()}

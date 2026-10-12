@@ -12,13 +12,28 @@ export type Permissions = {
   lawyerNames?: string[];
   /** The job the owner chose for the account. A label that preselects settings; it grants nothing by itself. */
   jobRole?: JobRole;
+  /** Delegated admin powers. The original owner holds all of them; staff hold only those granted. */
+  adminPowers?: AdminPower[];
   canEdit: boolean; canExport: boolean; revision: number;
 };
 export const NO_ACCESS: Permissions = { sections: [], caseScope: 'selected', caseIds: [], canEdit: false, canExport: false, revision: 0 };
 export const FULL_ACCESS: Permissions = { ...NO_ACCESS, sections: Object.keys(SECTIONS) as Section[], caseScope: 'all', canEdit: true, canExport: true };
-export function canOpen(access: Permissions, section: string, owner = false) {
-  return section === 'help' || (section === 'settings' ? owner : access.sections.includes(section as Section));
+/** «settings» opens for the owner and for admins holding the staff, settings or backup power. */
+export function canOpen(access: Permissions, section: string, admin = false) {
+  return section === 'help' || (section === 'settings' ? admin : access.sections.includes(section as Section));
 }
+export type AdminPower = 'staff' | 'reviews' | 'settings' | 'backup' | 'chat';
+export const ADMIN_POWERS: Record<AdminPower, { label: string; hint: string }> = {
+  staff: { label: 'إدارة الموظفين والصلاحيات', hint: 'إضافة الحسابات وتعديل صلاحياتها وكلمات مرورها، والدخول بحساباتهم، ومنح صلاحيات الإدارة التي يملكها.' },
+  reviews: { label: 'الاعتماد وتصحيح الدرجات', hint: 'اعتماد مراجعات المصادر، وتصحيح درجات التقاضي المغلقة أو التراجع عن النقل.' },
+  settings: { label: 'إعدادات المكتب والاستيراد', hint: 'مدد المواعيد، واستيراد السجلات من Excel، ودمج ملفات الموكلين.' },
+  backup: { label: 'النسخة الكاملة للبيانات', hint: 'تنزيل نسخة احتياطية كاملة لكل السجلات.' },
+  chat: { label: 'مراجعة المحادثات والتعليقات', hint: 'قراءة كل محادثات الموظفين للمراجعة، وحذف التعليقات.' },
+};
+export const ALL_POWERS = Object.keys(ADMIN_POWERS) as AdminPower[];
+export function powersOf(access: Pick<Permissions, 'adminPowers'>, owner = false): AdminPower[] { return owner ? ALL_POWERS : access.adminPowers || []; }
+/** Admins who see the settings page (staff list, office rules or backups). */
+export function isAdmin(powers: AdminPower[]) { return powers.some(p => p === 'staff' || p === 'settings' || p === 'backup'); }
 export const LEGAL_SECTIONS: Section[] = ['overview','cases','clients','deadlines','analytics','verification','work','conflicts','documents'];
 export function canReadCases(access: Permissions) { return access.sections.some(s => LEGAL_SECTIONS.includes(s) && s !== 'documents'); }
 export function canEditClients(access: Permissions) { return access.canEdit && access.caseScope === 'all' && access.sections.includes('clients'); }
@@ -37,7 +52,7 @@ export const PAGE_PRESETS: [string, Section[]][] = [
 /** Job roles offered when adding staff. Picking one fills in the settings below it; the owner can still adjust them. */
 export type JobRole = 'manager' | 'lawyer' | 'secretary' | 'collections' | 'accountant' | 'hr' | 'custom';
 export const JOB_ROLES: { id: JobRole; label: string; hint: string; preset?: Omit<Permissions, 'revision' | 'jobRole'> }[] = [
-  { id: 'manager', label: 'مدير — صلاحيات كاملة', hint: 'كل الصفحات وكل القضايا، مع التعديل والتصدير.',
+  { id: 'manager', label: 'مدير — صلاحيات كاملة', hint: 'كل الصفحات وكل القضايا، مع التعديل والتصدير وكل صلاحيات الإدارة التي تملكها.',
     preset: { sections: Object.keys(SECTIONS) as Section[], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
   { id: 'lawyer', label: 'محامٍ', hint: 'يرى القضايا المسجلة باسمه، مع الجلسات والمهام.',
     preset: { sections: ['overview', 'cases', 'clients', 'deadlines', 'work', 'conflicts'], caseScope: 'selected', caseIds: [], canEdit: true, canExport: false } },
