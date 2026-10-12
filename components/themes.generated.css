@@ -174,6 +174,10 @@
 :root[data-theme=noir] .mention-picker legend{color:#c8c0b0}
 :root[data-theme=noir] .mention-chip{border:1px solid #33302a}
 :root[data-theme=noir] .mention-chip:has(input:checked){background:#211f1b}
+:root[data-theme=noir] .switch-banner{color:#11100e}
+:root[data-theme=noir] .switch-banner .btn{background:#11100e}
+:root[data-theme=noir] .issued-password code{background:#1d1b18;border:1px dashed #443c31}
+:root[data-theme=noir] .lawyer-accounts td input{border:1px solid #37342d}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
 :root[data-theme=noir] .workspace-option-top small{color:#544f45}
@@ -425,6 +429,10 @@
 :root[data-theme=phantom] .mention-picker legend{color:#d1d1d1}
 :root[data-theme=phantom] .mention-chip{border:1px solid #262626}
 :root[data-theme=phantom] .mention-chip:has(input:checked){background:#191919}
+:root[data-theme=phantom] .switch-banner{color:#0d0d0d}
+:root[data-theme=phantom] .switch-banner .btn{background:#0d0d0d}
+:root[data-theme=phantom] .issued-password code{background:#151515;border:1px dashed #383025}
+:root[data-theme=phantom] .lawyer-accounts td input{border:1px solid #282828}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .workspace-option-top small{color:#3d3d3d}
@@ -612,6 +620,10 @@
 :root[data-theme=ivory] .comment-form textarea{border:1px solid #d2cec9;background:#fefefd}
 :root[data-theme=ivory] .mention-chip{border:1px solid #d6d2ce}
 :root[data-theme=ivory] .mention-chip:has(input:checked){background:#f7f6f6}
+:root[data-theme=ivory] .switch-banner{color:#ffffff}
+:root[data-theme=ivory] .switch-banner .btn{background:#ffffff}
+:root[data-theme=ivory] .issued-password code{background:#f9f9f8;border:1px dashed #c8c2bb}
+:root[data-theme=ivory] .lawyer-accounts td input{border:1px solid #d2cec9}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
 :root[data-theme=ivory] .department-topbar{background:#fefefed9}
 :root[data-theme=ivory] .department-brand .brand-mark{color:#faf9f8}

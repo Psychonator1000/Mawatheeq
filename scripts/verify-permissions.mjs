@@ -150,5 +150,23 @@ await office(admin.token,'set_member_password',{id:editor.user.id,password:'Temp
 assert.equal((await login('legal.editor','Temporary-again-123')).user.mustChangePassword,true);
 assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id})).map(h=>h.change),['password','password','rename']);
 assert.equal((await office(admin.token,'context')).canManage,true);
+// Display names and owner-only switching to a staff account without its password.
+await office(admin.token,'set_display_name',{id:editor.user.id,displayName:'  ا/ محامٍ   تجريبي '});
+assert.equal((await office(admin.token,'context')).members.find(m=>m.id===editor.user.id).displayName,'ا/ محامٍ تجريبي');
+await assert.rejects(()=>office(admin.token,'switch_user',{id:editor.user.id}),/كلمة مرور مؤقتة/,'a pending temporary password blocks switching');
+await office(admin.token,'set_member_password',{id:editor.user.id,password:'Permanent-password-123',mustChange:false});
+const fresh=await login('legal.editor','Permanent-password-123');
+for(const action of ['switch_user','set_display_name'])await denied(()=>office(fresh.token,action,{id:editor.user.id,displayName:'x'}));
+await assert.rejects(()=>office(admin.token,'switch_user',{id:admin.user.id}),/الموظفين فقط/);
+const switched=await office(admin.token,'switch_user',{id:editor.user.id});
+assert.equal(switched.user.username,'legal.editor');assert.match(switched.token,/^[a-f0-9]{64}$/);
+const asEditor=await office(switched.token,'context');assert.equal(asEditor.canManage,false);assert.equal(asEditor.user.id,editor.user.id);assert.equal(asEditor.switchedBy,'office.owner');
+await denied(()=>office(switched.token,'switch_user',{id:editor.user.id}));await denied(()=>office(switched.token,'set_member_access',{id:editor.user.id,permissions:full,revision:99}));
+assert.deepEqual((await local(switched.token,'cases_page')).map(c=>c.id).sort(),(await local(fresh.token,'cases_page')).map(c=>c.id).sort(),'a switched session has exactly the employee permissions');
+assert.equal((await office(admin.token,'context')).canManage,true,'the owner session stays valid while switched');
+assert.equal((await office(admin.token,'context')).switchedBy,null);
+await office(admin.token,'set_member_enabled',{id:editor.user.id,enabled:false});await assert.rejects(()=>local(switched.token,'access'),e=>e.code==='28000');
+await assert.rejects(()=>office(admin.token,'switch_user',{id:editor.user.id}),/موقوف/);
+assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id})).slice(0,3).map(h=>h.change),['switch','password','display_name']);
 await db.close();
-console.log('Passed permissions: admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames and direct passwords.');
+console.log('Passed permissions: admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');

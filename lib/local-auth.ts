@@ -2,6 +2,8 @@ import { backend, loadBackend } from './supabase-client';
 
 export type LocalUser = { id: string; username: string; role: 'owner' | 'editor'; mustChangePassword: boolean };
 const storageKey = 'mawatheeq.local-session.v1';
+// While the owner works inside a staff account, the owner's own session waits here to be restored.
+const ownerKey = 'mawatheeq.owner-session.v1';
 export const sessionEvent = 'mawatheeq-session-changed';
 let token = '';
 
@@ -44,8 +46,27 @@ export async function signIn(username: string, password: string): Promise<LocalU
   return data.user as LocalUser;
 }
 export async function signOut(): Promise<void> {
+  if (isSwitchedSession()) return returnToOwner();
   try { if (token || localStorage.getItem(storageKey)) await localRequest('logout'); }
   finally { saveToken(''); }
+}
+export function isSwitchedSession(): boolean {
+  try { return !!localStorage.getItem(ownerKey); } catch { return false; }
+}
+/** Owner only: open a staff account without its password. The owner's session is kept to return to. */
+export async function switchToUser(id: string): Promise<LocalUser> {
+  const owner = token || localStorage.getItem(storageKey) || '';
+  const result = await officeRequest<{ token: string; user: LocalUser }>('switch_user', { id });
+  localStorage.setItem(ownerKey, owner);
+  saveToken(result.token);
+  return result.user;
+}
+/** Ends the staff session opened by the owner and restores the owner's own session. */
+export async function returnToOwner(): Promise<void> {
+  const owner = localStorage.getItem(ownerKey) || '';
+  try { await localRequest('logout'); } catch { /* The switched session also expires on its own. */ }
+  localStorage.removeItem(ownerKey);
+  saveToken(owner);
 }
 export async function changePassword(currentPassword: string, newPassword: string): Promise<LocalUser> {
   return localRequest<LocalUser>('password', { currentPassword, newPassword });
