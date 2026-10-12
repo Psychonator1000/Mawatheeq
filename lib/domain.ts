@@ -23,9 +23,11 @@ export function caseState(c:CaseRecord,r:Rules=DEFAULT_RULES,today=todayISO()){
  const remaining=daysBetween(today,due),elapsed=daysBetween(c.date,today),executionRemaining=daysBetween(today,executionDue);
  const eligible=!criminal&&outcome==='لصالحنا'&&appeal==='لا يوجد';
  const expired=due?today>due:days===0&&executionDue?today>executionDue:false;
- const status=criminal?'جنح':c.executionNote==='غير متداول'||c.appealRecorded==='منتهي'?'منتهي':appeal==='تم'?'متداول':outcome==='لصالحنا'&&['تم عمل اجراءات التنفيذ','تم فتح ملف التنفيذ'].includes(c.executionNote)?'تنفيذ قائم':!c.date||days===null||outcome==='غير محدد'?'بيانات ناقصة':expired&&appeal==='لا يوجد'?outcome==='لصالحنا'?'جاهز للتنفيذ':c.noActionConfirmation==='نعم'?'منتهي':c.noActionConfirmation==='لا'?'متداول':'بانتظار تأكيد الإجراءات':appeal==='غير مؤكد'?'بانتظار تأكيد الطعن':'متداول';
- const alert=status==='منتهي'?'ملف منتهي':appeal==='تم'?'تم اتخاذ الإجراء':days===0?'نهائي':remaining===null?'بيانات ناقصة':remaining<0?'انتهت المهلة':remaining<=r.warning?'خلال خمسة أيام':'ضمن المهلة';
- return {outcome,appeal,criminal,due,days,remaining,elapsed,executionDue,executionRemaining,eligible,status,alert};
+ // Moved to a higher court and waiting for its judgment: the case is still in progress, not missing data.
+ const awaiting=!c.date&&Array.isArray(c.stages)&&c.stages.length>0;
+ const status=criminal?'جنح':awaiting?'متداول':c.executionNote==='غير متداول'||c.appealRecorded==='منتهي'?'منتهي':appeal==='تم'?'متداول':outcome==='لصالحنا'&&['تم عمل اجراءات التنفيذ','تم فتح ملف التنفيذ'].includes(c.executionNote)?'تنفيذ قائم':!c.date||days===null||outcome==='غير محدد'?'بيانات ناقصة':expired&&appeal==='لا يوجد'?outcome==='لصالحنا'?'جاهز للتنفيذ':c.noActionConfirmation==='نعم'?'منتهي':c.noActionConfirmation==='لا'?'متداول':'بانتظار تأكيد الإجراءات':appeal==='غير مؤكد'?'بانتظار تأكيد الطعن':'متداول';
+ const alert=status==='منتهي'?'ملف منتهي':appeal==='تم'||awaiting?'تم اتخاذ الإجراء':days===0?'نهائي':remaining===null?'بيانات ناقصة':remaining<0?'انتهت المهلة':remaining<=r.warning?'خلال خمسة أيام':'ضمن المهلة';
+ return {outcome,appeal,criminal,due,days,remaining,elapsed,executionDue,executionRemaining,eligible,status,alert,awaiting};
 }
 export function emptyCase():CaseRecord{return {id:crypto.randomUUID(),code:'',autoNumber:'',client:'',clientGroup:'',opponent:'',role:'',type:'حكم أول درجة',ruling:'',outcome:'غير محدد',appealRecorded:'',appealConfirmation:'',date:'',notes:'',executionNote:'',copyDate:'',notificationDate:'',announcementDate:'',originalDate:'',executionStage:'',executionLegacy:'',noActionConfirmation:'',caseNumber:'',court:'',subject:'',lawyer:'',source:'إدخال يدوي',review:'',legacyNotes:'',insurance:false,procedures:[]}}
 

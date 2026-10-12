@@ -73,12 +73,13 @@ assert.ok(await mine.getByText('مهمة الأسبوع القادم').isVisible
 
 // A refresh opens instantly from the last visit even when the server is slow, then the server's copy takes over.
 await page.waitForFunction(()=>!!localStorage.getItem('mawatheeq.boot.v1'));await page.waitForTimeout(300);
-slowServer=4000;const reloadStart=Date.now();await page.reload();
-await mine.getByText('مهمة متأخرة تجريبية').waitFor({timeout:2500});
-assert.ok(Date.now()-reloadStart<3000,'Workspace and work appear before the slow server answers');
+// Each server answer takes 8 s, so anything shown sooner came from the last visit, not the server.
+slowServer=8000;const reloadStart=Date.now();await page.reload();
+await mine.getByText('مهمة متأخرة تجريبية').waitFor({timeout:7000});
+assert.ok(Date.now()-reloadStart<7500,'Workspace and work appear before the slow server answers');
 assert.equal(await page.getByText('جارٍ تحميل سجلاتك',{exact:false}).count(),0,'No loading placeholder on a refresh');
 await page.screenshot({path:artifacts+'/instant-reload.png'});
-slowServer=0;await page.waitForTimeout(4500);
+slowServer=0;await page.waitForTimeout(8500);
 
 // Notifications: my overdue and today work plus the approaching deadline, most urgent first.
 const bell=page.getByRole('button',{name:/^التنبيهات/});
@@ -260,6 +261,29 @@ await page.getByRole('button',{name:'إغلاق دون حفظ'}).click();
 await sheet.waitFor({state:'hidden'});
 assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-0').payload.opponent,'خصم الأدوات 0','Discarded edits are not saved');
 
+// Court levels: moving to appeal closes the first-instance file as a read-only record and starts a fresh one.
+await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-2/).click();
+const lv=page.locator('[data-record-window]');await lv.locator('.case-pin').getByText('TOOL-2').waitFor();
+await lv.locator('.case-quick').getByRole('button',{name:'نقل إلى الاستئناف'}).click();
+const mv=page.getByRole('dialog',{name:/نقل القضية إلى الاستئناف/});
+assert.equal(await mv.getByRole('button',{name:/نقل إلى الاستئناف وحفظ/}).isDisabled(),true,'Who appealed is required');
+await mv.getByLabel('من طعن في الحكم؟',{exact:true}).selectOption('الخصم');await mv.getByLabel('رقم القضية في الاستئناف',{exact:true}).fill('2026/77 مدني استئناف');await mv.getByLabel('المحكمة / الدائرة',{exact:true}).fill('محكمة الاستئناف · الدائرة 3');
+await mv.getByRole('button',{name:/نقل إلى الاستئناف وحفظ/}).click();await mv.waitFor({state:'hidden'});
+const closedLevel=lv.locator('.stage-card.closed');await closedLevel.getByText('2026/302').waitFor();
+assert.ok(await closedLevel.getByText('الخصم',{exact:true}).isVisible(),'The closed level records who appealed');
+assert.ok(await closedLevel.getByText('tools_owner',{exact:true}).isVisible(),'The server records who closed the level');
+assert.ok(await lv.locator('.case-pin').getByText('2026/77 مدني استئناف').isVisible(),'The new level\'s case number is pinned');
+assert.ok(await lv.locator('.case-pin').getByText('ابتدائي: 2026/302').isVisible(),'Earlier case numbers stay visible');
+assert.ok(await lv.locator('.progress-steps .step.current').getByText('بانتظار الحكم').isVisible(),'The appeal is waiting for its judgment');
+await page.screenshot({path:artifacts+'/case-levels.png'});
+const saved=(await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-2').payload;
+assert.equal(saved.stage,'استئناف');assert.equal(saved.stages.length,1);assert.equal(saved.stages[0].caseNumber,'2026/302');assert.equal(saved.date,'');
+await lv.getByRole('tab',{name:/بيانات الحكم/}).click();await lv.locator('.progress-steps .step.done').getByRole('button').click();
+assert.equal(await lv.getByRole('tab',{name:/درجات التقاضي/}).getAttribute('aria-selected'),'true','A finished level opens its record');
+await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
+await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('combobox').fill('2026/302');
+await page.getByRole('dialog',{name:'بحث سريع'}).getByText(/TOOL-2/).first().waitFor();await page.keyboard.press('Escape');
+
 // Account actions live in the avatar menu.
 const openAccount=()=>page.getByRole('button',{name:'حساب tools_owner'}).click();
 await openAccount();
@@ -346,4 +370,4 @@ assert.equal(await page.evaluate(()=>new Promise(res=>{const r=indexedDB.open('m
 await page.reload();await page.getByRole('button',{name:'فتح مساحة العمل',exact:true}).waitFor();
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
+console.log('Passed tools UI: court levels (move to appeal, closed read-only record, pinned numbers, search by earlier number), instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');

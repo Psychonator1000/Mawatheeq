@@ -54,6 +54,11 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - Match repeated judgments using their automatic number, date, and parties; a changed office code alone does not make a new judgment. Never import workbook helper tables or cached countdown formulas as case records.
 - Keep private import plans and source workbooks outside the public repository. Use revision checks, snapshots, and reconciliation for shared-data updates. Run `test:excel` when changing workbook parsing.
 
+## Court levels
+
+- Cases move ابتدائي → استئناف → تمييز. The record holds the current level; each level left is kept in `stages` exactly as it stood, with its own number, court, judgment and procedures.
+- The server stamps who closed a level and when. Staff may add levels but never change or remove a closed one; only the owner corrects or undoes. A save without `stages` keeps the existing list. Workbook imports match closed levels too. Run `test:domain` and `test:office` when changing this.
+
 ## Office workflows and source verification
 
 - The 4 October 2026 clarification makes new case entry form-based. PDFs were for building the initial database; attachments remain optional for entry and verification. Never require a PDF to add a case or approve a source-based review.

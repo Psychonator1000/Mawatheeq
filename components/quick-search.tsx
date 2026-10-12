@@ -3,6 +3,7 @@ import {Building2,FileText,History,Plus,Search} from 'lucide-react';
 import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,CommandList} from './ui/command';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
 import {normalizeSearch} from '@/lib/case-browse';
+import {allCaseNumbers} from '@/lib/case-stages';
 import {clientName,type ClientEntity} from '@/lib/clients';
 import type {CaseRecord} from '@/lib/domain';
 
@@ -14,7 +15,7 @@ export default function QuickSearch({open,onOpenChange,recent=[],cases,clients,s
  const [query,setQuery]=useState('');
  useEffect(()=>{const key=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();onOpenChange(!open)}};addEventListener('keydown',key);return()=>removeEventListener('keydown',key)},[open,onOpenChange]);
  const term=normalizeSearch(query.trim());
- const caseIndex=useMemo(()=>cases.map(c=>[c,normalizeSearch([c.code,c.autoNumber,clientName(c),c.client,c.opponent,c.clientContactName,c.lawyer].join(' '))] as const),[cases]);
+ const caseIndex=useMemo(()=>cases.map(c=>[c,normalizeSearch([c.code,c.autoNumber,clientName(c),c.client,c.opponent,c.clientContactName,c.lawyer,...allCaseNumbers(c)].join(' '))] as const),[cases]);
  const clientIndex=useMemo(()=>clients.map(c=>[c,normalizeSearch([c.name,...c.aliases,...c.contacts.map(p=>p.name)].join(' '))] as const),[clients]);
  const foundCases=term?caseIndex.filter(([,text])=>text.includes(term)).slice(0,limit).map(([c])=>c):[];
  const foundClients=term?clientIndex.filter(([,text])=>text.includes(term)).slice(0,5).map(([c])=>c):[];

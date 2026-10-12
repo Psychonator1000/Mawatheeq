@@ -1189,6 +1189,14 @@
 :root[data-mode=dark] .case-window .step-text{background:transparent}
 :root[data-mode=dark] .record-window .record-eyebrow{color:var(--brand)}
 :root[data-mode=dark] .record-window .case-pin .amount-words{color:var(--muted-foreground)}
+:root[data-mode=dark] .stage-banner{color:var(--muted-foreground)}
+:root[data-mode=dark] .stage-banner b{color:var(--foreground)}
+:root[data-mode=dark] .stage-card{border:1px solid var(--border);background:var(--card)}
+:root[data-mode=dark] .stage-card.current{border-color:color-mix(in srgb,var(--brand) 45%,var(--border));background:color-mix(in srgb,var(--brand) 5%,var(--card))}
+:root[data-mode=dark] .stage-level small{color:var(--brand)}
+:root[data-mode=dark] .stage-facts{background:color-mix(in srgb,var(--muted) 60%,transparent)}
+:root[data-mode=dark] .stage-facts dt{color:var(--muted-foreground)}
+:root[data-mode=dark] .step-open:focus-visible{outline:2px solid var(--brand)}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

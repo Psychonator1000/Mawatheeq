@@ -130,3 +130,17 @@
 .record-window .case-pin .notice{margin:0;font-size:12px}
 .record-window>.detail-actions{display:flex;flex-wrap:wrap;gap:8px}
 @media(max-width:900px){.detail-sheet.record-window[data-size=compact]{inset:0!important;grid-template-columns:1fr}}
+/* Court levels: closed levels are read-only records inside the case file. */
+.stage-banner{margin:16px 0 0;font-size:13px;color:var(--muted-foreground)}.stage-banner b{color:var(--foreground)}
+.stage-list{display:grid;gap:12px;margin-top:18px}
+.stage-card{border:1px solid var(--border);border-radius:14px;padding:14px 16px;background:var(--card)}
+.stage-card.current{border-color:color-mix(in srgb,var(--brand) 45%,var(--border));background:color-mix(in srgb,var(--brand) 5%,var(--card))}
+.stage-card header,.stage-card summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:default}.stage-card summary{cursor:pointer;list-style:none}.stage-card summary::-webkit-details-marker{display:none}
+.stage-level{display:inline-flex;align-items:center;gap:6px;font-weight:700}.stage-level small{font-weight:500;color:var(--brand);font-size:11px}
+.stage-card .mono{font-size:13px}.stage-card .actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.stage-facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 16px;margin:12px 0 0;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--muted) 60%,transparent)}
+.stage-facts dt{font-size:11px;color:var(--muted-foreground)}.stage-facts dd{margin:0;font-size:13px;font-weight:600}
+.stage-ruling{margin:10px 0 0;font-size:13px;line-height:1.9}.stage-card h4{margin:14px 0 6px;font-size:13px}
+.stage-card.closed[open]{box-shadow:0 8px 24px -18px #0006}.stage-card>.btn{margin-top:12px}
+.step-open{all:unset;display:flex;align-items:inherit;gap:inherit;width:100%;cursor:pointer;border-radius:8px}.step-open:focus-visible{outline:2px solid var(--brand);outline-offset:2px}.step.done .step-open:hover .step-text b{text-decoration:underline}
+.stage-number{font-size:11px;padding:2px 8px}

@@ -77,7 +77,8 @@ export function matchesCaseFilters(record: CaseRecord, filters: CaseFilters) {
     && includes(`${record.clientEntityName || ''} ${record.client || ''} ${record.clientGroup || ''}`, filters.client)
     && includes(record.opponent, filters.opponent)
     && includes([record.code, record.autoNumber, record.client, record.clientGroup, record.opponent,
-      record.caseNumber, record.lawyer, record.ruling, record.clientEntityName, record.clientContactName, record.casePerson].join(' '), filters.search);
+      record.caseNumber, record.lawyer, record.ruling, record.clientEntityName, record.clientContactName, record.casePerson,
+      ...(Array.isArray(record.stages) ? (record.stages as { caseNumber?: string; autoNumber?: string }[]).flatMap(st => [st.caseNumber, st.autoNumber]) : [])].join(' '), filters.search);
 }
 
 export function monthlyCaseCounts(records: CaseRecord[], year: string) {

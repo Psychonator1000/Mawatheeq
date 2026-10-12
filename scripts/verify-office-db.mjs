@@ -98,7 +98,22 @@ await assert.rejects(()=>request(again.token,'context'),/الجلسة/);
 assert.equal((await rpc('mawatheeq_local_login',['newstaff','Reset-fixture-password-123'])).user.mustChangePassword,true);
 const backup=await request(owner.token,'export_page',{kind:'case_reviews',offset:0});assert.ok(backup.length>=3);
 await assert.rejects(()=>request(owner.token,'export_page',{kind:'accounts'}),/متاحة/);
+// Court levels: a closed level is stamped by the server and locked for staff; only the owner corrects or undoes it.
+{let sc=await local(owner.token,'save_case',{case:{id:'stage-fixture',client:'Synthetic Client',opponent:'Synthetic Opponent',code:'STG',autoNumber:'777',date:'2026-01-01',type:'حكم أول درجة',outcome:'لصالحنا',caseNumber:'2026/1',procedures:[]}});
+ const closed={id:'stage-1',level:'ابتدائي',caseNumber:'2026/1',autoNumber:'777',court:'الكلية',lawyer:'',role:'',type:'حكم أول درجة',date:'2026-01-01',outcome:'لصالحنا',ruling:'',appealRecorded:'',appealConfirmation:'تم',absent:'',copyDate:'',notificationDate:'',announcementDate:'',originalDate:'',procedures:[{id:'p',date:'2026-01-02',text:'جلسة'}],appealedBy:'الخصم',movedOn:'2026-01-20',note:'',closedAt:'1999-01-01T00:00:00',closedBy:'forged'};
+ sc=await local(editor.token,'save_case',{case:{...sc,stage:'استئناف',type:'حكم استئناف',caseNumber:'2026/2',autoNumber:'888',date:'',stages:[closed]}});
+ assert.equal(sc.stages[0].closedBy,'editor','The server records who closed the level');assert.notEqual(sc.stages[0].closedAt,'1999-01-01T00:00:00','The closing time is the server\'s');
+ await assert.rejects(()=>local(editor.token,'save_case',{case:{...sc,stages:[{...sc.stages[0],outcome:'غير صالحنا'}]}}),/مغلقة/,'Staff cannot rewrite a closed level');
+ await assert.rejects(()=>local(editor.token,'save_case',{case:{...sc,stages:[]}}),/مغلقة/,'Staff cannot remove a closed level');
+ await assert.rejects(()=>local(editor.token,'save_case',{case:{...sc,stages:[...sc.stages,{...closed,id:'x',level:'درجة'}]}}),/غير صالحة/);
+ const {stages,...withoutStages}=sc;sc=await local(editor.token,'save_case',{case:{...withoutStages,notes:'older client'}});
+ assert.deepEqual(sc.stages,stages,'A save without the list keeps the closed levels');
+ sc=await local(owner.token,'save_case',{case:{...sc,stages:[{...sc.stages[0],ruling:'تصحيح المسؤول'}]}});
+ assert.equal(sc.stages[0].ruling,'تصحيح المسؤول');assert.equal(sc.stages[0].closedBy,'editor','A correction keeps the original closing stamp');
+ const imported=await local(owner.token,'import_cases',{cases:[{client:'Synthetic Client',opponent:'Synthetic Opponent',code:'STG',autoNumber:'777',date:'2026-01-01',type:'حكم أول درجة',procedures:[]}]});
+ assert.equal(imported.added,0,'A workbook row for the closed level matches the case instead of duplicating it');
+ sc=await local(owner.token,'save_case',{case:{...sc,stages:[],stage:'ابتدائي'}});assert.deepEqual(sc.stages,[],'The owner can undo a move');}
 await db.exec('reset role');
 assert.equal((await db.query("select count(*)::int n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='mawatheeq_office_request' and p.prosecdef")).rows[0].n,0);
 await db.close();
-console.log('Passed office database: session denial, evidence gates, authoritative reviewers, stale approvals, history, local staff controls, tasks/hearings, conflicts, portable export and revocation.');
+console.log('Passed office database: court levels (server-stamped, locked for staff, owner corrections, import matching), session denial, evidence gates, authoritative reviewers, stale approvals, history, local staff controls, tasks/hearings, conflicts, portable export and revocation.');
