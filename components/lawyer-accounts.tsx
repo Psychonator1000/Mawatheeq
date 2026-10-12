@@ -29,7 +29,7 @@ export default function LawyerAccounts({members,records,onClose,onCreated}:{memb
   for(const row of chosen){
    try{
     const permissions:Omit<Permissions,'revision'>=scope==='none'?{sections:[],caseScope:'selected',caseIds:[],canEdit:false,canExport:false}
-     :{sections:CASE_SECTIONS,caseScope:scope==='all'?'all':'selected',caseIds:scope==='all'?[]:row.cases,canEdit,canExport:false};
+     :{sections:CASE_SECTIONS,caseScope:scope==='all'?'all':'selected',caseIds:[],lawyerNames:scope==='all'?[]:[row.label],canEdit,canExport:false};
     const password=generatePassword();
     const created=await officeRequest<Member>('create_member',{username:row.username.trim().toLowerCase(),password,permissions});
     await officeRequest('set_member_password',{id:created.id,password,mustChange:false});
@@ -49,7 +49,7 @@ export default function LawyerAccounts({members,records,onClose,onCreated}:{memb
     <label className="checkbox-line"><input type="radio" name="lawyer-scope" checked={scope==='all'} onChange={()=>setScope('all')}/>صفحة القضايا، وجميع القضايا</label>
     <label className="checkbox-line"><input type="radio" name="lawyer-scope" checked={scope==='none'} onChange={()=>setScope('none')}/>بلا صفحات الآن (أحددها لاحقاً)</label>
     {scope!=='none'&&<label className="checkbox-line"><input type="checkbox" checked={canEdit} onChange={e=>setCanEdit(e.target.checked)}/>السماح بالتعديل</label>}
-    {scope==='own'&&<p className="subtitle">«قضاياه فقط» تشمل القضايا المسجلة باسمه الآن. القضايا الجديدة تضيفها له من «تعديل الصلاحيات».</p>}
+    {scope==='own'&&<p className="subtitle">«قضاياه فقط» تتبع اسم المحامي في خانة «المحامي»: القضايا المسجلة باسمه الآن، وكل قضية جديدة أو منقولة إليه لاحقاً.</p>}
    </fieldset>
    <div className="table-wrap"><table className="office-table"><thead><tr><th aria-label="إنشاء"/><th>المحامي في القضايا</th><th>الاسم الظاهر</th><th>اسم الدخول</th></tr></thead><tbody>
     {rows.map((r,i)=><tr key={r.label}><td><input type="checkbox" aria-label={'إنشاء حساب '+r.label} checked={r.include} disabled={busy} onChange={e=>patch(i,{include:e.target.checked})}/></td><td>{r.label}<small>{r.cases.length} قضية</small></td>

@@ -8,6 +8,8 @@ export const SECTIONS = {
 export type Section = keyof typeof SECTIONS;
 export type Permissions = {
   sections: Section[]; caseScope: 'all' | 'selected'; caseIds: string[];
+  /** With selected cases: every case whose lawyer field matches one of these names, now and later. */
+  lawyerNames?: string[];
   canEdit: boolean; canExport: boolean; revision: number;
 };
 export const NO_ACCESS: Permissions = { sections: [], caseScope: 'selected', caseIds: [], canEdit: false, canExport: false, revision: 0 };
