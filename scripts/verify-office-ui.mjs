@@ -62,8 +62,14 @@ try{
  await roll.getByLabel('التجميع').selectOption('outcome');await page.frameLocator('.roll-preview').getByRole('heading',{name:/لصالحنا|غير محدد|غير صالحنا/}).first().waitFor();
  await page.screenshot({path:artifacts+'/judgment-roll.png'});
  await page.evaluate(()=>{window.__printed='';window.__mawatheeqPrint=h=>{window.__printed+=h}});await roll.getByRole('button',{name:/طباعة الرول/}).click();
- {const printed=await page.evaluate(()=>window.__printed);assert.ok(firstTwo.every(n=>printed.includes('>'+n+'<')),'Both selected cases are printed');assert.ok(printed.includes('2 حكم')&&printed.includes('landscape;margin:0'),'Only the selection, landscape, no browser header');}
- await roll.getByRole('radio',{name:/القضايا المعروضة/}).check();await page.frameLocator('.roll-preview').getByText(/25 حكم/).waitFor();
+ {const printed=await page.evaluate(()=>window.__printed);assert.ok(firstTwo.every(n=>printed.includes('>'+n+'<')),'Both selected cases are printed');assert.ok(printed.includes('2 قضية')&&printed.includes('landscape;margin:0'),'Only the selection, landscape, no browser header');assert.ok(printed.includes('المحكمة / الدائرة / الدور')&&printed.includes('الجلسة القادمة')&&printed.includes('آخر إجراء'),'The roll carries the full story');}
+ await roll.getByRole('radio',{name:/القضايا المعروضة/}).check();await page.frameLocator('.roll-preview').getByText(/25 قضية/).waitFor();
+ // Filters narrow the roll (a month with no judgments prints nothing), and columns can be dropped.
+ await roll.locator('.roll-filter-grid').getByLabel('شهر الحكم',{exact:true}).selectOption('01');await roll.locator('.roll-count').getByText('0',{exact:true}).waitFor();assert.equal(await roll.getByRole('button',{name:/طباعة الرول/}).isDisabled(),true);
+ await roll.getByRole('button',{name:'مسح التصفية'}).click();await roll.locator('.roll-count').getByText('25',{exact:true}).waitFor();
+ await roll.getByRole('button',{name:/الأعمدة/}).click();await roll.getByRole('checkbox',{name:'الكود',exact:true}).uncheck();
+ await page.evaluate(()=>{window.__printed=''});await roll.getByRole('button',{name:/طباعة الرول/}).click();assert.ok(!(await page.evaluate(()=>window.__printed)).includes('<th>الكود</th>'),'An unticked column is not printed');
+ await roll.getByRole('button',{name:'الأعمدة المعتادة'}).click();
  await roll.getByRole('button',{name:'إغلاق',exact:true}).first().click();await page.locator('.pick-bar').getByRole('button',{name:'إلغاء التحديد'}).click();
  await page.setViewportSize({width:390,height:844});await page.locator('tbody tr.case-row').first().scrollIntoViewIfNeeded();await page.screenshot({path:artifacts+'/case-list-mobile.png'});await page.setViewportSize({width:1440,height:1000});
  await go('إضافة قضية');const sheet=page.getByRole('dialog');await sheet.getByLabel('كود المكتب',{exact:true}).fill('NEW-FORM');await sheet.getByLabel('الرقم الآلي',{exact:true}).fill('9000');
