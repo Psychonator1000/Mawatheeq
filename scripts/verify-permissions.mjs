@@ -185,5 +185,13 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  await office(admin.token,'set_member_access',{id:m.id,revision:m.permissions.revision,permissions:{...m.permissions,caseScope:'all',lawyerNames:['المحامي المثال']}});
  const again=await login('own_lawyer');assert.equal((await local(again.token,'access')).lawyerNames,undefined,'All-case scope drops the names');
  const history=await office(admin.token,'access_history',{id:m.id});assert.ok(history.some(h=>JSON.stringify(h).includes('lawyerNames')),'The audit records the names');}
+// Job roles label the account and travel with its permissions; they grant nothing by themselves.
+{await assert.rejects(()=>office(admin.token,'create_member',{username:'bad_role',password:'Temporary-password-123',permissions:{...noAccess,jobRole:'owner'}}),/دور الموظف/);
+ const clerk=await create('role_clerk',{...noAccess,jobRole:'secretary'});
+ const access=await local(clerk.token,'access');assert.equal(access.jobRole,'secretary');assert.deepEqual(access.sections,[],'A role alone opens no page');
+ await denied(()=>local(clerk.token,'cases_page'));
+ const ctx=await office(admin.token,'context');const m=ctx.members.find(x=>x.username==='role_clerk');assert.equal(m.permissions.jobRole,'secretary');
+ await office(admin.token,'set_member_access',{id:m.id,revision:m.permissions.revision,permissions:{...m.permissions,jobRole:'lawyer',sections:['cases'],lawyerNames:['المحامي المثال']}});
+ const history=await office(admin.token,'access_history',{id:m.id});assert.equal(history[0].after.jobRole,'lawyer','The audit records the role');assert.deepEqual(history[0].after.lawyerNames,['المحامي المثال'],'Names still stored with a role');}
 await db.close();
-console.log('Passed permissions: lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
+console.log('Passed permissions: job roles (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');

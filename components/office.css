@@ -5,7 +5,6 @@
 .office-attachments{border:1px solid #e2d8ca;border-radius:10px;padding:14px;margin-top:18px}.office-attachments>summary{cursor:pointer;font-size:13px;color:#745749}.office-attachments[open]>summary{margin-bottom:14px}
 
 /* Administrator permission editor */
-.permissions-dialog{max-width:840px!important}
 .permission-group{border:1px solid #e4d9cb!important;border-radius:12px;padding:18px!important;margin:22px 0!important;min-width:0}
 .permission-group legend{font-weight:700;padding:0 8px;color:var(--brand)}
 .permission-group>.checkbox-line{margin:12px 0}
@@ -23,6 +22,34 @@
 .readonly-fields{border:0;padding:0;min-width:0}
 .readonly-fields:disabled input,.readonly-fields:disabled textarea,.readonly-fields:disabled button,.readonly-fields:disabled select{opacity:1;color:#655044;cursor:default}
 .access-scope{margin-bottom:20px;border-inline-start:3px solid var(--brand);padding:10px 15px;background:#f7f0e7;font-size:13px;line-height:1.8}
+.permissions-dialog{max-width:940px!important}
+.permissions-dialog .office-form{border:0;padding:0;margin:8px 0 0}
+.account-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px;align-items:start}
+.account-fields>.checkbox-line{grid-column:1/-1;margin:0 0 6px!important}
+.role-step{background:#fbf7ef}
+.role-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.role-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;border:1px solid #e4d9cb;border-radius:12px;background:#fffdf8;color:#47392f;text-align:right;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+.role-card svg{color:var(--brand)}
+.role-card b{font-size:14px;font-weight:650}
+.role-card small{font-size:12px;line-height:1.7;color:#7a6759}
+.role-card:hover{border-color:#cdb89f;transform:translateY(-1px)}
+.role-card.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand) inset;background:#f6eee3}
+.role-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.role-summary span{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:10px;background:#f3eadf;min-width:0}
+.role-summary small{font-size:11px;color:#7a6759}
+.role-summary b{font-size:13px;font-weight:600;color:#3b2f25;overflow-wrap:anywhere}
+.permission-lawyers{margin-top:14px}
+.permission-lawyers .permission-cases{max-height:260px;overflow-y:auto}
+.permission-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;border:1px dashed #d6c4ad;border-radius:12px;background:transparent;color:#5d4a3d;font-size:13px;cursor:pointer}
+.permission-toggle:hover{background:#f7f1e8}
+.permission-toggle .chev{margin-inline-start:auto;transition:transform .2s}
+.permission-toggle[aria-expanded=true] .chev{transform:rotate(180deg)}
+.permission-details{animation:permission-open .2s ease-out}
+@keyframes permission-open{from{opacity:0;transform:translateY(-4px)}}
+.permission-details .permission-cases{max-height:320px;overflow-y:auto}
+.role-chip{display:inline-block;margin-inline-end:8px;padding:1px 9px;border-radius:999px;background:#f1e6d8;color:#5d3f33;font-size:12px;font-weight:600}
+@media(max-width:600px){.account-fields,.role-summary{grid-template-columns:1fr}.role-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.role-card,.permission-details{transition:none;animation:none}}
 @media(max-width:600px){.permission-sections{grid-template-columns:1fr}.permission-group{padding:12px!important}.permission-case{padding:10px}}
 
 .quick-search-trigger{gap:8px;color:#756359;min-height:36px}.quick-search-trigger kbd{font:11px ui-monospace,monospace;border:1px solid #dfd3c5;border-radius:6px;padding:1px 6px;background:#faf6ef;direction:ltr}
@@ -161,7 +188,46 @@
 .tl-item.overdue .tl-body b{color:#a8562a}
 .case-finance{display:grid;gap:14px;margin-top:18px}
 .roll-print{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:6px 0 10px}.roll-print .field{margin:0;min-width:200px;max-width:260px}
-.case-window .detail-tabs{flex-wrap:wrap;height:auto!important;justify-content:flex-start;row-gap:4px}.case-window .detail-tabs>[role=tab]{flex:0 0 auto}
+/* Case file tabs: every tab visible (they wrap), each with its icon and a count where it helps. */
+.case-window .case-tabs{display:flex;flex-wrap:wrap;gap:4px;height:auto!important;width:100%;justify-content:flex-start;padding:5px!important;border-radius:14px;background:#efe6da;border:1px solid #e4d9cb;overflow:visible}
+.case-tabs>[role=tab]{flex:0 0 auto;position:relative;display:inline-flex;align-items:center;gap:7px;height:auto;padding:8px 13px;border-radius:10px;border:0;font-size:13.5px;font-weight:500;color:#6d5a4c;background:transparent;box-shadow:none}
+.case-tabs>[role=tab] svg{width:16px;height:16px;opacity:.75}
+.case-tabs>[role=tab]:hover{background:#f7f1e8;color:#3b2f25}
+.case-tabs>[role=tab][data-state=active]{background:#fffdf8;color:var(--brand);font-weight:650;box-shadow:0 1px 2px #3b2f2514,0 4px 12px -6px #3b2f2533}
+.case-tabs>[role=tab][data-state=active] svg{opacity:1}
+.case-tabs>[role=tab][data-state=active]::after{content:'';position:absolute;inset-inline:14px;bottom:3px;height:2px;border-radius:2px;background:var(--brand)}
+.tab-count{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e4d9cb;color:#5d4a3d;font-size:11px;font-weight:600;display:inline-grid;place-items:center;font-variant-numeric:tabular-nums}
+[data-state=active]>.tab-count{background:var(--brand);color:#fff}
+/* Titled cards that group a tab's fields. */
+.tab-card{border:1px solid #e4d9cb;border-radius:14px;background:#fffdf8;padding:18px 20px 20px;margin-top:16px}
+.tab-card>header{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #eee5d8}
+.tab-card-icon{width:34px;height:34px;flex-shrink:0;border-radius:10px;display:grid;place-items:center;background:#f3eadf;color:var(--brand)}
+.tab-card-icon svg{width:18px;height:18px}
+.tab-card h3{margin:0;font-size:15px;font-weight:650;color:#3b2f25}
+.tab-card header small{display:block;margin-top:2px;font-size:12px;line-height:1.7;color:#7a6759}
+.tab-card .form-grid{gap:14px 18px}
+.tab-card .field{margin:0}
+.tab-flags{display:flex;flex-wrap:wrap;gap:8px 22px}.tab-flags .checkbox-line{margin:0}
+.tab-dates{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px 18px}
+.tab-proc{grid-template-columns:repeat(3,minmax(0,1fr))!important}.tab-proc>.wide,.tab-proc>.field:has(textarea){grid-column:1/-1;order:9}
+.tab-proc textarea{min-height:76px}
+.tab-stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;margin:16px 0 0}
+.tab-stats>div{background:#f3eadf!important;border-radius:12px!important}
+.tab-stats b{font-size:15px}
+.tab-list-title{display:flex;align-items:center;gap:8px;margin:24px 0 14px;font-size:15px;font-weight:650;color:#3b2f25}.tab-list-title svg{width:17px;height:17px;color:var(--brand)}
+.tab-list-title small{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#efe6da;font-size:12px;display:inline-grid;place-items:center;color:#5d4a3d}
+.case-window .timeline-item{background:#fffdf8;border:1px solid #eee5d8;border-radius:12px;padding:12px 14px}
+.case-window .timeline-item p{margin:4px 0;font-weight:500}
+.tab-empty{display:grid;justify-items:center;gap:8px;text-align:center;padding:48px 20px;margin-top:16px;border:1px dashed #d6c4ad;border-radius:14px;color:#7a6759}
+.tab-empty svg{width:34px;height:34px;color:var(--brand);opacity:.6}.tab-empty b{color:#3b2f25;font-size:15px}.tab-empty p{margin:0;font-size:13px;max-width:420px;line-height:1.8}
+.case-window .stage-banner{display:inline-flex;align-items:center;gap:6px;margin:16px 0 0;padding:6px 12px;border-radius:999px;background:#f3eadf}
+/* Court / experts choice as a segmented control. */
+.venue-choice{gap:6px!important}
+.venue-choice .checkbox-line{margin:0!important;padding:8px 14px;border:1px solid #e4d9cb;border-radius:10px;background:#fffdf8;cursor:pointer;white-space:nowrap;line-height:1.4}
+.venue-choice .checkbox-line:has(input:checked){border-color:var(--brand);background:#f6eee3;color:var(--brand);font-weight:600}
+.venue-choice input{accent-color:var(--brand)}
+@media(max-width:900px){.tab-stats{grid-template-columns:1fr 1fr!important}.tab-proc{grid-template-columns:1fr 1fr!important}}
+@media(max-width:600px){.tab-card{padding:14px}.tab-proc{grid-template-columns:1fr!important}.case-tabs>[role=tab]{padding:7px 10px;font-size:13px}}
 .perf-reason{display:grid;gap:8px;justify-items:start}.perf-reason .subtitle{margin:0}
 .staff-search{margin:0 0 12px;max-width:420px}.staff-search small{white-space:nowrap;color:var(--muted-foreground);font-size:12px}
 /* Staff chat: a bubble on every page and a panel above it. */

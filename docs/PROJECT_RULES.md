@@ -75,6 +75,7 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 ## User permissions
 
 - Only the owner creates/manages local accounts and grants access. New accounts default to no sections, no cases, read-only, and no report export. The owner cannot be restricted or disabled through staff controls.
+- New staff start by choosing a job role (manager, lawyer, secretary, collections, accountant, HR or custom). The role (`jobRole`) only labels the account and preselects editable settings; authority comes solely from the saved sections, case scope and edit/export flags. «Manager» means all pages and cases with edit/export, never account administration.
 - Enforce allowed cases and sections on the server, including documents, client/contact projections, work, history, reviews and exports. Hidden navigation is not authorization. Never restore broad execute grants to private legacy functions or direct table/storage access.
 - Changing permissions requires the current permission revision, records an audit entry and revokes sessions. Keep account locking/revalidation so a concurrent stale password request cannot undo an administrator reset.
 - Shared client profiles/new case creation require all-case editing and their corresponding section. Restricted case edits preserve client links and historical labels, including omitted keys. Unclassified document studio access requires all-case scope; case evidence must be linked exclusively to allowed cases.
