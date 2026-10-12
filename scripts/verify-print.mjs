@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { caseSheetHtml, voucherHtml, statementHtml, judgmentRollHtml } from '../lib/print.ts';
+import { caseSheetHtml, voucherHtml, statementHtml, judgmentRollHtml, listHtml } from '../lib/print.ts';
 import { filterRoll, sortRoll, groupRoll, rollCell, EMPTY_ROLL_FILTER, ROLL_COLUMNS, DEFAULT_ROLL_COLUMNS } from '../lib/judgment-roll.ts';
 
 const record = {
@@ -69,3 +69,6 @@ console.log('Passed payroll sheet and warning letter: escaping, per-currency tot
  assert.ok(roll.includes('<td class="nowrap">3</td>') && roll.includes('3 قضية') && roll.includes('<h2>سالم (2)</h2>') && roll.includes('المحكمة / الدائرة / الدور'),'Numbered across groups with counts and the court column');
  assert.ok(!/github/i.test(roll) && !/github/i.test(html),'Printed pages never carry the site address');}
 console.log('Passed judgment roll printing.');
+{const l=listHtml('إفادات <ملف>','اتصالات',['التاريخ','الإجراء'],[['13/10/2026','<b>اتصال</b>']],'13/10/2026','u',[['الإجمالي','1.000']]);
+ assert.ok(!l.includes('<b>اتصال') && l.includes('&lt;b&gt;اتصال') && l.includes('إفادات &lt;ملف&gt;') && l.includes('1.000'),'Printed lists are escaped with totals');}
+console.log('Passed printable lists.');

@@ -86,7 +86,8 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 
 - Selecting legal, secretary, collections, accounting or HR never grants authority. Department grants alone must not authorize the full legal case, client profile, document or other departments' records.
 - Keep case assignments shared across case-linked departments. HR profiles are independent of login accounts; only the owner and admins with the staff power administer users.
-- Secretary work reuses work_items. Collection edits invalidate source reviews; generation checks current file and case revisions and preserves immutable output snapshots.
+- Secretary work reuses work_items. Collection source-data edits invalidate source reviews; changes to follow-up fields only (status, assignee, instalments, tags, closing) keep them. Generation checks current file and case revisions and preserves immutable output snapshots.
+- Collection statements (إفادات) and payments are records linked to their file and its case. Collection payments, like accounting entries, are immutable in exact fils and are cancelled with an audited reason. Run test:departments and the workspaces browser test when changing collections.
 - Keep posted financial entries immutable, with exact minor-unit amounts, separate currencies and audited cancellation reasons. Never introduce paid payment services or payroll calculations implicitly.
 - HR leave approval must serialize per employee and reject overlapping approved dates. Keep profile and leave histories.
 - Run test:departments and both synthetic browser workflows alongside existing access tests before deployment.

@@ -162,3 +162,10 @@ export function judgmentRollHtml(title: string, scope: string, headers: string[]
   const body = groups.map(([label, list]) => `${label ? `<h2>${escape(label)} (${list.length})</h2>` : ''}${table(list)}`).join('');
   return page(title, `<style>.roll{font-size:${size}px}.roll th{white-space:nowrap}.roll thead{display:table-header-group}.roll tr{break-inside:avoid}.roll small{color:#6b5a50}h2{break-after:avoid}</style><header><h1>${escape(title)}</h1><p>${escape(scope)} · ${total} قضية</p></header>${total ? body : '<p>لا توجد قضايا في هذا النطاق.</p>'}${footer(printedAt, printedBy)}`, true);
 }
+
+/** A simple printable table (file statements, a file's account statement…), escaped, with optional totals rows. */
+export function listHtml(title: string, subtitle: string, headers: string[], rows: string[][], printedAt: string, printedBy: string, totals: [string, string][] = []): string {
+  const table = `<table class="list"><thead><tr>${headers.map(h => `<th>${escape(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${escape(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const sums = totals.length ? `<table class="totals" style="margin-top:12px;width:auto">${totals.map(([k, v]) => `<tr class="total"><th>${escape(k)}</th><td class="amount">${escape(v)}</td></tr>`).join('')}</table>` : '';
+  return page(title, `<header><h1>${escape(title)}</h1><p>${escape(subtitle)}</p></header>${rows.length ? table : '<p>لا توجد سجلات.</p>'}${sums}${footer(printedAt, printedBy)}`, headers.length > 6);
+}

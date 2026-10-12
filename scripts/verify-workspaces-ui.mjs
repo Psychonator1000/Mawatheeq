@@ -64,12 +64,24 @@ try{
  for(const label of ['تاريخ رفض أمر الأداء','تاريخ التكليف بالوفاء','تاريخ كشف الحساب','تاريخ الجلسة'])await pickToday(label);
  // The hearing day follows the hearing date (a choice, not typed).
  await page.getByRole('combobox',{name:'يوم الجلسة'}).getByText(/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)$/).waitFor();
- await click('إضافة مستند للحافظة');await field('وصف المستند 1','عقد تجريبي تمت مراجعته');await click('حفظ ملف التحصيل');
+ await page.getByRole('tab',{name:/^الحافظة والمستندات/}).click();await click('إضافة مستند للحافظة');await field('وصف المستند 1','عقد تجريبي تمت مراجعته');await click('حفظ ملف التحصيل');
  await page.getByRole('heading',{name:'مراجعة المصدر',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).isDisabled(),true);
  await page.getByRole('checkbox',{name:'راجعت البيانات الحالية وطابقتها مع المصدر المسجل.',exact:true}).check();await click('تسجيل مراجعة المصدر');
  await page.getByText(/راجع ui_owner هذه النسخة/).waitFor();
  await downloadWord('إنشاء صحيفة Word','شركة اختبار التحصيل');await downloadWord('إنشاء حافظة Word','عقد تجريبي تمت مراجعته');
- await screen('collections-review-desktop');await click('إغلاق الملف');await screen('collections-desktop');
+ await screen('collections-review-desktop');
+ // File statements (إفادات): a call that is not done yet becomes a due follow-up.
+ await page.getByRole('tab',{name:/^إفادات الملف/}).click();await page.getByRole('combobox',{name:'إجراء التحصيل أو التنفيذ'}).click();await page.getByRole('option',{name:'اتصال بالخصم',exact:true}).click();
+ await field('الإجراء (نص الإفادة)','لم يرد على الاتصال');await page.getByRole('radio',{name:'غير منجز',exact:true}).click();await click('إضافة الإفادة');
+ await page.locator('.statements-table').getByText('لم يرد على الاتصال').waitFor();await screen('collections-statements-desktop');
+ // Financial position: a payment lowers the remaining amount.
+ await page.getByRole('tab',{name:/^الوضع المالي/}).click();await field('المبلغ (د.ك)','25.125');await click('إضافة دفعة');
+ await page.locator('.position-tile').filter({hasText:'إجمالي المسدد'}).getByText('25.125').waitFor();await page.locator('.position-tile').filter({hasText:'الباقي'}).getByText('100.000').waitFor();await screen('collections-money-desktop');
+ // Follow-up fields: changing the file status keeps the source review.
+ await page.getByRole('tab',{name:/^بيانات الملف/}).click();await page.getByRole('combobox',{name:'حالة الملف'}).click();await page.getByRole('option',{name:'تحصيل ودي',exact:true}).click();await click('حفظ ملف التحصيل');
+ await page.locator('[data-record-window]').getByText('تمت المراجعة',{exact:true}).first().waitFor();
+ await click('إغلاق الملف');await page.getByRole('button',{name:'المتابعات المستحقة (1)'}).click();await page.getByText('لم يرد على الاتصال').waitFor();await click('ملفات التحصيل');
+ await screen('collections-desktop');
  await click('طباعة جماعية');await page.locator('.batch-table').getByText('جاهز',{exact:true}).waitFor();await click('الاثنان معاً');await click('تحديد كل الجاهز');
  {const files=[];const onDownload=d=>files.push(d);page.on('download',onDownload);await click('إنشاء ملف الطباعة (1)');for(let i=0;i<60&&files.length<2;i++)await page.waitForTimeout(250);page.off('download',onDownload);assert.equal(files.length,2,'batch print downloads one file per paper type');assert.deepEqual(files.map(d=>d.suggestedFilename().split('-2')[0]).sort(),['Mawatheeq-bundles','Mawatheeq-claims']);}
  await screen('collections-batch-desktop');await click('ملفات التحصيل');
@@ -93,7 +105,7 @@ try{
  const before=calls.length;await staff.getByRole('button',{name:'فتح التحصيل',exact:true}).click();await staff.getByRole('button',{name:'فتح الملف',exact:true}).waitFor();
  assert.equal(calls.slice(before).some(c=>c.name==='mawatheeq_local_request'&&c.action==='cases_page'),false);
  assert.equal(await staff.getByRole('button',{name:'ملف تحصيل جديد',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'تصدير القائمة',exact:true}).count(),0);
- await staff.getByRole('button',{name:'فتح الملف',exact:true}).click();assert.equal(await staff.getByLabel('العنوان',{exact:true}).isDisabled(),true);assert.equal(await staff.getByRole('button',{name:'تسجيل مراجعة المصدر',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).count(),0);await staff.keyboard.press('Escape');
+ await staff.getByRole('button',{name:'فتح الملف',exact:true}).click();await staff.getByRole('tab',{name:/^الأطراف والمطالبة/}).click();assert.equal(await staff.getByLabel('العنوان',{exact:true}).isDisabled(),true);assert.equal(await staff.getByRole('button',{name:'إضافة الإفادة'}).count(),0,'Read-only staff cannot add statements');assert.equal(await staff.getByRole('button',{name:'تسجيل مراجعة المصدر',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).count(),0);await staff.keyboard.press('Escape');
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'خروج',exact:true}).click();await staff.getByLabel('اسم المستخدم',{exact:true}).fill('dept_ui_reader');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await staff.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();
  await staff.evaluate(()=>sessionStorage.setItem('mawatheeq.workspace.v1','legal'));await staff.reload();await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),2,'Forged workspace preference cannot grant legal access');
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();await staff.getByLabel('كلمة المرور الحالية',{exact:true}).fill('Unsaved-password-from-previous-user');
