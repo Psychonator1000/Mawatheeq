@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import WorkspaceHub from '@/components/workspace-hub';
 import { AccountContext } from '@/components/account-menu';
 import MotionLayer from '@/components/motion-layer';
+import Chat from '@/components/chat';
 import ConnectionStatus from '@/components/connection-status';
 import {workspaceStorageKey} from '@/lib/departments';
 import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, isSwitchedSession, returnToOwner, type LocalUser } from '@/lib/local-auth';
@@ -102,6 +103,7 @@ export default function SharedApp() {
   const passwordForm = user && (passwordRequired || changingPassword);
   if (ready && user && !passwordForm) return <AccountContext.Provider value={{ username: user.username, busy, onChangePassword: () => { setChangingPassword(true); setMessage(''); setError(''); }, onLogout: () => void logout() }}>
     <MotionLayer />
+    <Chat userId={user.id} />
     <ConnectionStatus />
     {user.role !== 'owner' && isSwitchedSession() && <div className="switch-banner" role="status"><span>أنت الآن داخل حساب <b dir="ltr">{user.username}</b> بصلاحياته فقط.</span><button className="btn" disabled={busy} onClick={() => { setBusy(true); backToStaffList(); void returnToOwner().finally(() => setBusy(false)); }}>العودة إلى حسابي</button></div>}
     <AuthorizedWorkspace key={user.id} owner={user.role==='owner'} />

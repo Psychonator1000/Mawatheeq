@@ -59,6 +59,11 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - Cases move ابتدائي → استئناف → تمييز. The record holds the current level; each level left is kept in `stages` exactly as it stood, with its own number, court, judgment and procedures.
 - The server stamps who closed a level and when. Staff may add levels but never change or remove a closed one; only the owner corrects or undoes. A save without `stages` keeps the existing list. Workbook imports match closed levels too. Run `test:domain` and `test:office` when changing this.
 
+## Staff chat
+
+- Conversations are one-to-one or groups; any employee may start either. Members read and write; the owner may review any conversation read-only, and the panel says so.
+- References (people, cases, clients, work) are filtered on the server for both sender and reader; a reader without access sees only the typed label. Edits and deletions are allowed for 15 minutes. Attachments are ≤5 MB in the private `mawatheeq-chat` bucket via the local-files function. Polling only (no Realtime). Run `test:chat` when changing this.
+
 ## Office workflows and source verification
 
 - The 4 October 2026 clarification makes new case entry form-based. PDFs were for building the initial database; attachments remain optional for entry and verification. Never require a PDF to add a case or approve a source-based review.

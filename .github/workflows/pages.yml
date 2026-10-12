@@ -36,6 +36,7 @@ jobs:
       - run: pnpm run test:shared
       - run: pnpm run test:local-auth
       - run: pnpm run test:office
+      - run: pnpm run test:chat
       - run: pnpm run test:permissions
       - run: pnpm run test:departments
       - run: pnpm run test:comments

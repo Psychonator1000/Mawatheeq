@@ -36,6 +36,7 @@ import PageHelp,{pageHelp} from './page-help';
 import ShortcutsDialog from './shortcuts-dialog';
 import {setCaseOrigin} from '@/lib/case-origin';
 import {readSnapshot,writeSnapshot} from '@/lib/boot-cache';
+import {OPEN_EVENT,pendingOpen,takeOpen} from '@/lib/open-record';
 import {lawyerLabels,lawyerKey} from '@/lib/lawyer-match';
 import {recentCaseIds,rememberCase} from '@/lib/recent';
 import QuickSearch from './quick-search';
@@ -96,6 +97,15 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
  const recentCases=recentIds.map(id=>records.find(r=>r.id===id)).filter((c):c is CaseRecord=>!!c);
  // Opening from a list remembers it, so the case window can step to the previous/next case without closing.
  const [browseIds,setBrowseIds]=useState<string[]>([]),[enter,setEnter]=useState<'origin'|'prev'|'next'>('origin');
+ // Records opened from chat: wait for the records, then open the case, the client's cases or the task.
+ const [openTick,setOpenTick]=useState(0);
+ useEffect(()=>{const on=()=>setOpenTick(t=>t+1);addEventListener(OPEN_EVENT,on);return()=>removeEventListener(OPEN_EVENT,on)},[]);
+ useEffect(()=>{const r=pendingOpen();if(!r||loading)return;takeOpen();
+  if(r.type==='case'){const c=records.find(x=>x.id===r.id);if(c){setEnter('origin');setBrowseIds([]);setSelected(c)}else toast.error('لا يمكنك فتح هذه القضية.')}
+  else if(r.type==='client'){if(allowed('cases'))go('cases',{clientEntityId:r.id})}
+  else if(r.type==='work'){if(allowed('work'))openWork(r.id);else toast.error('لا تملك صلاحية صفحة المهام.')}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[openTick,loading,records]);
  function openFromList(c:CaseRecord,list:CaseRecord[],e:React.MouseEvent){setCaseOrigin(e.clientX,e.clientY);setBrowseIds(list.map(x=>x.id));setEnter('origin');setSelected(c)}
  const caseNav=(()=>{if(!selected)return undefined;const ids=browseIds,i=ids.indexOf(selected.id);if(i<0)return undefined;const find=(id?:string)=>id?records.find(r=>r.id===id):undefined;return {index:i,total:ids.length,prev:find(ids[i-1]),next:find(ids[i+1])}})();
  async function exportXlsx(){if(!access.canExport)return;setBusy(true);try{if(sharedBackend)await localRequest('check_export');const {exportWorkbook}=await import('@/lib/excel');await exportWorkbook(records,rules,clients,view==='deadlines'?reportDate:todayISO());toast.success('تم تنزيل ملف Excel')}catch{toast.error('تعذر تصدير الملف. حاول مرة أخرى.')}finally{setBusy(false)}}

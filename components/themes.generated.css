@@ -186,6 +186,10 @@
 :root[data-theme=noir] .step.late .step-text em{color:#d2a5a9}
 :root[data-theme=noir] .tl-item.judgment .tl-dot,:root[data-theme=noir] .tl-item.level .tl-dot{color:#11100e}
 :root[data-theme=noir] .tl-item.overdue .tl-body b{color:#d4b4a3}
+:root[data-theme=noir] .chat-bubble{color:#11100e}
+:root[data-theme=noir] .chat-badge{background:#e0ad99;color:#11100e}
+:root[data-theme=noir] .chat-ref.user{color:#a4c4da;background:#a4c4da1a}
+:root[data-theme=noir] .chat-leave{color:#d2a5a9}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
 :root[data-theme=noir] .workspace-option-top small{color:#544f45}
@@ -452,6 +456,10 @@
 :root[data-theme=phantom] .step.late .step-text em{color:#ddc3c5}
 :root[data-theme=phantom] .tl-item.judgment .tl-dot,:root[data-theme=phantom] .tl-item.level .tl-dot{color:#0d0d0d}
 :root[data-theme=phantom] .tl-item.overdue .tl-body b{color:#deccc2}
+:root[data-theme=phantom] .chat-bubble{color:#0d0d0d}
+:root[data-theme=phantom] .chat-badge{background:#e5c8bc;color:#0d0d0d}
+:root[data-theme=phantom] .chat-ref.user{color:#c3d6e2;background:#c3d6e21a}
+:root[data-theme=phantom] .chat-leave{color:#ddc3c5}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .workspace-option-top small{color:#3d3d3d}
@@ -650,6 +658,8 @@
 :root[data-theme=ivory] .lawyer-accounts td input{border:1px solid #d2cec9}
 :root[data-theme=ivory] .step.late .step-dot{color:#ffffff}
 :root[data-theme=ivory] .tl-item.judgment .tl-dot,:root[data-theme=ivory] .tl-item.level .tl-dot{color:#ffffff}
+:root[data-theme=ivory] .chat-bubble{color:#ffffff}
+:root[data-theme=ivory] .chat-badge{color:#ffffff}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
 :root[data-theme=ivory] .department-topbar{background:#fefefed9}
 :root[data-theme=ivory] .department-brand .brand-mark{color:#faf9f8}
@@ -841,6 +851,8 @@
 :root[data-theme=phantom-light] .lawyer-accounts td input{border:1px solid #d1ceca}
 :root[data-theme=phantom-light] .step.late .step-dot{color:#ffffff}
 :root[data-theme=phantom-light] .tl-item.judgment .tl-dot,:root[data-theme=phantom-light] .tl-item.level .tl-dot{color:#ffffff}
+:root[data-theme=phantom-light] .chat-bubble{color:#ffffff}
+:root[data-theme=phantom-light] .chat-badge{color:#ffffff}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
 :root[data-theme=phantom-light] .workspace-option{border:1px solid #fafaf9;background:#fefefe;color:#403c39}
 :root[data-theme=phantom-light] .workspace-option-top small{color:#aba8a4}
@@ -1215,6 +1227,39 @@
 :root[data-mode=dark] .tl-body small{color:var(--muted-foreground)}
 :root[data-mode=dark] .tl-item.overdue .tl-body b{color:#ddb9a5}
 :root[data-mode=dark] .staff-search small{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-bubble{color:#131313;background:var(--brand)}
+:root[data-mode=dark] .chat-bubble:focus-visible{outline:3px solid var(--brand-ring,var(--brand))}
+:root[data-mode=dark] .chat-badge{background:#eab199;color:#131313;border:2px solid var(--background)}
+:root[data-mode=dark] .chat-panel{background:var(--card);color:var(--foreground);border:1px solid var(--border)}
+:root[data-mode=dark] .chat-head{border-bottom:1px solid var(--border);background:linear-gradient(170deg,color-mix(in srgb,var(--brand) 9%,var(--card)),var(--card))}
+:root[data-mode=dark] .chat-title small{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-row:hover,:root[data-mode=dark] .chat-row:focus-visible{background:color-mix(in srgb,var(--brand) 7%,transparent)}
+:root[data-mode=dark] .chat-avatar{background:color-mix(in srgb,var(--brand) 14%,var(--card));color:var(--brand)}
+:root[data-mode=dark] .chat-row-text small{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-row.unread .chat-row-text b,:root[data-mode=dark] .chat-row.unread .chat-row-text small{color:var(--foreground)}
+:root[data-mode=dark] .chat-row-meta small{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-section{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-empty{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-foot{border-top:1px solid var(--border);color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-messages{background:color-mix(in srgb,var(--muted) 35%,transparent)}
+:root[data-mode=dark] .chat-msg{background:var(--card);border:1px solid var(--border)}
+:root[data-mode=dark] .chat-msg.mine{background:color-mix(in srgb,var(--brand) 12%,var(--card));border-color:color-mix(in srgb,var(--brand) 25%,var(--border))}
+:root[data-mode=dark] .chat-msg footer small{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-sender{color:var(--brand)}
+:root[data-mode=dark] .chat-event{color:var(--muted-foreground);background:var(--card);border:1px solid var(--border)}
+:root[data-mode=dark] .chat-ref{color:var(--brand);background:color-mix(in srgb,var(--brand) 10%,transparent)}
+:root[data-mode=dark] .chat-ref.user{color:#a6cbe3;background:#a6cbe31a}
+:root[data-mode=dark] .chat-ref.locked{color:var(--muted-foreground);background:color-mix(in srgb,var(--muted) 70%,transparent)}
+:root[data-mode=dark] .chat-file{border:1px solid var(--border);background:var(--background)}
+:root[data-mode=dark] .chat-file small{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-compose{border-top:1px solid var(--border);background:var(--card)}
+:root[data-mode=dark] .chat-compose textarea{border:1px solid var(--border);background:var(--background);color:var(--foreground)}
+:root[data-mode=dark] .chat-compose textarea:focus{border-color:var(--brand)}
+:root[data-mode=dark] .chat-editing{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-suggest{background:var(--card);border:1px solid var(--border)}
+:root[data-mode=dark] .chat-suggest small{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-suggest [aria-selected=true] button,:root[data-mode=dark] .chat-suggest button:hover{background:color-mix(in srgb,var(--brand) 10%,transparent)}
+:root[data-mode=dark] .chat-leave{color:#dba7ac}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}
