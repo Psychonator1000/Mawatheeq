@@ -248,6 +248,8 @@
 :root[data-theme=noir] .roll-choice b{background:#25231e}
 :root[data-theme=noir] .roll-choice.on{background:#1f1d19}
 :root[data-theme=noir] .roll-preview{border:1px solid #2f2c27;background:#11100e}
+:root[data-theme=noir] .role-chip-case{background:#1f1e1a;color:#c3bbcd}
+:root[data-theme=noir] .case-when small.case-type{color:#c8c0ba}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
 :root[data-theme=noir] .workspace-option-top small{color:#544f45}
@@ -576,6 +578,8 @@
 :root[data-theme=phantom] .roll-choice b{background:#1b1b1b}
 :root[data-theme=phantom] .roll-choice.on{background:#171717}
 :root[data-theme=phantom] .roll-preview{border:1px solid #222222;background:#0d0d0d}
+:root[data-theme=phantom] .role-chip-case{background:#171717;color:#d6d2dc}
+:root[data-theme=phantom] .case-when small.case-type{color:#d8d4d1}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .workspace-option-top small{color:#3d3d3d}
@@ -816,6 +820,7 @@
 :root[data-theme=ivory] .roll-choice b{background:#e8e5e1}
 :root[data-theme=ivory] .roll-choice.on{background:#f8f8f7}
 :root[data-theme=ivory] .roll-preview{border:1px solid #dbd8d4;background:#ffffff}
+:root[data-theme=ivory] .role-chip-case{background:#f7f7f8}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
 :root[data-theme=ivory] .department-topbar{background:#fefefed9}
 :root[data-theme=ivory] .department-brand .brand-mark{color:#faf9f8}
@@ -1057,6 +1062,7 @@
 :root[data-theme=phantom-light] .roll-choice b{background:#fbfbfb}
 :root[data-theme=phantom-light] .roll-choice.on{background:#fcfcfc}
 :root[data-theme=phantom-light] .roll-preview{border:1px solid #dbd8d4;background:#ffffff}
+:root[data-theme=phantom-light] .role-chip-case{background:#fcfcfc}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
 :root[data-theme=phantom-light] .workspace-option{border:1px solid #fafaf9;background:#fefefe;color:#403c39}
 :root[data-theme=phantom-light] .workspace-option-top small{color:#aba8a4}
@@ -1529,6 +1535,8 @@
 :root[data-mode=dark] .roll-choice b{background:#26221e}
 :root[data-mode=dark] .roll-choice.on{border-color:var(--brand);background:#211e1a;color:var(--brand)}
 :root[data-mode=dark] .roll-preview{border:1px solid #2e2924;background:#131313}
+:root[data-mode=dark] .role-chip-case{background:#1e1a21;color:#c8bfd3}
+:root[data-mode=dark] .case-when small.case-type{color:#cec5bf}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

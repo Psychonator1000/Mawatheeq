@@ -334,3 +334,5 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 /* App pages printed with the browser: no page margin, so the browser adds no address header or footer. */
 @page{margin:0}
 @media print{body{padding:10mm 12mm!important}}
+.role-chip-case{display:inline-block;margin-top:4px;margin-inline-end:6px;padding:0 8px;border-radius:999px;font-size:11px;line-height:1.8;background:#ece6f2;color:#53406b}
+.case-when small.case-type{color:#6d5a4c;font-weight:500}
