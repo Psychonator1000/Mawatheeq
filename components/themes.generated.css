@@ -1300,7 +1300,7 @@
 :root[data-mode=dark] .field input:focus,:root[data-mode=dark] .field textarea:focus,:root[data-mode=dark] .field select:focus,:root[data-mode=dark] .comment-form textarea:focus{border-color:var(--brand-ring);background:#131313}
 :root[data-mode=dark] .notice-count.urgent::after{border-radius:inherit;border:2px solid #dba7ac}
 :root[data-mode=dark] .cursor-halo{border:1.5px solid color-mix(in srgb,var(--brand) 45%,transparent);background:radial-gradient(circle,color-mix(in srgb,var(--glow-1) 22%,transparent),transparent 70%)}
-@media (pointer:fine){:root[data-mode=dark][data-motion=full][data-pointer][data-hover-action] .cursor-halo{border-color:color-mix(in srgb,var(--brand) 70%,transparent);background-color:color-mix(in srgb,var(--brand) 7%,transparent)}
+@media (pointer:fine){:root[data-mode=dark][data-motion=full][data-pointer] .cursor-halo[data-hover]{border-color:color-mix(in srgb,var(--brand) 70%,transparent);background-color:color-mix(in srgb,var(--brand) 7%,transparent)}
 }
 :root[data-mode=dark] .rail-track{background:color-mix(in srgb,var(--brand) 12%,transparent)}
 :root[data-mode=dark] .rail-fill{background:linear-gradient(var(--glow-1),var(--brand))}
@@ -1331,7 +1331,7 @@
 :root[data-mode=dark] .avatar-dot{background:#8a3c36;border:2px solid var(--background)}
 :root[data-mode=dark] .tips-heading{color:var(--brand)}
 :root[data-mode=dark][data-follower=dot] .cursor-halo{background:var(--brand)}
-:root[data-mode=dark][data-follower=dot][data-hover-action] .cursor-halo{background:var(--brand-hover)}
+:root[data-mode=dark][data-follower=dot] .cursor-halo[data-hover]{background:var(--brand-hover)}
 :root[data-mode=dark][data-follower=diamond] .cursor-halo{background:color-mix(in srgb,var(--brand) 12%,transparent)}
 :root[data-mode=dark][data-theme=sunflower]{--sidebar:#897322;--sidebar-foreground:#f7e9c5;--sidebar-primary:#f7e9c5;--sidebar-primary-foreground:#6d5d1b;--sidebar-accent:#705d1c;--sidebar-accent-foreground:#f7ebca;--sidebar-border:#ededed14;--sidebar-ring:#f2daa3;--primary-foreground:#f7ecc9}
 :root[data-mode=dark][data-theme=sunflower] [data-slot=sidebar-container]{background:linear-gradient(180deg,#806c20,#917824)}

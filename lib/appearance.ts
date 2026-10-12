@@ -135,9 +135,22 @@ export function saveAppearance(a: Appearance) {
 export const motionAllowed = () => document.documentElement.dataset.motion !== 'off' && document.documentElement.dataset.perf !== 'lite' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
 const SLOW_KEY = 'mawatheeq.slow-device';
 /** A device that is likely to struggle with the full effects: few cores, little memory, or data saver. */
+let softwareGraphics: boolean | null = null;
+/** Chrome draws without the graphics card (software rendering) when the driver is blocked or missing. */
+function noGraphicsCard(): boolean {
+  if (softwareGraphics !== null) return softwareGraphics;
+  try {
+    const gl = document.createElement('canvas').getContext('webgl') as WebGLRenderingContext | null;
+    if (!gl) return (softwareGraphics = true);
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return (softwareGraphics = /swiftshader|llvmpipe|software|basic render|microsoft basic/i.test(renderer));
+  } catch { return (softwareGraphics = false); }
+}
 export function weakDevice(): boolean {
   const n = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
-  return (n.hardwareConcurrency || 8) <= 4 || (n.deviceMemory || 8) <= 4 || !!n.connection?.saveData;
+  return (n.hardwareConcurrency || 8) <= 4 || (n.deviceMemory || 8) <= 4 || !!n.connection?.saveData || noGraphicsCard();
 }
 /** Remembered when the app measured slow frames on this device, so later visits start light. */
 export const markedSlow = () => { try { return localStorage.getItem(SLOW_KEY) === '1'; } catch { return false; } };
@@ -148,15 +161,9 @@ export const liteMode = (a: Pick<Appearance, 'performance'>) => a.performance ==
 export const pointerEffectsOn = () => document.documentElement.dataset.motion === 'full' && motionAllowed();
 /** Run a state change inside a view transition when the browser supports it and motion is allowed. */
 export function withViewTransition(update: () => void) {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => { skipTransition?: () => void } };
-  if (!doc.startViewTransition || !motionAllowed()) { update(); return; }
-  // The change must never depend on the animation: apply it directly if the transition stalls,
-  // and end any transition still running (the page is not interactive during one).
-  let done = false;
-  const run = () => { if (!done) { done = true; update(); } };
-  const transition = doc.startViewTransition(run);
-  setTimeout(run, 400);
-  setTimeout(() => transition?.skipTransition?.(), 1500);
+  // Page snapshots (the View Transitions API) made the whole screen flash blank on weak graphics cards, so the change
+  // is applied directly; pages animate their own content in instead.
+  update();
 }
 /**
  * Secret words toggle their theme: the first time switches to it, typing it again returns to the theme
