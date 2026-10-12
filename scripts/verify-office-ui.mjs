@@ -109,6 +109,11 @@ try{
  await page.screenshot({path:artifacts+'/switched-user-desktop.png'});
  await page.locator('.switch-banner').getByRole('button',{name:'العودة إلى حسابي',exact:true}).click();await page.locator('.switch-banner').waitFor({state:'detached'});
  await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).waitFor();
- assert.deepEqual(errors,[]);console.log('Passed office UI: lawyer accounts, owner switch-to-user and return, generated passwords, account rename and permanent staff password, form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');
+ // The lawyer's account follows his name on the cases: «قضاياه فقط» is selected and new cases are included.
+ await page.evaluate(()=>{location.hash='settings'});await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
+ assert.equal(await page.getByRole('radio',{name:/قضاياه فقط/}).isChecked(),true,'Bulk lawyer accounts see their own cases by name');
+ assert.equal(await page.getByRole('checkbox',{name:'قضايا ا/ سالم تجريبي'}).isChecked(),true);
+ await page.getByText(/يرى 5 قضية الآن/).waitFor();await page.screenshot({path:artifacts+'/lawyer-scope.png'});await page.keyboard.press('Escape');
+ assert.deepEqual(errors,[]);console.log('Passed office UI: lawyer accounts following their name on the cases, owner switch-to-user and return, generated passwords, account rename and permanent staff password, form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');
 }catch(e){await page.screenshot({path:artifacts+'/office-ui-failure.png',fullPage:true});console.error(await page.locator('body').innerText());throw e}
 finally{await browser.close();await db.close()}

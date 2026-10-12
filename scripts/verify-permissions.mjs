@@ -168,5 +168,22 @@ assert.equal((await office(admin.token,'context')).switchedBy,null);
 await office(admin.token,'set_member_enabled',{id:editor.user.id,enabled:false});await assert.rejects(()=>local(switched.token,'access'),e=>e.code==='28000');
 await assert.rejects(()=>office(admin.token,'switch_user',{id:editor.user.id}),/موقوف/);
 assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id})).slice(0,3).map(h=>h.change),['switch','password','display_name']);
+// "His own cases": lawyer names follow the cases' lawyer field, including cases added or reassigned later.
+{const lawyerScope={...noAccess,sections:['cases','work'],canEdit:true,lawyerNames:['  المحامي المثال ']};
+ await assert.rejects(()=>office(admin.token,'create_member',{username:'bad_lawyers',password:'Temporary-password-123',permissions:{...lawyerScope,lawyerNames:'not a list'}}),/غير صالحة/);
+ const own=await create('own_lawyer',lawyerScope);
+ assert.deepEqual((await local(own.token,'access')).lawyerNames,['المحامي المثال'],'Names are stored trimmed');
+ assert.deepEqual(await local(own.token,'cases_page'),[],'No case carries the name yet');
+ const mine=await local(admin.token,'save_case',{case:{...visible,id:'lawyer-case',code:'MINE',lawyer:'المحامى  المثال',revision:0}});
+ await local(admin.token,'save_case',{case:{...visible,id:'lawyer-other',code:'NOT-MINE',lawyer:'محامٍ آخر',revision:0}});
+ assert.deepEqual((await local(own.token,'cases_page')).map(c=>c.id),['lawyer-case'],'A new case with his name (any spelling variant) appears; others stay hidden');
+ await denied(()=>local(own.token,'save_case',{case:{...visible,id:'lawyer-other',code:'TAKE',lawyer:'المحامي المثال',revision:1}}));
+ const edited=await local(own.token,'save_case',{case:{...mine,notes:'own edit'}});assert.equal(edited.notes,'own edit','He can edit his own case');
+ await local(admin.token,'save_case',{case:{...edited,lawyer:'محامٍ آخر'}});
+ assert.deepEqual(await local(own.token,'cases_page'),[],'Reassigning the case removes it');
+ const ctx=await office(admin.token,'context');const m=ctx.members.find(x=>x.username==='own_lawyer');
+ await office(admin.token,'set_member_access',{id:m.id,revision:m.permissions.revision,permissions:{...m.permissions,caseScope:'all',lawyerNames:['المحامي المثال']}});
+ const again=await login('own_lawyer');assert.equal((await local(again.token,'access')).lawyerNames,undefined,'All-case scope drops the names');
+ const history=await office(admin.token,'access_history',{id:m.id});assert.ok(history.some(h=>JSON.stringify(h).includes('lawyerNames')),'The audit records the names');}
 await db.close();
-console.log('Passed permissions: admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
+console.log('Passed permissions: lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
