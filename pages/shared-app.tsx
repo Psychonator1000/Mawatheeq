@@ -7,13 +7,15 @@ import ConnectionStatus from '@/components/connection-status';
 import {workspaceStorageKey} from '@/lib/departments';
 import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, isSwitchedSession, returnToOwner, type LocalUser } from '@/lib/local-auth';
 import type { Permissions } from '@/lib/permissions';
+import { cachedUser, cachedAccess, rememberUser, rememberAccess } from '@/lib/boot-cache';
 
 /** After leaving a staff account, the owner lands back on the staff list they switched from. */
 function backToStaffList() { sessionStorage.setItem(workspaceStorageKey, 'legal'); history.replaceState(null, '', '#settings'); }
 
 export default function SharedApp() {
-  const [ready, setReady] = useState(false);
-  const [user, setUser] = useState<LocalUser | null>(null);
+  // A returning account opens straight away from the last visit; the session is confirmed in the background.
+  const [user, setUser] = useState<LocalUser | null>(cachedUser);
+  const [ready, setReady] = useState(() => !!user);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -30,7 +32,7 @@ export default function SharedApp() {
       const current = ++generation.current;
       try {
         const found = await restoreSession();
-        if (active && current === generation.current) setUser(found);
+        if (active && current === generation.current) { rememberUser(found); setUser(found); }
       } catch (reason) {
         if (active && current === generation.current) setError(reason instanceof Error ? reason.message : 'تعذر الاتصال.');
       } finally { if (active && current === generation.current) setReady(true); }
@@ -61,6 +63,7 @@ export default function SharedApp() {
     event.preventDefault(); setBusy(true); setError(''); setMessage('');
     try {
       const found = await signIn(username, password);
+      rememberUser(found);
       sessionStorage.removeItem(workspaceStorageKey);
       ++generation.current;
       setUser(found); setReady(true); setPassword('');
@@ -72,6 +75,7 @@ export default function SharedApp() {
     try {
       if (newPassword !== confirmPassword) throw new Error('كلمتا المرور الجديدتان غير متطابقتين.');
       const updated = await changePassword(password, newPassword);
+      rememberUser(updated);
       sessionStorage.removeItem(workspaceStorageKey);
       ++generation.current;
       setUser(updated); setChangingPassword(false);
@@ -131,8 +135,8 @@ export default function SharedApp() {
 }
 
 function AuthorizedWorkspace({owner}:{owner:boolean}) {
-  const [access,setAccess]=useState<Permissions|null>(null),[error,setError]=useState('');
-  useEffect(()=>{let active=true;localRequest<Permissions>('access').then(value=>{if(active)setAccess(value)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[]);
+  const [access,setAccess]=useState<Permissions|null>(cachedAccess),[error,setError]=useState('');
+  useEffect(()=>{let active=true;localRequest<Permissions>('access').then(value=>{if(active){rememberAccess(value);setAccess(old=>old&&JSON.stringify(old)===JSON.stringify(value)?old:value)}}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[]);
   if(!access)return <main className="auth-page"><section className="auth-card"><h1>مواثيق</h1>{error?<><p role="alert">{error}</p><button className="btn" onClick={()=>location.reload()}>إعادة المحاولة</button></>:<p role="status">جارٍ تحميل صلاحياتك…</p>}</section></main>;
   return <WorkspaceHub access={access} owner={owner}/>;
 }
