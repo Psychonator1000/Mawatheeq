@@ -299,3 +299,11 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 :root[data-cursor=themed] :is(a[href],button:not(:disabled),[role=button],[role=tab],[role=option],[role=menuitem],[role=menuitemradio],[role=checkbox],[role=radio],[role=switch],summary,select,label,input[type=checkbox],input[type=radio],input[type=range],input[type=color],input[type=file],.choice,[data-tilt],.copy-chip,.rail-mark,.att-cell,.permission-case,.number-link,.client-card,.office-card,.workspace-option){cursor:var(--cursor-hand,pointer)}
 :root[data-cursor=themed] :is(input:not([type=checkbox],[type=radio],[type=range],[type=color],[type=file],[type=button],[type=submit]),textarea,[contenteditable=true]){cursor:text}
 :root[data-cursor=themed] :is(button:disabled,[aria-disabled=true]){cursor:not-allowed}
+/* Light mode (automatic on weak devices, or chosen): no animated backdrop, glass blur, cursor effects or scroll
+   transforms. The app looks the same otherwise and stays fully usable. */
+:root[data-perf=lite] :is(.ambient-canvas,.ambient-blob,.ambient-grain,.ambient-spot,.cursor-halo,.burst-canvas){display:none!important}
+:root[data-perf=lite] *,:root[data-perf=lite] *::before,:root[data-perf=lite] *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+:root[data-perf=lite] :not(.spin,.spin *,[data-sonner-toast],[data-sonner-toast] *){animation-duration:.01ms!important;animation-iteration-count:1!important}
+:root[data-perf=lite] body{background-attachment:scroll!important}
+:root[data-perf=lite] [data-tilt]{transform:none!important}
+:root[data-perf=lite] :is(.my-work-item,.agenda-item,.client-card,.person-card,.collection-card,.timeline-item,.doc-row,.legend-row,.bar-item){transform:none!important}
