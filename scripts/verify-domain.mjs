@@ -21,4 +21,21 @@ assert.equal(remainingDaysLabel(null),'غير محدد');
 assert.equal(remainingDaysLabel(null,true),'نهائي');
 assert.equal(elapsedDaysLabel(-1),'الحكم بعد 1 يوم');
 assert.equal(elapsedDaysLabel(null),'غير محدد');
-console.log('Passed: elapsed/remaining counters, selected report dates, execution timing, today, overdue, future, missing and invalid dates, leap years and DST boundaries.');
+// Court levels: moving on keeps the closed level intact and opens the next one with its own number.
+{const {currentLevel,nextLevel,moveToNextLevel,undoLastMove,canUndoMove,stagesOf,allCaseNumbers,awaitingJudgment}=await import('../lib/case-stages.ts');
+ const c={...base,id:'stage-case',caseNumber:'2026/100',autoNumber:'111',court:'الكلية',ruling:'إلزام',appealConfirmation:'تم',procedures:[{id:'p1',date:'2026-01-02',text:'جلسة'}]};
+ assert.equal(currentLevel(c),'ابتدائي');assert.equal(nextLevel(c),'استئناف');
+ assert.equal(currentLevel({...c,type:'حكم ابتدائي'}),'ابتدائي');assert.equal(currentLevel({...c,type:'حكم تمييز'}),'تمييز');assert.equal(nextLevel({...c,type:'حكم تمييز'}),null);
+ const moved=moveToNextLevel(c,{caseNumber:' 2026/55 استئناف ',autoNumber:'222',court:'الاستئناف',appealedBy:'الخصم',movedOn:'2026-01-20',note:''},'s1');
+ assert.equal(moved.stage,'استئناف');assert.equal(moved.type,'حكم استئناف');assert.equal(moved.caseNumber,'2026/55 استئناف');assert.equal(moved.date,'');assert.equal(moved.outcome,'غير محدد');
+ assert.deepEqual(moved.procedures,[]);assert.equal(moved.appealConfirmation,'');assert.equal(moved.client,c.client);assert.equal(moved.opponent,c.opponent);
+ const [closed]=stagesOf(moved);assert.equal(closed.level,'ابتدائي');assert.equal(closed.caseNumber,'2026/100');assert.equal(closed.date,'2026-01-01');assert.equal(closed.outcome,'لصالحنا');assert.equal(closed.ruling,'إلزام');assert.equal(closed.procedures.length,1);assert.equal(closed.appealedBy,'الخصم');
+ assert.deepEqual(allCaseNumbers(moved),['2026/100','2026/55 استئناف']);
+ assert.equal(awaitingJudgment(moved),true);assert.equal(caseState(moved,r,'2026-02-05').status,'متداول','Waiting for the appeal judgment is in progress, not missing data');
+ assert.equal(caseState(c,r,'2026-02-05').status,caseState({...c},r,'2026-02-05').status);
+ assert.equal(canUndoMove(moved),true);const undone=undoLastMove(moved);assert.equal(undone.caseNumber,'2026/100');assert.equal(undone.date,'2026-01-01');assert.equal(stagesOf(undone).length,0);assert.equal(undone.procedures.length,1);
+ assert.equal(canUndoMove({...moved,procedures:[{id:'p2',date:'2026-02-01',text:'جلسة'}]}),false,'No undo once the new level has work');
+ const third=moveToNextLevel({...moved,date:'2026-05-01',outcome:'لصالحنا'},{caseNumber:'2026/9 تمييز',autoNumber:'333',court:'التمييز',appealedBy:'نحن',movedOn:'2026-05-10',note:'طعن'},'s2');
+ assert.equal(currentLevel(third),'تمييز');assert.equal(stagesOf(third).length,2);assert.throws(()=>moveToNextLevel(third,{caseNumber:'',autoNumber:'',court:'',appealedBy:'',movedOn:'',note:''}));
+}
+console.log('Passed: court levels (move, closed snapshot, waiting status, undo rules), elapsed/remaining counters, selected report dates, execution timing, today, overdue, future, missing and invalid dates, leap years and DST boundaries.');

@@ -24,9 +24,12 @@ export function caseSheetHtml(c: CaseRecord, timing: { label: string; value: str
   const procedures = (c.procedures || []).filter(p => p.text || p.date).sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const procedureRows = procedures.map(p => `<tr><td class="nowrap">${escape(dmy(p.date))}</td><td>${escape(p.text)}</td><td>${escape(p.lawyer)}</td><td class="nowrap">${escape(dmy(p.followup || ''))}</td></tr>`).join('');
   const open = work.filter(w => w.caseId === c.id && w.status !== 'done' && w.status !== 'cancelled').sort((a, b) => (a.dueDate + a.dueTime).localeCompare(b.dueDate + b.dueTime));
+  const stages = Array.isArray(c.stages) ? c.stages as { level: string; caseNumber: string; court: string; date: string; outcome: string; ruling: string; appealedBy: string; procedures?: { date: string; text: string }[] }[] : [];
+  const stageRows = stages.map(st => `<tr><td class="nowrap">${escape(st.level)}</td><td class="nowrap">${escape(st.caseNumber)}</td><td>${escape(st.court)}</td><td class="nowrap">${escape(dmy(st.date))}</td><td>${escape(st.outcome)}</td><td>${escape(st.ruling)}</td><td>${escape(st.appealedBy)}</td><td>${(st.procedures || []).length}</td></tr>`).join('');
   const workRows = open.map(w => `<tr><td class="nowrap">${escape(dmy(w.dueDate))} ${escape(w.dueTime)}</td><td>${escape(w.kind === 'hearing' ? 'جلسة' : 'مهمة')}</td><td>${escape(w.title)}</td><td>${escape(w.location)}</td></tr>`).join('');
   return page('ملف القضية ' + (c.code || c.autoNumber || ''), `<header><h1>${escape(client || 'ملف قضية')}</h1><p>${escape([c.code, c.autoNumber && 'الرقم الآلي ' + c.autoNumber, c.opponent && 'ضد ' + c.opponent].filter(Boolean).join(' · '))}</p></header>
 ${timingRows ? `<h2>المواعيد المحسوبة</h2><table>${timingRows}</table>` : ''}${body}
+${stageRows ? `<h2>درجات التقاضي السابقة</h2><table class="list"><tr><th>الدرجة</th><th>رقم القضية</th><th>المحكمة</th><th>تاريخ الحكم</th><th>النتيجة</th><th>المنطوق</th><th>الطاعن</th><th>الإجراءات</th></tr>${stageRows}</table>` : ''}
 ${procedureRows ? `<h2>سجل الإجراءات</h2><table class="list"><tr><th>التاريخ</th><th>الإجراء</th><th>المحامي</th><th>المتابعة</th></tr>${procedureRows}</table>` : ''}
 ${workRows ? `<h2>المهام والجلسات المفتوحة</h2><table class="list"><tr><th>الموعد</th><th>النوع</th><th>العمل</th><th>المكان</th></tr>${workRows}</table>` : ''}
 ${footer(printedAt, printedBy)}`);
