@@ -1,7 +1,7 @@
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
 
 /** Bump when adding tips so the account menu shows its dot again. */
-export const TIPS_VERSION='2026-10-12b';
+export const TIPS_VERSION='2026-10-12c';
 const KEY='mawatheeq.tips.seen';
 export const tipsUnseen=()=>{try{return localStorage.getItem(KEY)!==TIPS_VERSION}catch{return false}};
 export const markTipsSeen=()=>{try{localStorage.setItem(KEY,TIPS_VERSION)}catch{/* Still shown next time. */}};
@@ -28,6 +28,7 @@ const TIPS:[string,string,string][]=[
  ['🔤','حجم الخط والكثافة','من «المظهر والحركة»: كبّر الخط أو اعرض صفوفاً أكثر، أو اختر الحركة الهادئة.'],
  ['📶','حالة الاتصال','يظهر تنبيه إذا انقطعت الشبكة؛ انتظر عودته قبل الحفظ حتى لا تضيع التغييرات.'],
  ['🎨','سمات مخفية','بعض السمات لا تظهر في القائمة. اكتب كلمتها السرية في أي مكان خارج خانات الكتابة، واكتبها مرة أخرى للعودة.'],
+ ['🌸','ساكورا','سمة أزهار الكرز: بتلات تتساقط مع الريح وتتطاير عند الضغط. جرّب كتابة «sakura».'],
 ];
 export default function TipsDialog({onClose}:{onClose:()=>void}){
  return <Dialog open onOpenChange={open=>!open&&onClose()}><DialogContent dir="rtl" className="office-dialog tips-dialog"><DialogHeader><DialogTitle>نصائح مواثيق</DialogTitle><DialogDescription>كل اختصارات لوحة المفاتيح، وطرق أسرع لإنجاز العمل.</DialogDescription></DialogHeader>

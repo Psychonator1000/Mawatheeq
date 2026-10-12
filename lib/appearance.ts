@@ -10,7 +10,7 @@ export const THEMES = {
   teal: { label: 'فيروزي', swatch: '#0f6e6a', accent: '#7ee0d2' },
   emerald: { label: 'زمردي', swatch: '#1d5e4b', accent: '#c9dfb8' },
   sunset: { label: 'برتقالي الغروب', swatch: '#b0451f', accent: '#ffb27a' },
-  rose: { label: 'وردي', swatch: '#a3325a', accent: '#f7a8c4' },
+  rose: { label: 'ساكورا', swatch: '#a3325a', accent: '#ffd6e2' },
   plum: { label: 'بنفسجي', swatch: '#5a2d6e', accent: '#e0c2d6' },
   indigo: { label: 'نيلي', swatch: '#3b3f9e', accent: '#b4b8ff' },
   copper: { label: 'نحاسي', swatch: '#8a4a24', accent: '#ecd0a3' },
@@ -19,7 +19,7 @@ export const THEMES = {
 } as const;
 type ThemeInfo = { label: string; swatch: string; accent: string; hidden?: boolean };
 /** Hidden themes appear in the list only after their secret word is typed (an easter egg). */
-export const SECRET_WORDS: Record<string, keyof typeof THEMES> = { persona: 'phantom', phantom: 'phantom', aero: 'sky' };
+export const SECRET_WORDS: Record<string, keyof typeof THEMES> = { persona: 'phantom', phantom: 'phantom', aero: 'sky', sakura: 'rose' };
 export const TEXT_SIZES = { normal: { label: 'عادي' }, large: { label: 'كبير' }, xlarge: { label: 'كبير جداً' } } as const;
 export const DENSITIES = { comfortable: { label: 'مريحة' }, compact: { label: 'مضغوطة', hint: 'صفوف أقل ارتفاعاً لعرض سجلات أكثر' } } as const;
 export const isHidden = (t: string) => !!(THEMES as Record<string, ThemeInfo>)[t]?.hidden;
@@ -104,6 +104,11 @@ function applyThemedCursor(theme: string, dark: boolean) {
     // Comic-style: a hard red arrow with a black outline and an offset shadow.
     const shadow = `<path d="${arrow}" transform="translate(2.5 2.5)" fill="${theme === 'phantom' ? '#ffffff' : '#000000'}"/>`;
     normal = shape('#e60012', '#000000', shadow); hand = shape(theme === 'phantom' ? '#ffffff' : '#000000', '#e60012', shadow.replace(/fill="[^"]+"/, 'fill="#e60012"'));
+  } else if (theme === 'rose') {
+    // Sakura: a blush-pink arrow; over clickable things it carries a small blossom.
+    const blush = '<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe3ea"/><stop offset="1" stop-color="#e2678f"/></linearGradient></defs>';
+    const flower = '<g transform="translate(23 23)" fill="#f9bfd2" stroke="#d9466f" stroke-width=".8">' + [0, 72, 144, 216, 288].map(r => `<ellipse cy="-3.6" rx="2.6" ry="3.6" transform="rotate(${r})"/>`).join('') + '<circle r="1.4" fill="#d9466f"/></g>';
+    normal = shape('url(#p)', dark ? '#2a0f18' : '#7a1f42', blush); hand = shape('url(#p)', dark ? '#2a0f18' : '#7a1f42', blush).replace('</svg>', flower + '</svg>');
   } else if (theme === 'sky') {
     // Aero: a glossy blue arrow with a white rim.
     const gloss = '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfeaff"/><stop offset=".45" stop-color="#3fb3f0"/><stop offset="1" stop-color="#0d6fb0"/></linearGradient><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9ffd0"/><stop offset=".5" stop-color="#8fdc5a"/><stop offset="1" stop-color="#3f9a24"/></linearGradient></defs>';
