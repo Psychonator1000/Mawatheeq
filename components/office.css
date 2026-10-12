@@ -56,3 +56,33 @@
 .password-row{display:flex;gap:6px;align-items:stretch}.password-row input{flex:1;min-width:0}
 .issued-password{display:grid;gap:12px;padding:6px 0}.issued-password code{display:block;padding:12px 14px;border-radius:10px;background:#f7f1e8;border:1px dashed #d6c4ad;font-size:18px;letter-spacing:.5px;text-align:center;user-select:all}
 .lawyer-accounts td input{width:100%;min-width:120px;padding:6px 8px;border:1px solid #dcd0bf;border-radius:8px;background:transparent;color:inherit}
+/* Case file: a pinned header (company, opponent, case number, progress); everything below scrolls. */
+.detail-sheet>.case-pin{position:sticky;top:-30px;z-index:6;margin:-30px -30px 0;padding:24px 30px 16px;background:color-mix(in srgb,var(--background) 94%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);box-shadow:0 10px 24px -20px #0006;gap:12px;text-align:right}
+.case-pin-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-inline-start:28px}
+.detail-sheet>button.absolute{z-index:8}
+.case-pin-names{min-width:0}.case-pin-names h2{font-size:22px;line-height:1.35;margin:0}
+.case-pin-names p{margin-top:4px;font-size:15px;color:var(--foreground)}.case-pin-names .vs{color:var(--muted-foreground);font-size:12px;margin-inline-end:4px}
+.case-pin-id{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.case-pin-id>small{font-size:11px;color:var(--muted-foreground)}.case-pin-id>.copy-chip{font-size:16px;font-weight:700;padding:5px 12px}
+.case-pin-codes{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.case-pin-codes .copy-chip{font-size:11px;padding:2px 8px;opacity:.85}
+.case-progress{display:grid;gap:10px}
+.progress-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;position:relative}
+.progress-steps .step{display:flex;align-items:flex-start;gap:8px;position:relative;padding-inline-end:10px}
+.progress-steps .step:not(:last-child)::after{content:'';position:absolute;top:12px;inset-inline-start:30px;inset-inline-end:8px;height:2px;background:var(--border);border-radius:2px}
+.progress-steps .step.done:not(:last-child)::after{background:var(--brand)}
+.step-dot{flex-shrink:0;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--muted);color:var(--muted-foreground);border:2px solid var(--border);position:relative;z-index:1}
+.step.done .step-dot{background:var(--brand);border-color:var(--brand);color:var(--primary-foreground)}
+.step.current .step-dot{background:var(--card);border-color:var(--brand);color:var(--brand);box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 16%,transparent)}
+.step.late .step-dot{background:#a32e38;border-color:#a32e38;color:#fff}
+.step-text{display:grid;min-width:0;background:var(--background);padding-inline-end:4px;position:relative;z-index:1}
+.step-text small{font-size:11px;color:var(--muted-foreground)}.step-text b{font-size:13px;font-weight:650;line-height:1.35}.step-text em{font-style:normal;font-size:11px;color:var(--muted-foreground)}
+.step.late .step-text b{color:#a32e38}.step.current .step-text b{color:var(--brand)}
+.appeal-window{height:5px;border-radius:5px;background:var(--muted);overflow:hidden}.appeal-window i{display:block;height:100%;border-radius:inherit;background:var(--brand);transition:width .4s}
+.appeal-window.urgent i{background:#c2410c}
+.progress-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+.latest-step{flex:1;min-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--foreground)}.latest-step small{color:var(--muted-foreground);margin-inline-end:6px}
+@media(max-width:950px){.detail-sheet>.case-pin{top:-24px;margin:-24px -24px 0;padding:20px 24px 14px}}
+@media(max-width:640px){.case-pin-top{flex-direction:column;gap:8px}.case-pin-names h2{font-size:18px}.case-pin-id{flex-direction:row;flex-wrap:wrap;align-items:center}.case-pin-id>small{display:none}.case-pin-id>.copy-chip{font-size:14px;padding:3px 10px}.step-dot{width:20px;height:20px;font-size:11px}.progress-steps .step{gap:5px}.progress-steps .step:not(:last-child)::after{top:10px;inset-inline-start:24px}.step-text b{font-size:12px}.step-text em{display:none}.progress-foot{flex-wrap:nowrap}.latest-step{min-width:0}}
+.step.next .step-dot{border-style:dashed;border-color:var(--brand);color:var(--brand)}.step.next .step-text b{color:var(--brand)}
+.step.current .step-text em{color:var(--brand);font-weight:600}.step.late .step-text em{color:#a32e38;font-weight:600}
+.progress-other{font-size:14px;margin:0}.progress-other b{color:var(--brand)}
