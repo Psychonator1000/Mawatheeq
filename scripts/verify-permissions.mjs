@@ -193,5 +193,39 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  const ctx=await office(admin.token,'context');const m=ctx.members.find(x=>x.username==='role_clerk');assert.equal(m.permissions.jobRole,'secretary');
  await office(admin.token,'set_member_access',{id:m.id,revision:m.permissions.revision,permissions:{...m.permissions,jobRole:'lawyer',sections:['cases'],lawyerNames:['المحامي المثال']}});
  const history=await office(admin.token,'access_history',{id:m.id});assert.equal(history[0].after.jobRole,'lawyer','The audit records the role');assert.deepEqual(history[0].after.lawyerNames,['المحامي المثال'],'Names still stored with a role');}
+// Delegated admins: specific powers, granted only by holders, never over the owner, oneself or a stronger admin.
+{const pw='Temporary-password-123',ready=async(u)=>{const t=await login(u,pw);await local(t.token,'password',{currentPassword:pw,newPassword:'Fixture-password-123'});return login(u)};
+ const id=async u=>(await office(admin.token,'context')).members.find(m=>m.username===u);
+ await assert.rejects(()=>office(admin.token,'create_member',{username:'bad_powers',password:pw,permissions:{...noAccess,adminPowers:['everything']}}),/صلاحيات الإدارة غير صالحة/);
+ await office(admin.token,'create_member',{username:'deputy',password:pw,permissions:{...full,adminPowers:['staff','chat']}});
+ await office(admin.token,'create_member',{username:'keeper',password:pw,permissions:{...noAccess,adminPowers:['backup','settings']}});
+ const deputy=await ready('deputy'),keeper=await ready('keeper');
+ assert.deepEqual((await local(deputy.token,'access')).adminPowers,['chat','staff']);
+ const dctx=await office(deputy.token,'context');assert.equal(dctx.canManage,true,'Staff power opens account management');assert.ok(dctx.members.some(m=>m.permissions),'and the grants list');
+ // The deputy runs the staff list on the owner's behalf.
+ await office(deputy.token,'create_member',{username:'helper',password:pw,permissions:{...scoped,adminPowers:['staff']}});
+ const helper=await ready('helper');assert.deepEqual((await local(helper.token,'access')).adminPowers,['staff'],'An admin delegates powers they hold');
+ await denied(()=>office(deputy.token,'create_member',{username:'too_much',password:pw,permissions:{...noAccess,adminPowers:['settings']}}));
+ let h=await id('helper');await office(deputy.token,'set_member_access',{id:h.id,revision:h.permissions.revision,permissions:{...h.permissions,adminPowers:[]}});
+ assert.equal((await local((await login('helper')).token,'access')).adminPowers,undefined,'An admin removes another admin\'s powers');
+ await assert.rejects(()=>local(helper.token,'access'),e=>e.code==='28000','Changing powers ends the sessions');
+ h=await id('helper');await office(deputy.token,'set_member_access',{id:h.id,revision:h.permissions.revision,permissions:{...h.permissions,canEdit:false}});
+ assert.equal((await id('helper')).permissions.adminPowers,undefined,'Omitting adminPowers keeps none');
+ // Never oneself, the owner, or an admin with powers the actor lacks.
+ const d=await id('deputy'),k=await id('keeper');
+ await denied(()=>office(deputy.token,'set_member_access',{id:d.id,revision:d.permissions.revision,permissions:{...d.permissions,adminPowers:['staff','chat','backup']}}));
+ for(const [action,extra] of [['set_member_enabled',{enabled:false}],['rename_member',{username:'hijack'}],['set_display_name',{displayName:'x'}],['set_member_password',{password:'Another-password-123',mustChange:false}],['switch_user',{}]]){
+  await denied(()=>office(deputy.token,action,{id:admin.user.id,...extra}));await denied(()=>office(deputy.token,action,{id:k.id,...extra}));}
+ await denied(()=>office(deputy.token,'set_member_access',{id:k.id,revision:k.permissions.revision,permissions:{...k.permissions,adminPowers:[]}}));
+ // Powers stay within their area.
+ await denied(()=>local(deputy.token,'save_rules',{rules:{first:30,appeal:30,objection:8,execution:30,warning:7}}));
+ await denied(()=>office(deputy.token,'export_page',{kind:'cases'}));
+ await denied(()=>office(keeper.token,'create_member',{username:'nope',password:pw}));
+ assert.equal((await office(keeper.token,'context')).canManage,false);
+ const rules=await local(admin.token,'rules');await local(keeper.token,'save_rules',{rules});assert.deepEqual(await local(admin.token,'rules'),rules,'The settings power saves office rules');
+ // A switched session never carries admin powers, even the owner's switch into an admin.
+ const sw=await office(admin.token,'switch_user',{id:d.id});await denied(()=>office(sw.token,'create_member',{username:'via_switch',password:pw}));
+ assert.equal((await office(sw.token,'context')).canManage,false);
+ const history=await office(admin.token,'access_history',{id:d.id});assert.deepEqual(history[0].after.adminPowers,['chat','staff'],'The audit records the powers');}
 await db.close();
-console.log('Passed permissions: job roles (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
+console.log('Passed permissions: delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');

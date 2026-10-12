@@ -57,11 +57,11 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 ## Court levels
 
 - Cases move ابتدائي → استئناف → تمييز. The record holds the current level; each level left is kept in `stages` exactly as it stood, with its own number, court, judgment and procedures.
-- The server stamps who closed a level and when. Staff may add levels but never change or remove a closed one; only the owner corrects or undoes. A save without `stages` keeps the existing list. Workbook imports match closed levels too. Run `test:domain` and `test:office` when changing this.
+- The server stamps who closed a level and when. Staff may add levels but never change or remove a closed one; only the owner or an admin with the reviews power corrects or undoes. A save without `stages` keeps the existing list. Workbook imports match closed levels too. Run `test:domain` and `test:office` when changing this.
 
 ## Staff chat
 
-- Conversations are one-to-one or groups; any employee may start either. Members read and write; the owner may review any conversation read-only, and the panel says so.
+- Conversations are one-to-one or groups; any employee may start either. Members read and write; the owner or an admin with the chat power may review any conversation read-only, and the panel says so.
 - References (people, cases, clients, work) are filtered on the server for both sender and reader; a reader without access sees only the typed label. Edits and deletions are allowed for 15 minutes. Attachments are ≤5 MB in the private `mawatheeq-chat` bucket via the local-files function. Polling only (no Realtime). Run `test:chat` when changing this.
 
 ## Office workflows and source verification
@@ -74,8 +74,9 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 
 ## User permissions
 
-- Only the owner creates/manages local accounts and grants access. New accounts default to no sections, no cases, read-only, and no report export. The owner cannot be restricted or disabled through staff controls.
-- New staff start by choosing a job role (manager, lawyer, secretary, collections, accountant, HR or custom). The role (`jobRole`) only labels the account and preselects editable settings; authority comes solely from the saved sections, case scope and edit/export flags. «Manager» means all pages and cases with edit/export, never account administration.
+- The owner (the original account) holds every admin power and cannot be restricted, disabled, renamed, reset or switched into by anyone else. The 13 October 2026 request delegates administration: staff accounts may hold specific `adminPowers` (staff, reviews, settings, backup, chat). Any admin with the staff power manages other staff and grants only powers they hold; never their own account or one with powers they lack. New accounts default to no sections, no cases, read-only, no report export and no admin powers.
+- Each public request names the power its action needs (`set_power`); `is_owner()` is true only for the owner or a holder of that power in a session of their own. Switched sessions carry no admin powers. Data access still follows sections and case scope.
+- New staff start by choosing a job role (manager, lawyer, secretary, collections, accountant, HR or custom). The role (`jobRole`) only labels the account and preselects editable settings; authority comes solely from the saved sections, case scope and edit/export flags. «Manager» means all pages and cases with edit/export and preselects the admin powers the granter holds.
 - Enforce allowed cases and sections on the server, including documents, client/contact projections, work, history, reviews and exports. Hidden navigation is not authorization. Never restore broad execute grants to private legacy functions or direct table/storage access.
 - Changing permissions requires the current permission revision, records an audit entry and revokes sessions. Keep account locking/revalidation so a concurrent stale password request cannot undo an administrator reset.
 - Shared client profiles/new case creation require all-case editing and their corresponding section. Restricted case edits preserve client links and historical labels, including omitted keys. Unclassified document studio access requires all-case scope; case evidence must be linked exclusively to allowed cases.
@@ -84,7 +85,7 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 ## Employee workspaces
 
 - Selecting legal, secretary, collections, accounting or HR never grants authority. Department grants alone must not authorize the full legal case, client profile, document or other departments' records.
-- Keep case assignments shared across case-linked departments. HR profiles are independent of login accounts; only the owner administers users.
+- Keep case assignments shared across case-linked departments. HR profiles are independent of login accounts; only the owner and admins with the staff power administer users.
 - Secretary work reuses work_items. Collection edits invalidate source reviews; generation checks current file and case revisions and preserves immutable output snapshots.
 - Keep posted financial entries immutable, with exact minor-unit amounts, separate currencies and audited cancellation reasons. Never introduce paid payment services or payroll calculations implicitly.
 - HR leave approval must serialize per employee and reject overlapping approved dates. Keep profile and leave histories.

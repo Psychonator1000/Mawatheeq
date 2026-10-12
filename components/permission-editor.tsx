@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
 import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,SlidersHorizontal,ChevronDown,type LucideIcon} from 'lucide-react';
-import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,JOB_ROLES,workspacesOf,type JobRole,type Permissions,type Section} from '@/lib/permissions';
+import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,JOB_ROLES,ADMIN_POWERS,ALL_POWERS,workspacesOf,type AdminPower,type JobRole,type Permissions,type Section} from '@/lib/permissions';
 import {type CaseRecord} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -17,7 +17,7 @@ export function inferRole(v:Permissions):JobRole|undefined{
  return JOB_ROLES.find(r=>r.preset&&r.id!=='lawyer'&&same(r.preset.sections,v.sections)&&r.preset.caseScope===v.caseScope&&r.preset.canEdit===v.canEdit&&r.preset.canExport===v.canExport)?.id;
 }
 
-export default function PermissionEditor({value,onChange,records,suggestLawyer=''}:{value:Permissions;onChange:(v:Permissions)=>void;records:CaseRecord[];suggestLawyer?:string}) {
+export default function PermissionEditor({value,onChange,records,suggestLawyer='',grantable=[]}:{value:Permissions;onChange:(v:Permissions)=>void;records:CaseRecord[];suggestLawyer?:string;grantable?:AdminPower[]}) {
  const [search,setSearch]=useState(''),[page,setPage]=useState(1),[lawyerSearch,setLawyerSearch]=useState('');
  // Lawyer names as written on the cases, with how many cases carry each.
  const lawyers=useMemo(()=>lawyerLabels(records),[records]);
@@ -31,7 +31,7 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
  const pages=Math.max(1,Math.ceil(filtered.length/10)),current=Math.min(page,pages),rows=filtered.slice((current-1)*10,current*10);
  const patch=(next:Partial<Permissions>)=>onChange({...value,...next});
  const toggle=(id:string,checked:boolean)=>patch({caseIds:checked?[...value.caseIds,id]:value.caseIds.filter(x=>x!==id)});
- const opens=workspacesOf(value);
+ const opens=workspacesOf(value),powers=value.adminPowers||[];
  const role=inferRole(value);
  // New accounts start folded until a role is chosen; older accounts that match no role open the details.
  const [details,setDetails]=useState(role==='custom'||(!role&&value.revision>0));
@@ -41,7 +41,8 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
   const r=JOB_ROLES.find(x=>x.id===id)!;
   if(!r.preset){setLawyerMode(false);setDetails(true);onChange({...value,jobRole:id});return}
   const lawyer=id==='lawyer';setLawyerMode(lawyer);
-  onChange({...value,...r.preset,caseIds:[],jobRole:id,lawyerNames:lawyer?(names.length?names:suggested?[suggested]:[]):[]});
+  // «مدير» also receives every admin power the person granting it holds; other roles keep the powers already chosen.
+  onChange({...value,...r.preset,caseIds:[],jobRole:id,lawyerNames:lawyer?(names.length?names:suggested?[suggested]:[]):[],...(id==='manager'?{adminPowers:[...grantable]}:{})});
  }
  function lawyerPicker(){return <div className="permission-lawyers">
     {!names.length&&<p className="notice" role="alert">{suggestLawyer?`لم يُعثر على «${suggestLawyer}» في خانة «المحامي» بالقضايا. `:''}اختر اسمه كما هو مكتوب في القضايا من القائمة أدناه.</p>}
@@ -54,7 +55,7 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
  return <div className="permission-editor">
   <fieldset className="permission-group role-step"><legend>الدور الوظيفي</legend>
    <div className="role-grid" role="radiogroup" aria-label="الدور الوظيفي">{JOB_ROLES.map(r=>{const Icon=ROLE_ICONS[r.id];const on=role===r.id;return <button type="button" role="radio" aria-checked={on} key={r.id} className={'role-card'+(on?' on':'')} onClick={()=>pickRole(r.id)}><Icon size={20} aria-hidden/><b>{r.label}</b><small>{r.hint}</small></button>})}</div>
-   {role==='manager'&&<p className="subtitle">إدارة الحسابات والصلاحيات والإعدادات والاعتماد تبقى لك وحدك.</p>}
+   {role==='manager'&&<p className="subtitle">يحصل المدير أيضاً على صلاحيات الإدارة المحددة أدناه. حساب المالك لا يُعدَّل من أي حساب آخر.</p>}
    <div className="role-summary" role="status">
     <span><small>الصفحات</small><b>{opens.length?opens.map(p=>WORKSPACE_LABELS[p]).join('، '):'لا شيء بعد'}</b></span>
     <span><small>القضايا</small><b>{scopeText}</b></span>
@@ -62,6 +63,10 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
    </div>
    {byLawyer&&lawyerPicker()}
   </fieldset>
+  {(grantable.length>0||!!powers.length)&&<fieldset className="permission-group admin-step"><legend>صلاحيات الإدارة</legend>
+   <p className="subtitle">ينوب صاحب الحساب عن المالك فيما تختاره هنا. تمنح فقط الصلاحيات التي تملكها، ولا يستطيع أحد تعديل حساب المالك.</p>
+   <div className="power-grid">{ALL_POWERS.map(p=>{const on=powers.includes(p),can=grantable.includes(p);return <label key={p} className={'power-option'+(on?' on':'')+(can?'':' locked')} title={can?undefined:'لا تملك هذه الصلاحية لتمنحها'}><input type="checkbox" checked={on} disabled={!can} onChange={e=>patch({adminPowers:e.target.checked?[...powers,p]:powers.filter(x=>x!==p)})}/><span><b>{ADMIN_POWERS[p].label}</b><small>{ADMIN_POWERS[p].hint}</small></span></label>})}</div>
+  </fieldset>}
   <button type="button" className="permission-toggle" aria-expanded={details} onClick={()=>setDetails(v=>!v)}><SlidersHorizontal size={16} aria-hidden/>{details?'إخفاء التفاصيل':'تعديل التفاصيل: الصفحات والقضايا والعمليات'}<ChevronDown size={16} aria-hidden className="chev"/></button>
   {details&&<div className="permission-details">
   <fieldset className="permission-group"><legend>الصفحات التي يراها</legend>
@@ -86,7 +91,7 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
   <fieldset className="permission-group"><legend>العمليات المسموحة</legend>
    <label className="checkbox-line"><input type="checkbox" checked={value.canEdit} onChange={e=>patch({canEdit:e.target.checked})}/>السماح بالتعديل في الأقسام المتاحة</label>
    <label className="checkbox-line"><input type="checkbox" checked={value.canExport} onChange={e=>patch({canExport:e.target.checked})}/>السماح بتصدير التقارير وطباعتها</label>
-   <p className="subtitle">بدون التعديل يصبح الحساب للقراءة فقط. إضافة القضايا وتعديل ملفات الموكلين المشتركة تتطلب جميع القضايا والقسم المختص. إدارة المستخدمين والاعتماد والإعدادات والاستيراد والنسخة الكاملة للمسؤول فقط.</p>
+   <p className="subtitle">بدون التعديل يصبح الحساب للقراءة فقط. إضافة القضايا وتعديل ملفات الموكلين المشتركة تتطلب جميع القضايا والقسم المختص. إدارة المستخدمين والاعتماد والإعدادات والاستيراد والنسخة الكاملة تُمنح من «صلاحيات الإدارة».</p>
   </fieldset>
   </div>}
  </div>;

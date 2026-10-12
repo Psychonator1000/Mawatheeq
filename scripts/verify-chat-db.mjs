@@ -113,6 +113,13 @@ const found = await chat(amal2, 'search', { q: 'CH-' }); assert.deepEqual(found.
 assert.ok((await chat(badr2, 'search', { q: 'CH-' })).filter(r => r.type === 'case').length === 2);
 assert.ok((await chat(amal2, 'search', { q: 'بدر' })).some(r => r.type === 'user'));
 
+// An admin given the chat power reviews conversations they are not in, read-only, like the owner.
+{const s=(await office(owner,'context')).members.find(x=>x.username==='salem');
+ await denied(()=>chat(salem2,'messages',{conversationId:d1.id}));
+ await office(owner,'set_member_access',{id:s.id,revision:s.permissions.revision,permissions:{...s.permissions,adminPowers:['chat']}});
+ const reviewer=await login('salem');assert.equal((await chat(reviewer,'summary')).owner,true,'The chat power opens owner review');
+ assert.ok((await chat(reviewer,'messages',{conversationId:d1.id})).length>0,'and reads any conversation');
+ await denied(()=>chat(reviewer,'send',{conversationId:d1.id,clientId:uuid(),body:'x',refs:[]}));}
 await db.exec('reset role');
 assert.equal((await db.query("select has_function_privilege('anon','mawatheeq_private.chat_ref_ok(uuid,jsonb)','execute') ok")).rows[0].ok, false, 'Helpers are not callable directly');
 await db.exec('set role anon'); await assert.rejects(() => db.query('select * from mawatheeq_private.chat_messages'), /permission denied/, 'Tables are not readable directly'); await db.exec('reset role');

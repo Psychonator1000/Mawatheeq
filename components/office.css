@@ -47,6 +47,14 @@
 .permission-details{animation:permission-open .2s ease-out}
 @keyframes permission-open{from{opacity:0;transform:translateY(-4px)}}
 .permission-details .permission-cases{max-height:320px;overflow-y:auto}
+.admin-step{background:#fbf7ef}
+.power-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.power-option{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid #e4d9cb;border-radius:12px;background:#fffdf8;cursor:pointer}
+.power-option input{margin-top:4px;width:17px;height:17px;accent-color:var(--brand);flex-shrink:0}
+.power-option b{display:block;font-size:13.5px;font-weight:650;color:#3b2f25}.power-option small{display:block;margin-top:3px;font-size:12px;line-height:1.7;color:#7a6759}
+.power-option.on{border-color:var(--brand);background:#f6eee3}
+.power-option.locked{opacity:.55;cursor:not-allowed}
+.office-table small.admin-powers{color:var(--brand);font-weight:600}
 .role-chip{display:inline-block;margin-inline-end:8px;padding:1px 9px;border-radius:999px;background:#f1e6d8;color:#5d3f33;font-size:12px;font-weight:600}
 @media(max-width:600px){.account-fields,.role-summary{grid-template-columns:1fr}.role-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.role-card,.permission-details{transition:none;animation:none}}

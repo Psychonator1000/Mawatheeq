@@ -4,14 +4,14 @@ import {ArrowUpLeft,Scale,CalendarDays,Files,Wallet,UsersRound} from 'lucide-rea
 import {flushSync} from 'react-dom';
 import AccountMenu,{AccountContext} from './account-menu';
 import {withViewTransition} from '@/lib/appearance';
-import {LEGAL_SECTIONS,type Permissions} from '@/lib/permissions';
+import {LEGAL_SECTIONS,type Permissions,isAdmin,powersOf} from '@/lib/permissions';
 import {WORKSPACES,workspaceStorageKey,type WorkspaceId} from '@/lib/departments';
 import Workspace from './workspace';
 import DepartmentWorkspace from './departments/department-shell';
 import './workspaces.css';
 const icons={legal:Scale,secretary:CalendarDays,collections:Files,accounting:Wallet,hr:UsersRound};
 export default function WorkspaceHub({access,owner}:{access:Permissions;owner:boolean}) {
- const allowed=(Object.keys(WORKSPACES) as WorkspaceId[]).filter(id=>owner||(id==='legal'?access.sections.some(s=>LEGAL_SECTIONS.includes(s)):access.sections.includes(id)));
+ const allowed=(Object.keys(WORKSPACES) as WorkspaceId[]).filter(id=>owner||(id==='legal'?access.sections.some(s=>LEGAL_SECTIONS.includes(s))||isAdmin(powersOf(access)):access.sections.includes(id)));
  // An account with a single page opens it directly, without the chooser.
  const only=allowed.length===1?allowed[0]:null;
  const [selected,setSelected]=useState<WorkspaceId|null>(()=>{const saved=sessionStorage.getItem(workspaceStorageKey) as WorkspaceId;return allowed.includes(saved)?saved:only});
