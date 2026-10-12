@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {UsersRound,Plus} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
@@ -13,6 +13,8 @@ import {DepartmentHistory,EditorDialog,StatusMessage,useRecords,exportCsv} from 
 import {leaveDays,leaveUsed} from '@/lib/leave';
 import {AttendanceBoard,AttendanceSettingsPanel,AttendanceUnavailable,ProfilesPanel,useAttendanceEnabled} from './attendance';
 import DevicesPanel from './devices';
+import {personName} from '@/lib/staff-accounts';
+type StaffAccount={id:string;username:string;displayName:string;role:string};
 type Tab='employee'|'leave'|'attendance'|'devices'|'pay'|'settings';
 const ATT_TABS:[Tab,string][]=[['attendance','الحضور'],['devices','الأجهزة'],['pay','الرواتب والبصمات'],['settings','إعدادات الدوام']];
 export default function HR({access}:{access:Permissions}) {
@@ -21,6 +23,27 @@ export default function HR({access}:{access:Permissions}) {
  const [tab,setTab]=useState<Tab>('employee'),[search,setSearch]=useState(''),[status,setStatus]=useState(''),[page,setPage]=useState(1),[editing,setEditing]=useState<DepartmentRecord|null>(null);
  const employees=rows.filter(r=>r.kind==='employee'),leaves=rows.filter(r=>r.kind==='leave');
  const employeeName=(id:string)=>employees.find(r=>r.id===id)?.payload.name||'غير متاح';
+ // Every sign-in account has an HR file: link a same-named file, otherwise create one (HR editors only).
+ const [staff,setStaff]=useState<StaffAccount[]>([]),synced=useRef(false);
+ useEffect(()=>{
+  if(loading||error||synced.current)return;synced.current=true;
+  void (async()=>{
+   let accounts:StaffAccount[];try{accounts=await departmentRequest<StaffAccount[]>('staff_accounts',{workspace:'hr'})}catch{return}
+   setStaff(accounts);if(!access.canEdit)return;
+   const linked=new Set(employees.map(r=>r.payload.accountId).filter(Boolean)),norm=(v:string)=>normalizeSearch(personName(v||''));
+   let next=Math.max(0,...employees.map(r=>Number(/^EMP-(\d+)$/.exec(r.payload.employeeNumber||'')?.[1]||0)))+1,added=0;
+   for(const a of accounts.filter(a=>!linked.has(a.id))){
+    const name=personName(a.displayName)||a.username,match=employees.find(r=>!r.payload.accountId&&[norm(a.displayName),norm(a.username)].includes(norm(r.payload.name)));
+    try{
+     if(match)await departmentRequest('save_record',{workspace:'hr',record:{...match,payload:{...match.payload,accountId:a.id}}});
+     else{await departmentRequest('save_record',{workspace:'hr',record:newDepartmentRecord('hr','employee',{employeeNumber:`EMP-${String(next++).padStart(3,'0')}`,name,title:'',department:'',phone:'',startDate:'',status:'active',notes:'',accountId:a.id})});added++}
+    }catch{/* Shown again on the next visit; the server keeps one file per account. */}
+   }
+   if(added)toast.success(`أُضيف ${added} ملف موظف من حسابات الدخول.`);
+   if(accounts.some(a=>!linked.has(a.id)))reload();
+  })();
+ },[loading,error,employees,access.canEdit,reload]);
+ const accountOf=(r:DepartmentRecord)=>staff.find(a=>a.id===r.payload.accountId);
  const filtered=rows.filter(r=>r.kind===tab&&(!status||(status==='archived'?r.archived:!r.archived&&r.payload.status===status))&&normalizeSearch([r.payload.name,r.payload.employeeNumber,r.payload.department,r.payload.title,r.payload.type,employeeName(r.subjectId)].join(' ')).includes(normalizeSearch(search)));
  const pages=Math.max(1,Math.ceil(filtered.length/12)),current=Math.min(page,pages),today=todayISO(),year=Number(today.slice(0,4));
  function add(kind:'employee'|'leave'){setEditing(newDepartmentRecord('hr',kind,kind==='employee'?{employeeNumber:'',name:'',title:'',department:'',phone:'',startDate:'',status:'active',notes:''}:{type:'سنوية',fromDate:today,toDate:today,status:'pending',notes:'',decisionNote:''} as Record<string,string>))}
@@ -29,8 +52,8 @@ export default function HR({access}:{access:Permissions}) {
  <section className="panel"><div className="department-toolbar"><div className="department-tabs" role="group" aria-label="سجلات الموارد البشرية"><button className={'btn '+(tab==='employee'?'primary':'')} aria-pressed={tab==='employee'} onClick={()=>{setTab('employee');setStatus('');setPage(1)}}>ملفات الموظفين</button><button className={'btn '+(tab==='leave'?'primary':'')} aria-pressed={tab==='leave'} onClick={()=>{setTab('leave');setStatus('');setPage(1)}}>الإجازات</button>{attendance!==false&&ATT_TABS.map(([k,label])=><button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{label}</button>)}</div>{access.canEdit&&(tab==='employee'||tab==='leave')&&<button className="btn primary" onClick={()=>add(tab as 'employee'|'leave')}><Plus size={17}/>{tab==='employee'?'موظف جديد':'طلب إجازة جديد'}</button>}</div>
  {tab!=='employee'&&tab!=='leave'?<div className="att-section">{attendance===null?<p role="status">جارٍ التحقق من ميزة الحضور…</p>:attendance===false?<AttendanceUnavailable/>:tab==='attendance'?<AttendanceBoard canExport={access.canExport}/>:tab==='devices'?<DevicesPanel/>:tab==='pay'?<ProfilesPanel/>:<AttendanceSettingsPanel/>}</div>:<>
  <div className="department-toolbar"><Field label="بحث الموارد البشرية" value={search} onChange={v=>{setSearch(v);setPage(1)}}/><OfficeSelect label="تصفية الحالة" value={status} onChange={v=>{setStatus(v);setPage(1)}} empty="جميع الحالات" options={tab==='employee'?[['active','نشط'],['inactive','غير نشط'],['archived','مؤرشف']]:Object.entries(LEAVE_STATUSES)}/>{access.canExport&&<button className="btn" onClick={()=>void exportCsv('hr','Mawatheeq-'+tab,tab==='employee'?[['رقم الموظف','الاسم','المسمى','القسم','تاريخ الانضمام','الحالة'],...filtered.map(r=>[r.payload.employeeNumber,r.payload.name,r.payload.title,r.payload.department,r.payload.startDate,r.archived?'مؤرشف':r.payload.status==='active'?'نشط':'غير نشط'])]:[['الموظف','نوع الإجازة','من','إلى','الحالة','ملاحظة القرار'],...filtered.map(r=>[employeeName(r.subjectId),r.payload.type,r.payload.fromDate,r.payload.toDate,LEAVE_STATUSES[r.payload.status as keyof typeof LEAVE_STATUSES],r.payload.decisionNote])]).catch(e=>toast.error(e.message))}>تصدير القائمة</button>}</div>
- <StatusMessage loading={loading} error={error}/>{!loading&&!error&&<>{tab==='employee'?<div className="people-grid">{filtered.slice((current-1)*12,current*12).map(r=><article className="person-card" data-tilt key={r.id}><div className="person-avatar">{r.payload.name.slice(0,1)}</div><span className={'tag '+(!r.archived&&r.payload.status==='active'?'green':'')}>{r.archived?'مؤرشف':r.payload.status==='active'?'نشط':'غير نشط'}</span><h2>{r.payload.name}</h2><p>{r.payload.title||'المسمى غير مسجل'}</p><small>{r.payload.department||'قسم غير مسجل'} · {r.payload.employeeNumber}</small><small>إجازات معتمدة {year}: {leaveUsed(leaves,r.id,year).total} يوم</small><button className="btn" onClick={()=>setEditing(r)}>فتح ملف الموظف</button></article>)}</div>:<div className="table-wrap"><table className="office-table"><thead><tr><th>الموظف</th><th>نوع الإجازة</th><th>المدة</th><th>الحالة</th><th>التفاصيل</th></tr></thead><tbody>{filtered.slice((current-1)*12,current*12).map(r=><tr key={r.id}><td>{employeeName(r.subjectId)}</td><td>{r.payload.type}</td><td>{formatDate(r.payload.fromDate)} — {formatDate(r.payload.toDate)}<small>{leaveDays(r.payload.fromDate,r.payload.toDate)} يوم</small></td><td><span className={'tag '+(r.payload.status==='approved'?'green':'amber')}>{LEAVE_STATUSES[r.payload.status as keyof typeof LEAVE_STATUSES]}</span></td><td><button className="btn" onClick={()=>setEditing(r)}>فتح طلب الإجازة</button></td></tr>)}</tbody></table></div>}{!filtered.length&&<Empty text={tab==='employee'?'أضف ملف الموظف وبيانات عمله الأساسية.':'أضف طلب إجازة لموظف مسجل.'}/>}<PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></>}
- </>}<p className="subtitle">ملف الموظف مستقل عن حساب الدخول. إنشاء الحسابات ومنح صلاحياتها من إعدادات مسؤول المكتب.</p></section>
+ <StatusMessage loading={loading} error={error}/>{!loading&&!error&&<>{tab==='employee'?<div className="people-grid">{filtered.slice((current-1)*12,current*12).map(r=><article className="person-card" data-tilt key={r.id}><div className="person-avatar">{r.payload.name.slice(0,1)}</div><span className={'tag '+(!r.archived&&r.payload.status==='active'?'green':'')}>{r.archived?'مؤرشف':r.payload.status==='active'?'نشط':'غير نشط'}</span><h2>{r.payload.name}</h2>{accountOf(r)&&<small className="person-account" dir="ltr" title="حساب الدخول المرتبط">@{accountOf(r)!.username}</small>}<p>{r.payload.title||'المسمى غير مسجل'}</p><small>{r.payload.department||'قسم غير مسجل'} · {r.payload.employeeNumber}</small><small>إجازات معتمدة {year}: {leaveUsed(leaves,r.id,year).total} يوم</small><button className="btn" onClick={()=>setEditing(r)}>فتح ملف الموظف</button></article>)}</div>:<div className="table-wrap"><table className="office-table"><thead><tr><th>الموظف</th><th>نوع الإجازة</th><th>المدة</th><th>الحالة</th><th>التفاصيل</th></tr></thead><tbody>{filtered.slice((current-1)*12,current*12).map(r=><tr key={r.id}><td>{employeeName(r.subjectId)}</td><td>{r.payload.type}</td><td>{formatDate(r.payload.fromDate)} — {formatDate(r.payload.toDate)}<small>{leaveDays(r.payload.fromDate,r.payload.toDate)} يوم</small></td><td><span className={'tag '+(r.payload.status==='approved'?'green':'amber')}>{LEAVE_STATUSES[r.payload.status as keyof typeof LEAVE_STATUSES]}</span></td><td><button className="btn" onClick={()=>setEditing(r)}>فتح طلب الإجازة</button></td></tr>)}</tbody></table></div>}{!filtered.length&&<Empty text={tab==='employee'?'أضف ملف الموظف وبيانات عمله الأساسية.':'أضف طلب إجازة لموظف مسجل.'}/>}<PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></>}
+ </>}<p className="subtitle">لكل حساب دخول ملف موظف يُنشأ تلقائياً ويمكن استكماله هنا. إنشاء الحسابات ومنح صلاحياتها من إعدادات مسؤول المكتب.</p></section>
  {editing&&<HREditor key={editing.id} initial={editing} employees={employees} leaves={leaves} access={access} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);reload()}}/>}</>;
 }
 function HREditor({initial,employees,leaves,access,onClose,onSaved}:{initial:DepartmentRecord;employees:DepartmentRecord[];leaves:DepartmentRecord[];access:Permissions;onClose:()=>void;onSaved:()=>void}) {
