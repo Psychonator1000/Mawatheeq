@@ -18,6 +18,15 @@ const hexRgb = (value: string, fallback: RGB): RGB => {
 const rgba = (c: RGB, a: number) => `rgba(${c[0]},${c[1]},${c[2]},${Math.max(0, Math.min(1, a)).toFixed(3)})`;
 const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t].map(Math.round) as RGB;
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+/** One cherry-blossom petal pointing up from the origin: rounded, with the notch at its tip. */
+function petal(ctx: CanvasRenderingContext2D, len: number, light: string, deep: string) {
+  const g = ctx.createLinearGradient(0, 0, 0, -len);
+  g.addColorStop(0, deep); g.addColorStop(.7, light); g.addColorStop(1, light);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(len * .55, -len * .2, len * .6, -len * .85, len * .18, -len);
+  ctx.lineTo(0, -len * .82); ctx.lineTo(-len * .18, -len);
+  ctx.bezierCurveTo(-len * .6, -len * .85, -len * .55, -len * .2, 0, 0); ctx.fill();
+}
 
 export function readPalette() {
   const css = getComputedStyle(document.documentElement);
@@ -38,6 +47,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
   const waves: { x: number; y: number; born: number }[] = [];
   const seed = (w: number, h: number) => {
     if (kind === 'bubbles') { nodes = Array.from({ length: Math.min(34, Math.round(w * h / 45000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .15, vy: -(.15 + Math.random() * .35), r: 8 + Math.random() * 34, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
+    if (kind === 'sakura') { nodes = Array.from({ length: Math.min(42, Math.round(w * h / 32000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: .1 + Math.random() * .35, vy: .35 + Math.random() * .55, r: 6.5 + Math.random() * 7.5, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
     if (kind === 'phantom') { nodes = Array.from({ length: 16 }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: -(.3 + Math.random() * .6), vy: .15 + Math.random() * .35, r: 6 + Math.random() * 16, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
     const fireflies = kind === 'fireflies';
     const count = fireflies ? Math.min(46, Math.round(w * h / 30000)) : Math.min(120, Math.round(w * h / 13000));
@@ -57,6 +67,8 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
         n.phase += .02 * dt * speed;
         if (kind === 'bubbles') { n.x += (n.vx + Math.sin(n.phase) * .25) * dt * speed; n.y += n.vy * dt * speed; }
         else if (kind === 'phantom') { n.x += n.vx * dt * speed; n.y += n.vy * dt * speed; }
+        // Sakura: petals fall and sway, carried by a slow gust that comes and goes.
+        else if (kind === 'sakura') { const gust = .55 + Math.sin(now / 5200) * .45; n.x += (n.vx * gust + Math.sin(n.phase * 1.3) * .45) * dt * speed; n.y += (n.vy + Math.cos(n.phase) * .12) * dt * speed; }
         else if (kind === 'fireflies') { n.x += (n.vx + Math.sin(n.phase) * .18) * dt * speed; n.y += n.vy * dt * speed; }
         else { n.x += n.vx * dt * speed; n.y += n.vy * dt * speed; }
         n.y -= s.scrollV * 1.6 * dt * (.4 + n.r / 3);
@@ -84,6 +96,23 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.ellipse(n.x - n.r * .38, n.y - n.r * .45, n.r * .28, n.r * .14, -.6, 0, Math.PI * 2); ctx.fill();
       }
+    } else if (kind === 'sakura') {
+      // Sakura: tumbling five-lobed petals in soft pinks; a few whole blossoms drift among them.
+      for (const n of nodes) {
+        ctx.save(); ctx.translate(n.x, n.y); ctx.rotate(n.phase * .7 + n.hue * 6);
+        const flip = Math.cos(n.phase * 1.6), tone = n.hue;
+        ctx.globalAlpha = .7 + .3 * Math.abs(flip);
+        if (tone > .9) {
+          ctx.scale(1, .75 + .25 * Math.abs(flip));
+          for (let k = 0; k < 5; k++) { ctx.rotate(Math.PI * 2 / 5); petal(ctx, n.r * .9, '#ffd6e2', '#f49ab9'); }
+          ctx.fillStyle = '#e8708f'; ctx.beginPath(); ctx.arc(0, 0, n.r * .22, 0, Math.PI * 2); ctx.fill();
+        } else {
+          ctx.scale(.45 + .55 * Math.abs(flip), 1);
+          petal(ctx, n.r * 1.5, tone > .55 ? '#ffe3ea' : '#ffd0de', tone > .3 ? '#f7a1bf' : '#ef86aa');
+        }
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
     } else if (kind === 'phantom') {
       // Persona: slowly turning red and black rays from the pointer side, with drifting stars.
       const cx = near ? px : w * .78, cy = near ? py : h * .3, turn = now / 9000, rays = 18, len = Math.hypot(w, h);
@@ -122,7 +151,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
   const loop = (now: number) => { frame = 0; const s = state(); if (document.hidden || s.motion === 'off' || s.reduced) return; draw(now, true); frame = requestAnimationFrame(loop); };
   const sync = () => {
     palette = readPalette(); const s = state();
-    if (!['constellation', 'fireflies', 'bubbles', 'phantom'].includes(s.mode)) { cancelAnimationFrame(frame); frame = 0; canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height); return; }
+    if (!['constellation', 'fireflies', 'bubbles', 'phantom', 'sakura'].includes(s.mode)) { cancelAnimationFrame(frame); frame = 0; canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height); return; }
     if (s.motion === 'off' || s.reduced) { cancelAnimationFrame(frame); frame = 0; draw(performance.now(), false); return; }
     if (!frame && !document.hidden) { last = 0; frame = requestAnimationFrame(loop); }
   };
@@ -168,6 +197,7 @@ export function createBursts(canvas: HTMLCanvasElement) {
       for (const p of pts) if (p.alpha > 0) {
         const r = p.s.r * (1 - p.t * .5);
         if (b.shape === 'shard') { ctx.fillStyle = rgba(p.s.color, .95 * p.alpha); ctx.beginPath(); ctx.moveTo(p.s.x + p.s.dx * .06, p.s.y + p.s.dy * .06); ctx.lineTo(p.s.x - p.s.dy * .03, p.s.y + p.s.dx * .03); ctx.lineTo(p.s.x + p.s.dy * .03, p.s.y - p.s.dx * .03); ctx.closePath(); ctx.fill(); }
+        else if (b.shape === 'petal') { ctx.save(); ctx.translate(p.s.x, p.s.y); ctx.rotate(Math.atan2(p.s.dy, p.s.dx) + Math.PI / 2 + p.t * 3); ctx.globalAlpha = .9 * p.alpha; petal(ctx, 7 + r * 2.2, '#ffe0ea', '#f07fa6'); ctx.restore(); ctx.globalAlpha = 1; }
         else if (b.shape === 'bubble') { ctx.strokeStyle = rgba(p.s.color, .8 * p.alpha); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(p.s.x, p.s.y, r * 2.2, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = `rgba(255,255,255,${(.7 * p.alpha).toFixed(3)})`; ctx.beginPath(); ctx.arc(p.s.x - r * .7, p.s.y - r * .7, r * .5, 0, Math.PI * 2); ctx.fill(); }
         else { ctx.fillStyle = rgba(p.s.color, .85 * p.alpha); ctx.beginPath(); ctx.arc(p.s.x, p.s.y, r, 0, Math.PI * 2); ctx.fill(); }
       }
@@ -183,7 +213,7 @@ export function createBursts(canvas: HTMLCanvasElement) {
         const a = i / count * Math.PI * 2 + (Math.random() - .5) * .5, dist = reach * (.55 + Math.random() * .7), start = 4 + Math.random() * 8;
         return { x, y, ox: Math.cos(a) * start, oy: Math.sin(a) * start, dx: Math.cos(a) * dist, dy: Math.sin(a) * dist, r: .9 + Math.random() * 1.7, delay: Math.random() * 90, color: Math.random() < .55 ? p.brand : mix(p.glow1, p.brand, .3) };
       });
-      const theme = document.documentElement.dataset.theme, shape = theme?.startsWith('phantom') ? 'shard' : theme === 'sky' ? 'bubble' : 'dot';
+      const theme = document.documentElement.dataset.theme, shape = theme?.startsWith('phantom') ? 'shard' : theme === 'sky' ? 'bubble' : theme === 'rose' ? 'petal' : 'dot';
       if (shape === 'shard') for (const sp of sparks) { sp.dx *= 1.5; sp.dy *= 1.5; sp.color = Math.random() < .5 ? [230, 0, 18] : Math.random() < .5 ? [0, 0, 0] : [255, 255, 255]; }
       bursts.push({ x, y, born: performance.now(), sparks, ring: reach * .9, color: p.brand, strong, shape });
       if (!frame) frame = requestAnimationFrame(draw);

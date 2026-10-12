@@ -175,6 +175,7 @@ assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.b
 await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
 await page.getByRole('radio',{name:'أصفر مشمس'}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()),'#a57400','Yellow theme applies');
 assert.equal(await page.getByRole('radio',{name:/أبيض وذهبي|أسود وذهبي/}).count(),0,'one gold theme, not two');
+await page.getByRole('radio',{name:'ساكورا',exact:true}).check();assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'rose');assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.ambient-canvas')).display),'block','Sakura draws falling petals');
 await page.getByRole('radio',{name:'ذهبي',exact:true}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(11, 10, 8)','Gold is black and gold by default');
 await page.getByRole('radio',{name:'فاتح',exact:true}).check();assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'ivory','Gold in light mode is white and gold');await page.getByRole('radio',{name:/^حسب السمة/}).check();
 await page.getByRole('radio',{name:'أزرق سماوي'}).check();await page.getByRole('radio',{name:/يراعات مضيئة/}).check();

@@ -39,7 +39,7 @@ export default function MotionLayer() {
   let scrollDir='down',lastScrollAt=0;
   let lastTop=scrollY,lastTime=performance.now(),velocity=0,velFrame=0,settle=0,lastTick=0;
   const fx:FxState={mode:'',motion:'',reduced:false,pointerX:-999,pointerY:-999,pointerOn:false,scrollV:0};
-  const state=()=>{const backdropMode=root.dataset.backdrop||'constellation',theme=root.dataset.theme;fx.mode=backdropMode==='none'?'none':theme==='sky'?'bubbles':theme?.startsWith('phantom')?'phantom':backdropMode;fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches;fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
+  const state=()=>{const backdropMode=root.dataset.backdrop||'constellation',theme=root.dataset.theme;fx.mode=backdropMode==='none'?'none':theme==='sky'?'bubbles':theme==='rose'?'sakura':theme?.startsWith('phantom')?'phantom':backdropMode;fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches;fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
   const backdrop=ambient.current?createBackdrop(ambient.current,state):null,bursts=burst.current?createBursts(burst.current):null;
   const unset=(...names:string[])=>(el:HTMLElement)=>names.forEach(n=>el.style.removeProperty(n));
   const trackTilt=tracker(unset('--tilt-x','--tilt-y')),trackMagnet=tracker(unset('--mag-x','--mag-y')),trackGlow=tracker(unset('--gx','--gy'));
@@ -172,6 +172,7 @@ export default function MotionLayer() {
   <div className="ambient" aria-hidden="true"><span className="ambient-blob one"/><span className="ambient-blob two"/><span className="ambient-blob three"/><span className="ambient-spot"/><span className="ambient-grain"/><canvas ref={ambient} className="ambient-canvas"/></div>
   <canvas ref={burst} className="burst-canvas" aria-hidden="true"/>
   {splash==='phantom'&&<div className="egg-splash phantom-splash" aria-hidden="true"><div className="calling-card" dir="ltr" lang="en"><small>CALLING CARD</small><b>{ransom("WE'RE GONNA STEAL YOUR HEART!")}</b><span>— The Phantom Thieves</span></div></div>}
+  {splash==='rose'&&<div className="egg-splash sakura-splash" aria-hidden="true">{Array.from({length:28},(_,i)=><i key={i} style={{'--i':i} as CSSProperties}/>)}<b>桜</b></div>}
   {splash==='sky'&&<div className="egg-splash aero-splash" aria-hidden="true">{Array.from({length:14},(_,i)=><i key={i} style={{'--i':i} as CSSProperties}/>)}<b>Aero</b></div>}
   <div className="cursor-halo" aria-hidden="true"/>
   <div className="scroll-progress" aria-hidden="true"/>

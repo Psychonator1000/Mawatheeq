@@ -1335,6 +1335,14 @@
 :root[data-mode=dark][data-theme=sky] .cursor-halo{border-color:#131313f2;background:radial-gradient(circle at 35% 30%,#131313e6 0 12%,#1a4d6840 40%,transparent 70%)}
 :root[data-mode=dark][data-theme=sky] [role=dialog]{border:1px solid #131313e6;background:linear-gradient(180deg,#131313f2,#161a1deb)}
 :root[data-mode=dark][data-theme=sky] .payroll-totals>div,:root[data-mode=dark][data-theme=sky] .department-brand .brand-mark{color:#b3d6ee}
+:root[data-mode=dark][data-theme=rose]{--background:#181314}
+:root[data-mode=dark][data-theme=rose] body{background:radial-gradient(circle at 8% -10%,#431121 0,transparent 42%),radial-gradient(circle at 95% 110%,#1c1618 0,transparent 48%),#181314}
+:root[data-mode=dark][data-theme=rose] :is(.panel-head h2,.department-toolbar>h2,.section-title)::before{color:#66253b}
+:root[data-mode=dark][data-theme=rose] .btn.primary{background:linear-gradient(135deg,#753147,#d9a8b9)}
+:root[data-mode=dark][data-theme=rose] :is(.case-table,.office-table) th{background:#1a1416}
+:root[data-mode=dark][data-theme=rose] .scroll-progress{background:linear-gradient(90deg,#471221,#66253b,#d9a8b9)}
+:root[data-mode=dark][data-theme=rose] ::selection{background:#4a1223;color:#e3b7c8}
+:root[data-mode=dark][data-theme=rose]:not([data-follower=dot]) .cursor-halo{background:linear-gradient(135deg,#1e1819,#5f2136)}
 :root[data-mode=dark]:not([data-theme]),:root[data-mode=dark][data-theme=burgundy]{color-scheme:dark;--background:#170f11;--card:#221719;--popover:#221719;--muted:#302427;--secondary:#302427;--accent:#3a272c;--border:#403034;--input:#4c393d;--foreground:#ece9ea;--card-foreground:#ece9ea;--popover-foreground:#ece9ea;--secondary-foreground:#e3dddf;--muted-foreground:#afa1a5;--primary-foreground:#211216;--brand:#d37e93;--brand-hover:#dc99a9;--brand-ink:#f4ecee;--brand-deep:#4c1a27}
 :root[data-mode=dark][data-theme=navy]{color-scheme:dark;--background:#0f1317;--card:#161b22;--popover:#161b22;--muted:#242930;--secondary:#242930;--accent:#272f3a;--border:#303741;--input:#38414c;--foreground:#e9eaec;--card-foreground:#e9eaec;--popover-foreground:#e9eaec;--secondary-foreground:#dde0e3;--muted-foreground:#a1a7af;--primary-foreground:#121921;--brand:#7ba3d6;--brand-hover:#96b6de;--brand-ink:#eceff4;--brand-deep:#18304e}
 :root[data-mode=dark][data-theme=emerald]{color-scheme:dark;--background:#0f1715;--card:#16221e;--popover:#16221e;--muted:#24302d;--secondary:#24302d;--accent:#273a34;--border:#30413c;--input:#384c46;--foreground:#e9eceb;--card-foreground:#e9eceb;--popover-foreground:#e9eceb;--secondary-foreground:#dde3e2;--muted-foreground:#a1afab;--primary-foreground:#12211d;--brand:#7ad6bb;--brand-hover:#96dfc9;--brand-ink:#ecf4f1;--brand-deep:#184e3e}
