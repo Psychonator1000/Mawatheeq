@@ -133,10 +133,10 @@ export default function MotionLayer() {
     visibleRows.add(row);
     if(revealed.has(row))continue;
     revealed.add(row);
-    if(scrolling){row.style.setProperty('--sr-delay',Math.min(n++,6)*70+'ms');row.classList.toggle('row-up',scrollDir==='up');row.classList.add('row-reveal')}
+    if(scrolling){row.style.setProperty('--sr-delay',Math.min(n++,6)*80+'ms');row.classList.toggle('row-up',scrollDir==='up');row.classList.add('row-reveal')}
    }
   });
-  const onRowRevealEnd=(e:AnimationEvent)=>{if(e.animationName==='cell-shine'||e.animationName==='sr-fade'){const row=(e.target as HTMLElement).parentElement;if(row?.classList.contains('row-reveal')&&e.target===row.lastElementChild)row.classList.remove('row-reveal','row-up')}};
+  const onRowRevealEnd=(e:AnimationEvent)=>{const el=e.target as HTMLElement;const row=e.animationName==='row-glow'?el:e.animationName==='sr-fade'&&el===el.parentElement?.lastElementChild?el.parentElement:null;if(row?.classList.contains('row-reveal'))row.classList.remove('row-reveal','row-up')};
   document.addEventListener('animationend',onRowRevealEnd);
   const watchedRows=new WeakSet<Element>();
   const watched=new WeakSet<Element>();
