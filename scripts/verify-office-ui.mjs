@@ -63,6 +63,12 @@ try{
  await go('إضافة جلسة');await page.getByLabel('عنوان العمل',{exact:true}).fill('جلسة تجريبية');assert.equal(await page.getByRole('button',{name:'حفظ العمل',exact:true}).isDisabled(),true);await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-2');await go('حفظ العمل');await page.getByLabel('المواعيد',{exact:true}).selectOption('active');await page.getByText('جلسة تجريبية',{exact:true}).waitFor();
  await go('فحص الأطراف');await page.getByLabel('اسم الطرف أو الجهة المراد فحصها',{exact:true}).fill('خصم تجريبي 2');await page.getByText('خصم',{exact:true}).first().waitFor();
  await go('الإعدادات والبيانات');await go('إضافة موظف');await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_staff');await page.getByLabel('كلمة المرور',{exact:true}).fill('Temporary-synthetic-123');await page.getByRole('checkbox',{name:'اطلب من الموظف تغييرها عند الدخول التالي',exact:true}).check();
+ // A role fills in the settings; «مخصص» opens them for a hand-picked account.
+ assert.equal(await page.getByRole('checkbox',{name:'سجل الأحكام',exact:true}).count(),0,'Details stay folded until a role is chosen');
+ await page.getByRole('radio',{name:/^محاسب/}).click();await page.locator('.role-summary').getByText('المحاسبة',{exact:true}).waitFor();await page.locator('.role-summary').getByText('قراءة وتعديل · تصدير وطباعة',{exact:true}).waitFor();
+ await page.getByRole('radio',{name:/^محامٍ/}).click();await page.locator('.role-summary').getByText('قضاياه فقط (0)',{exact:true}).waitFor();await page.screenshot({path:artifacts+'/role-picker.png'});
+ await page.getByRole('radio',{name:/^مخصص/}).click();await page.getByRole('checkbox',{name:'المحاسبة',exact:true}).uncheck();for(const s of ['نظرة عامة','الموكلون','المواعيد والمتابعة','فحص الأطراف'])await page.getByRole('checkbox',{name:s,exact:true}).uncheck();
+ await page.getByRole('radio',{name:'قضايا أختارها فقط'}).check();await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).uncheck();
  await page.getByRole('checkbox',{name:'سجل الأحكام',exact:true}).check();await page.getByRole('checkbox',{name:'التحليل والإحصائيات',exact:true}).check();await page.getByRole('checkbox',{name:'التحقق من القضايا',exact:true}).check();await page.getByRole('checkbox',{name:'المهام والجلسات',exact:true}).check();
  await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-2');await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).check();
  assert.equal(await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).isChecked(),false);
@@ -113,6 +119,7 @@ try{
  await page.evaluate(()=>{location.hash='settings'});await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText(/قضاياه فقط: 5 قضية/).waitFor();
  await page.getByLabel('بحث في فريق المكتب').fill('سالم');assert.equal(await page.locator('.office-staff tbody tr').count(),1,'Staff search finds the lawyer by name');await page.getByLabel('بحث في فريق المكتب').fill('');
  await page.evaluate(()=>{location.hash='settings'});await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
+ await page.getByRole('radio',{name:/^محامٍ/,checked:true}).waitFor();await page.getByRole('button',{name:/تعديل التفاصيل/}).click();
  assert.equal(await page.getByRole('radio',{name:/قضاياه فقط/}).isChecked(),true,'Bulk lawyer accounts see their own cases by name');
  assert.equal(await page.getByRole('checkbox',{name:'قضايا ا/ سالم تجريبي'}).isChecked(),true);
  await page.getByText(/يرى 5 قضية الآن/).waitFor();await page.screenshot({path:artifacts+'/lawyer-scope.png'});await page.keyboard.press('Escape');

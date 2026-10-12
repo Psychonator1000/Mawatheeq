@@ -131,6 +131,17 @@
 :root[data-theme=noir] .permission-case small{color:#c4bcb6}
 :root[data-theme=noir] .readonly-fields:disabled input,:root[data-theme=noir] .readonly-fields:disabled textarea,:root[data-theme=noir] .readonly-fields:disabled button,:root[data-theme=noir] .readonly-fields:disabled select{color:#cbc3be}
 :root[data-theme=noir] .access-scope{background:#1d1b18}
+:root[data-theme=noir] .role-step{background:#191714}
+:root[data-theme=noir] .role-card{border:1px solid #2f2c27;background:#141210;color:#d9d3c8}
+:root[data-theme=noir] .role-card small{color:#c1bab5}
+:root[data-theme=noir] .role-card:hover{border-color:#4d4338}
+:root[data-theme=noir] .role-card.on{background:#1f1d19}
+:root[data-theme=noir] .role-summary span{background:#22201c}
+:root[data-theme=noir] .role-summary small{color:#c1bab5}
+:root[data-theme=noir] .role-summary b{color:#ddd8cd}
+:root[data-theme=noir] .permission-toggle{border:1px dashed #443c31;color:#cfc7c1}
+:root[data-theme=noir] .permission-toggle:hover{background:#1d1b18}
+:root[data-theme=noir] .role-chip{background:#25231e;color:#d3c6c1}
 :root[data-theme=noir] .quick-search-trigger{color:#c8c0b0}
 :root[data-theme=noir] .quick-search-trigger kbd{border:1px solid #33302a;background:#191714}
 :root[data-theme=noir] .notice-count{background:#bdb2a8;color:#11100e}
@@ -186,6 +197,26 @@
 :root[data-theme=noir] .step.late .step-text em{color:#d2a5a9}
 :root[data-theme=noir] .tl-item.judgment .tl-dot,:root[data-theme=noir] .tl-item.level .tl-dot{color:#11100e}
 :root[data-theme=noir] .tl-item.overdue .tl-body b{color:#d4b4a3}
+:root[data-theme=noir] .case-window .case-tabs{background:#25231e;border:1px solid #2f2c27}
+:root[data-theme=noir] .case-tabs>[role=tab]{color:#c8c0ba}
+:root[data-theme=noir] .case-tabs>[role=tab]:hover{background:#1d1b18;color:#ddd8cd}
+:root[data-theme=noir] .case-tabs>[role=tab][data-state=active]{background:#141210}
+:root[data-theme=noir] .tab-count{background:#2f2c27;color:#cfc7c1}
+:root[data-theme=noir] [data-state=active]>.tab-count{color:#11100e}
+:root[data-theme=noir] .tab-card{border:1px solid #2f2c27;background:#141210}
+:root[data-theme=noir] .tab-card>header{border-bottom:1px solid #26241f}
+:root[data-theme=noir] .tab-card-icon{background:#22201c}
+:root[data-theme=noir] .tab-card h3{color:#ddd8cd}
+:root[data-theme=noir] .tab-card header small{color:#c1bab5}
+:root[data-theme=noir] .tab-stats>div{background:#22201c!important}
+:root[data-theme=noir] .tab-list-title{color:#ddd8cd}
+:root[data-theme=noir] .tab-list-title small{background:#25231e;color:#cfc7c1}
+:root[data-theme=noir] .case-window .timeline-item{background:#141210;border:1px solid #26241f}
+:root[data-theme=noir] .tab-empty{border:1px dashed #443c31;color:#c1bab5}
+:root[data-theme=noir] .tab-empty b{color:#ddd8cd}
+:root[data-theme=noir] .case-window .stage-banner{background:#22201c}
+:root[data-theme=noir] .venue-choice .checkbox-line{border:1px solid #2f2c27;background:#141210}
+:root[data-theme=noir] .venue-choice .checkbox-line:has(input:checked){background:#1f1d19}
 :root[data-theme=noir] .chat-bubble{color:#11100e}
 :root[data-theme=noir] .chat-badge{background:#e0ad99;color:#11100e}
 :root[data-theme=noir] .chat-ref.user{color:#a4c4da;background:#a4c4da1a}
@@ -401,6 +432,17 @@
 :root[data-theme=phantom] .permission-case small{color:#d5d1ce}
 :root[data-theme=phantom] .readonly-fields:disabled input,:root[data-theme=phantom] .readonly-fields:disabled textarea,:root[data-theme=phantom] .readonly-fields:disabled button,:root[data-theme=phantom] .readonly-fields:disabled select{color:#dbd6d3}
 :root[data-theme=phantom] .access-scope{background:#161616}
+:root[data-theme=phantom] .role-step{background:#121212}
+:root[data-theme=phantom] .role-card{border:1px solid #222222;background:#0f0f0f;color:#e0e0e0}
+:root[data-theme=phantom] .role-card small{color:#d4cfcc}
+:root[data-theme=phantom] .role-card:hover{border-color:#3f362b}
+:root[data-theme=phantom] .role-card.on{background:#171717}
+:root[data-theme=phantom] .role-summary span{background:#191919}
+:root[data-theme=phantom] .role-summary small{color:#d4cfcc}
+:root[data-theme=phantom] .role-summary b{color:#e4e4e4}
+:root[data-theme=phantom] .permission-toggle{border:1px dashed #383025;color:#ded9d6}
+:root[data-theme=phantom] .permission-toggle:hover{background:#151515}
+:root[data-theme=phantom] .role-chip{background:#1b1b1b;color:#e1d9d6}
 :root[data-theme=phantom] .quick-search-trigger{color:#d1d1d1}
 :root[data-theme=phantom] .quick-search-trigger kbd{border:1px solid #262626;background:#131313}
 :root[data-theme=phantom] .notice-count{background:#d0c9c3;color:#0d0d0d}
@@ -456,6 +498,26 @@
 :root[data-theme=phantom] .step.late .step-text em{color:#ddc3c5}
 :root[data-theme=phantom] .tl-item.judgment .tl-dot,:root[data-theme=phantom] .tl-item.level .tl-dot{color:#0d0d0d}
 :root[data-theme=phantom] .tl-item.overdue .tl-body b{color:#deccc2}
+:root[data-theme=phantom] .case-window .case-tabs{background:#1b1b1b;border:1px solid #222222}
+:root[data-theme=phantom] .case-tabs>[role=tab]{color:#d8d4d1}
+:root[data-theme=phantom] .case-tabs>[role=tab]:hover{background:#151515;color:#e4e4e4}
+:root[data-theme=phantom] .case-tabs>[role=tab][data-state=active]{background:#0f0f0f}
+:root[data-theme=phantom] .tab-count{background:#222222;color:#ded9d6}
+:root[data-theme=phantom] [data-state=active]>.tab-count{color:#0d0d0d}
+:root[data-theme=phantom] .tab-card{border:1px solid #222222;background:#0f0f0f}
+:root[data-theme=phantom] .tab-card>header{border-bottom:1px solid #1c1c1c}
+:root[data-theme=phantom] .tab-card-icon{background:#191919}
+:root[data-theme=phantom] .tab-card h3{color:#e4e4e4}
+:root[data-theme=phantom] .tab-card header small{color:#d4cfcc}
+:root[data-theme=phantom] .tab-stats>div{background:#191919!important}
+:root[data-theme=phantom] .tab-list-title{color:#e4e4e4}
+:root[data-theme=phantom] .tab-list-title small{background:#1b1b1b;color:#ded9d6}
+:root[data-theme=phantom] .case-window .timeline-item{background:#0f0f0f;border:1px solid #1c1c1c}
+:root[data-theme=phantom] .tab-empty{border:1px dashed #383025;color:#d4cfcc}
+:root[data-theme=phantom] .tab-empty b{color:#e4e4e4}
+:root[data-theme=phantom] .case-window .stage-banner{background:#191919}
+:root[data-theme=phantom] .venue-choice .checkbox-line{border:1px solid #222222;background:#0f0f0f}
+:root[data-theme=phantom] .venue-choice .checkbox-line:has(input:checked){background:#171717}
 :root[data-theme=phantom] .chat-bubble{color:#0d0d0d}
 :root[data-theme=phantom] .chat-badge{background:#e5c8bc;color:#0d0d0d}
 :root[data-theme=phantom] .chat-ref.user{color:#c3d6e2;background:#c3d6e21a}
@@ -626,6 +688,13 @@
 :root[data-theme=ivory] .permission-cases{border:1px solid #dbd8d4}
 :root[data-theme=ivory] .permission-case{border-bottom:1px solid #e8e5e2}
 :root[data-theme=ivory] .access-scope{background:#f9f9f8}
+:root[data-theme=ivory] .role-step{background:#fbfbfb}
+:root[data-theme=ivory] .role-card{border:1px solid #dbd8d4;background:#fefefd}
+:root[data-theme=ivory] .role-card.on{background:#f8f8f7}
+:root[data-theme=ivory] .role-summary span{background:#f7f6f6}
+:root[data-theme=ivory] .permission-toggle{border:1px dashed #c8c2bb}
+:root[data-theme=ivory] .permission-toggle:hover{background:#f9f9f8}
+:root[data-theme=ivory] .role-chip{background:#e8e5e1}
 :root[data-theme=ivory] .quick-search-trigger kbd{border:1px solid #d6d2ce;background:#fbfbfa}
 :root[data-theme=ivory] .notice-count{color:#ffffff}
 :root[data-theme=ivory] .notice-head{border-bottom:1px solid #e6e4e0}
@@ -658,6 +727,21 @@
 :root[data-theme=ivory] .lawyer-accounts td input{border:1px solid #d2cec9}
 :root[data-theme=ivory] .step.late .step-dot{color:#ffffff}
 :root[data-theme=ivory] .tl-item.judgment .tl-dot,:root[data-theme=ivory] .tl-item.level .tl-dot{color:#ffffff}
+:root[data-theme=ivory] .case-window .case-tabs{background:#e8e5e1;border:1px solid #dbd8d4}
+:root[data-theme=ivory] .case-tabs>[role=tab]:hover{background:#f9f9f8}
+:root[data-theme=ivory] .case-tabs>[role=tab][data-state=active]{background:#fefefd}
+:root[data-theme=ivory] .tab-count{background:#dbd8d4}
+:root[data-theme=ivory] [data-state=active]>.tab-count{color:#ffffff}
+:root[data-theme=ivory] .tab-card{border:1px solid #dbd8d4;background:#fefefd}
+:root[data-theme=ivory] .tab-card>header{border-bottom:1px solid #e6e4e0}
+:root[data-theme=ivory] .tab-card-icon{background:#f7f6f6}
+:root[data-theme=ivory] .tab-stats>div{background:#f7f6f6!important}
+:root[data-theme=ivory] .tab-list-title small{background:#e8e5e1}
+:root[data-theme=ivory] .case-window .timeline-item{background:#fefefd;border:1px solid #e6e4e0}
+:root[data-theme=ivory] .tab-empty{border:1px dashed #c8c2bb}
+:root[data-theme=ivory] .case-window .stage-banner{background:#f7f6f6}
+:root[data-theme=ivory] .venue-choice .checkbox-line{border:1px solid #dbd8d4;background:#fefefd}
+:root[data-theme=ivory] .venue-choice .checkbox-line:has(input:checked){background:#f8f8f7}
 :root[data-theme=ivory] .chat-bubble{color:#ffffff}
 :root[data-theme=ivory] .chat-badge{color:#ffffff}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
@@ -805,6 +889,15 @@
 :root[data-theme=phantom-light] .permission-cases{border:1px solid #dbd8d4}
 :root[data-theme=phantom-light] .permission-case{border-bottom:1px solid #fbfbfb}
 :root[data-theme=phantom-light] .access-scope{background:#fdfdfc}
+:root[data-theme=phantom-light] .role-step{background:#fefefd}
+:root[data-theme=phantom-light] .role-card{border:1px solid #dbd8d4;background:#fffefe;color:#3f3a37}
+:root[data-theme=phantom-light] .role-card:hover{border-color:#bcb7b0}
+:root[data-theme=phantom-light] .role-card.on{background:#fcfcfc}
+:root[data-theme=phantom-light] .role-summary span{background:#fcfcfc}
+:root[data-theme=phantom-light] .role-summary b{color:#33302d}
+:root[data-theme=phantom-light] .permission-toggle{border:1px dashed #c7c2bc}
+:root[data-theme=phantom-light] .permission-toggle:hover{background:#fdfdfd}
+:root[data-theme=phantom-light] .role-chip{background:#fbfbfb}
 :root[data-theme=phantom-light] .quick-search-trigger{color:#6b6663}
 :root[data-theme=phantom-light] .quick-search-trigger kbd{border:1px solid #d5d2cf;background:#fefdfd}
 :root[data-theme=phantom-light] .notice-count{color:#ffffff}
@@ -851,6 +944,24 @@
 :root[data-theme=phantom-light] .lawyer-accounts td input{border:1px solid #d1ceca}
 :root[data-theme=phantom-light] .step.late .step-dot{color:#ffffff}
 :root[data-theme=phantom-light] .tl-item.judgment .tl-dot,:root[data-theme=phantom-light] .tl-item.level .tl-dot{color:#ffffff}
+:root[data-theme=phantom-light] .case-window .case-tabs{background:#fbfbfb;border:1px solid #dbd8d4}
+:root[data-theme=phantom-light] .case-tabs>[role=tab]:hover{background:#fdfdfd;color:#33302d}
+:root[data-theme=phantom-light] .case-tabs>[role=tab][data-state=active]{background:#fffefe}
+:root[data-theme=phantom-light] .tab-count{background:#dbd8d4}
+:root[data-theme=phantom-light] [data-state=active]>.tab-count{color:#ffffff}
+:root[data-theme=phantom-light] .tab-card{border:1px solid #dbd8d4;background:#fffefe}
+:root[data-theme=phantom-light] .tab-card>header{border-bottom:1px solid #fbfbfb}
+:root[data-theme=phantom-light] .tab-card-icon{background:#fcfcfc}
+:root[data-theme=phantom-light] .tab-card h3{color:#33302d}
+:root[data-theme=phantom-light] .tab-stats>div{background:#fcfcfc!important}
+:root[data-theme=phantom-light] .tab-list-title{color:#33302d}
+:root[data-theme=phantom-light] .tab-list-title small{background:#fbfbfb}
+:root[data-theme=phantom-light] .case-window .timeline-item{background:#fffefe;border:1px solid #fbfbfb}
+:root[data-theme=phantom-light] .tab-empty{border:1px dashed #c7c2bc}
+:root[data-theme=phantom-light] .tab-empty b{color:#33302d}
+:root[data-theme=phantom-light] .case-window .stage-banner{background:#fcfcfc}
+:root[data-theme=phantom-light] .venue-choice .checkbox-line{border:1px solid #dbd8d4;background:#fffefe}
+:root[data-theme=phantom-light] .venue-choice .checkbox-line:has(input:checked){background:#fcfcfc}
 :root[data-theme=phantom-light] .chat-bubble{color:#ffffff}
 :root[data-theme=phantom-light] .chat-badge{color:#ffffff}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
@@ -1117,6 +1228,18 @@
 :root[data-mode=dark] .permission-case small{color:#cac2bb}
 :root[data-mode=dark] .readonly-fields:disabled input,:root[data-mode=dark] .readonly-fields:disabled textarea,:root[data-mode=dark] .readonly-fields:disabled button,:root[data-mode=dark] .readonly-fields:disabled select{color:#d1c8c2}
 :root[data-mode=dark] .access-scope{border-inline-start:3px solid var(--brand);background:#1f1c19}
+:root[data-mode=dark] .role-step{background:#1c1a16}
+:root[data-mode=dark] .role-card{border:1px solid #2e2924;background:#181613;color:#d9d4cf}
+:root[data-mode=dark] .role-card svg{color:var(--brand)}
+:root[data-mode=dark] .role-card small{color:#c8c0ba}
+:root[data-mode=dark] .role-card:hover{border-color:#574b3b}
+:root[data-mode=dark] .role-card.on{border-color:var(--brand);background:#211e1a}
+:root[data-mode=dark] .role-summary span{background:#23201b}
+:root[data-mode=dark] .role-summary small{color:#c8c0ba}
+:root[data-mode=dark] .role-summary b{color:#ded9d4}
+:root[data-mode=dark] .permission-toggle{border:1px dashed #504536;background:transparent;color:#d5cbc5}
+:root[data-mode=dark] .permission-toggle:hover{background:#1f1c18}
+:root[data-mode=dark] .role-chip{background:#26221e;color:#d9cac4}
 :root[data-mode=dark] .quick-search-trigger{color:#c9c0bb}
 :root[data-mode=dark] .quick-search-trigger kbd{border:1px solid #312c27;background:#1c1a16}
 :root[data-mode=dark] .notice-count{background:#c5b8ac;color:#131313}
@@ -1226,6 +1349,29 @@
 :root[data-mode=dark] .tl-body p{color:var(--muted-foreground)}
 :root[data-mode=dark] .tl-body small{color:var(--muted-foreground)}
 :root[data-mode=dark] .tl-item.overdue .tl-body b{color:#ddb9a5}
+:root[data-mode=dark] .case-window .case-tabs{background:#26221e;border:1px solid #2e2924}
+:root[data-mode=dark] .case-tabs>[role=tab]{color:#cec5bf;background:transparent}
+:root[data-mode=dark] .case-tabs>[role=tab]:hover{background:#1f1c18;color:#ded9d4}
+:root[data-mode=dark] .case-tabs>[role=tab][data-state=active]{background:#181613;color:var(--brand)}
+:root[data-mode=dark] .case-tabs>[role=tab][data-state=active]::after{background:var(--brand)}
+:root[data-mode=dark] .tab-count{background:#2e2924;color:#d5cbc5}
+:root[data-mode=dark] [data-state=active]>.tab-count{background:var(--brand);color:#131313}
+:root[data-mode=dark] .tab-card{border:1px solid #2e2924;background:#181613}
+:root[data-mode=dark] .tab-card>header{border-bottom:1px solid #27231e}
+:root[data-mode=dark] .tab-card-icon{background:#23201b;color:var(--brand)}
+:root[data-mode=dark] .tab-card h3{color:#ded9d4}
+:root[data-mode=dark] .tab-card header small{color:#c8c0ba}
+:root[data-mode=dark] .tab-stats>div{background:#23201b!important}
+:root[data-mode=dark] .tab-list-title{color:#ded9d4}
+:root[data-mode=dark] .tab-list-title svg{color:var(--brand)}
+:root[data-mode=dark] .tab-list-title small{background:#26221e;color:#d5cbc5}
+:root[data-mode=dark] .case-window .timeline-item{background:#181613;border:1px solid #27231e}
+:root[data-mode=dark] .tab-empty{border:1px dashed #504536;color:#c8c0ba}
+:root[data-mode=dark] .tab-empty svg{color:var(--brand)}
+:root[data-mode=dark] .tab-empty b{color:#ded9d4}
+:root[data-mode=dark] .case-window .stage-banner{background:#23201b}
+:root[data-mode=dark] .venue-choice .checkbox-line{border:1px solid #2e2924;background:#181613}
+:root[data-mode=dark] .venue-choice .checkbox-line:has(input:checked){border-color:var(--brand);background:#211e1a;color:var(--brand)}
 :root[data-mode=dark] .staff-search small{color:var(--muted-foreground)}
 :root[data-mode=dark] .chat-bubble{color:#131313;background:var(--brand)}
 :root[data-mode=dark] .chat-bubble:focus-visible{outline:3px solid var(--brand-ring,var(--brand))}
