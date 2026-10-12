@@ -83,9 +83,16 @@ assert.equal(await panel.locator('.notice-item').first().innerText().then(t=>t.i
 await page.screenshot({path:artifacts+'/notifications.png'});
 await panel.getByText('مهمة متأخرة: مهمة متأخرة تجريبية').click();
 const editor=page.getByRole('dialog');
-await editor.getByRole('heading',{name:'تفاصيل العمل'}).waitFor();
+await editor.getByRole('heading',{name:'مهمة متأخرة تجريبية'}).waitFor();
 assert.equal(await editor.getByLabel('عنوان العمل',{exact:true}).inputValue(),'مهمة متأخرة تجريبية','Notification opens that task');
-await page.keyboard.press('Escape');await editor.waitFor({state:'hidden'});
+// Task windows follow the case window: pinned facts, previous/next with Alt+arrows.
+assert.ok(await editor.locator('.case-pin .case-facts').getByText('المسؤول',{exact:true}).isVisible(),'Task essentials are pinned');
+assert.ok(await editor.locator('.case-nav').isVisible(),'Task window can step through the list');
+await page.keyboard.press('Alt+ArrowLeft');
+await page.waitForFunction(()=>document.querySelector('[data-record-window] input')?.value!=='مهمة متأخرة تجريبية');
+assert.equal(await page.locator('[data-record-window]').getAttribute('data-enter'),'next','Next task slides in');
+await page.screenshot({path:artifacts+'/task-window.png'});
+await page.keyboard.press('Escape');await page.locator('[data-record-window]').waitFor({state:'hidden'});
 
 // Month calendar.
 await page.getByRole('button',{name:'تقويم شهري'}).click();
@@ -165,9 +172,10 @@ await page.getByText(/حكم أول درجة 30 يوماً، الاستئناف 
 // Client contacts can be called or messaged from the profile.
 await page.goto(base+'#clients');await page.reload();
 await page.getByRole('button',{name:/شركة اتصال تجريبية/}).click();
-const call=page.getByRole('link',{name:'اتصال بـ منسق تجريبي'});
+const call=page.locator('.case-main').getByRole('link',{name:'اتصال بـ منسق تجريبي'});
 assert.equal(await call.getAttribute('href'),'tel:+96599991234','Arabic-digit local number becomes an international call link');
-assert.equal(await page.getByRole('link',{name:'واتساب منسق تجريبي'}).getAttribute('href'),'https://wa.me/96599991234');
+assert.equal(await page.locator('.case-main').getByRole('link',{name:'واتساب منسق تجريبي'}).getAttribute('href'),'https://wa.me/96599991234');
+assert.equal(await page.locator('.case-pin').getByRole('link',{name:'اتصال بـ منسق تجريبي'}).getAttribute('href'),'tel:+96599991234','The follow-up contact can be called from the pinned summary');
 await page.keyboard.press('Escape');
 
 // Appearance choices apply instantly and persist on this device.
@@ -191,6 +199,14 @@ assert.deepEqual(await page.evaluate(()=>[document.documentElement.dataset.theme
 await page.getByRole('button',{name:'استعادة الافتراضي'}).click();await page.getByRole('button',{name:'تم'}).click();
 assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'burgundy');
 assert.equal(await page.evaluate(()=>document.documentElement.dataset.backdrop),'constellation','The living dot network is the default backdrop');
+// Client profiles open in the same window as cases: pinned summary, quick actions, previous/next.
+{const cards=page.locator('.client-card');if(await cards.count()>1){const first=(await cards.first().locator('h3').innerText()).trim();await cards.first().click();
+ const win=page.locator('[data-record-window]');await win.locator('.case-facts').getByText('القضايا النشطة',{exact:true}).waitFor();
+ assert.equal((await win.getByRole('heading').first().innerText()).trim(),first,'Client window shows the client');
+ assert.ok(await win.locator('.case-quick').getByRole('button',{name:/إضافة شخص/}).isVisible(),'Quick actions are pinned');
+ await page.screenshot({path:artifacts+'/client-window.png'});
+ await page.keyboard.press('Alt+ArrowLeft');await page.waitForFunction(f=>document.querySelector('[data-record-window] h2')?.textContent?.trim()!==f,first);
+ await page.keyboard.press('Escape');await win.waitFor({state:'hidden'})}}
 
 // Easter egg: typing "persona" switches to the hidden theme; typing it again returns to the previous theme,
 // and the hidden theme is listed only while it is active.
