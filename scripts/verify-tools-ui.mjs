@@ -50,8 +50,9 @@ await context.addInitScript(()=>{try{const k='mawatheeq.appearance.v1',a=JSON.pa
 const page=await context.newPage();const errors=[];
 page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));
+let slowServer=0;
 await page.route('https://office-fixture.supabase.co/**',async route=>{
- const req=route.request();const url=new URL(req.url());
+ const req=route.request();if(slowServer)await new Promise(r=>setTimeout(r,slowServer));const url=new URL(req.url());
  if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
  const name=url.pathname.split('/').pop();const body=req.postDataJSON();
  if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request','mawatheeq_comment_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
@@ -69,6 +70,15 @@ const mine=page.getByRole('region',{name:'عملي'});
 await mine.getByText('مهمة متأخرة تجريبية').waitFor();
 assert.ok(await mine.getByText('جلسة اليوم التجريبية').isVisible());
 assert.ok(await mine.getByText('مهمة الأسبوع القادم').isVisible());
+
+// A refresh opens instantly from the last visit even when the server is slow, then the server's copy takes over.
+await page.waitForFunction(()=>!!localStorage.getItem('mawatheeq.boot.v1'));await page.waitForTimeout(300);
+slowServer=4000;const reloadStart=Date.now();await page.reload();
+await mine.getByText('مهمة متأخرة تجريبية').waitFor({timeout:2500});
+assert.ok(Date.now()-reloadStart<3000,'Workspace and work appear before the slow server answers');
+assert.equal(await page.getByText('جارٍ تحميل سجلاتك',{exact:false}).count(),0,'No loading placeholder on a refresh');
+await page.screenshot({path:artifacts+'/instant-reload.png'});
+slowServer=0;await page.waitForTimeout(4500);
 
 // Notifications: my overdue and today work plus the approaching deadline, most urgent first.
 const bell=page.getByRole('button',{name:/^التنبيهات/});
@@ -328,6 +338,12 @@ assert.equal(await motion.evaluate(()=>document.documentElement.dataset.perf),'l
 assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.ambient-canvas')).display),'none','light mode stops the animated backdrop');
 assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.topbar')).backdropFilter),'none','light mode drops glass blur');
 await lively.close();
+// Signing out deletes the stored account and every stored copy of its records from this browser.
+await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('menuitem',{name:/خروج/}).or(page.getByRole('button',{name:/^خروج/})).first().click();
+await page.getByRole('button',{name:'فتح مساحة العمل',exact:true}).waitFor();await page.waitForTimeout(300);
+assert.equal(await page.evaluate(()=>localStorage.getItem('mawatheeq.boot.v1')),null,'Stored account removed on sign-out');
+assert.equal(await page.evaluate(()=>new Promise(res=>{const r=indexedDB.open('mawatheeq-cache',1);r.onupgradeneeded=()=>r.result.createObjectStore('snapshots');r.onsuccess=()=>{const q=r.result.transaction('snapshots').objectStore('snapshots').count();q.onsuccess=()=>{res(q.result);r.result.close()}}})),0,'Stored records removed on sign-out');
+await page.reload();await page.getByRole('button',{name:'فتح مساحة العمل',exact:true}).waitFor();
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();
-console.log('Passed tools UI: personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');
+console.log('Passed tools UI: instant refresh from the last visit with a slow server and full removal on sign-out, personal work panel, prioritized notifications that open tasks, month calendar navigation, Ctrl+K case/section search, escaped printable case sheet, account menu without floating bars, per-page help from settings, contact call/WhatsApp links, accounting statement and receipt printing, HR leave days, full-motion interaction smoke test, @mention discussion with replies and moderation, persistent themes and backgrounds, keyboard shortcuts, recent cases, unsaved-edit protection and no runtime errors.');

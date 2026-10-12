@@ -7,9 +7,13 @@ import {Field,saveBlob} from '../shared';
 import {OfficeSelect,RecordHistory} from '../office-shared';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '../ui/dialog';
 import {normalizeSearch} from '@/lib/case-browse';
+import {readSnapshot,writeSnapshot} from '@/lib/boot-cache';
 export function useRecords<P>(workspace:Department) {
  const [rows,setRows]=useState<DepartmentRecord<P>[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[version,setVersion]=useState(0);
- useEffect(()=>{let active=true;setLoading(true);setError('');departmentPages<DepartmentRecord<P>>(workspace,'records_page').then(r=>{if(active)setRows(r)}).catch(e=>{if(active){setRows([]);setError(e.message)}}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[workspace,version]);
+ useEffect(()=>{let active=true,fresh=false;setLoading(true);setError('');
+  // Show the last copy at once while the server's copy loads.
+  void readSnapshot<DepartmentRecord<P>[]>('dept:'+workspace).then(r=>{if(active&&r&&!fresh){setRows(r);setLoading(false)}});
+  departmentPages<DepartmentRecord<P>>(workspace,'records_page').then(r=>{fresh=true;if(active){setRows(r);void writeSnapshot('dept:'+workspace,r)}}).catch(e=>{if(active){setRows([]);setError(e.message)}}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[workspace,version]);
  return {rows,loading,error,reload:()=>setVersion(v=>v+1)};
 }
 export function StatusMessage({loading,error}:{loading:boolean;error:string}) {return <>{loading&&<p role="status">جارٍ تحميل السجلات…</p>}{error&&<p className="notice" role="alert">{error}</p>}</>}

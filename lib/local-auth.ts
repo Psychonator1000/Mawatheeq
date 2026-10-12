@@ -1,4 +1,5 @@
 import { backend, loadBackend } from './supabase-client';
+import { clearBoot } from './boot-cache';
 
 export type LocalUser = { id: string; username: string; role: 'owner' | 'editor'; mustChangePassword: boolean };
 const storageKey = 'mawatheeq.local-session.v1';
@@ -10,7 +11,7 @@ let token = '';
 function announce() { window.dispatchEvent(new Event(sessionEvent)); }
 function saveToken(value: string) {
   token = value;
-  if (value) localStorage.setItem(storageKey, value); else localStorage.removeItem(storageKey);
+  if (value) localStorage.setItem(storageKey, value); else { localStorage.removeItem(storageKey); clearBoot(); }
   announce();
 }
 async function sessionRequest<T = unknown>(endpoint: string, action: string, data: Record<string, unknown> = {}): Promise<T> {

@@ -12,11 +12,15 @@ function checked<T>({ data, error }: { data: T; error: { message: string } | nul
 }
 
 async function allRows(table: string): Promise<StoredRow[]> {
+  const action = table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', page = (offset: number) => localRequest<StoredRow[] | null>(action, { offset }).then(r => r || []);
+  // Two pages at a time: one round trip for an office of up to 1,000 records instead of one per page.
   const rows: StoredRow[] = [];
-  for (let from = 0; ; from += 500) {
-    const page = await localRequest<StoredRow[] | null>(table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', { offset: from }) || [];
-    rows.push(...page);
-    if (page.length < 500) return rows;
+  for (let from = 0; ; from += 1000) {
+    const [a, b] = await Promise.all([page(from), page(from + 500)]);
+    rows.push(...a);
+    if (a.length < 500) return rows;
+    rows.push(...b);
+    if (b.length < 500) return rows;
   }
 }
 
@@ -31,11 +35,12 @@ async function allClients(action: 'list' | 'lookup') {
 export async function sharedRequest(path: string, init?: RequestInit): Promise<unknown> {
   const method = init?.method || 'GET';
   if (path === '/api/cases' && method === 'GET') {
+    const rules = localRequest<Rules | null>('rules'); rules.catch(() => undefined);
     const access = await localRequest<Permissions>('access');
     const canRead = canReadCases(access);
     const [rows, settings, directory] = await Promise.all([
       canRead ? allRows('mawatheeq_cases') : [],
-      localRequest<Rules | null>('rules'), canRead ? allClients(access.sections.includes('clients') ? 'list' : 'lookup') : {clients: [], canMerge: false},
+      rules, canRead ? allClients(access.sections.includes('clients') ? 'list' : 'lookup') : {clients: [], canMerge: false},
     ]);
     return { ...directory, cases: rows.map(row => enrichCase({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived } as CaseRecord, directory.clients)), rules: settings || DEFAULT_RULES };
   }
