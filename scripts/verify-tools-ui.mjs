@@ -45,6 +45,8 @@ await dept('hr',{id:'77777777-7777-4777-8777-777777777772',workspace:'hr',kind:'
 
 const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce',timezoneId:'Asia/Kuwait'});
+// The test machine has few cores; pin full effects so automatic light mode does not hide what is being tested.
+await context.addInitScript(()=>{try{const k='mawatheeq.appearance.v1',a=JSON.parse(localStorage.getItem(k)||'{}');if(!a.performance){a.performance='full';localStorage.setItem(k,JSON.stringify(a))}}catch{/* test setup */}});
 const page=await context.newPage();const errors=[];
 page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));
@@ -267,6 +269,7 @@ await page.getByText('3 يوم',{exact:true}).waitFor();
 await page.screenshot({path:artifacts+'/hr.png'});
 // With full motion, effects never block work: ripples, view transitions, tabs and workspace switches stay interactive.
 const lively=await browser.newContext({viewport:{width:1440,height:900},reducedMotion:'no-preference',timezoneId:'Asia/Kuwait'});
+await lively.addInitScript(()=>{try{const k='mawatheeq.appearance.v1',a=JSON.parse(localStorage.getItem(k)||'{}');if(!a.performance){a.performance='full';localStorage.setItem(k,JSON.stringify(a))}}catch{/* test setup */}});
 const motion=await lively.newPage();motion.on('pageerror',e=>errors.push('motion: '+e.message));
 await motion.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));
 await motion.route('https://office-fixture.supabase.co/**',async route=>{const req=route.request();if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
@@ -303,6 +306,11 @@ await motion.setViewportSize({width:1280,height:900});
 await motion.mouse.wheel(0,600);await motion.waitForTimeout(1500);
 assert.equal(await motion.evaluate(()=>document.documentElement.hasAttribute('data-scrolling')),false,'Scroll-reactive lag settles after scrolling stops');
 assert.equal(await motion.evaluate(()=>document.documentElement.dataset.motion),'full');
+// Light mode turns the heavy effects off while the app keeps working.
+await motion.evaluate(()=>{const k='mawatheeq.appearance.v1',a=JSON.parse(localStorage.getItem(k)||'{}');localStorage.setItem(k,JSON.stringify({...a,performance:'lite'}))});await motion.reload();await motion.waitForTimeout(800);
+assert.equal(await motion.evaluate(()=>document.documentElement.dataset.perf),'lite');
+assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.ambient-canvas')).display),'none','light mode stops the animated backdrop');
+assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.topbar')).backdropFilter),'none','light mode drops glass blur');
 await lively.close();
 assert.deepEqual(errors,[],'No runtime errors');
 await browser.close();

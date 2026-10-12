@@ -1,7 +1,7 @@
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
 
 /** Bump when adding tips so the account menu shows its dot again. */
-export const TIPS_VERSION='2026-10-12d';
+export const TIPS_VERSION='2026-10-12e';
 const KEY='mawatheeq.tips.seen';
 export const tipsUnseen=()=>{try{return localStorage.getItem(KEY)!==TIPS_VERSION}catch{return false}};
 export const markTipsSeen=()=>{try{localStorage.setItem(KEY,TIPS_VERSION)}catch{/* Still shown next time. */}};
@@ -27,6 +27,7 @@ const TIPS:[string,string,string][]=[
  ['👤','صفحات كل موظف','من «فريق المكتب والصلاحيات» اختر قالباً مثل «السكرتارية فقط». من له صفحة واحدة تفتح له مباشرة.'],
  ['🌗','فاتح أو داكن','بدّل بين الوضع الفاتح والداكن لأي سمة من قائمة حسابك بنقرة واحدة. ومن «المظهر والحركة» اختر شكل مؤشر الفأرة والشكل الذي يتبعه أو أخفه.'],
  ['👥','الدخول بحساب موظف','من «فريق المكتب والصلاحيات» اضغط «الدخول بحسابه» لترى التطبيق كما يراه الموظف دون كلمة مروره، ثم «العودة إلى حسابي».'],
+ ['⚡','جهاز بطيء؟','على الأجهزة الضعيفة يخفف التطبيق المؤثرات وحده. ويمكنك اختيار «خفيف» من «المظهر والحركة» ← الأداء على أي جهاز.'],
  ['🔤','حجم الخط والكثافة','من «المظهر والحركة»: كبّر الخط أو اعرض صفوفاً أكثر، أو اختر الحركة الهادئة.'],
  ['📶','حالة الاتصال','يظهر تنبيه إذا انقطعت الشبكة؛ انتظر عودته قبل الحفظ حتى لا تضيع التغييرات.'],
  ['🎨','سمات مخفية','بعض السمات لا تظهر في القائمة. اكتب كلمتها السرية في أي مكان خارج خانات الكتابة، واكتبها مرة أخرى للعودة.'],

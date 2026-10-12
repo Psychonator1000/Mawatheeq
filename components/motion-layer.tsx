@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState,type CSSProperties} from 'react';
 import {ArrowUp} from 'lucide-react';
-import {motionAllowed,pointerEffectsOn,toggleSecretTheme,SECRET_WORDS} from '@/lib/appearance';
+import {motionAllowed,pointerEffectsOn,toggleSecretTheme,SECRET_WORDS,loadAppearance,saveAppearance,markSlow} from '@/lib/appearance';
+import {toast} from 'sonner';
 import {createBackdrop,createBursts,type FxState} from './motion-fx';
 import './motion.css';
 import './themes.generated.css';
@@ -39,7 +40,7 @@ export default function MotionLayer() {
   let scrollDir='down',lastScrollAt=0;
   let lastTop=scrollY,lastTime=performance.now(),velocity=0,velFrame=0,settle=0,lastTick=0;
   const fx:FxState={mode:'',motion:'',reduced:false,pointerX:-999,pointerY:-999,pointerOn:false,scrollV:0};
-  const state=()=>{const backdropMode=root.dataset.backdrop||'constellation',theme=root.dataset.theme;fx.mode=backdropMode==='none'?'none':theme==='sky'?'bubbles':theme==='rose'?'sakura':theme?.startsWith('phantom')?'phantom':backdropMode;fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches;fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
+  const state=()=>{const backdropMode=root.dataset.backdrop||'constellation',theme=root.dataset.theme;fx.mode=backdropMode==='none'?'none':theme==='sky'?'bubbles':theme==='rose'?'sakura':theme?.startsWith('phantom')?'phantom':backdropMode;fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches||root.dataset.perf==='lite';fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
   const backdrop=ambient.current?createBackdrop(ambient.current,state):null,bursts=burst.current?createBursts(burst.current):null;
   const unset=(...names:string[])=>(el:HTMLElement)=>names.forEach(n=>el.style.removeProperty(n));
   const trackTilt=tracker(unset('--tilt-x','--tilt-y')),trackMagnet=tracker(unset('--mag-x','--mag-y')),trackGlow=tracker(unset('--gx','--gy'));
@@ -159,10 +160,27 @@ export default function MotionLayer() {
   };
   addEventListener('keydown',onKey);
   const onAppearance=()=>{backdrop?.sync()};
+  // Automatic light mode: watch the first seconds of real use; if frames keep dropping, lighten the effects for good.
+  let perfFrame=0,perfStop=0;
+  if(loadAppearance().performance==='auto'&&root.dataset.perf!=='lite'&&!navigator.webdriver){
+   let last=0,frames=0,slowFrames=0,windows=0,badWindows=0,windowStart=performance.now();
+   const sample=(now:number)=>{
+    if(last&&!document.hidden){frames++;if(now-last>50)slowFrames++}
+    last=document.hidden?0:now;
+    if(now-windowStart>=3000){
+     const fps=frames/((now-windowStart)/1000);if(frames>20&&(fps<32||slowFrames/frames>.2))badWindows++;
+     windows++;frames=0;slowFrames=0;windowStart=now;
+     if(badWindows>=2){markSlow();saveAppearance(loadAppearance());toast.message('خُففت المؤثرات لتسريع التطبيق على هذا الجهاز.',{description:'يمكنك تغيير ذلك من «المظهر والحركة» ← الأداء.'});return}
+     if(windows>=6)return;
+    }
+    perfFrame=requestAnimationFrame(sample);
+   };
+   perfStop=window.setTimeout(()=>{perfFrame=requestAnimationFrame(sample)},2500);
+  }
   onScroll();scheduleMeasure();
   addEventListener('pointermove',onMove,{passive:true});addEventListener('pointerdown',onDown,{passive:true});addEventListener('pointerup',onUp,{passive:true});addEventListener('pointercancel',onUp,{passive:true});document.addEventListener('pointerleave',onLeave);
   addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',scheduleMeasure,{passive:true});addEventListener('mawatheeq-appearance',onAppearance);reducedQuery.addEventListener('change',onAppearance);
-  return()=>{cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
+  return()=>{cancelAnimationFrame(perfFrame);clearTimeout(perfStop);cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
    removeEventListener('pointermove',onMove);removeEventListener('pointerdown',onDown);removeEventListener('pointerup',onUp);removeEventListener('pointercancel',onUp);document.removeEventListener('pointerleave',onLeave);
    removeEventListener('keydown',onKey);clearTimeout(splashTimer);removeEventListener('scroll',onScroll);removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
    for(const a of ['data-scrolled','data-scrolling','data-pointer','data-hover-action','data-pressing'])root.removeAttribute(a)};

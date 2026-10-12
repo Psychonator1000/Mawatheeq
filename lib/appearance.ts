@@ -44,12 +44,17 @@ export const MODES = {
 export const FOLLOWERS = {
   ring: { label: 'حلقة صغيرة' }, dot: { label: 'نقطة' }, diamond: { label: 'معيّن' }, off: { label: 'بدون', hint: 'إخفاء الشكل الذي يتبع المؤشر' },
 } as const;
+export const PERFORMANCE = {
+  auto: { label: 'تلقائي', hint: 'يخفف المؤثرات وحده على الأجهزة الضعيفة' },
+  lite: { label: 'خفيف', hint: 'بدون خلفية متحركة أو تأثيرات زجاجية؛ أسرع على الأجهزة القديمة' },
+  full: { label: 'كامل', hint: 'كل المؤثرات دائماً' },
+} as const;
 export const CURSORS = {
   themed: { label: 'بألوان السمة', hint: 'مؤشر الفأرة يتلون مع السمة' },
   system: { label: 'مؤشر النظام' },
 } as const;
-export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; density: keyof typeof DENSITIES; mode: keyof typeof MODES; follower: keyof typeof FOLLOWERS; cursor: keyof typeof CURSORS; unlocked: string[]; previous?: keyof typeof THEMES };
-export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', density: 'comfortable', mode: 'auto', follower: 'ring', cursor: 'themed', unlocked: [] };
+export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; density: keyof typeof DENSITIES; mode: keyof typeof MODES; performance: keyof typeof PERFORMANCE; follower: keyof typeof FOLLOWERS; cursor: keyof typeof CURSORS; unlocked: string[]; previous?: keyof typeof THEMES };
+export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', density: 'comfortable', mode: 'auto', performance: 'auto', follower: 'ring', cursor: 'themed', unlocked: [] };
 /** Themes whose own look is dark. */
 const DARK_NATIVE = new Set<string>(['noir', 'phantom']);
 /**
@@ -75,6 +80,7 @@ export function loadAppearance(): Appearance {
       text: saved.text in TEXT_SIZES ? saved.text : DEFAULT_APPEARANCE.text,
       density: saved.density in DENSITIES ? saved.density : DEFAULT_APPEARANCE.density,
       mode: saved.theme === 'ivory' && (saved.mode ?? 'auto') === 'auto' ? 'light' : saved.mode in MODES ? saved.mode : DEFAULT_APPEARANCE.mode,
+      performance: saved.performance in PERFORMANCE ? saved.performance : DEFAULT_APPEARANCE.performance,
       follower: saved.follower in FOLLOWERS ? saved.follower : DEFAULT_APPEARANCE.follower,
       cursor: saved.cursor in CURSORS ? saved.cursor : DEFAULT_APPEARANCE.cursor,
       unlocked: Array.isArray(saved.unlocked) ? saved.unlocked.filter((t: string) => t in THEMES) : [],
@@ -87,6 +93,7 @@ export function applyAppearance(a: Appearance) {
   const view = resolveTheme(a);
   root.dataset.theme = view.theme; root.dataset.backdrop = a.backdrop; root.dataset.motion = a.motion; root.dataset.text = a.text; root.dataset.density = a.density;
   root.dataset.follower = a.follower; root.dataset.cursor = a.cursor;
+  if (liteMode(a)) root.dataset.perf = 'lite'; else delete root.dataset.perf;
   if (view.mode) root.dataset.mode = view.mode; else delete root.dataset.mode;
   if (a.cursor === 'themed') applyThemedCursor(view.theme, view.dark); else { root.style.removeProperty('--cursor-arrow'); root.style.removeProperty('--cursor-hand'); }
 }
@@ -125,7 +132,18 @@ export function saveAppearance(a: Appearance) {
   window.dispatchEvent(new Event('mawatheeq-appearance'));
 }
 /** Any animation at all: not switched off here and not reduced by the device. */
-export const motionAllowed = () => document.documentElement.dataset.motion !== 'off' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const motionAllowed = () => document.documentElement.dataset.motion !== 'off' && document.documentElement.dataset.perf !== 'lite' && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SLOW_KEY = 'mawatheeq.slow-device';
+/** A device that is likely to struggle with the full effects: few cores, little memory, or data saver. */
+export function weakDevice(): boolean {
+  const n = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
+  return (n.hardwareConcurrency || 8) <= 4 || (n.deviceMemory || 8) <= 4 || !!n.connection?.saveData;
+}
+/** Remembered when the app measured slow frames on this device, so later visits start light. */
+export const markedSlow = () => { try { return localStorage.getItem(SLOW_KEY) === '1'; } catch { return false; } };
+export const markSlow = () => { try { localStorage.setItem(SLOW_KEY, '1'); } catch { /* Applies for this visit only. */ } };
+/** Light mode: chosen explicitly, or automatic on a weak or measured-slow device. */
+export const liteMode = (a: Pick<Appearance, 'performance'>) => a.performance === 'lite' || (a.performance === 'auto' && (weakDevice() || markedSlow()));
 /** Pointer-driven effects run only with full motion and no reduced-motion preference. */
 export const pointerEffectsOn = () => document.documentElement.dataset.motion === 'full' && motionAllowed();
 /** Run a state change inside a view transition when the browser supports it and motion is allowed. */
