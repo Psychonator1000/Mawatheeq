@@ -387,3 +387,6 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .chat-row-close:hover{background:#efe4d8;color:var(--brand)}
 @media(hover:none){.chat-row-close{opacity:.7}}
 .chat-row.closed{opacity:.6}
+/* Record windows: the tab bar stays at the top while the tab's content scrolls under it. */
+.case-window>.case-main .detail-tabs{position:sticky;top:-26px;z-index:6;box-shadow:0 8px 16px -12px #2c1c1059}
+@media(max-width:900px){.case-window>.case-main .detail-tabs{top:-18px}}
