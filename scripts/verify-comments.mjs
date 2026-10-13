@@ -110,6 +110,23 @@ assert.equal((await comments(owner.token, 'list', task)).length, 1);
 await denied(() => comments(outsider.token, 'list', task));
 await denied(() => comments(reader.token, 'list', task), 'Case-only staff without work access cannot read task comments');
 
+// Private comments: only the author, the colleagues mentioned and the office owner see them; replies stay private.
+const bystander = await staff('bystander', scope(['cases', 'work'], ['comment-visible']));
+const secret = await comments(clerk.token, 'post', { ...visible, body: 'Private note', mentions: [reader.member.id], private: true });
+assert.equal(secret.private, true);
+const ids = async token => (await comments(token, 'list', visible)).map(c => c.id);
+assert.ok((await ids(reader.token)).includes(secret.id), 'The mentioned colleague sees a private comment');
+assert.ok((await ids(owner.token)).includes(secret.id), 'The office owner sees a private comment');
+assert.ok(!(await ids(bystander.token)).includes(secret.id), 'Others with access to the case do not');
+await assert.rejects(() => comments(bystander.token, 'post', { ...visible, body: 'Peek', parentId: secret.id }), /غير موجود/, 'Nor can they reply to it');
+await assert.rejects(() => comments(clerk.token, 'post', { ...visible, body: 'Nobody', private: true }), /زميل واحد/);
+const secretReply = await comments(owner.token, 'post', { ...visible, body: 'Private answer', parentId: secret.id });
+assert.equal(secretReply.private, true, 'A reply to a private comment stays private');
+assert.deepEqual(secretReply.mentions.map(m => m.username).sort(), ['clerk', 'reader'], 'Everyone in the private exchange is included');
+assert.ok(!(await ids(bystander.token)).includes(secretReply.id));
+const open = await comments(bystander.token, 'post', { ...visible, body: 'Open note', mentions: [clerk.member.id] });
+assert.equal(open.private, false); assert.ok((await ids(reader.token)).includes(open.id), 'Comments stay visible to everyone by default');
+
 // Revoking access hides existing comments and mentions.
 await comments(owner.token, 'post', { ...visible, body: 'After revocation', mentions: [clerk.member.id] });
 await office(owner.token, 'set_member_access', { id: clerk.member.id, revision: clerk.member.permissions.revision, permissions: scope(['cases', 'work'], ['comment-hidden']) });
@@ -119,4 +136,4 @@ assert.equal((await comments(again.token, 'mentions')).items.length, 0, 'Mention
 
 // Existing APIs keep working after the migration.
 assert.ok((await local(owner.token, 'cases_page', { offset: 0 })).length >= 2);
-console.log('Passed comments: replies with author notification and per-reader references, session-gated RPC only, trimmed bodies and limits, mentions limited to staff who can see the record, read-only and outsider denial, task visibility rules, mentions feed and monotonic read marker, author/owner soft delete, revocation hiding and existing API compatibility.');
+console.log('Passed comments: private comments for the mentioned only (owner included, replies stay private), replies with author notification and per-reader references, session-gated RPC only, trimmed bodies and limits, mentions limited to staff who can see the record, read-only and outsider denial, task visibility rules, mentions feed and monotonic read marker, author/owner soft delete, revocation hiding and existing API compatibility.');

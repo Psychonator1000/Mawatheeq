@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ChevronDown,ChevronLeft,MessageSquare,Reply,Send,Trash2} from 'lucide-react';
+import {ChevronDown,ChevronLeft,Lock,MessageSquare,Reply,Send,Trash2,Users} from 'lucide-react';
 import {toast} from 'sonner';
 import {chatRequest,commentRequest} from '@/lib/local-auth';
 import {requestOpen} from '@/lib/open-record';
@@ -37,13 +37,14 @@ export default function CommentThread({target,userId,isOwner,canPost}:{target:Co
     {c.authorId===userId?<b>{c.authorName||c.author}</b>:<button type="button" className="comment-author" onClick={()=>requestChat(c.authorId)} title="مراسلة">{c.authorName||c.author}</button>}
     {c.authorName&&c.authorName!==c.author&&<small dir="ltr">@{c.author}</small>}
     <time dateTime={c.createdAt}>{time(c.createdAt)}</time>
+    {c.private&&<span className="comment-private" title="يراه الكاتب والمشار إليهم ومسؤول المكتب فقط"><Lock size={12}/> خاص{c.mentions.length>0&&<> · {c.mentions.map(shown).join('، ')}</>}</span>}
     {!c.deleted&&(c.authorId===userId||isOwner)&&<button className="icon-btn" aria-label="حذف التعليق" onClick={()=>void remove(c)}><Trash2 size={14}/></button>}</div>
    {c.deleted?<p className="muted">حُذف هذا التعليق.</p>:<p className="comment-body">{bodyParts(c.body,refs).map((p,k)=>typeof p==='string'?<span key={k}>{p}</span>:
     <button type="button" key={k} className={'chat-ref '+p.type+(p.ok?'':' locked')} onClick={()=>openRef(p)} title={p.type==='user'?(p.id===userId?'أنت':'مراسلة'):p.ok?'فتح':'غير متاح لك'}>{refToken(p)}</button>)}</p>}
    <div className="comment-actions">
     {canPost&&!c.deleted&&<button type="button" className="text-link" onClick={()=>setReplyTo(replyTo===c.id?null:c.id)}><Reply size={13}/> رد</button>}
     {n>0&&<button type="button" className="text-link" aria-expanded={!hidden} onClick={()=>setFolded(f=>{const x=new Set(f);if(x.has(c.id))x.delete(c.id);else x.add(c.id);return x})}>{hidden?<ChevronLeft size={13}/>:<ChevronDown size={13}/>} {hidden?`عرض ${n===1?'الرد':n+' ردود'}`:'إخفاء الردود'}</button>}</div>
-   {replyTo===c.id&&<Composer target={target} parentId={c.id} people={people} label={'الرد على '+(c.authorName||c.author)} onPosted={posted} onCancel={()=>setReplyTo(null)}/>}
+   {replyTo===c.id&&<Composer target={target} parentId={c.id} parentPrivate={!!c.private} people={people} label={'الرد على '+(c.authorName||c.author)} onPosted={posted} onCancel={()=>setReplyTo(null)}/>}
    {n>0&&!hidden&&<ol className={'comment-list comment-replies'+(depth>=4?' flat':'')}>{c.replies.map(r=>item(r,depth+1))}</ol>}
   </li>};
  return <section className="comment-thread" aria-label="النقاش الداخلي"><h3><MessageSquare size={17}/> النقاش الداخلي</h3>
@@ -56,8 +57,9 @@ export default function CommentThread({target,userId,isOwner,canPost}:{target:Co
 }
 
 /** Writing a comment or a reply: «@» a colleague (they are notified), «#» a case by office code, a client or a task, «!» a case by automatic number. */
-function Composer({target,parentId,people,label,onPosted,onCancel}:{target:CommentTarget;parentId?:number;people:CommentPerson[];label:string;onPosted:(c:Comment)=>void;onCancel?:()=>void}){
- const [text,setText]=useState(''),[refs,setRefs]=useState<ChatRef[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState('');
+function Composer({target,parentId,parentPrivate=false,people,label,onPosted,onCancel}:{target:CommentTarget;parentId?:number;parentPrivate?:boolean;people:CommentPerson[];label:string;onPosted:(c:Comment)=>void;onCancel?:()=>void}){
+ const [text,setText]=useState(''),[refs,setRefs]=useState<ChatRef[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[onlyMentioned,setOnlyMentioned]=useState(false);
+ const mentioned=refs.filter(r=>r.type==='user'&&text.includes(refToken(r)));
  const [trigger,setTrigger]=useState<ReturnType<typeof typedTrigger>>(null),[pick,setPick]=useState(0);
  const input=useRef<HTMLTextAreaElement>(null);
  useEffect(()=>{if(parentId)input.current?.focus()},[parentId]);
@@ -79,14 +81,19 @@ function Composer({target,parentId,people,label,onPosted,onCancel}:{target:Comme
  }
  async function post(){if(!text.trim()||busy)return;setBusy(true);setError('');
   const used=refs.filter(r=>text.includes(refToken(r)));
-  try{const saved=await commentRequest<Comment>('post',{...target,body:text,parentId:parentId??null,mentions:[...new Set(used.filter(r=>r.type==='user').map(r=>r.id))],refs:used.filter(r=>r.type!=='user').map(({type,id,label})=>({type,id,label}))});
-   onPosted(saved);setText('');setRefs([])}
+  try{const saved=await commentRequest<Comment>('post',{...target,body:text,parentId:parentId??null,mentions:[...new Set(used.filter(r=>r.type==='user').map(r=>r.id))],private:parentPrivate||(onlyMentioned&&mentioned.length>0),refs:used.filter(r=>r.type!=='user').map(({type,id,label})=>({type,id,label}))});
+   onPosted(saved);setText('');setRefs([]);setOnlyMentioned(false)}
   catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  return <form className={'comment-form'+(parentId?' reply':'')} onSubmit={e=>{e.preventDefault();void post()}}>
   {error&&<p className="notice" role="alert">{error}</p>}
   <label className="field"><span>{label}</span><textarea ref={input} value={text} onChange={e=>onType(e.target.value)} onKeyDown={onKey} onClick={e=>setTrigger(typedTrigger(text,e.currentTarget.selectionStart))} onBlur={()=>setTimeout(()=>setTrigger(null),150)} maxLength={4000} rows={parentId?2:3} placeholder="اكتب ملاحظة… @ زميل، # كود قضية أو موكل أو مهمة، ! رقم آلي"/></label>
   {trigger&&suggest.length>0&&<ul className="chat-suggest comment-suggest" role="listbox" aria-label="اقتراحات">{suggest.map((s,i)=><li key={s.type+s.id+s.label} role="option" aria-selected={i===pick}><button type="button" onMouseDown={e=>{e.preventDefault();choose(s)}}><b>{refToken(s)}</b><small>{s.sub}</small></button></li>)}</ul>}
   {trigger?.char==='@'&&!suggest.length&&<p className="muted comment-hint">لا يوجد زميل بهذا الاسم يملك صلاحية هذا السجل.</p>}
+  {/* Who sees it: a private exchange stays private; otherwise mentioning someone offers the choice. */}
+  {parentPrivate?<p className="comment-audience-note"><Lock size={13}/> رد خاص: يراه أطراف هذا النقاش ومسؤول المكتب فقط.</p>
+  :mentioned.length>0&&<fieldset className="comment-audience"><legend>من يرى التعليق؟</legend>
+   <label><input type="radio" name={'audience-'+(parentId??'new')} checked={!onlyMentioned} onChange={()=>setOnlyMentioned(false)}/><Users size={13}/> كل من يرى السجل</label>
+   <label><input type="radio" name={'audience-'+(parentId??'new')} checked={onlyMentioned} onChange={()=>setOnlyMentioned(true)}/><Lock size={13}/> المشار إليهم فقط ({mentioned.map(r=>r.label).join('، ')})</label></fieldset>}
   <div className="comment-form-actions"><button className="btn primary" disabled={busy||!text.trim()}><Send size={15}/> {busy?'جارٍ الإرسال…':parentId?'إرسال الرد':'إرسال التعليق'}</button>
    {onCancel&&<button type="button" className="btn" onClick={onCancel}>إلغاء</button>}<small className="muted">Ctrl+Enter للإرسال</small></div>
  </form>;

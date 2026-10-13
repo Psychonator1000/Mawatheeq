@@ -174,7 +174,14 @@ const answer=question.locator('.comment-replies>li').filter({hasText:'أيضاً
 await answer.waitFor({timeout:15000}).catch(async e=>{console.log('Discussion when the reply did not appear:\n'+await discussion.innerText());throw e});
 await answer.getByRole('button',{name:'كود TOOL-0'}).waitFor();
 assert.equal((await rpc('mawatheeq_comment_request',[clerkSession.token,'mentions','{}'])).items.length,2,'The answered author is notified of the reply');
+// Mentioning someone offers «المشار إليهم فقط»: the comment is then private to them, the author and the office owner.
+await newComment.fill('ملاحظة خاصة ');await newComment.pressSequentially('@tools_c');
+await discussion.getByRole('option').filter({hasText:'@tools_clerk'}).click();
+await discussion.getByLabel(/المشار إليهم فقط/).check();await discussion.getByRole('button',{name:'إرسال التعليق'}).click();
+const secret=discussion.locator('.comment-list>li').filter({hasText:'ملاحظة خاصة'});await secret.locator('.comment-private').getByText(/خاص/).waitFor();
+assert.equal((await rpc('mawatheeq_comment_request',[clerkSession.token,'list',JSON.stringify({targetType:'case',targetId:'tools-case-0'})])).find(c=>c.body.startsWith('ملاحظة خاصة')).private,true,'The comment is stored as private');
 await page.screenshot({path:artifacts+'/discussion.png'});
+await secret.getByRole('button',{name:'حذف التعليق'}).click();await secret.waitFor({state:'detached'}).catch(()=>{});
 await question.getByRole('button',{name:'إخفاء الردود'}).click();await answer.waitFor({state:'detached'});await question.getByRole('button',{name:/عرض الرد/}).click();await answer.waitFor();
 // A colleague's name opens a one-to-one chat with them.
 await question.getByRole('button',{name:'tools_clerk'}).first().click();
@@ -183,7 +190,7 @@ await withClerk.getByLabel('نص الرسالة').fill('بخصوص النقاش'
 await page.getByRole('button',{name:/^المحادثات/}).first().click();await withClerk.waitFor({state:'detached'});
 await answer.getByRole('button',{name:'حذف التعليق'}).click();await question.locator('.comment-replies>li.deleted').waitFor();
 await discussion.getByRole('listitem').filter({hasText:'نعم، استلمناها اليوم'}).getByRole('button',{name:'حذف التعليق'}).click();
-await page.waitForFunction(()=>document.querySelectorAll('.comment-thread li.deleted').length===2);
+await page.waitForFunction(()=>document.querySelectorAll('.comment-thread li.deleted').length===3);
 assert.equal(await question.locator(':scope>.comment-meta').getByRole('button',{name:'حذف التعليق'}).count(),1,'The office owner can moderate colleagues\' comments');
 await page.keyboard.press('Escape');
 await bell.click();
