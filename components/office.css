@@ -376,3 +376,5 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .desk-next input[type=time]{width:110px}
 .desk-panel .table-wrap{overflow-x:auto}
 @media (max-width:760px){.desk-panel .office-table{min-width:680px}.desk-toolbar .field{flex:1 1 100%}}
+.desk-dialog{max-height:92vh;overflow:auto}
+.desk-bare-actions{justify-content:flex-end;margin-bottom:12px}

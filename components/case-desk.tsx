@@ -1,4 +1,4 @@
-import {useMemo,useState} from 'react';
+import {createContext,useContext,useMemo,useState} from 'react';
 import {Printer,Plus,Save,ArrowUpLeft,AlertTriangle,FileSignature,CheckCircle2} from 'lucide-react';
 import {toast} from 'sonner';
 import {type CaseRecord,emptyCase,formatDate,todayISO,daysBetween} from '@/lib/domain';
@@ -12,17 +12,21 @@ import {EditorDialog} from './departments/shared';
 import type {Member,WorkItem} from '@/lib/office';
 
 type Props={page:DeskPage;records:CaseRecord[];clients:ClientEntity[];work:WorkItem[];members:Member[];canEdit:boolean;canCreate:boolean;canExport:boolean;printedBy:string;
- onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onNew:(c:CaseRecord)=>void};
+ onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onNew:(c:CaseRecord)=>void;
+ /** Shown inside a window that already carries the title and description. */
+ bare?:boolean};
+const Bare=createContext(false);
 
 async function saveCase(c:CaseRecord,clients:ClientEntity[]){const d=await api('/api/cases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case:c})});return enrichCase(d.case,clients)}
 const ref=(c:CaseRecord)=>c.code||c.autoNumber||'بلا كود';
 const parties=(c:CaseRecord)=>`${clientName(c)||'—'} ضد ${c.opponent||'—'}`;
 const lawyersOf=(rs:CaseRecord[])=>[...new Set(rs.map(c=>String(c.lawyer||'').trim()).filter(Boolean))].sort();
 function CaseCell({c,onOpen}:{c:CaseRecord;onOpen:(c:CaseRecord)=>void}){return <button type="button" className="desk-case" onClick={()=>onOpen(c)}><b>{ref(c)}</b><small>{parties(c)}</small></button>}
-function Panel({title,note,actions,children}:{title:string;note?:string;actions?:React.ReactNode;children:React.ReactNode}){return <section className="panel desk-panel"><div className="panel-head"><div><h2 className="sr-only">{title}</h2>{note&&<p className="panel-note">{note}</p>}</div>{actions&&<div className="actions">{actions}</div>}</div><div className="panel-body">{children}</div></section>}
+function Panel({title,note,actions,children}:{title:string;note?:string;actions?:React.ReactNode;children:React.ReactNode}){if(useContext(Bare))return <div className="desk-bare">{actions&&<div className="actions desk-bare-actions">{actions}</div>}{children}</div>;return <section className="panel desk-panel"><div className="panel-head"><div><h2 className="sr-only">{title}</h2>{note&&<p className="panel-note">{note}</p>}</div>{actions&&<div className="actions">{actions}</div>}</div><div className="panel-body">{children}</div></section>}
 function print(canExport:boolean,title:string,sub:string,headers:string[],rows:string[][],by:string){if(!canExport)return;if(!printHtml(listHtml(title,sub,headers,rows,formatDate(todayISO()),by)))toast.error('اسمح بالنوافذ المنبثقة للطباعة.')}
 
-export default function CaseDesk(p:Props){
+export default function CaseDesk(p:Props){return <Bare.Provider value={!!p.bare}><DeskPageView {...p}/></Bare.Provider>}
+function DeskPageView(p:Props){
  switch(p.page){
   case 'posting':return <Posting {...p}/>;
   case 'postingErrors':return <PostingErrors {...p}/>;
