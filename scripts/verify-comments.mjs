@@ -78,6 +78,20 @@ assert.equal((await comments(reader.token, 'mark_mentions_read', { lastId: 1 }))
 assert.equal((await comments(reader.token, 'mark_mentions_read', { lastId: 999999 })).lastRead, reply.id, 'Read marker is capped at existing comments');
 assert.equal((await comments(clerk.token, 'mentions')).items.length, 1);
 
+// Replies build a thread; the answered author is notified; references are kept only when the writer may open them.
+const answer = await comments(clerk.token, 'post', { ...visible, body: 'تم، راجع كود COMMENT-VISIBLE', parentId: first.id,
+  refs: [{ type: 'case', id: 'comment-visible', label: 'كود COMMENT-VISIBLE' }, { type: 'case', id: 'comment-hidden', label: 'كود COMMENT-HIDDEN' }, { type: 'user', id: owner.user.id, label: 'owner' }] });
+assert.equal(answer.parentId, first.id); assert.equal(answer.authorName, 'clerk');
+assert.deepEqual(answer.refs.map(r => [r.id, r.ok]), [['comment-visible', true]], 'Only references the writer may open are kept');
+assert.deepEqual(answer.mentions.map(m => m.username), ['owner'], 'The answered author is notified');
+assert.equal((await comments(owner.token, 'mentions')).items[0].id, answer.id);
+assert.equal((await comments(reader.token, 'list', visible)).find(c => c.id === answer.id).refs[0].ok, true);
+assert.equal(mentionable[0].name, 'clerk', 'Mentionable staff carry their display name');
+await assert.rejects(() => comments(owner.token, 'post', { ...visible, body: 'x', parentId: 999999 }), /غير موجود/);
+await assert.rejects(() => comments(owner.token, 'post', { ...visible, body: 'x', parentId: 'abc' }), /غير صالح/);
+await comments(clerk.token, 'delete', { id: answer.id });
+await assert.rejects(() => comments(owner.token, 'post', { ...visible, body: 'x', parentId: answer.id }), /محذوف/);
+
 // Deleting: author or owner only; text is hidden but the row stays.
 await denied(() => comments(clerk.token, 'delete', { id: first.id }));
 await denied(() => comments(outsider.token, 'delete', { id: reply.id }));
@@ -85,7 +99,7 @@ const removed = await comments(clerk.token, 'delete', { id: reply.id });
 assert.equal(removed.deleted, true); assert.equal(removed.body, '');
 await comments(owner.token, 'delete', { id: first.id });
 const thread = await comments(owner.token, 'list', visible);
-assert.deepEqual(thread.map(c => [c.deleted, c.body]), [[true, ''], [true, '']]);
+assert.deepEqual(thread.map(c => [c.deleted, c.body]), [[true, ''], [true, ''], [true, '']]);
 assert.equal((await comments(reader.token, 'mentions')).items.length, 0, 'Deleted comments leave the mentions feed');
 
 // Task comments follow the task visibility rules.
@@ -105,4 +119,4 @@ assert.equal((await comments(again.token, 'mentions')).items.length, 0, 'Mention
 
 // Existing APIs keep working after the migration.
 assert.ok((await local(owner.token, 'cases_page', { offset: 0 })).length >= 2);
-console.log('Passed comments: session-gated RPC only, trimmed bodies and limits, mentions limited to staff who can see the record, read-only and outsider denial, task visibility rules, mentions feed and monotonic read marker, author/owner soft delete, revocation hiding and existing API compatibility.');
+console.log('Passed comments: replies with author notification and per-reader references, session-gated RPC only, trimmed bodies and limits, mentions limited to staff who can see the record, read-only and outsider denial, task visibility rules, mentions feed and monotonic read marker, author/owner soft delete, revocation hiding and existing API compatibility.');

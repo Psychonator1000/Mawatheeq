@@ -155,16 +155,34 @@ await bell.click();
 await panel.getByText('أشار إليك tools_clerk').click();
 const discussion=page.getByRole('region',{name:'النقاش الداخلي'});
 await discussion.getByText('هل استلمنا صيغة الحكم؟').waitFor();
-await discussion.getByLabel('تعليق جديد').fill('نعم، استلمناها اليوم');
-await discussion.getByLabel('@tools_clerk').check();
+// Typing «@» offers colleagues who can see the case; the chosen one is notified.
+const newComment=discussion.getByLabel('تعليق جديد');
+await newComment.fill('نعم، استلمناها اليوم ');await newComment.pressSequentially('@tools_c');
+await discussion.getByRole('option').filter({hasText:'@tools_clerk'}).click();
 await discussion.getByRole('button',{name:'إرسال التعليق'}).click();
 await discussion.getByText('نعم، استلمناها اليوم').waitFor();
-await discussion.getByRole('list').getByText('@tools_clerk').waitFor(); // Reply shows its mention
+await discussion.getByRole('list').getByRole('button',{name:'@tools_clerk'}).waitFor(); // The mention shows as a name chip
+assert.equal((await rpc('mawatheeq_comment_request',[clerkSession.token,'mentions','{}'])).items.length,1,'The mentioned colleague receives the comment');
+// Replies nest under the comment they answer, notify its author, and can cite a case by office code with «#».
+const question=discussion.locator('.comment-list>li').filter({hasText:'هل استلمنا صيغة الحكم؟'});
+await question.getByRole('button',{name:'رد'}).first().click();
+const replyBox=question.getByLabel(/الرد على/);await replyBox.fill('راجع ');await replyBox.pressSequentially('#TOOL');
+await question.getByRole('option').filter({hasText:'كود TOOL-0'}).first().click();await replyBox.pressSequentially('أيضاً');
+await question.getByRole('button',{name:'إرسال الرد'}).click();
+const answer=question.locator('.comment-replies>li').filter({hasText:'أيضاً'});await answer.waitFor();
+await answer.getByRole('button',{name:'كود TOOL-0'}).waitFor();
+assert.equal((await rpc('mawatheeq_comment_request',[clerkSession.token,'mentions','{}'])).items.length,2,'The answered author is notified of the reply');
 await page.screenshot({path:artifacts+'/discussion.png'});
-assert.equal((await rpc('mawatheeq_comment_request',[clerkSession.token,'mentions','{}'])).items.length,1,'The mentioned colleague receives the reply');
+await question.getByRole('button',{name:'إخفاء الردود'}).click();await answer.waitFor({state:'detached'});await question.getByRole('button',{name:/عرض الرد/}).click();await answer.waitFor();
+// A colleague's name opens a one-to-one chat with them.
+await question.getByRole('button',{name:'tools_clerk'}).first().click();
+const withClerk=page.getByRole('dialog',{name:'المحادثات'});await withClerk.locator('.chat-title').getByText('tools_clerk').waitFor();
+await withClerk.getByLabel('نص الرسالة').fill('بخصوص النقاش');await withClerk.getByRole('button',{name:'إرسال'}).click();await withClerk.getByText('بخصوص النقاش').waitFor();
+await page.getByRole('button',{name:/^المحادثات/}).first().click();await withClerk.waitFor({state:'detached'});
+await answer.getByRole('button',{name:'حذف التعليق'}).click();await question.locator('.comment-replies>li.deleted').waitFor();
 await discussion.getByRole('listitem').filter({hasText:'نعم، استلمناها اليوم'}).getByRole('button',{name:'حذف التعليق'}).click();
-await discussion.getByText('حُذف هذا التعليق.').waitFor();
-assert.equal(await discussion.getByRole('listitem').filter({hasText:'هل استلمنا صيغة الحكم؟'}).getByRole('button',{name:'حذف التعليق'}).count(),1,'The office owner can moderate colleagues\' comments');
+await page.waitForFunction(()=>document.querySelectorAll('.comment-thread li.deleted').length===2);
+assert.equal(await question.locator(':scope>.comment-meta').getByRole('button',{name:'حذف التعليق'}).count(),1,'The office owner can moderate colleagues\' comments');
 await page.keyboard.press('Escape');
 await bell.click();
 await page.waitForFunction(()=>document.querySelector('.notice-panel')&&![...document.querySelectorAll('.notice-item')].some(e=>e.textContent.includes('أشار إليك')),null,{timeout:5000});
@@ -426,7 +444,8 @@ await lively.close();
  const clerkCtx=await browser.newContext({viewport:{width:1280,height:900},reducedMotion:'reduce',timezoneId:'Asia/Kuwait'});await wireFixture(clerkCtx);
  const cp=await clerkCtx.newPage();cp.on('pageerror',e=>errors.push('clerk: '+e.message));await cp.goto(base);
  await cp.getByLabel('اسم المستخدم',{exact:true}).fill('tools_clerk');await cp.getByLabel('كلمة المرور',{exact:true}).fill('Fixture-password-123');await cp.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
- const cb=cp.getByRole('button',{name:'المحادثات، 1 غير مقروءة'});await cb.waitFor({timeout:15000});await cb.click();
+ // Two unread: the note sent from the discussion and this message.
+ const cb=cp.getByRole('button',{name:'المحادثات، 2 غير مقروءة'});await cb.waitFor({timeout:15000});await cb.click();
  const cpanel=cp.getByRole('dialog',{name:'المحادثات'});await cpanel.locator('.chat-row',{hasText:'tools_owner'}).click();
  await cpanel.locator('.chat-ref').getByText('كود TOOL-0').click();
  await cp.locator('[data-record-window] .case-pin').getByText('TOOL-0').waitFor();assert.equal(await cpanel.count(),0,'Opening a reference shows the case');

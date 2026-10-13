@@ -6,7 +6,7 @@ import {toast} from 'sonner';
 import {chatRequest,fileRequest} from '@/lib/local-auth';
 import {backend} from '@/lib/supabase-client';
 import {requestOpen} from '@/lib/open-record';
-import {FILE_TYPES,MAX_FILE,bodyParts,chatTime,conversationName,fileSize,refToken,triggerRefs,typedTrigger,type ChatConversation,type ChatMessage,type ChatPerson,type ChatRef,type ChatSummary} from '@/lib/chat';
+import {CHAT_WITH_EVENT,FILE_TYPES,MAX_FILE,bodyParts,chatTime,conversationName,fileSize,refToken,triggerRefs,typedTrigger,type ChatConversation,type ChatMessage,type ChatPerson,type ChatRef,type ChatSummary} from '@/lib/chat';
 
 const FAST=5000,SLOW=30000,HIDDEN=60000;
 const missing=(e:unknown)=>/Could not find the function|PGRST202|404/.test(String((e as Error)?.message||e));
@@ -25,9 +25,15 @@ export default function Chat({userId}:{userId:string}){
  // Escape closes the panel when focus is in it or nowhere in particular (not while a case file or dialog has focus).
  const panel=useRef<HTMLElement>(null);
  useEffect(()=>{if(!open)return;const key=(e:KeyboardEvent)=>{const a=document.activeElement;if(e.key==='Escape'&&!e.defaultPrevented&&(!a||a===document.body||panel.current?.contains(a))){e.preventDefault();setOpen(false)}};addEventListener('keydown',key);return()=>removeEventListener('keydown',key)},[open]);
+ // A name elsewhere in the app (a discussion, for example) opens a one-to-one chat with that colleague.
+ useEffect(()=>{const go=async(e:Event)=>{const id=(e as CustomEvent<string>).detail;if(!id||id===userId)return;
+  try{const r=await chatRequest<{id:string}>('start_direct',{userId:id});reopenChat(userId,r.id);await refresh();setView('list');setActive(r.id);setOpen(true)}
+  catch(err){toast.error(missing(err)?'المحادثات غير مفعّلة بعد.':(err as Error).message)}};
+  addEventListener(CHAT_WITH_EVENT,go);return()=>removeEventListener(CHAT_WITH_EVENT,go)},[userId,refresh]);
+ const host=useWindowHost();
  if(!available)return null;
  const conv=summary?.conversations.find(c=>c.id===active)||null;
- return <>
+ return createPortal(<>
   <button type="button" className={'chat-bubble'+(open?' open':'')} aria-label={unread?`المحادثات، ${unread} غير مقروءة`:'المحادثات'} aria-expanded={open} onClick={()=>setOpen(o=>!o)}><MessageCircle size={24}/>{unread>0&&<span className="chat-badge">{unread>99?'99+':unread}</span>}</button>
   {open&&<section className="chat-panel" role="dialog" aria-label="المحادثات" dir="rtl" ref={panel}>
    {conv&&view==='list'?<Conversation key={conv.id} conv={conv} me={userId} onLeave={()=>setOpen(false)} onBack={()=>setActive(null)} onInfo={()=>setView('info')} onChanged={refresh} onDirect={async id=>{const r=await chatRequest<{id:string}>('start_direct',{userId:id});reopenChat(userId,r.id);await refresh();setActive(r.id)}}/>
@@ -35,9 +41,17 @@ export default function Chat({userId}:{userId:string}){
    :view==='info'&&conv?<GroupInfo conv={conv} me={userId} onBack={()=>setView('list')} onChanged={async left=>{await refresh();setView('list');if(left)setActive(null)}}/>
    :<ConversationList key={userId} summary={summary} me={userId} onOpen={id=>{reopenChat(userId,id);setActive(id);setView('list')}} onNew={()=>setView('new')} onGroup={()=>setView('group')} onClose={()=>setOpen(false)}/>}
   </section>}
- </>;
+ </>,host??document.body);
 }
 
+/** An open record window traps focus and clicks, so the chat lives inside the topmost one while it is open. */
+function useWindowHost(){
+ const [host,setHost]=useState<HTMLElement|null>(null);
+ useEffect(()=>{let frame=0;const pick=()=>{const all=document.querySelectorAll<HTMLElement>('[data-record-window]');setHost(all.length?all[all.length-1]:null)};
+  pick();const watch=new MutationObserver(()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(pick)});watch.observe(document.body,{childList:true});
+  return()=>{watch.disconnect();cancelAnimationFrame(frame)}},[]);
+ return host;
+}
 /** Conversations closed from the list on this device, with the time of their last message when closed. */
 const closedKey=(me:string)=>'mawatheeq.chat-closed.'+me;
 const readClosed=(me:string):Record<string,string>=>{try{const v=JSON.parse(localStorage.getItem(closedKey(me))||'{}');return v&&typeof v==='object'?v:{}}catch{return {}}};

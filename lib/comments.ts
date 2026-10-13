@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { commentRequest } from './local-auth';
+import type { ChatRef } from './chat';
 
 export type CommentTarget = { targetType: 'case' | 'work'; targetId: string };
-export type Comment = CommentTarget & { id: number; body: string; deleted: boolean; authorId: string; author: string; mentions: { id: string; username: string }[]; createdAt: string };
+export type CommentPerson = { id: string; username: string; name?: string };
+/** parentId, authorName, names and refs arrive once the replies migration is applied; older servers omit them. */
+export type Comment = CommentTarget & { id: number; parentId?: number | null; body: string; deleted: boolean; authorId: string; author: string; authorName?: string; mentions: CommentPerson[]; refs?: ChatRef[]; createdAt: string };
 export type MentionFeed = { items: Comment[]; lastRead: number };
 
 let available: Promise<boolean> | null = null;

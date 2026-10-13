@@ -3,7 +3,7 @@ import type { WorkItem } from './office';
 
 export type NoticeTone = 'danger' | 'warning' | 'info';
 export type Notice = { id: string; tone: NoticeTone; title: string; detail: string; view: string; caseId?: string; workId?: string; mentionId?: number };
-type MentionFeed = { items: { id: number; targetType: 'case' | 'work'; targetId: string; author: string; body: string }[]; lastRead: number };
+type MentionFeed = { items: { id: number; targetType: 'case' | 'work'; targetId: string; author: string; authorName?: string; body: string }[]; lastRead: number };
 type CaseState = Pick<ReturnType<typeof caseState>, 'alert' | 'remaining'>;
 
 const caseLabel = (c: CaseRecord) => c.code || c.autoNumber || c.clientEntityName || c.client || 'قضية';
@@ -18,7 +18,7 @@ export function buildNotices({ cases, stateOf, work, userId, today, showDeadline
     if (m.id <= mentions!.lastRead) continue;
     const text = m.body.replace(/\s+/g, ' ').trim();
     notices.push({ id: 'mention-' + m.id, tone: 'warning', mentionId: m.id, view: m.targetType === 'case' ? 'cases' : 'work', caseId: m.targetType === 'case' ? m.targetId : undefined, workId: m.targetType === 'work' ? m.targetId : undefined,
-      title: 'أشار إليك ' + m.author, detail: text.length > 90 ? text.slice(0, 90) + '…' : text });
+      title: 'أشار إليك ' + (m.authorName || m.author), detail: text.length > 90 ? text.slice(0, 90) + '…' : text });
   }
   const active = cases.filter(c => !c.archived);
   if (showWork) {

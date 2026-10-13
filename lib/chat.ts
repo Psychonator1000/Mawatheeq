@@ -43,6 +43,9 @@ export function bodyParts(body: string, refs: ChatRef[]): (string | ChatRef)[] {
   }
   return parts.filter(p => p !== '');
 }
+/** Open a one-to-one chat with a colleague from anywhere (a name in a discussion, for example). */
+export const CHAT_WITH_EVENT = 'mawatheeq-chat-with';
+export function requestChat(userId: string) { window.dispatchEvent(new CustomEvent(CHAT_WITH_EVENT, { detail: userId })); }
 export const fileSize = (n: number) => n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
 export function chatTime(iso: string) {
   const d = new Date(iso), now = new Date(), sameDay = d.toDateString() === now.toDateString();

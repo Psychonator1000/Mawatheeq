@@ -2594,6 +2594,9 @@
 :root[data-mode=dark] .chat-viewer img{background:#131313}
 :root[data-mode=dark] .chat-viewer-pdf{background:#131313}
 :root[data-mode=dark] .chat-viewer-wait{color:#131313}
+:root[data-mode=dark] .comment-author{color:var(--brand)}
+:root[data-mode=dark] .comment-replies{border-inline-start:2px solid color-mix(in srgb,var(--brand) 22%,transparent)}
+:root[data-mode=dark] .comment-replies>li{background:transparent}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}
