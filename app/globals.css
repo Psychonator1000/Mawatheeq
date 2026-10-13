@@ -44,12 +44,12 @@
 @media(max-width:600px){.client-grid{grid-template-columns:1fr;padding:14px}.case-category{padding:12px;font-size:12px}.case-category strong{font-size:17px}.client-section-heading{gap:12px}.date-picker-button{font-size:12px}}
 
 /* Interface fonts (المظهر والحركة → نوع الخط). The text font serves records, tables and forms; the heading font gives
-   page titles, record names and dialog titles a formal voice. «مكتبي» is the default before settings load. */
-:root{--font-body:'IBM Plex Sans Arabic','Noto Sans Arabic Variable',Tahoma,sans-serif;--font-heading:'Noto Naskh Arabic Variable','IBM Plex Sans Arabic',serif}
+   page titles, record names and dialog titles a formal voice. «خليجي» (Tajawal) is the default before settings load. */
+:root{--font-body:'Tajawal','Noto Sans Arabic Variable',Tahoma,sans-serif;--font-heading:var(--font-body)}
+:root[data-font=office]{--font-body:'IBM Plex Sans Arabic','Noto Sans Arabic Variable',Tahoma,sans-serif;--font-heading:'Noto Naskh Arabic Variable','IBM Plex Sans Arabic',serif}
 :root[data-font=classic]{--font-body:'Noto Sans Arabic Variable',Tahoma,sans-serif;--font-heading:'Amiri','Noto Sans Arabic Variable',serif}
 :root[data-font=modern]{--font-body:'Readex Pro Variable','Noto Sans Arabic Variable',Tahoma,sans-serif;--font-heading:var(--font-body)}
-:root[data-font=gulf]{--font-body:'Tajawal','Noto Sans Arabic Variable',Tahoma,sans-serif;--font-heading:var(--font-body)}
 :root[data-font=plain]{--font-body:'Noto Sans Arabic Variable',Tahoma,sans-serif;--font-heading:var(--font-body)}
 :is(h1,h2,[data-slot=sheet-title],[data-slot=dialog-title],[data-slot=alert-dialog-title]){font-family:var(--font-heading)}
 /* Naskh and Amiri are calligraphic: no negative tracking, a little more room, and a lighter bold. */
-:root:is(:not([data-font]),[data-font=office],[data-font=classic]) :is(h1,h2,[data-slot=sheet-title],[data-slot=dialog-title],[data-slot=alert-dialog-title]){letter-spacing:0;font-weight:700}
+:root:is([data-font=office],[data-font=classic]) :is(h1,h2,[data-slot=sheet-title],[data-slot=dialog-title],[data-slot=alert-dialog-title]){letter-spacing:0;font-weight:700}

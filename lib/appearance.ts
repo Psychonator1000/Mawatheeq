@@ -22,12 +22,12 @@ type ThemeInfo = { label: string; swatch: string; accent: string; hidden?: boole
 /** Hidden themes appear in the list only after their secret word is typed (an easter egg). */
 export const SECRET_WORDS: Record<string, keyof typeof THEMES> = { persona: 'phantom', phantom: 'phantom', aero: 'sky', sakura: 'rose', nier: 'yorha', yorha: 'yorha' };
 export const TEXT_SIZES = { normal: { label: 'عادي' }, large: { label: 'كبير' }, xlarge: { label: 'كبير جداً' } } as const;
-/** Interface fonts: text and headings. «مكتبي» pairs a crisp sans for records with a Naskh for titles, the style of legal papers. */
+/** Interface fonts: text and headings. «خليجي» (Tajawal) is the office's choice; «مكتبي» pairs a crisp sans with a Naskh for titles. */
 export const FONTS = {
+  gulf: { label: 'خليجي', hint: 'Tajawal' },
   office: { label: 'مكتبي', hint: 'IBM Plex للنص، ونسخ للعناوين' },
   classic: { label: 'كلاسيكي', hint: 'Noto للنص، وأميري للعناوين' },
   modern: { label: 'عصري', hint: 'Readex Pro' },
-  gulf: { label: 'خليجي', hint: 'Tajawal' },
   plain: { label: 'البسيط', hint: 'Noto Sans Arabic لكل شيء (الخط السابق)' },
 } as const;
 export const DENSITIES = { comfortable: { label: 'مريحة' }, compact: { label: 'مضغوطة', hint: 'صفوف أقل ارتفاعاً لعرض سجلات أكثر' } } as const;
@@ -69,7 +69,7 @@ export const CURSORS = {
   system: { label: 'مؤشر النظام' },
 } as const;
 export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; font: keyof typeof FONTS; density: keyof typeof DENSITIES; mode: keyof typeof MODES; performance: keyof typeof PERFORMANCE; follower: keyof typeof FOLLOWERS; cursor: keyof typeof CURSORS; unlocked: string[]; previous?: keyof typeof THEMES };
-export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', font: 'office', density: 'comfortable', mode: 'auto', performance: 'auto', follower: 'ring', cursor: 'themed', unlocked: [] };
+export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', font: 'gulf', density: 'comfortable', mode: 'auto', performance: 'auto', follower: 'ring', cursor: 'themed', unlocked: [] };
 /** Themes whose own look is dark. */
 const DARK_NATIVE = new Set<string>(['noir', 'phantom']);
 /**
