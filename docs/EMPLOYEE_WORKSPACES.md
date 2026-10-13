@@ -37,7 +37,7 @@ The order of payment (أمر الأداء) is the source paper: its details are 
 
 ### Follow-up (13 October 2026)
 
-Modelled on the office's previous collections system. A file window has tabs: بيانات الملف, الأطراف والمطالبة, الحافظة والمستندات, إفادات الملف, الوضع المالي, السجل.
+A file window has tabs: بيانات الملف, الأطراف والمطالبة, الحافظة والمستندات, إفادات الملف, الوضع المالي, السجل.
 
 - **File data**: file status and execution-file status (fixed lists), assigned employee, arrival date, batch number, accounting contract, debt reason, required action, order-of-payment fee (added to the claim), instalment, total instalments, delay days, overdue amount, promissory note amount and dates, four free tags (ترقيم 1–4), and closing date and reason. These follow-up fields are not source data for the papers: changing only them keeps a valid source review. Any other change clears it as before.
 - **File statements (إفادات)**: categories اتصالات, تنفيذ, عناوين خصوم and إداري. Each statement records the action (from a list, or typed), review date, status (منجز / غير منجز / مؤجل) and text. Calls also record the number, the party called and the method (phone/WhatsApp), with call and WhatsApp links. The server stamps who wrote each statement and when. Statements can be corrected or removed; the history keeps both. Statements that are not done and whose review date has come appear in «المتابعات المستحقة».
@@ -48,9 +48,8 @@ Statements and payments are department records linked to their file (`subject_id
 
 ### Files before cases and links (13 October 2026)
 
-Cases grow out of collection files, so a file can be opened before any lawsuit. A file without a case needs all-case scope; several files may lead to one case; file numbers are unique. «ربط بقضية» in the file (tab «الأطراف والمطالبة») attaches or changes its case, and «ربط ملف تحصيل» in the case window attaches a file found by its number, defendant, civil ID or customer number. Statements and payments move with the file. Only staff with the collections section see a case's files.
+Cases grow out of collection files, so a file can be opened before any lawsuit. A file without a case needs all-case scope; several files may lead to one case; file numbers are unique. «ربط بقضية» in the file (tab «الأطراف والمطالبة») attaches or changes its case, and «ربط ملف تحصيل» in the case window attaches a file found by its number, defendant, civil ID or customer number. Statements and payments move with the file. Only staff with the collections section see a case's files. Migration `20261013180000_collection_cases.sql`.
 
-«استيراد ملفات» reads an export and previews it. Files already here (same number) are skipped. «سبب المديونية» becomes the customer's number at the client company, «الرقم الآلى - ملف» is kept as written, and a numeric court number links the matching case automatically. The previous statuses (سوفت، تحت الرفع، سكت، حفظ) are kept, and paid and spent totals become opening entries marked as carried over. Migration `20261013180000_collection_cases.sql`.
 
 ### Batch printing
 

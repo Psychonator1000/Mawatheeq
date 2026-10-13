@@ -7,7 +7,7 @@ begin;
 -- * «case_files» lists the files of one case and «find_files» searches files to attach, both within the
 --   collections section and case scope;
 -- * file numbers (code) are unique, so repeated imports never duplicate a file;
--- * files imported from the previous system keep its statuses (سوفت، تحت الرفع، سكت، حفظ), the customer's number at
+-- * files may use the team's further statuses (سوفت، تحت الرفع، سكت، حفظ), the customer's number at
 --   the client company, the court file number as written, and the defendant's job/residence note.
 
 alter table mawatheeq_private.department_records drop constraint department_records_check;
