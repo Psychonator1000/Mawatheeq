@@ -347,3 +347,6 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .roll-columns{display:flex;flex-wrap:wrap;gap:6px}
 .roll-dialog .roll-preview{height:48vh}
 @media(max-width:800px){.roll-arrange{grid-template-columns:1fr 1fr}.roll-toggles{grid-column:1/-1}}
+.workbook-import{max-width:min(920px,calc(100vw - 24px))!important}.workbook-import h2 svg{display:inline;vertical-align:-3px;margin-inline-end:6px}
+.import-summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:6px 0 14px}.import-summary>div{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid #e4d9cb;border-radius:12px;background:#fffdf8}.import-summary b{font-size:24px;color:var(--brand)}.import-summary span{font-size:12px;color:#7a6759}.import-summary .warn b{color:#a32e38}
+.workbook-import details{margin:8px 0;border:1px solid #e4d9cb;border-radius:10px;padding:8px 12px}.workbook-import summary{cursor:pointer;font-weight:650}.import-list{max-height:280px;overflow:auto;margin-top:8px}.import-list td small{display:block;color:#857669}.import-issues{margin:8px 0 0;padding-inline-start:18px;font-size:13px;line-height:1.9;max-height:200px;overflow:auto}
