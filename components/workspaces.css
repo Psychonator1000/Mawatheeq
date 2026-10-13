@@ -107,3 +107,5 @@
 .status-chips{margin-bottom:18px}
 .pick-bar{margin-bottom:18px;border-radius:12px}
 .archive-missing{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.evidence-actions{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 14px}
+.output-option .output-why{display:block;color:#9a5a2c;font-weight:600;margin:4px 0 8px}
