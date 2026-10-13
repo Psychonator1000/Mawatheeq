@@ -378,9 +378,11 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 @media (max-width:760px){.desk-panel .office-table{min-width:680px}.desk-toolbar .field{flex:1 1 100%}}
 .desk-dialog{max-height:92vh;overflow:auto}
 .desk-bare-actions{justify-content:flex-end;margin-bottom:12px}
-.chat-row-wrap{position:relative}
-.chat-row-wrap .chat-row{padding-inline-end:40px}
-.chat-row-close{position:absolute;inset-inline-end:8px;top:50%;translate:0 -50%;width:26px;height:26px;border-radius:50%;border:0;background:transparent;color:#8a766a;display:grid;place-items:center;opacity:0;transition:opacity .15s,background .15s}
+.chat-row-wrap{display:flex;align-items:center;gap:2px}
+.chat-row-wrap .chat-row{flex:1;min-width:0}
+/* The close button sits in the row's own line, not on top of it, so nothing can shift it while pressed. */
+.chat-row-close{flex:none;width:26px;height:26px;border-radius:50%;border:0;background:transparent;color:#8a766a;display:grid;place-items:center;opacity:0;transition:opacity .15s,background .15s}
+.chat-row-close:active:not(:disabled){transform:none}
 .chat-row-wrap:hover .chat-row-close,.chat-row-close:focus-visible{opacity:1}
 .chat-row-close:hover{background:#efe4d8;color:var(--brand)}
 @media(hover:none){.chat-row-close{opacity:.7}}
