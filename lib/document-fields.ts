@@ -32,23 +32,41 @@ export function needsNumericReading(raw:string){
   return /طلب\s*استصدار\s*امر\s*اداء|كشف\s*حساب\s*لمشترك|رقم\s*الايصال/.test(text);
 }
 
-// Derive currency wording from the extracted, reviewable amount instead of OCR spelling.
+// Derive currency wording from the extracted, reviewable amount instead of OCR spelling. The counted noun follows the
+// last part of the number: 3–10 take the plural (دنانير), 11–99 the accusative singular (ديناراً), and round hundreds,
+// thousands and millions the genitive singular (دينار), before which مائتان/ألفان/مليونان drop their ن.
+type Noun={one:string;two:string;plural:string;acc:string;gen:string};
+const DINAR:Noun={one:'دينار كويتي واحد',two:'ديناران كويتيان',plural:'دنانير كويتية',acc:'ديناراً كويتياً',gen:'دينار كويتي'};
+const FILS:Noun={one:'فلس واحد',two:'فلسان',plural:'فلوس',acc:'فلساً',gen:'فلس'};
+const ONES=['','واحد','اثنان','ثلاثة','أربعة','خمسة','ستة','سبعة','ثمانية','تسعة','عشرة','أحد عشر','اثنا عشر','ثلاثة عشر','أربعة عشر','خمسة عشر','ستة عشر','سبعة عشر','ثمانية عشر','تسعة عشر'];
+const TENS=['','','عشرون','ثلاثون','أربعون','خمسون','ستون','سبعون','ثمانون','تسعون'];
+const HUNDREDS=['','مائة','مائتان','ثلاثمائة','أربعمائة','خمسمائة','ستمائة','سبعمائة','ثمانمائة','تسعمائة'];
+const small=(n:number):string=>n>=100?[HUNDREDS[Math.floor(n/100)],small(n%100)].filter(Boolean).join(' و'):n<20?ONES[n]:[ONES[n%10],TENS[Math.floor(n/10)]].filter(Boolean).join(' و');
+// The dual loses its ن when a noun follows it directly (مائتا دينار، ألفا دينار).
+const construct=(words:string)=>words.replace(/(مائتان|ألفان|مليونان)$/,m=>m.slice(0,-1));
+/** «number noun» for 1–999,999,999 with the noun in its correct form. */
+function counted(n:number,noun:Noun):string{
+  if(n===1)return noun.one;if(n===2)return noun.two;
+  const parts:string[]=[];let rest=n;
+  for(const [size,scale] of [[1000000,{one:'مليون',two:'مليونان',plural:'ملايين',acc:'مليوناً',gen:'مليون'}],[1000,{one:'ألف',two:'ألفان',plural:'آلاف',acc:'ألفاً',gen:'ألف'}]] as const){
+    const v=Math.floor(rest/size);rest%=size;
+    if(!v)continue;
+    parts.push(counted(v,scale));
+  }
+  if(rest)parts.push(small(rest));
+  const words=parts.join(' و');
+  // A round thousand or million is followed directly by the noun: ثلاثة آلاف دينار، أحد عشر ألف دينار.
+  if(!rest)return `${construct(words).replace(/(ألف|مليون)اً$/,'$1')} ${noun.gen}`;
+  const r=rest%100;
+  if(r>=3&&r<=10)return `${words} ${noun.plural}`;
+  if(r>=11)return `${words} ${noun.acc}`;
+  return `${construct(words)} ${noun.gen}`;
+}
 export function amountInWords(amount:string){
   if(!/^\d{1,9}(?:\.\d{1,3})?$/.test(amount))return '';
-  const ones=['','واحد','اثنان','ثلاثة','أربعة','خمسة','ستة','سبعة','ثمانية','تسعة','عشرة','أحد عشر','اثنا عشر','ثلاثة عشر','أربعة عشر','خمسة عشر','ستة عشر','سبعة عشر','ثمانية عشر','تسعة عشر'];
-  const tens=['','','عشرون','ثلاثون','أربعون','خمسون','ستون','سبعون','ثمانون','تسعون'];
-  const hundreds=['','مائة','مائتان','ثلاثمائة','أربعمائة','خمسمائة','ستمائة','سبعمائة','ثمانمائة','تسعمائة'];
-  const small=(n:number):string=>n>=100?[hundreds[Math.floor(n/100)],small(n%100)].filter(Boolean).join(' و'):n<20?ones[n]:[ones[n%10],tens[Math.floor(n/10)]].filter(Boolean).join(' و');
-  const words=(n:number):string=>{
-    const parts:string[]=[];
-    for(const [size,one,two,plural] of [[1000000,'مليون','مليونان','ملايين'],[1000,'ألف','ألفان','آلاف']] as const){
-      const v=Math.floor(n/size);if(v){parts.push(v===1?one:v===2?two:`${small(v)} ${v<=10?plural:one}`);n%=size;}
-    }
-    if(n)parts.push(small(n));return parts.join(' و')||'صفر';
-  };
   const [whole,fraction='']=amount.split('.');const dinars=+whole,fils=+fraction.padEnd(3,'0');
-  const dinarWords=dinars===1?'دينار كويتي واحد':dinars===2?'ديناران كويتيان':`${words(dinars)} ${dinars>=3&&dinars<=10?'دنانير كويتية':'ديناراً كويتياً'}`;
-  const filsWords=fils===1?'فلس واحد':fils===2?'فلسان':`${words(fils)} ${fils>=3&&fils<=10?'فلوس':'فلساً'}`;
+  if(!dinars&&!fils)return 'صفر دينار كويتي';
+  const dinarWords=dinars?counted(dinars,DINAR):'',filsWords=fils?counted(fils,FILS):'';
   return dinars&&fils?`${dinarWords} و${filsWords}`:fils?filsWords:dinarWords;
 }
 

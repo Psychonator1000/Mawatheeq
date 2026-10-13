@@ -27,6 +27,11 @@ assert.equal(extractFields('ملف ليس له رقم').code,'');
 assert.equal(extractFields('مبلغ: 1,770.254 د.ك').amount,'1770.254');
 assert.equal(extractFields('مبلغ: 770,254 د.ك').amount,'770.254');
 assert.equal(amountInWords('770.254'),'سبعمائة وسبعون ديناراً كويتياً ومائتان وأربعة وخمسون فلساً');
+// The counted noun follows the last part of the number (court papers print this text).
+for(const [n,w] of [['1','دينار كويتي واحد'],['2','ديناران كويتيان'],['5','خمسة دنانير كويتية'],['12','اثنا عشر ديناراً كويتياً'],['100','مائة دينار كويتي'],['200','مائتا دينار كويتي'],['205','مائتان وخمسة دنانير كويتية'],
+ ['1000','ألف دينار كويتي'],['2000','ألفا دينار كويتي'],['3000','ثلاثة آلاف دينار كويتي'],['15000','خمسة عشر ألف دينار كويتي'],['1200','ألف ومائتا دينار كويتي'],
+ ['1004.61','ألف وأربعة دنانير كويتية وستمائة وعشرة فلوس'],['177.8','مائة وسبعة وسبعون ديناراً كويتياً وثمانمائة فلس'],['0.002','فلسان'],['3000000','ثلاثة ملايين دينار كويتي']])
+ assert.equal(amountInWords(n),w,n);
 const cancelled=new AbortController();cancelled.abort();
 await assert.rejects(()=>readPDFPages({numPages:1},()=>{},()=>{},()=>{},cancelled.signal),e=>e.name==='AbortError');
 for(const name of ['jbig2.wasm','jbig2_nowasm_fallback.js','openjpeg.wasm'])assert.ok(fs.statSync('public/ocr/pdfjs/wasm/'+name).size>0);

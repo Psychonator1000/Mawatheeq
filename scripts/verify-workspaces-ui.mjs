@@ -111,19 +111,47 @@ try{
  await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
  // import (synthetic): files without a case, an automatic link by court number, then manual links from the file and from the case.
  await rpc('mawatheeq_local_request',[login.token,'save_case',JSON.stringify({case:{id:'ui-case-auto',code:'AUTO-1',autoNumber:'260000001',client:'شركة اختبار الواجهة',clientGroup:'شركة اختبار الواجهة',opponent:'خصم آلي',date:'2026-09-01',type:'حكم أول درجة',outcome:'لصالحنا',procedures:[],revision:0}})]);
+ await db.exec('reset role');
+ const uiClient=(await db.query(`insert into mawatheeq_private.client_entities(payload) values('{"name":"شركة تجريبية للاتصالات","kind":"organization","sector":"telecom","aliases":[],"contacts":[],"notes":"","needsReview":false}') returning id::text`)).rows[0].id;
+ await db.exec("update mawatheeq_private.client_entities set payload=payload||jsonb_build_object('id',id::text) where payload->>'id' is null;set role anon");
  {const X=require(require.resolve('xlsx',{paths:[process.cwd()]}));const w=X.utils.book_new();
   const head=['إسم الموكل','رقم الملف','إسم الخصم','حالة الملف','سبب المديونية','قيمة المطالبة','رقم العقد','الرقم الآلى - ملف','ترقيم 1','ترقيم 4','تاريخ الورود','رقم الهوية - الخصم','عنوان المنزل - الخصم','ملاحظات 1','ملاحظات 2','الجنسية - الخصم','الوظيفة - الخصم','المنطقة','القطعة','إجمالى المدفوعات','إجمالى المصروفات'];
-  X.utils.book_append_sheet(w,X.utils.aoa_to_sheet([head,['شركة تجريبية','W-1','SYNTHETIC ONE','سوفت','50000001',120.5,'C-1','260000001','بدون','0','03/10/2026','200000000001','','فارغ','','TESTLAND','خارج البلاد','','',20,0],
+  X.utils.book_append_sheet(w,X.utils.aoa_to_sheet([head,['شركة تجريبية','W-1','SYNTHETIC ONE','سوفت','50000001',120.5,'C-1','260000001','بدون','0','03/10/2026','290010100126','','فارغ','','TESTLAND','خارج البلاد','','',20,0],
    ['شركة تجريبية','W-2','SYNTHETIC TWO','تحت الرفع','50000002',75,'C-2','هولد','SA','','03/10/2026','200000000002','','','','','','','',0,0],
-   ['شركة تجريبية','W-3','SYNTHETIC THREE','سكت','50000003',40,'C-3','','بدون','','03/10/2026','200000000003','','','','','','','',0,0]]),'Files');
+   ['شركة تجريبية','W-3','SYNTHETIC TWO','سكت','50000003',40,'C-3','','بدون','','03/10/2026','200000000002','','','','','','','',0,0]]),'Files');
   await switchTo('التحصيل');
   await page.getByLabel('ملف Excel للتحصيل',{exact:true}).setInputFiles({name:'collections.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(X.write(w,{type:'array',bookType:'xlsx'}))});
   const dlg=page.getByRole('dialog');const stat=async label=>dlg.locator('.import-summary>div').filter({hasText:label}).locator('b').innerText();
-  await dlg.getByText('SYNTHETIC TWO').waitFor();assert.equal(await stat('ملف جديد'),'3');assert.equal(await stat('يُربط بقضية تلقائياً'),'1');
+  await dlg.getByText('SYNTHETIC TWO').first().waitFor();assert.equal(await stat('ملف جديد'),'3');assert.equal(await stat('يُربط بقضية تلقائياً'),'1');
   await screen('collection-import');await dlg.getByRole('button',{name:'استيراد 3 ملف'}).click();await dlg.waitFor({state:'detached'});
   let recs=await dept('collections','records_page');const byCode=c=>recs.find(r=>r.kind==='file'&&r.payload.code===c);
   assert.equal(byCode('W-1').caseId,'ui-case-auto','Linked by its court number');assert.equal(byCode('W-2').caseId,'');assert.equal(byCode('W-2').payload.customerId,'50000002');assert.equal(byCode('W-2').payload.fileStatus,'تحت الرفع');
   assert.ok(recs.some(r=>r.kind==='payment'&&r.subjectId===byCode('W-1').id&&r.payload.amount==='20'),'Paid total carried over');
+  // Data checks: civil IDs failing the check digit, debtors with several files, files without a phone.
+  const cards=async()=>(await page.locator('.collection-card .collection-code').allInnerTexts()).filter(c=>c.startsWith('W-')).sort();
+  const check=page.getByLabel('تدقيق البيانات',{exact:true});
+  await check.selectOption('badcivil');await page.waitForTimeout(150);assert.deepEqual(await cards(),['W-2','W-3'],'Civil IDs failing the check digit are flagged');
+  await page.locator('.collection-card').filter({hasText:'W-2'}).getByText('رقم مدني؟').waitFor();
+  await check.selectOption('shared');await page.waitForTimeout(150);assert.deepEqual(await cards(),['W-2','W-3'],'Files of the same debtor');
+  await page.locator('.collection-card').filter({hasText:'W-2'}).getByText('2 ملفات للخصم').waitFor();
+  await check.selectOption('nophone');await page.waitForTimeout(150);assert.ok((await cards()).includes('W-1'));
+  await check.selectOption('');
+  // Select every result, share the files in turn between two people and link them to the client profile.
+  await page.getByRole('button',{name:/^تحديد كل النتائج/}).click();
+  const pickedCount=Number((await page.locator('.pick-bar b').innerText()).match(/\d+/)[0]);
+  await page.getByLabel('توزيع على موظف أو أكثر (افصل بـ ،)',{exact:true}).fill('علي، منى');
+  await page.getByLabel('ربط بملف الموكل',{exact:true}).selectOption({label:'شركة تجريبية للاتصالات'});
+  await page.locator('.pick-bar').getByText(/بالتناوب على 2 موظفين/).waitFor();await screen('collection-distribute');
+  await page.getByRole('button',{name:'تطبيق على المحدد'}).click();await page.getByText(`حُدّث ${pickedCount} ملف`).first().waitFor();
+  recs=await dept('collections','records_page');const shared=recs.filter(r=>r.kind==='file'&&!r.archived);
+  assert.equal(shared.filter(r=>r.payload.assignedTo==='علي').length,Math.ceil(pickedCount/2),'Round-robin first person');
+  assert.equal(shared.filter(r=>r.payload.assignedTo==='منى').length,Math.floor(pickedCount/2),'Round-robin second person');
+  assert.ok(shared.every(r=>r.payload.clientEntityId===uiClient),'Bulk client link');
+  // In the file: the other file of the same debtor and the civil ID warning.
+  await page.locator('.collection-card').filter({hasText:'W-3'}).getByRole('button',{name:'فتح الملف'}).click();
+  await page.getByRole('tab',{name:/^الأطراف والمطالبة/}).click();await page.getByText('ملفات أخرى لنفس الخصم (1)').waitFor();
+  await page.getByText(/لا يطابق رقم التحقق/).waitFor();assert.equal(await page.getByLabel('الموكل في سجل الموكلين',{exact:true}).inputValue(),uiClient);
+  await screen('collection-debtor');await page.keyboard.press('Escape');
   await page.locator('.collection-card').filter({hasText:'W-2'}).getByRole('button',{name:'فتح الملف'}).click();
   await page.getByRole('tab',{name:/^الأطراف والمطالبة/}).click();await page.getByRole('button',{name:'ربط بقضية',exact:true}).click();
   await page.getByRole('dialog').getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-1');await page.getByRole('button',{name:'ربط الملف بالقضية',exact:true}).click();
@@ -133,7 +161,10 @@ try{
   await switchTo('القضايا');await page.getByRole('button',{name:/^سجل الأحكام/}).first().click();await page.getByRole('button',{name:'فتح القضية TEST-1',exact:true}).click();
   await page.getByText('ملف W-2').waitFor();await page.getByRole('button',{name:'ربط ملف تحصيل'}).click();await page.getByLabel(/ابحث برقم الملف/).fill('W-3');
   await page.locator('.linked-files li').filter({hasText:'W-3'}).getByRole('button',{name:'ربط بهذه القضية'}).click();await page.getByText('ملف W-3').waitFor();await screen('case-collections');
-  recs=await dept('collections','records_page');assert.equal(byCode('W-3').caseId,'ui-case-1','Linked from the case');await page.keyboard.press('Escape');}
+  recs=await dept('collections','records_page');assert.equal(byCode('W-3').caseId,'ui-case-1','Linked from the case');await page.keyboard.press('Escape');
+  // The client profile lists its collection files.
+  await page.getByRole('button',{name:/^الموكلون/}).first().click();await page.locator('.client-card').filter({hasText:'شركة تجريبية للاتصالات'}).click();
+  await page.getByText(/^ملفات التحصيل \(\d+\)$/).waitFor();await page.locator('.entity-collections').getByText('ملف W-2').waitFor();await screen('client-collections');await page.keyboard.press('Escape');}
  for(const name of ['السكرتارية','التحصيل','المحاسبة','الموارد البشرية','الأرشيف']){
   await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero').waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
  }
@@ -155,7 +186,7 @@ try{
  await otherTab.evaluate(token=>localStorage.setItem('mawatheeq.local-session.v1',token),login.token);
  await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),6);
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();assert.equal(await staff.getByLabel('كلمة المرور الحالية',{exact:true}).inputValue(),'','Cross-tab session replacement clears old password inputs');
- assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, precise ledger/void, employee/leave forms, archive custody/receipt/label/scan/stocktake, import with automatic and manual case links from both sides, department-only readonly access, responsive layouts and no runtime errors.');
+ assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, precise ledger/void, employee/leave forms, archive custody/receipt/label/scan/stocktake, import with automatic and manual case links from both sides, civil ID/debtor/phone checks, select-all round-robin distribution with client links, client profile collection files, department-only readonly access, responsive layouts and no runtime errors.');
 }catch(e){await screen('failure');console.error(await page.locator('body').innerText());throw e}
 finally{
  await browser.close();await db.close();

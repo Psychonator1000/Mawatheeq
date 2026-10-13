@@ -90,3 +90,31 @@ export function mapCollectionSheet(header: unknown[], rows: unknown[][], dateOf:
     return [{ row: n + 2, payload, paid: money(at(r, c.paid)), expenses: money(at(r, c.expenses)), autoNumber: /^\d{6,12}$/.test(auto) ? auto : '' }];
   });
 }
+
+const CIVIL_WEIGHTS = [2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
+/**
+ * Whether a Kuwaiti civil ID is well formed: 12 digits, a century digit (2 = 1900s, 3 = 2000s), a real birth date
+ * (YYMMDD) and the check digit. Used to flag likely typos for review; it never blocks saving.
+ */
+export function civilIdValid(id: string): boolean {
+  if (!/^[23]\d{11}$/.test(id)) return false;
+  const year = (id[0] === '2' ? 1900 : 2000) + Number(id.slice(1, 3)), month = Number(id.slice(3, 5)), day = Number(id.slice(5, 7));
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return false;
+  const check = 11 - CIVIL_WEIGHTS.reduce((sum, w, i) => sum + w * Number(id[i]), 0) % 11;
+  return check < 10 && check === Number(id[11]);
+}
+
+/** The key that groups files of the same debtor: the civil ID when known, otherwise the defendant's name. */
+export function debtorKey(p: { civilId?: string; defendant?: string }): string {
+  const civil = String(p.civilId || '').replace(/\D/g, '');
+  if (civil) return 'id:' + civil;
+  const name = String(p.defendant || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  return name ? 'name:' + name : '';
+}
+
+/** Splits files across staff in turn (first file to the first name, and so on), keeping the list order. */
+export function roundRobin<T>(items: T[], staff: string[]): [T, string][] {
+  const names = staff.map(s => s.trim()).filter(Boolean);
+  return names.length ? items.map((item, i) => [item, names[i % names.length]]) : [];
+}

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { emptyCase } from '../lib/domain.ts';
 import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT } from '../lib/case-browse.ts';
 import { suggestions, weekdayOf, CLIENT_ROLES } from '../lib/choices.ts';
-import { fils, kwd, position, dueStatements, FILE_STATUSES, mapCollectionSheet, ALL_FILE_STATUSES } from '../lib/collections.ts';
+import { fils, kwd, position, dueStatements, FILE_STATUSES, mapCollectionSheet, ALL_FILE_STATUSES, civilIdValid, debtorKey, roundRobin } from '../lib/collections.ts';
 import { custodyOf, isOverdue, nextNumber, code39, code39Ready, code39Svg, daysBetween, MOVEMENTS } from '../lib/archive.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
 
@@ -173,4 +173,14 @@ assert.ok(FILE_STATUSES.includes('تحصيل ودي'));
   assert.match(b.payload.notes, /الحالة في الملف: حالة أخرى/, 'Unknown statuses are kept in the notes'); assert.equal(b.payload.address2, 'المنطقة الأولى، قطعة 3');
   assert.throws(() => mapCollectionSheet(['x'], [], String), /رقم الملف/);
 }
-console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money, import mapping and follow-up helpers.');
+{
+  // Civil ID check digit and birth date (synthetic numbers), debtor grouping and round-robin distribution.
+  for (const id of ['290010100126', '305022800348', '285123100775']) assert.ok(civilIdValid(id), id);
+  for (const id of ['290010100127', '29001010012', '190010100126', '290013100126', '2900101001a6', '']) assert.equal(civilIdValid(id), false, id);
+  assert.equal(debtorKey({ civilId: '2900 1010 0126', defendant: 'A' }), 'id:290010100126');
+  assert.equal(debtorKey({ civilId: '', defendant: '  Synthetic   Person ' }), 'name:synthetic person');
+  assert.equal(debtorKey({}), '');
+  assert.deepEqual(roundRobin(['a', 'b', 'c', 'd', 'e'], ['x', ' y ', '']), [['a', 'x'], ['b', 'y'], ['c', 'x'], ['d', 'y'], ['e', 'x']]);
+  assert.deepEqual(roundRobin(['a'], []), []);
+}
+console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money, import mapping, civil ID check, debtor grouping, round-robin and follow-up helpers.');

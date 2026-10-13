@@ -13,14 +13,15 @@ import { clampPage } from '@/lib/pagination';
 import { Field, Empty, api } from './shared';
 import { CONTACT_ROLES, suggestions } from '@/lib/choices';
 import PageNavigation from './page-navigation';
+import EntityCollections from './departments/entity-collections';
 
 type EditorProps = {
   entity: ClientEntity; clients: ClientEntity[]; records?: CaseRecord[]; canMerge?: boolean; readOnly?: boolean;
   onClose: () => void; onSaved: (client: ClientEntity) => void; onMerged?: () => Promise<void>;
   onOpenCase?: (record: CaseRecord) => void; onShowCases?: (id: string) => void; onAddCase?: (id: string) => void;
-  nav?: WindowNav; onNavigate?: (dir: 'prev' | 'next') => void; enter?: Enter;
+  nav?: WindowNav; onNavigate?: (dir: 'prev' | 'next') => void; enter?: Enter; canCollections?: boolean;
 };
-export function ClientEditor({ entity, clients, records = [], canMerge, readOnly=false, onClose, onSaved, onMerged, onOpenCase, onShowCases, onAddCase, nav, onNavigate, enter }: EditorProps) {
+export function ClientEditor({ entity, clients, records = [], canMerge, canCollections=false, readOnly=false, onClose, onSaved, onMerged, onOpenCase, onShowCases, onAddCase, nav, onNavigate, enter }: EditorProps) {
   const contactRoles = useMemo(() => suggestions(clients.flatMap(c => c.contacts), p => p.role, CONTACT_ROLES, 100), [clients]);
   const [draft, setDraft] = useState(entity), [busy, setBusy] = useState(false), [targetId, setTargetId] = useState('');
   const [casePage, setCasePage] = useState(1);
@@ -81,6 +82,7 @@ export function ClientEditor({ entity, clients, records = [], canMerge, readOnly
         <b>{c.code || 'بدون كود'}</b><span>{c.opponent || 'خصم غير مسجل'}<small>{c.clientContactName && `المتابع: ${c.clientContactName} · `}{c.casePerson && `الشخص المعني: ${c.casePerson} · `}{formatDate(c.date)}{c.archived ? ' · مؤرشف' : ''}</small></span><ArrowUpLeft size={16}/>
       </button>)}</div>
       {linked.length > 10 && <PageNavigation page={page} pages={pages} total={linked.length} onChange={setCasePage}/>}
+      {canCollections && <EntityCollections entityId={entity.id}/>}
     </>}
     {canMerge && entity.revision && <details className="client-merge"><summary><Merge size={16}/> دمج ملف مكرر مع موكل آخر</summary>
       <p className="subtitle">استخدم الدمج فقط بعد التأكد من أن الملفين يمثلان الجهة نفسها. تُنقل القضايا والأشخاص والصيغ السابقة، وتبقى بيانات القضايا الأصلية محفوظة.</p>
@@ -102,8 +104,8 @@ export function ClientSelect({ clients, value, onChange, onCreate }: { clients: 
   </div>;
 }
 
-export default function ClientDirectory({ clients, records, canMerge, readOnly=false, onSaved, onReload, onShowCases, onAddCase, onOpenCase }: {
-  clients: ClientEntity[]; records: CaseRecord[]; canMerge: boolean; readOnly?: boolean; onSaved: (c: ClientEntity) => void;
+export default function ClientDirectory({ clients, records, canMerge, canCollections=false, readOnly=false, onSaved, onReload, onShowCases, onAddCase, onOpenCase }: {
+  clients: ClientEntity[]; records: CaseRecord[]; canMerge: boolean; canCollections?: boolean; readOnly?: boolean; onSaved: (c: ClientEntity) => void;
   onReload: () => Promise<void>; onShowCases: (id: string) => void; onAddCase?: (id: string) => void; onOpenCase: (c: CaseRecord) => void;
 }) {
   const [search, setSearch] = useState(''), [reviewOnly, setReviewOnly] = useState(false), [page, setPage] = useState(1), [selected, setSelectedRaw] = useState<ClientEntity | null>(null);
@@ -116,7 +118,7 @@ export default function ClientDirectory({ clients, records, canMerge, readOnly=f
       <label className="checkbox-line"><input type="checkbox" checked={reviewOnly} onChange={e=>{setReviewOnly(e.target.checked);setPage(1);}}/> يحتاج مراجعة ({clients.filter(c=>c.needsReview||c.contacts.some(p=>p.needsReview)).length})</label></div>
       <div className="client-grid">{filtered.slice((current-1)*18,current*18).map(c=><button className="client-card" data-tilt key={c.id} onClick={()=>setSelected(c)}><div className="client-card-top"><Building2 size={22}/><span className="tag">{counts.get(c.id)||0} قضية</span></div><h3>{c.name}</h3><p>{CLIENT_KINDS[c.kind]} · {CLIENT_SECTORS[c.sector]}</p><div className="client-card-people"><Users size={15}/>{c.contacts.length ? `${c.contacts.length} شخص مرتبط` : 'الأشخاص غير مسجلين'}</div>{(c.needsReview||c.contacts.some(p=>p.needsReview))&&<span className="tag amber">يحتاج مراجعة</span>}</button>)}</div>
       {!filtered.length&&<Empty/>}<PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></section>
-    {selected&&<ClientEditor nav={nav} onNavigate={step} enter={enter} readOnly={readOnly} key={selected.id} entity={selected} clients={clients} records={records} canMerge={canMerge} onClose={()=>setSelected(null)} onSaved={onSaved} onMerged={onReload} onOpenCase={onOpenCase} onShowCases={onShowCases} onAddCase={onAddCase}/>}
+    {selected&&<ClientEditor nav={nav} onNavigate={step} enter={enter} readOnly={readOnly} key={selected.id} entity={selected} clients={clients} records={records} canMerge={canMerge} canCollections={canCollections} onClose={()=>setSelected(null)} onSaved={onSaved} onMerged={onReload} onOpenCase={onOpenCase} onShowCases={onShowCases} onAddCase={onAddCase}/>}
   </>;
 }
 

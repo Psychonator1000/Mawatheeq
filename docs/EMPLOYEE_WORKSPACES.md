@@ -52,6 +52,13 @@ Cases grow out of collection files, so a file can be opened before any lawsuit. 
 
 «استيراد Excel» (owner or all-case editors) reads a collections spreadsheet and previews it. Files already here (same number) are skipped. «سبب المديونية» becomes the customer's number at the client company, «الرقم الآلى - ملف» is kept as written, and a numeric court number links the matching case automatically. The team's statuses (سوفت، تحت الرفع، سكت، حفظ) are kept, other statuses go to the notes, and paid and spent totals become opening entries marked as imported.
 
+### Client profiles, checks and distribution (13 October 2026)
+
+- **Client link**: a file may link the client profile it is filed for (`clientEntityId`, tab «الأطراف والمطالبة» → «ملف الموكل», or in bulk). The name written on the papers stays as entered, and linking keeps a valid source review. The client window lists the client's collection files («ملفات التحصيل») to staff with the collections section, within their case scope. Only staff with all-case scope get the list of client profiles (`client_options`). Migration `20261013190000_collection_clients.sql`.
+- **Data checks** («تدقيق البيانات»): files without a phone number, civil IDs failing the Kuwaiti check digit or birth date (flagged «رقم مدني؟», never blocked), debtors with more than one file, and files not linked to a client profile. A file shows the other files of the same debtor (same civil ID, or name when there is none).
+- **Distribution**: «تحديد كل النتائج» picks every file in the current results. Several names separated by «،» share the picked files in turn; status and client link can be set in the same step.
+- **Amounts in words** follow the counted-noun rules on the papers: ثلاثة دنانير، أحد عشر ديناراً، مائة دينار، مائتا دينار، ألفا دينار، ثلاثة آلاف دينار، وستمائة وعشرة فلوس.
+
 
 ### Batch printing
 

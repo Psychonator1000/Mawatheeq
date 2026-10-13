@@ -25,7 +25,8 @@ await db.exec("insert into public.mawatheeq_members(user_id,role) select id,case
 const rpc = async (name, args) => (await db.query(`select public.${name}(${args.map((_, i) => '$' + (i + 1)).join(',')}) result`, args)).rows[0].result;
 const login = u => rpc('mawatheeq_local_login', [u, 'Fixture-password-123']);
 await db.exec('set role anon');
-const owner = await login('owner'), amal = await login('amal'), badr = await login('badr'), salem = await login('salem');
+const owner = await login('owner');
+for (const name of ['amal', 'badr', 'salem']) await login(name);
 const chat = (s, action, data = {}) => rpc('mawatheeq_chat_request', [s.token, action, JSON.stringify(data)]);
 const local = (s, action, data = {}) => rpc('mawatheeq_local_request', [s.token, action, JSON.stringify(data)]);
 const office = (s, action, data = {}) => rpc('mawatheeq_office_request', [s.token, action, JSON.stringify(data)]);
@@ -51,7 +52,7 @@ assert.equal(d1.id, d2.id, 'A pair has one direct conversation');
 await assert.rejects(() => chat(amal2, 'start_direct', { userId: id('amal') }), /زميلاً/);
 
 // References: only records the sender may open are kept; each reader sees whether it opens for them.
-const sent = await chat(badr2, 'send', { conversationId: d1.id, clientId: uuid(), body: 'راجعي القضية', refs: [{ type: 'case', id: 'chat-case-b', label: 'CH-B' }, { type: 'case', id: 'chat-case-a', label: 'CH-A' }, { type: 'user', id: id('amal'), label: 'أمل' }, { type: 'bogus', id: 'x', label: 'x' }] });
+await chat(badr2, 'send', { conversationId: d1.id, clientId: uuid(), body: 'راجعي القضية', refs: [{ type: 'case', id: 'chat-case-b', label: 'CH-B' }, { type: 'case', id: 'chat-case-a', label: 'CH-A' }, { type: 'user', id: id('amal'), label: 'أمل' }, { type: 'bogus', id: 'x', label: 'x' }] });
 let msgs = await chat(amal2, 'messages', { conversationId: d1.id });
 const m = msgs.at(-1); assert.equal(m.body, 'راجعي القضية'); assert.equal(m.refs.length, 3, 'Unknown reference types are dropped');
 assert.deepEqual(m.refs.map(r => [r.label, r.ok]), [['CH-B', false], ['CH-A', true], ['أمل', true]], 'A case the reader may not see does not open for her');

@@ -36,7 +36,7 @@ const dept=(workspace,record)=>rpc('mawatheeq_department_request',[login.token,'
 await dept('accounting',{id:'66666666-6666-4666-8666-666666666661',workspace:'accounting',kind:'entry',payload:{type:'fee',date:iso(-3),currency:'KWD',amount:'10',reference:'FEE-1',party:'موكل تجريبي',notes:''}});
 await dept('accounting',{id:'66666666-6666-4666-8666-666666666662',workspace:'accounting',kind:'entry',payload:{type:'receipt',date:iso(-1),currency:'KWD',amount:'2.5',reference:'RC-1',party:'موكل تجريبي',notes:'دفعة أولى'}});
 await dept('hr',{id:'77777777-7777-4777-8777-777777777771',workspace:'hr',kind:'employee',payload:{employeeNumber:'E-1',name:'موظف تجريبي',title:'محامٍ',department:'القضايا',phone:'',startDate:'2025-01-01',status:'active',notes:''}});
-const clerk=await office('create_member',{username:'tools_clerk',password:'Temporary-password-123',permissions:{sections:['cases','work'],caseScope:'selected',caseIds:['tools-case-0'],canEdit:true,canExport:false}});
+await office('create_member',{username:'tools_clerk',password:'Temporary-password-123',permissions:{sections:['cases','work'],caseScope:'selected',caseIds:['tools-case-0'],canEdit:true,canExport:false}});
 const clerkSession=await rpc('mawatheeq_local_login',['tools_clerk','Temporary-password-123']);
 await rpc('mawatheeq_local_request',[clerkSession.token,'password',JSON.stringify({currentPassword:'Temporary-password-123',newPassword:'Fixture-password-123'})]);
 await rpc('mawatheeq_comment_request',[clerkSession.token,'post',JSON.stringify({targetType:'case',targetId:'tools-case-0',body:'هل استلمنا صيغة الحكم؟',mentions:[me]})]);
@@ -378,7 +378,7 @@ await motion.route('https://office-fixture.supabase.co/**',async route=>{const r
 await motion.goto(base);
 await motion.getByLabel('اسم المستخدم',{exact:true}).fill('tools_owner');await motion.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');
 await motion.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
-for(const round of [1,2]){
+for(let round=1;round<=2;round++){
  await motion.getByRole('button',{name:'فتح القضايا'}).click();
  await motion.getByRole('heading',{name:'كل قضاياك، في مكان واحد'}).waitFor();
  await motion.getByRole('button',{name:'حساب tools_owner'}).click();await motion.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();

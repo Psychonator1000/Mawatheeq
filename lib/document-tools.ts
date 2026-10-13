@@ -1,6 +1,6 @@
 import {formatDate} from './domain';
 import {getWordTemplate} from './client-api';
-import {blankDocument, type DocumentData, type Evidence} from './document-fields';
+import type {DocumentData, Evidence} from './document-fields';
 export {blankDocument,extractFields,extractionSummary,normalizeDigits,amountInWords} from './document-fields';
 export type {DocumentData,Evidence} from './document-fields';
 export {extractPDF} from './pdf-reader';

@@ -206,6 +206,27 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  await assert.rejects(()=>dept(office.token,'collections','link_case',{id:f1.id,revision:f1.revision-1,caseId:''}),e=>e.code==='40001');
  const back=await dept(office.token,'collections','link_case',{id:f1.id,revision:f1.revision,caseId:''});assert.equal(back.caseId,'');
  await denied(()=>dept(legal.token,'collections','case_files',{caseId:visible.id}),'The legal section alone does not open collection files');}
+// Collection files linked to client profiles: picker for all-case staff, entity files within scope, review kept.
+{const office=await member('collect_clients',{...grants(['collections']),caseScope:'all'});
+ await db.exec('reset role');
+ const ent=(await db.query("insert into mawatheeq_private.client_entities(payload) values('{\"name\":\"Synthetic Telecom\",\"kind\":\"organization\",\"aliases\":[],\"contacts\":[]}') returning id::text")).rows[0].id;
+ const gone=(await db.query("insert into mawatheeq_private.client_entities(payload,merged_into) values('{\"name\":\"Merged Telecom\"}',$1) returning id::text",[ent])).rows[0].id;
+ await db.exec('set role anon');
+ assert.ok((await dept(office.token,'collections','client_options')).some(e=>e.id===ent&&e.name==='Synthetic Telecom'));
+ assert.ok(!(await dept(office.token,'collections','client_options')).some(e=>e.id===gone),'Merged entities are not offered');
+ await denied(()=>dept(collector.token,'collections','client_options'),'The client list needs all-case scope');
+ await denied(()=>dept(legal.token,'collections','client_options'),'The client list needs the collections section');
+ let cf=await save(office,'collections',record('collections','file',{...collectionData,code:'CLI-1',evidence:[],sourceReference:'Synthetic order CLI-1',notes:''},visible.id));
+ await assert.rejects(()=>save(office,'collections',{...cf,payload:{...cf.payload,clientEntityId:gone}}),/موكلاً محفوظاً/,'Only a current client entity can be linked');
+ await assert.rejects(()=>save(office,'collections',{...cf,payload:{...cf.payload,clientEntityId:'not-an-id'}}),/موكلاً محفوظاً/);
+ cf=await action(office,'collections','review_file',cf,{caseRevision:(await local(owner.token,'cases_page')).find(c=>c.id===visible.id).revision,attested:true});
+ cf=await save(office,'collections',{...cf,payload:{...cf.payload,clientEntityId:ent}});
+ assert.equal(cf.payload.clientEntityId,ent);assert.ok(cf.review&&cf.review.recordRevision===cf.revision,'Linking the client keeps the source review');
+ const hiddenClientFile=await save(owner,'collections',record('collections','file',{...collectionData,code:'CLI-2',evidence:[],sourceReference:'',notes:'',clientEntityId:ent},hidden.id));
+ assert.deepEqual((await dept(office.token,'collections','entity_files',{entityId:ent})).map(r=>r.id).sort(),[cf.id,hiddenClientFile.id].sort());
+ assert.deepEqual((await dept(collector.token,'collections','entity_files',{entityId:ent})).map(r=>r.id),[cf.id],'Entity files follow case scope');
+ await denied(()=>dept(legal.token,'collections','entity_files',{entityId:ent}),'Entity files need the collections section');
+ cf=await save(office,'collections',{...cf,payload:{...cf.payload,clientEntityId:''}});assert.equal(cf.payload.clientEntityId,'');}
 // Archive: locations, files, immutable custody movements, requests; case scope, state machine and the archive section.
 {const archivist=await member('archivist',{...grants(['archive']),caseScope:'all',jobRole:'archivist'});
  const scoped=await member('archive_scoped',grants(['archive']));
@@ -267,4 +288,4 @@ const backup=await dept(owner.token,'collections','backup_page',{kind:'outputs'}
 assert.equal(backup.length,2);assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
 await office(owner.token,'set_member_access',{id:collector.user.id,revision:collector.member.permissions?.revision||1,permissions:grants([])});
 await assert.rejects(()=>dept(collector.token,'collections','records_page'),e=>e.code==='28000','Grant changes revoke active department sessions');
-await db.close();console.log('Passed departments: collection files without a case (all-case scope, unique numbers, imported statuses, linking both ways with statements/payments following, search, many files per case), archive (section, scope, custody state machine, immutable movements cancelled latest first, unique numbers, locations, requests), collection statements/payments (scope, validation, immutable payments with audited cancellation, file review untouched), scoped summaries, shared secretary work, collection review/output snapshots, stale edits, exact money/void trail, HR isolation/leave overlap, account-linked HR files, private grants and session revocation.');
+await db.close();console.log('Passed departments: collection files linked to client profiles (picker scope, merged entities refused, review kept, entity files by scope), collection files without a case (all-case scope, unique numbers, imported statuses, linking both ways with statements/payments following, search, many files per case), archive (section, scope, custody state machine, immutable movements cancelled latest first, unique numbers, locations, requests), collection statements/payments (scope, validation, immutable payments with audited cancellation, file review untouched), scoped summaries, shared secretary work, collection review/output snapshots, stale edits, exact money/void trail, HR isolation/leave overlap, account-linked HR files, private grants and session revocation.');
