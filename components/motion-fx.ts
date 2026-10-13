@@ -165,7 +165,8 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
         const t = n.phase - k * .12; if (t <= 0) continue;
         ctx.strokeStyle = rgba(mix(palette.brand, palette.glow1, n.hue * .7), .22 * (1 - t)); ctx.beginPath(); ctx.ellipse(n.x, n.y, n.r * easeOut(t), n.r * easeOut(t) * .45, 0, 0, Math.PI * 2); ctx.stroke();
       }
-      for (const wv of waves) { const age = (now - wv.born) / 1100; ctx.strokeStyle = rgba(palette.brand, .3 * (1 - age)); ctx.beginPath(); ctx.ellipse(wv.x, wv.y, 220 * easeOut(age), 100 * easeOut(age), 0, 0, Math.PI * 2); ctx.stroke(); }
+      // A press can be stamped after this frame began, so its age starts at zero rather than below.
+      for (const wv of waves) { const age = Math.min(1, Math.max(0, (now - wv.born) / 1100)); ctx.strokeStyle = rgba(palette.brand, .3 * (1 - age)); ctx.beginPath(); ctx.ellipse(wv.x, wv.y, 220 * easeOut(age), 100 * easeOut(age), 0, 0, Math.PI * 2); ctx.stroke(); }
     } else if (kind === 'yorha') {
       // YoRHa: hollow squares drifting up, a slow scan line, and a targeting reticle at the pointer.
       const ink: RGB = [78, 75, 66];
@@ -204,7 +205,12 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
       if (near) { ctx.fillStyle = rgba(palette.brand, .5); ctx.beginPath(); ctx.arc(px, py, 2.2, 0, Math.PI * 2); ctx.fill(); }
     }
   };
-  const loop = (now: number) => { frame = 0; const s = state(); if (document.hidden || s.motion === 'off' || s.reduced) return; draw(now, true); frame = requestAnimationFrame(loop); };
+  const loop = (now: number) => {
+    frame = 0; const s = state(); if (document.hidden || s.motion === 'off' || s.reduced) return;
+    // One bad frame must never stop the backdrop: skip it and carry on.
+    try { draw(now, true); } catch { /* drawn again next frame */ }
+    frame = requestAnimationFrame(loop);
+  };
   const sync = () => {
     palette = readPalette(); const s = state();
     if (!CANVAS_KINDS.includes(s.mode)) { cancelAnimationFrame(frame); frame = 0; canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height); return; }
