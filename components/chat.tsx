@@ -1,6 +1,7 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowRight,Bell,Eye,FileText,LogOut,MessageCircle,Paperclip,Pencil,Plus,Search,Send,Trash2,UserPlus,Users,X} from 'lucide-react';
+import {createPortal} from 'react-dom';
+import {ArrowRight,Bell,Download,Eye,FileText,LogOut,MessageCircle,Paperclip,Pencil,Plus,Search,Send,Trash2,UserPlus,Users,X} from 'lucide-react';
 import {toast} from 'sonner';
 import {chatRequest,fileRequest} from '@/lib/local-auth';
 import {backend} from '@/lib/supabase-client';
@@ -74,6 +75,7 @@ function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:Cha
 
 function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeave:()=>void;conv:ChatConversation;me:string;onBack:()=>void;onInfo:()=>void;onChanged:()=>void;onDirect:(id:string)=>void}){
  const [messages,setMessages]=useState<ChatMessage[]>([]),[loaded,setLoaded]=useState(false),[text,setText]=useState(''),[refs,setRefs]=useState<ChatRef[]>([]);
+ const [viewing,setViewing]=useState<{file:NonNullable<ChatMessage['file']>;url:string}|null>(null);
  const [editing,setEditing]=useState<ChatMessage|null>(null),[busy,setBusy]=useState(false),[file,setFile]=useState<File|null>(null);
  const [trigger,setTrigger]=useState<ReturnType<typeof typedTrigger>>(null),[suggest,setSuggest]=useState<ChatRef[]>([]),[pick,setPick]=useState(0);
  const scroller=useRef<HTMLDivElement>(null),input=useRef<HTMLTextAreaElement>(null),fileInput=useRef<HTMLInputElement>(null),lastId=useRef(0);
@@ -114,10 +116,13 @@ function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeav
  function onPaste(e:React.ClipboardEvent<HTMLTextAreaElement>){const f=[...e.clipboardData.files].find(x=>x.type.startsWith('image/'));if(!f||readOnly)return;e.preventDefault();
   const stamp=new Date().toISOString().slice(0,19).replace('T',' ').replace(/:/g,'-'),name=!f.name||/^image\.\w+$/i.test(f.name)?`لقطة شاشة ${stamp}.${f.type.split('/')[1]||'png'}`:f.name;attach(new File([f],name,{type:f.type}))}
  function attach(f:File|undefined){if(!f)return;if(f.size>MAX_FILE){toast.error('حجم الملف يجب ألا يتجاوز 5 ميغابايت.');return}if(!FILE_TYPES.includes(f.type)){toast.error('الصور وPDF وWord وExcel فقط.');return}setFile(f)}
- async function download(f:NonNullable<ChatMessage['file']>){try{const r=await fileRequest('chat_download',{path:f.path,name:f.name});window.open(r.url,'_blank','noopener')}catch(e){toast.error((e as Error).message)}}
+ // Images and PDFs open in a viewer in the middle of the app; other files download.
+ async function download(f:NonNullable<ChatMessage['file']>){try{if(viewable(f)){setViewing({file:f,url:''});const r=await fileRequest('chat_download',{path:f.path,name:f.name});setViewing(v=>v?.file.path===f.path?{file:f,url:r.url||''}:v);return}
+  const r=await fileRequest('chat_download',{path:f.path,name:f.name,download:true});window.open(r.url,'_blank','noopener')}catch(e){setViewing(null);toast.error((e as Error).message)}}
  function openRef(r:ChatRef){if(!r.ok){toast.info('لا تملك صلاحية فتح هذا السجل.');return}if(r.type==='user'){if(r.id!==me)onDirect(r.id);return}requestOpen({type:r.type,id:r.id});onLeave()}
  const name=conversationName(conv,me);
  return <>
+  {viewing&&<FileViewer file={viewing.file} url={viewing.url} onClose={()=>setViewing(null)}/>}
   <header className="chat-head"><button type="button" className="icon-btn" onClick={onBack} aria-label="رجوع إلى المحادثات"><ArrowRight size={18}/></button>
    <div className="chat-title"><b>{name}</b><small>{conv.kind==='group'?conv.members.map(m=>m.name).join('، '):readOnly?'مراجعة المسؤول':'محادثة خاصة'}</small></div>
    {conv.kind==='group'&&conv.isMember&&<button type="button" className="icon-btn" onClick={onInfo} aria-label="إدارة المجموعة"><UserPlus size={18}/></button>}</header>
@@ -144,6 +149,21 @@ function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeav
    </div>
   </form>}
  </>;
+}
+
+const viewable=(f:NonNullable<ChatMessage['file']>)=>/^image\//.test(f.mime)||f.mime==='application/pdf'||/\.(png|jpe?g|gif|webp|pdf)$/i.test(f.name);
+
+/** A chat image or PDF shown over the app, centred, instead of a new browser tab. Esc or a click outside closes it. */
+function FileViewer({file,url,onClose}:{file:NonNullable<ChatMessage['file']>;url:string;onClose:()=>void}){
+ useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();onClose()}};window.addEventListener('keydown',k,true);return()=>window.removeEventListener('keydown',k,true)},[onClose]);
+ const pdf=file.mime==='application/pdf'||/\.pdf$/i.test(file.name);
+ async function save(){try{const r=await fileRequest('chat_download',{path:file.path,name:file.name,download:true});if(r.url)window.location.assign(r.url)}catch(e){toast.error((e as Error).message)}}
+ return createPortal(<div className="chat-viewer" role="dialog" aria-modal="true" aria-label={file.name} dir="rtl" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
+  <div className="chat-viewer-bar"><b title={file.name}>{file.name}</b><small>{fileSize(file.size)}</small>
+   <button type="button" className="icon-btn" onClick={()=>void save()} aria-label="تنزيل الملف" title="تنزيل"><Download size={18}/></button>
+   <button type="button" className="icon-btn" onClick={onClose} aria-label="إغلاق" title="إغلاق (Esc)"><X size={18}/></button></div>
+  {!url?<p className="chat-viewer-wait" role="status">جارٍ التحميل…</p>:pdf?<iframe className="chat-viewer-pdf" src={url} title={file.name}/>:<img src={url} alt={file.name} onClick={e=>e.stopPropagation()}/>}
+ </div>,document.body);
 }
 
 function NewChat({group,onCancel,onCreated}:{group:boolean;onCancel:()=>void;onCreated:(id:string)=>void}){

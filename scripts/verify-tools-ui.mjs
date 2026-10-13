@@ -439,7 +439,11 @@ await lively.close();
  await cpanel.getByLabel('نص الرسالة').evaluate(el=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array([137,80,78,71])],'image.png',{type:'image/png'}));el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))});
  await cpanel.locator('.chat-editing').getByText(/لقطة شاشة .*\.png/).waitFor();await cpanel.locator('.chat-editing').getByRole('button',{name:'إزالة'}).click();
  await panel.locator('.chat-msg:not(.mine) .chat-file').getByText('memo.pdf').waitFor({timeout:15000});
- const [popup]=await Promise.all([page.waitForEvent('popup'),panel.locator('.chat-file').getByText('memo.pdf').click()]);await popup.close();
+ // Images and PDFs open centred inside the app, not in a new tab; Esc closes the viewer and leaves the chat open.
+ let popups=0;page.on('popup',()=>popups++);await panel.locator('.chat-file').getByText('memo.pdf').click();
+ const viewer=page.getByRole('dialog',{name:'memo.pdf'});await viewer.locator('iframe.chat-viewer-pdf').waitFor();
+ const vb=await viewer.boundingBox(),vp=page.viewportSize();assert.ok(vb&&Math.abs(vb.x+vb.width/2-vp.width/2)<4,'The viewer is centred on the screen');assert.equal(popups,0,'No new tab opens');
+ await page.keyboard.press('Escape');await viewer.waitFor({state:'detached'});assert.ok(await panel.isVisible(),'Esc closes only the viewer');
  // Edit within 15 minutes; groups with a system note.
  await panel.locator('.chat-msg.mine').first().hover();await panel.getByRole('button',{name:'تعديل الرسالة'}).first().click();
  await panel.getByLabel('نص الرسالة').fill('مرحبا، راجع #TOOL-0 اليوم من فضلك');await panel.getByRole('button',{name:'حفظ التعديل'}).click();
