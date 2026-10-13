@@ -169,7 +169,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
       for (const wv of waves) { const age = Math.min(1, Math.max(0, (now - wv.born) / 1100)); ctx.strokeStyle = rgba(palette.brand, .3 * (1 - age)); ctx.beginPath(); ctx.ellipse(wv.x, wv.y, 220 * easeOut(age), 100 * easeOut(age), 0, 0, Math.PI * 2); ctx.stroke(); }
     } else if (kind === 'yorha') {
       // YoRHa: hollow squares drifting up, a slow scan line, and a targeting reticle at the pointer.
-      const ink: RGB = [78, 75, 66];
+      const ink = palette.brand;
       ctx.lineWidth = 1;
       for (const n of nodes) {
         ctx.save(); ctx.translate(n.x, n.y); ctx.rotate(Math.sin(n.phase * .5) * .25);

@@ -16,7 +16,7 @@ export const THEMES = {
   copper: { label: 'نحاسي', swatch: '#8a4a24', accent: '#ecd0a3' },
   graphite: { label: 'رمادي فحمي', swatch: '#33393f', accent: '#c4ccd4' },
   phantom: { label: 'لصوص القلوب', swatch: '#e60012', accent: '#0d0d0d', hidden: true },
-  yorha: { label: 'يورها (NieR)', swatch: '#cdc8b0', accent: '#4e4b42', hidden: true },
+  yorha: { label: 'يورها (NieR)', swatch: '#dedac7', accent: '#4e4b42', hidden: true },
 } as const;
 type ThemeInfo = { label: string; swatch: string; accent: string; hidden?: boolean };
 /** Hidden themes appear in the list only after their secret word is typed (an easter egg). */
@@ -72,8 +72,8 @@ export function resolveTheme(a: Pick<Appearance, 'theme' | 'mode'>): { theme: st
   const dark = a.mode === 'dark' || (a.mode === 'auto' && DARK_NATIVE.has(a.theme));
   if (a.theme === 'noir') return { theme: dark ? 'noir' : 'ivory', dark, mode: '' };
   if (a.theme === 'phantom') return { theme: dark ? 'phantom' : 'phantom-light', dark, mode: '' };
-  // YoRHa has one look: parchment and ink, as in the game's menus.
-  if (a.theme === 'yorha') return { theme: 'yorha', dark: false, mode: '' };
+  // YoRHa: parchment and ink in light mode, near-black and parchment in dark mode.
+  if (a.theme === 'yorha') return { theme: dark ? 'yorha-dark' : 'yorha', dark, mode: '' };
   return { theme: a.theme, dark, mode: dark ? 'dark' : '' };
 }
 const key = 'mawatheeq.appearance.v1';
@@ -125,10 +125,11 @@ function applyThemedCursor(theme: string, dark: boolean) {
     const blush = '<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe3ea"/><stop offset="1" stop-color="#e2678f"/></linearGradient></defs>';
     const flower = '<g transform="translate(23 23)" fill="#f9bfd2" stroke="#d9466f" stroke-width=".8">' + [0, 72, 144, 216, 288].map(r => `<ellipse cy="-3.6" rx="2.6" ry="3.6" transform="rotate(${r})"/>`).join('') + '<circle r="1.4" fill="#d9466f"/></g>';
     normal = shape('url(#p)', dark ? '#2a0f18' : '#7a1f42', blush); hand = shape('url(#p)', dark ? '#2a0f18' : '#7a1f42', blush).replace('</svg>', flower + '</svg>');
-  } else if (theme === 'yorha') {
+  } else if (theme.startsWith('yorha')) {
     // YoRHa: a parchment arrow outlined in ink; over clickable things it becomes solid ink with a square marker.
-    const mark = '<rect x="21" y="21" width="7" height="7" fill="#4e4b42" stroke="#dad4bb" stroke-width="1.2"/>';
-    normal = shape('#dad4bb', '#4e4b42'); hand = shape('#4e4b42', '#dad4bb').replace('</svg>', mark + '</svg>');
+    const [paper, ink] = theme === 'yorha-dark' ? ['#1d1c19', '#d6d0b5'] : ['#e9e5d5', '#4e4b42'];
+    const mark = `<rect x="21" y="21" width="7" height="7" fill="${ink}" stroke="${paper}" stroke-width="1.2"/>`;
+    normal = shape(paper, ink); hand = shape(ink, paper).replace('</svg>', mark + '</svg>');
   } else if (theme === 'sky') {
     // Aero: a glossy blue arrow with a white rim.
     const gloss = '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfeaff"/><stop offset=".45" stop-color="#3fb3f0"/><stop offset="1" stop-color="#0d6fb0"/></linearGradient><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9ffd0"/><stop offset=".5" stop-color="#8fdc5a"/><stop offset="1" stop-color="#3f9a24"/></linearGradient></defs>';

@@ -40,7 +40,7 @@ export default function MotionLayer() {
   let scrollDir='down',lastScrollAt=0;
   let lastTop=scrollY,lastTime=performance.now(),velocity=0,velFrame=0,settle=0,lastTick=0;
   const fx:FxState={mode:'',motion:'',reduced:false,pointerX:-999,pointerY:-999,pointerOn:false,scrollV:0};
-  const state=()=>{const backdropMode=root.dataset.backdrop||'constellation',theme=root.dataset.theme;fx.mode=backdropMode==='none'?'none':theme==='sky'?'bubbles':theme==='rose'?'sakura':theme?.startsWith('phantom')?'phantom':theme==='yorha'?'yorha':backdropMode==='petals'?'sakura':backdropMode;fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches||root.dataset.perf==='lite';fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
+  const state=()=>{const backdropMode=root.dataset.backdrop||'constellation',theme=root.dataset.theme;fx.mode=backdropMode==='none'?'none':theme==='sky'?'bubbles':theme==='rose'?'sakura':theme?.startsWith('phantom')?'phantom':theme?.startsWith('yorha')?'yorha':backdropMode==='petals'?'sakura':backdropMode;fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches||root.dataset.perf==='lite';fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
   const backdrop=ambient.current?createBackdrop(ambient.current,state):null,bursts=burst.current?createBursts(burst.current):null;
   const unset=(...names:string[])=>(el:HTMLElement)=>names.forEach(n=>el.style.removeProperty(n));
   const trackTilt=tracker(unset('--tilt-x','--tilt-y')),trackMagnet=tracker(unset('--mag-x','--mag-y')),trackGlow=tracker(unset('--gx','--gy'));

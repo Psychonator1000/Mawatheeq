@@ -188,9 +188,9 @@
 @media (prefers-reduced-motion:reduce){:root[data-theme=rose] :is(.cursor-halo,.panel-head h2::before,.department-toolbar>h2::before,.section-title::before){animation:none}}
 
 /* ───────── YoRHa (hidden: type “nier”): NieR: Automata's parchment menus, ink lines and square marks ───────── */
-:root[data-theme=yorha]{color-scheme:light;--brand:#4e4b42;--brand-deep:#3a3832;--brand-ink:#dad4bb;--brand-hover:#5f5b50;--brand-ring:#7a7566;--glow-1:#b4ae96;--glow-2:#8f8a78;--glow-3:#4e4b42;--background:#cdc8b0;--card:#dad5bd;--popover:#dad5bd;--foreground:#4e4b42;--muted-foreground:#77735f;--border:#4e4b4255;--primary-foreground:#dad4bb;--accent-foreground:#3a3832;--radius:0px;
+:root[data-theme=yorha]{color-scheme:light;--brand:#4e4b42;--brand-deep:#3a3832;--brand-ink:#dad4bb;--brand-hover:#5f5b50;--brand-ring:#7a7566;--glow-1:#b4ae96;--glow-2:#8f8a78;--glow-3:#4e4b42;--background:#dedac7;--card:#e9e5d5;--popover:#e9e5d5;--foreground:#4e4b42;--muted-foreground:#77735f;--border:#4e4b4255;--primary-foreground:#dad4bb;--accent-foreground:#3a3832;--radius:0px;
  --sidebar:#45433b;--sidebar-foreground:#dad4bb;--sidebar-primary:#dad4bb;--sidebar-primary-foreground:#45433b;--sidebar-accent:#dad4bb;--sidebar-accent-foreground:#45433b;--sidebar-border:#dad4bb33;--sidebar-ring:#dad4bb}
-:root[data-theme=yorha] body{background:repeating-linear-gradient(0deg,transparent 0 3px,#4e4b420b 3px 4px),radial-gradient(#4e4b4214 1px,transparent 1.2px) 0 0/22px 22px,#cdc8b0;background-attachment:fixed;color:#4e4b42}
+:root[data-theme=yorha] body{background:repeating-linear-gradient(0deg,transparent 0 3px,#4e4b420b 3px 4px),radial-gradient(#4e4b4214 1px,transparent 1.2px) 0 0/22px 22px,#dedac7;background-attachment:fixed;color:#4e4b42}
 :root[data-theme=yorha] ::selection{background:#4e4b42;color:#dad4bb}
 :root[data-theme=yorha]:not([data-backdrop=none]) .ambient-canvas{display:block}
 :root[data-theme=yorha] .ambient-blob{opacity:.12;background:radial-gradient(circle,#8f8a78 0,transparent 60%)!important}
@@ -199,17 +199,17 @@
 :root[data-theme=yorha] :is(.page-head h1,.panel-head h2,.department-hero h1)::before{content:'';display:inline-block;width:.42em;height:.42em;background:#4e4b42;margin-inline-end:.45em;vertical-align:.12em}
 :root[data-theme=yorha] .eyebrow{color:#77735f;letter-spacing:.3em}
 /* Panels: flat parchment boards with a thin ink frame and a soft offset shadow */
-:root[data-theme=yorha] :is(.panel,.office-card,.client-card,.person-card,.collection-card,.device-card,.department-metrics>div,.att-stat,.my-work-item,.quick-card,.ledger-summary>div,.stat,.workspace-option){background:#dad5bd!important;border:1px solid #4e4b4266!important;border-radius:0!important;box-shadow:5px 5px 0 #4e4b421f!important}
+:root[data-theme=yorha] :is(.panel,.office-card,.client-card,.person-card,.collection-card,.device-card,.department-metrics>div,.att-stat,.my-work-item,.quick-card,.ledger-summary>div,.stat,.workspace-option){background:#e9e5d5!important;border:1px solid #4e4b4266!important;border-radius:0!important;box-shadow:5px 5px 0 #4e4b421f!important}
 :root[data-theme=yorha] .panel-head{border-bottom:1px solid #4e4b4240}
 :root[data-theme=yorha] .stat.featured{background:#4e4b42!important;color:#dad4bb}
 :root[data-theme=yorha] .stat.featured :is(.stat-label,.stat-foot,.stat-num,.stat-label svg){color:#dad4bb}
 :root[data-theme=yorha] .stat-num{color:#4e4b42}
-:root[data-theme=yorha] .department-hero{background:#dad5bd!important;border:1px solid #4e4b4266!important;border-radius:0!important;box-shadow:none}
+:root[data-theme=yorha] .department-hero{background:#e9e5d5!important;border:1px solid #4e4b4266!important;border-radius:0!important;box-shadow:none}
 /* Buttons and menus: outlined slabs that fill with ink, like the pause menu's highlight bar */
 :root[data-theme=yorha] .btn{border-radius:0;border:1px solid #4e4b42;background:transparent;color:#4e4b42;box-shadow:none}
 :root[data-theme=yorha] .btn:hover:not(:disabled),:root[data-theme=yorha] .btn.primary{background:#4e4b42;color:#dad4bb;border-color:#4e4b42}
 :root[data-theme=yorha] .btn.primary:hover:not(:disabled){background:#3a3832}
-:root[data-theme=yorha] :is(input,select,textarea,.date-picker-button){border-radius:0!important;background:#e2ddc6!important;border-color:#4e4b4266!important;color:#4e4b42}
+:root[data-theme=yorha] :is(input,select,textarea,.date-picker-button){border-radius:0!important;background:#f0ede1!important;border-color:#4e4b4266!important;color:#4e4b42}
 :root[data-theme=yorha] [data-slot=sidebar-container]{background:#45433b;border-inline-start:1px solid #dad4bb33}
 :root[data-theme=yorha] :is(.brand-en,.brand-ar,.nav-section,.sidebar-foot){color:#dad4bbcc}
 :root[data-theme=yorha] .nav-button{color:#dad4bb!important;border-radius:0!important;position:relative}
@@ -220,14 +220,35 @@
 :root[data-theme=yorha] .tag{border-radius:0;background:#4e4b421a;color:#4e4b42;border:1px solid #4e4b4240}
 :root[data-theme=yorha] :is(.case-table,.office-table) th{background:#4e4b42!important;color:#dad4bb!important}
 :root[data-theme=yorha] :is(.case-table,.office-table) tbody tr:hover{background:#4e4b4214!important}
-:root[data-theme=yorha] [role=dialog]{border-radius:0!important;background:#dad5bd!important;border:1px solid #4e4b42!important}
+:root[data-theme=yorha] [role=dialog]{border-radius:0!important;background:#e9e5d5!important;border:1px solid #4e4b42!important}
 :root[data-theme=yorha] :is(.chip,.status-chips .chip){border-radius:0}
 :root[data-theme=yorha] :is(.chip.on,[role=tab][data-state=active]){background:#4e4b42!important;color:#dad4bb!important;border-color:#4e4b42!important}
-:root[data-theme=yorha] .topbar{background:#d4cfb7e6;border-bottom:1px solid #4e4b4240}
+:root[data-theme=yorha] .topbar{background:#e2decce6;border-bottom:1px solid #4e4b4240}
+/* YoRHa dark (the light/dark setting): warm near-black panels with parchment ink, as on the game's dark screens.
+   The rules above are copied for it with parchment and ink swapped (scripts/build-themes.mjs); these set its palette. */
+:root[data-theme=yorha-dark]{color-scheme:dark;--brand:#d6d0b5;--brand-deep:#b9b399;--brand-ink:#1d1c19;--brand-hover:#e6e1ca;--brand-ring:#8f8a78;--glow-1:#5f5b50;--glow-2:#8f8a78;--glow-3:#d6d0b5;--background:#1d1c19;--card:#262520;--popover:#262520;--foreground:#d6d0b5;--muted-foreground:#a29d88;--border:#d6d0b540;--primary-foreground:#1d1c19;--accent-foreground:#e6e1ca;--radius:0px;
+ --sidebar:#2b2a24;--sidebar-foreground:#d6d0b5;--sidebar-primary:#d6d0b5;--sidebar-primary-foreground:#2b2a24;--sidebar-accent:#d6d0b5;--sidebar-accent-foreground:#2b2a24;--sidebar-border:#d6d0b526;--sidebar-ring:#d6d0b5}
+:root[data-theme=yorha-dark] body{background:repeating-linear-gradient(0deg,transparent 0 3px,#d6d0b508 3px 4px),radial-gradient(#d6d0b514 1px,transparent 1.2px) 0 0/22px 22px,#1d1c19;background-attachment:fixed;color:#d6d0b5}
+:root[data-theme=yorha-dark] [data-slot=sidebar-container]{background:#2b2a24}
+:root[data-theme=yorha-dark] .nav-button{color:#d6d0b5!important}
+:root[data-theme=yorha-dark] .nav-button[data-active=true]{background:#d6d0b5!important;color:#2b2a24!important}
+:root[data-theme=yorha-dark] .nav-button[data-active=true]::before{background:#d6d0b5}
+:root[data-theme=yorha-dark] :is(.brand-en,.brand-ar,.nav-section,.sidebar-foot){color:#d6d0b5cc}
+:root[data-theme=yorha-dark] .topbar{background:#1d1c19e6;border-bottom:1px solid #d6d0b533}
+:root[data-theme=yorha-dark] :is(.panel,.office-card,.client-card,.person-card,.collection-card,.device-card,.department-metrics>div,.att-stat,.my-work-item,.quick-card,.ledger-summary>div,.stat,.workspace-option,.department-hero,.office-summary,[role=dialog]){background:#262520!important;border-color:#d6d0b54d!important;box-shadow:5px 5px 0 #00000059!important}
+:root[data-theme=yorha-dark] .stat.featured{background:#d6d0b5!important;color:#1d1c19}
+:root[data-theme=yorha-dark] .case-category.active{background:#d6d0b5!important;border-color:#d6d0b5!important;color:#1d1c19!important}
+:root[data-theme=yorha-dark] .case-category.active *{color:#1d1c19!important}
+:root[data-theme=yorha] .case-category.active{background:#4e4b42!important;border-color:#4e4b42!important;color:#e9e5d5!important}
+:root[data-theme=yorha] .case-category.active *{color:#e9e5d5!important}
+:root[data-theme=yorha-dark] .stat.featured :is(.stat-label,.stat-foot,.stat-num,.stat-label svg){color:#1d1c19}
+:root[data-theme=yorha-dark] :is(.stat-label,.stat-foot,.panel-note,.subtitle,small){color:#a29d88}
+:root[data-theme=yorha-dark] :is(input,select,textarea,.date-picker-button){background:#1d1c19!important;border-color:#d6d0b54d!important;color:#d6d0b5}
+:root[data-theme=yorha-dark] :is(.case-table,.office-table) th{background:#d6d0b5!important;color:#1d1c19!important}
 /* Boot screen when the theme is switched on */
-.yorha-splash{position:fixed;inset:0;z-index:96;pointer-events:none;background:#cdc8b0;display:grid;place-items:center;animation:yorha-out 2.6s steps(1) forwards,yorha-flicker 2.6s linear}
+.yorha-splash{position:fixed;inset:0;z-index:96;pointer-events:none;background:#dedac7;display:grid;place-items:center;animation:yorha-out 2.6s steps(1) forwards,yorha-flicker 2.6s linear}
 .yorha-splash::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,#4e4b4214 3px 4px);pointer-events:none}
-.yorha-boot{font-family:ui-monospace,Menlo,Consolas,monospace;color:#4e4b42;min-width:min(520px,86vw);border:1px solid #4e4b42;padding:22px 26px;background:#dad5bd;box-shadow:6px 6px 0 #4e4b4233}
+.yorha-boot{font-family:ui-monospace,Menlo,Consolas,monospace;color:#4e4b42;min-width:min(520px,86vw);border:1px solid #4e4b42;padding:22px 26px;background:#e9e5d5;box-shadow:6px 6px 0 #4e4b4233}
 .yorha-boot small{display:block;letter-spacing:.3em;font-size:11px;border-bottom:1px solid #4e4b4266;padding-bottom:8px;margin-bottom:12px}
 .yorha-boot p{margin:6px 0;font-size:14px;overflow:hidden;white-space:nowrap;width:0;animation:yorha-type .6s steps(28) forwards}
 .yorha-boot p:nth-of-type(2){animation-delay:.6s}
