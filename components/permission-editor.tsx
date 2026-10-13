@@ -43,16 +43,16 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
  const [details,setDetails]=useState(role==='custom'||(!role&&value.revision>0));
  // A lawyer's name typed for a new account ticks the matching name on the cases.
  useEffect(()=>{if(byLawyer&&!names.length&&suggested)onChange({...value,lawyerNames:[suggested]})},[suggested]);// eslint-disable-line react-hooks/exhaustive-deps
- /** A person may do several jobs. «مدير» and «مخصص» stand alone; the other jobs combine, and their suggested pages add up. */
+ /** A person may do several jobs (a manager may also be a lawyer). «مخصص» stands alone; the other jobs combine, and their suggested pages add up. */
  function pickRole(id:JobRole){
-  const alone=(r:JobRole)=>r==='manager'||r==='custom';
+  const alone=(r:JobRole)=>r==='custom';
   const next=alone(id)?(roles.includes(id)?[]:[id]):roles.includes(id)?roles.filter(r=>r!==id):[...roles.filter(r=>!alone(r)),id];
   if(!next.length){setLawyerMode(false);onChange({...value,jobRole:undefined,jobRoles:[]});return}
   if(next[0]==='custom'){setLawyerMode(false);setDetails(true);onChange({...value,jobRole:'custom',jobRoles:['custom']});return}
   const preset=combinedPreset(next)!;
   const lawyer=next.includes('lawyer')&&preset.caseScope==='selected';setLawyerMode(lawyer);
   // «مدير» also receives every admin power the person granting it holds; other roles keep the powers already chosen.
-  onChange({...value,...preset,caseIds:[],jobRole:next[0],jobRoles:next,lawyerNames:lawyer?(names.length?names:suggested?[suggested]:[]):[],...(next[0]==='manager'?{adminPowers:[...grantable]}:{})});
+  onChange({...value,...preset,caseIds:[],jobRole:next[0],jobRoles:next,lawyerNames:lawyer?(names.length?names:suggested?[suggested]:[]):[],...(id==='manager'&&next.includes('manager')?{adminPowers:[...grantable]}:{})});
  }
  function lawyerPicker(){return <div className="permission-lawyers">
     {!names.length&&<p className="notice" role="alert">{suggestLawyer?`لم يُعثر على «${suggestLawyer}» في خانة «المحامي» بالقضايا. `:''}اختر اسمه كما هو مكتوب في القضايا من القائمة أدناه.</p>}
@@ -64,10 +64,10 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
  const scopeText=value.caseScope==='all'?`جميع القضايا (${records.length})`:byLawyer?`قضاياه فقط (${ownCount})`:value.caseIds.length?`${value.caseIds.length} قضية مختارة`:'بلا قضايا';
  return <div className="permission-editor">
   <fieldset className="permission-group role-step"><legend>الدور الوظيفي</legend>
-   <p className="subtitle">اختر عملاً واحداً أو أكثر؛ تُجمع الصفحات المقترحة لكل الأعمال المختارة. «مدير» و«مخصص» يُختاران وحدهما.</p>
+   <p className="subtitle">اختر عملاً واحداً أو أكثر (مثلاً مدير ومحامٍ)؛ تُجمع الصفحات المقترحة لكل الأعمال المختارة. «مخصص» يُختار وحده.</p>
    <div className="role-grid" role="group" aria-label="الدور الوظيفي">{JOB_ROLES.map(r=>{const Icon=ROLE_ICONS[r.id];const on=roles.includes(r.id);return <button type="button" role="checkbox" aria-checked={on} key={r.id} className={'role-card'+(on?' on':'')} onClick={()=>pickRole(r.id)} title={r.hint}><Icon size={18} aria-hidden/><b>{r.label}</b>{on&&roles.length>1&&roles[0]===r.id&&<small>الأساسي</small>}</button>})}</div>
    {roles.map(id=><p className="role-hint" key={id}><b>{JOB_ROLES.find(r=>r.id===id)?.label.split(' — ')[0]}:</b> {JOB_ROLES.find(r=>r.id===id)?.hint}</p>)}
-   {role==='manager'&&<p className="subtitle">يحصل المدير أيضاً على صلاحيات الإدارة المحددة أدناه. حساب المالك لا يُعدَّل من أي حساب آخر.</p>}
+   {roles.includes('manager')&&<p className="subtitle">يحصل المدير أيضاً على صلاحيات الإدارة المحددة أدناه. حساب المالك لا يُعدَّل من أي حساب آخر.</p>}
    <div className="role-summary" role="status">
     <span><small>الصفحات</small><b>{opens.length?opens.map(p=>WORKSPACE_LABELS[p]).join('، '):'لا شيء بعد'}</b></span>
     <span><small>القضايا</small><b>{scopeText}</b></span>

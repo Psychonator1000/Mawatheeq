@@ -55,7 +55,7 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
    const preset=combinedPreset(newRoles),main=newRoles[0];
    const names=access.lawyerNames?.length?access.lawyerNames:[matchLawyer(editing.displayName||'',lawyerLabels(records).map(([l])=>l))].filter(Boolean) as string[];
    const byName=newRoles.includes('lawyer')&&preset?.caseScope==='selected';
-   const next:Permissions=applyPreset&&preset?{...access,...preset,caseIds:[],jobRole:main,jobRoles:newRoles,lawyerNames:byName?names:[],...(main==='manager'?{adminPowers:[...powers]}:{})}:{...access,jobRole:main,jobRoles:newRoles};
+   const next:Permissions=applyPreset&&preset?{...access,...preset,caseIds:[],jobRole:main,jobRoles:newRoles,lawyerNames:byName?names:[],...(newRoles.includes('manager')?{adminPowers:[...powers]}:{})}:{...access,jobRole:main,jobRoles:newRoles};
    await officeRequest('set_member_access',{id:editing.id,permissions:next,revision:access.revision});
   }
   else if(editing)await officeRequest('set_member_access',{id:editing.id,permissions:access,revision:access.revision});
@@ -104,7 +104,7 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
 function RolePicker({value,onChange,apply,onApply,current}:{value:JobRole[];onChange:(r:JobRole[])=>void;apply:boolean;onApply:(v:boolean)=>void;current:Permissions}) {
  const preset=combinedPreset(value);
  const pages=(p:Pick<Permissions,'sections'>)=>workspacesOf(p).map(w=>WORKSPACE_LABELS[w]).join('، ')||'بلا صفحات';
- const alone=(r:JobRole)=>r==='manager'||r==='custom';
+ const alone=(r:JobRole)=>r==='custom';
  const toggle=(id:JobRole)=>onChange(alone(id)?(value.includes(id)?[]:[id]):value.includes(id)?value.filter(r=>r!==id):[...value.filter(r=>!alone(r)),id]);
  return <div className="permission-group role-step">
   <p className="subtitle">اختر عملاً واحداً أو أكثر. الأول المختار هو العمل الأساسي.</p>
