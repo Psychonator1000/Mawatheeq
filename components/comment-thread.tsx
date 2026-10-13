@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {ChevronDown,ChevronLeft,Lock,MessageSquare,Reply,Send,Trash2,Users} from 'lucide-react';
 import {toast} from 'sonner';
 import {chatRequest,commentRequest} from '@/lib/local-auth';
@@ -61,7 +61,9 @@ function Composer({target,parentId,parentPrivate=false,people,label,onPosted,onC
  const [text,setText]=useState(''),[refs,setRefs]=useState<ChatRef[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[onlyMentioned,setOnlyMentioned]=useState(false);
  const mentioned=refs.filter(r=>r.type==='user'&&text.includes(refToken(r)));
  const [trigger,setTrigger]=useState<ReturnType<typeof typedTrigger>>(null),[pick,setPick]=useState(0);
- const input=useRef<HTMLTextAreaElement>(null);
+ const input=useRef<HTMLTextAreaElement>(null),caret=useRef<number|null>(null);
+ // After a suggestion is inserted the caret goes right after it, before the next keystroke can land elsewhere.
+ useLayoutEffect(()=>{const el=input.current,at=caret.current;if(el&&at!=null){caret.current=null;el.focus();el.setSelectionRange(at,at)}},[text]);
  useEffect(()=>{if(parentId)input.current?.focus()},[parentId]);
  const [found,setFound]=useState<ChatRef[]>([]);
  // «@» offers colleagues who can see this record; «#» and «!» search cases, clients and tasks as chat does.
@@ -73,7 +75,7 @@ function Composer({target,parentId,parentPrivate=false,people,label,onPosted,onC
  function onType(v:string){setText(v);const next=typedTrigger(v,input.current?.selectionStart??v.length);if(next?.char!==trigger?.char){setFound([]);setPick(0)}setTrigger(next);setRefs(r=>r.filter(x=>v.includes(refToken(x))))}
  function choose(r:ChatRef){if(!trigger)return;const token=refToken(r)+' ',next=text.slice(0,trigger.start)+token+text.slice(trigger.start+1+trigger.query.length);
   setText(next);setRefs(x=>[...x.filter(y=>!(y.type===r.type&&y.id===r.id&&y.label===r.label)),r]);setTrigger(null);
-  requestAnimationFrame(()=>{const el=input.current;if(el){const at=trigger.start+token.length;el.focus();el.setSelectionRange(at,at)}})}
+  caret.current=trigger.start+token.length}
  function onKey(e:React.KeyboardEvent<HTMLTextAreaElement>){
   if(suggest.length&&trigger){if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();setPick(p=>(p+(e.key==='ArrowDown'?1:suggest.length-1))%suggest.length);return}if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();choose(suggest[pick]);return}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();setTrigger(null);return}}
   if(e.key==='Escape'&&onCancel){e.preventDefault();e.stopPropagation();onCancel()}
