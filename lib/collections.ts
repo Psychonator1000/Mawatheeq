@@ -54,3 +54,39 @@ export function dueStatements<T extends { payload: StatementData; archived?: boo
   return rows.filter(r => !r.archived && r.payload.status !== 'done' && r.payload.reviewDate && r.payload.reviewDate <= today);
 }
 
+/** One file read from a collections spreadsheet, with the totals it carried (posted later as opening balances). */
+export type ImportedFile = { row: number; payload: Record<string, string>; paid: string; expenses: string; autoNumber: string };
+const EMPTY_MARKER = /^(?:فارغ|null|بدون|0|-)?$/i;
+/**
+ * Maps the export's columns to a collection file. «سبب المديونية» holds the customer's number at the client company;
+ * «الرقم الآلى - ملف» is kept as written and also returned when it is a court file number, to link the case.
+ */
+export function mapCollectionSheet(header: unknown[], rows: unknown[][], dateOf: (v: unknown) => string): ImportedFile[] {
+  const h = header.map(x => String(x ?? '').replace(/\s+/g, ' ').trim());
+  const col = (...names: string[]) => names.map(n => h.indexOf(n)).find(i => i >= 0) ?? -1;
+  const at = (r: unknown[], i: number) => (i < 0 || r[i] == null ? '' : String(r[i]).replace(/\s+/g, ' ').trim());
+  const c = {
+    client: col('إسم الموكل', 'اسم الموكل'), file: col('رقم الملف'), defendant: col('إسم الخصم', 'اسم الخصم'), status: col('حالة الملف'),
+    customer: col('سبب المديونية'), amount: col('قيمة المطالبة'), contract: col('رقم العقد'), auto: col('الرقم الآلى - ملف', 'الرقم الآلي - ملف'),
+    tag1: col('ترقيم 1'), tag2: col('ترقيم 2'), tag3: col('ترقيم 3'), tag4: col('ترقيم 4'), arrival: col('تاريخ الورود'), civil: col('رقم الهوية - الخصم'),
+    address: col('عنوان المنزل - الخصم'), notes1: col('ملاحظات 1'), notes2: col('ملاحظات 2'), nationality: col('الجنسية - الخصم'), job: col('الوظيفة - الخصم'),
+    area: col('المنطقة'), block: col('القطعة'), paid: col('إجمالى المدفوعات', 'إجمالي المدفوعات'), expenses: col('إجمالى المصروفات', 'إجمالي المصروفات'),
+  };
+  if (c.file < 0 || c.defendant < 0) throw new Error('لم يُعثر على عمودي «رقم الملف» و«إسم الخصم» في الملف.');
+  const money = (v: string) => { const n = Number(v.replace(/,/g, '')); return Number.isFinite(n) && n > 0 ? (Math.round(n * 1000) / 1000).toFixed(3).replace(/\.?0+$/, '') : ''; };
+  const keep = (v: string) => (EMPTY_MARKER.test(v) ? '' : v);
+  return rows.flatMap((r, n) => {
+    const code = at(r, c.file); if (!code) return [];
+    const auto = at(r, c.auto), status = at(r, c.status);
+    const payload: Record<string, string> = {
+      code, company: at(r, c.client), defendant: at(r, c.defendant), civilId: keep(at(r, c.civil)), nationality: keep(at(r, c.nationality)),
+      address: keep(at(r, c.address)), address2: [at(r, c.area) && 'المنطقة ' + at(r, c.area), at(r, c.block) && 'قطعة ' + at(r, c.block)].filter(Boolean).join('، '),
+      amount: money(at(r, c.amount)), account: keep(at(r, c.contract)), customerId: keep(at(r, c.customer)), fileAutoNumber: keep(auto),
+      fileStatus: ALL_FILE_STATUSES.includes(status) ? status : '', arrivalDate: dateOf(r[c.arrival]), defendantJob: keep(at(r, c.job)),
+      tag1: keep(at(r, c.tag1)), tag2: keep(at(r, c.tag2)), tag3: keep(at(r, c.tag3)), tag4: keep(at(r, c.tag4)),
+      notes: [keep(at(r, c.notes1)), keep(at(r, c.notes2)), status && !ALL_FILE_STATUSES.includes(status) ? 'الحالة في الملف: ' + status : ''].filter(Boolean).join(' · '),
+      sourceReference: 'ملف ' + code,
+    };
+    return [{ row: n + 2, payload, paid: money(at(r, c.paid)), expenses: money(at(r, c.expenses)), autoNumber: /^\d{6,12}$/.test(auto) ? auto : '' }];
+  });
+}
