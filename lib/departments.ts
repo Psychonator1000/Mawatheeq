@@ -19,7 +19,7 @@ export type DepartmentRecord<P=Record<string,string>> = {
 };
 /** Follow-up fields of a collection file (status, assignee, instalments, tags, closing). Changing only these keeps the source review. */
 export const FOLLOW_FIELDS = ['fileStatus','executionStatus','arrivalDate','debtReason','installment','installmentsTotal','delayDays','overdueAmount','batchNumber','accountingContract','orderFee','promissoryAmount','promissoryDate','promissoryDueDate','tag1','tag2','tag3','tag4','requiredAction','closedDate','closedReason','assignedTo'] as const;
-export type CollectionData = DocumentData & {sourceReference:string;notes:string} & Partial<Record<typeof FOLLOW_FIELDS[number],string>>;
+export type CollectionData = DocumentData & {sourceReference:string;notes:string} & Partial<Record<typeof FOLLOW_FIELDS[number]|'customerId'|'fileAutoNumber'|'defendantJob',string>>;
 export type CollectionRecord = DepartmentRecord<CollectionData>;
 export type LedgerData = {type:'fee'|'receipt'|'expense';date:string;currency:Currency;amount:string;amountMinor:string;reference:string;party:string;notes:string;status:'posted'|'void';voidReason:string};
 export type LedgerRecord = DepartmentRecord<LedgerData>;

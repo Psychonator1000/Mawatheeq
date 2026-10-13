@@ -46,6 +46,12 @@ Modelled on the office's previous collections system. A file window has tabs: ب
 
 Statements and payments are department records linked to their file (`subject_id`) and carry its case, so the collections section and case scope govern them exactly like the file. Migration `20261013120000_collection_followup.sql`.
 
+### Files before cases and links (13 October 2026)
+
+Cases grow out of collection files, so a file can be opened before any lawsuit. A file without a case needs all-case scope; several files may lead to one case; file numbers are unique. «ربط بقضية» in the file (tab «الأطراف والمطالبة») attaches or changes its case, and «ربط ملف تحصيل» in the case window attaches a file found by its number, defendant, civil ID or customer number. Statements and payments move with the file. Only staff with the collections section see a case's files.
+
+«استيراد ملفات» reads an export and previews it. Files already here (same number) are skipped. «سبب المديونية» becomes the customer's number at the client company, «الرقم الآلى - ملف» is kept as written, and a numeric court number links the matching case automatically. The previous statuses (سوفت، تحت الرفع، سكت، حفظ) are kept, and paid and spent totals become opening entries marked as carried over. Migration `20261013180000_collection_cases.sql`.
+
 ### Batch printing
 
 The «طباعة جماعية» view in التحصيل, also shown in the secretary workspace, lists files that are reviewed and complete for the chosen paper. Filter by search or hearing dates, tick files (or «تحديد كل الجاهز»), choose bundle, claim or both, and download one Word file per paper type. Each paper is generated through the same server `generate` action as a single paper, so revision checks, export permission and immutable output snapshots apply to every file; failures are listed without stopping the batch. Each document is its own section with page numbers restarting at 1. A secretary needs the التحصيل section and export permission; the section alone grants no case narrative, client profile or other department data.

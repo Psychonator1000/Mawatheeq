@@ -354,6 +354,10 @@
 :root[data-theme=noir] .stocktake-list{border:1px solid #2e2b25}
 :root[data-theme=noir] .stocktake-list .checkbox-line.on{background:#1b1916}
 :root[data-theme=noir] .stocktake-list small{color:#c2b9a8}
+:root[data-theme=noir] .linked-files li{border:1px solid #2e2b25;background:#141210}
+:root[data-theme=noir] .linked-files li span{color:#d1cbbe}
+:root[data-theme=noir] .linked-files li small{color:#c2b9a8}
+:root[data-theme=noir] .case-link p small{color:#c2b9a8}
 :root[data-theme=noir] .ambient-spot{background:radial-gradient(circle,#11100eb0 0,#11100e00 68%)}
 :root[data-theme=noir][data-scrolled] .topbar{background:#171613e6}
 :root[data-theme=noir] .sidebar-rail{background:#11100e10}
@@ -730,6 +734,10 @@
 :root[data-theme=phantom] .stocktake-list{border:1px solid #212121}
 :root[data-theme=phantom] .stocktake-list .checkbox-line.on{background:#141414}
 :root[data-theme=phantom] .stocktake-list small{color:#cbcbcb}
+:root[data-theme=phantom] .linked-files li{border:1px solid #212121;background:#0f0f0f}
+:root[data-theme=phantom] .linked-files li span{color:#dadada}
+:root[data-theme=phantom] .linked-files li small{color:#cbcbcb}
+:root[data-theme=phantom] .case-link p small{color:#cbcbcb}
 :root[data-theme=phantom] .ambient-spot{background:radial-gradient(circle,#0d0d0db0 0,#0d0d0d00 68%)}
 :root[data-theme=phantom][data-scrolled] .topbar{background:#111111e6}
 :root[data-theme=phantom] .sidebar-rail{background:#0d0d0d10}
@@ -973,6 +981,7 @@
 :root[data-theme=ivory] .capacity-bar{background:#e8e5e1}
 :root[data-theme=ivory] .stocktake-list{border:1px solid #dddad6}
 :root[data-theme=ivory] .stocktake-list .checkbox-line.on{background:#fafafa}
+:root[data-theme=ivory] .linked-files li{border:1px solid #dddad6;background:#fefefd}
 :root[data-theme=ivory][data-scrolled] .topbar{background:#fcfcfbe6}
 :root[data-theme=ivory] .back-to-top{color:#fcfcfb}
 :root[data-theme=ivory] .choice{border:1px solid #dddad6;background:#fefefd}
@@ -1263,6 +1272,10 @@
 :root[data-theme=phantom-light] .stocktake-list{border:1px solid #faf9f9}
 :root[data-theme=phantom-light] .stocktake-list .checkbox-line.on{background:#fdfdfd}
 :root[data-theme=phantom-light] .stocktake-list small{color:#7b7773}
+:root[data-theme=phantom-light] .linked-files li{border:1px solid #faf9f9;background:#fffefe}
+:root[data-theme=phantom-light] .linked-files li span{color:#524d4a}
+:root[data-theme=phantom-light] .linked-files li small{color:#7b7773}
+:root[data-theme=phantom-light] .case-link p small{color:#7b7773}
 :root[data-theme=phantom-light][data-scrolled] .topbar{background:#fefefee6}
 :root[data-theme=phantom-light] .back-to-top{color:#fefefe}
 :root[data-theme=phantom-light] .choice{border:1px solid #faf9f9;background:#fffefe}
@@ -1830,6 +1843,10 @@
 :root[data-mode=dark] .stocktake-list{border:1px solid #2d2823}
 :root[data-mode=dark] .stocktake-list .checkbox-line.on{background:#171d19}
 :root[data-mode=dark] .stocktake-list small{color:#c3bbb3}
+:root[data-mode=dark] .linked-files li{border:1px solid #2d2823;background:#181613}
+:root[data-mode=dark] .linked-files li span{color:#d2cbc6}
+:root[data-mode=dark] .linked-files li small{color:#c3bbb3}
+:root[data-mode=dark] .case-link p small{color:#c3bbb3}
 :root[data-mode=dark] .ambient-blob.one{background:radial-gradient(circle,var(--glow-1) 0,transparent 66%)}
 :root[data-mode=dark] .ambient-blob.two{background:radial-gradient(circle,var(--glow-2) 0,transparent 66%)}
 :root[data-mode=dark] .ambient-blob.three{background:radial-gradient(circle,var(--glow-3) 0,transparent 66%)}
