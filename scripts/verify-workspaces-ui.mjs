@@ -65,7 +65,7 @@ try{
  // The hearing day follows the hearing date (a choice, not typed).
  await page.getByRole('combobox',{name:'يوم الجلسة'}).getByText(/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)$/).waitFor();
  await page.getByRole('tab',{name:/^الحافظة والمستندات/}).click();await click('إضافة مستند للحافظة');await field('وصف المستند 1','عقد تجريبي تمت مراجعته');await click('حفظ ملف التحصيل');
- await page.getByRole('heading',{name:'مراجعة المصدر',exact:true}).waitFor();await page.getByText('لا يمكن الإنشاء بعد: سجّل «مراجعة المصدر» أعلاه أولاً.').first().waitFor();assert.equal(await page.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).isDisabled(),true);
+ await page.getByRole('heading',{name:'مراجعة المصدر',exact:true}).waitFor();await page.getByText('لا يمكن الإنشاء بعد: سجّل «مراجعة المصدر» أعلاه أولاً.').first().waitFor();assert.ok(await page.getByRole('tab',{name:/^الأطراف والمطالبة/}).innerText().then(t=>/\d/.test(t)),'The parties tab counts the missing fields');assert.equal(await page.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).isDisabled(),true);
  await page.getByRole('checkbox',{name:'راجعت البيانات الحالية وطابقتها مع المصدر المسجل.',exact:true}).check();await click('تسجيل مراجعة المصدر');
  await page.getByText(/راجع ui_owner هذه النسخة/).waitFor();
  await downloadWord('إنشاء صحيفة Word','شركة اختبار التحصيل');await downloadWord('إنشاء حافظة Word','عقد تجريبي تمت مراجعته');

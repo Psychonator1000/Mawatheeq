@@ -10,6 +10,12 @@ const required={
  claim:['company','defendant','civilId','nationality','address','amount','amountWords','account','phone','orderNumber','court','rejectedDate','demandDate','statementDate','companyCivil','companyRegister','hearingCourt','hearingDate','hearingDay','hearingCircuit'],
  bundle:['company','defendant','hearingCourt','hearingDate','hearingCircuit','lawsuitNumber','lawsuitYear'],
 };
+/** Empty fields each document still needs, by field key: which documents ask for it. */
+export function missingFieldKeys(data:CollectionData):Map<string,('claim'|'bundle')[]> {
+ const out=new Map<string,('claim'|'bundle')[]>();
+ for(const kind of ['claim','bundle'] as const)for(const k of required[kind])if(!String(data[k]||'').trim())out.set(k,[...(out.get(k)||[]),kind]);
+ return out;
+}
 export function missingDocumentFields(data:CollectionData,kind:'claim'|'bundle') {
  const missing=required[kind].filter(k=>!String(data[k]||'').trim()).map(k=>COLLECTION_LABELS[k]||'المبلغ كتابة');
  if(kind==='bundle'&&!data.evidence.some(e=>e.included))missing.push('مستند واحد على الأقل بالحافظة');
