@@ -96,7 +96,7 @@ export const JOB_ROLES: { id: JobRole; label: string; hint: string; preset?: Omi
     preset: { sections: ['overview', 'cases', 'clients'], caseScope: 'all', caseIds: [], canEdit: true, canExport: false } },
   { id: 'driver', label: 'سائق', hint: 'توصيل الملفات والمراسلات: يرى المهام المسندة إليه فقط.',
     preset: { sections: ['work'], caseScope: 'selected', caseIds: [], canEdit: true, canExport: false } },
-  { id: 'officeBoy', label: 'عامل خدمات (أوفيس بوي)', hint: 'خدمات المكتب. حساب للمحادثة والحضور فقط، دون صفحات أو قضايا.',
+  { id: 'officeBoy', label: 'عامل خدمات', hint: 'ضيافة المكتب ونظافته وإيصال الأوراق داخله. حساب للمحادثة والحضور فقط، دون صفحات أو قضايا.',
     preset: { sections: [], caseScope: 'selected', caseIds: [], canEdit: false, canExport: false } },
   { id: 'developer', label: 'مطوّر برمجيات', hint: 'تطوير النظام وصيانته. لا يفتح بيانات المكتب إلا بما تمنحه يدوياً من صفحات أو صلاحيات إدارة.',
     preset: { sections: [], caseScope: 'selected', caseIds: [], canEdit: false, canExport: false } },
