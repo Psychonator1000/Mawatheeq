@@ -9,6 +9,9 @@ import {WORKSPACES,workspaceStorageKey,type WorkspaceId} from '@/lib/departments
 // Each workspace is downloaded when it is opened, so a person only loads the parts they use.
 const Workspace=lazy(()=>import('./workspace'));
 const DepartmentWorkspace=lazy(()=>import('./departments/department-shell'));
+// Shared window, table and form styles load up front (before the workspace styles and themes), whichever
+// workspace opens first; the workspaces themselves load on demand.
+import './office.css';
 import './workspaces.css';
 import BrandLogo from './brand-logo';
 const icons={legal:Scale,secretary:CalendarDays,collections:Files,accounting:Wallet,hr:UsersRound,archive:Archive};
