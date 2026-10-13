@@ -50,15 +50,23 @@ export const PAGE_PRESETS: [string, Section[]][] = [
 ];
 
 /** Job roles offered when adding staff. Picking one fills in the settings below it; the owner can still adjust them. */
-export type JobRole = 'manager' | 'lawyer' | 'secretary' | 'collections' | 'accountant' | 'hr' | 'archivist' | 'custom';
+export type JobRole = 'manager' | 'lawyer' | 'counsel' | 'secretary' | 'sessionsClerk' | 'executionClerk' | 'collections' | 'callCenter' | 'accountant' | 'hr' | 'archivist' | 'courier' | 'officeAdmin' | 'custom';
 export const JOB_ROLES: { id: JobRole; label: string; hint: string; preset?: Omit<Permissions, 'revision' | 'jobRole'> }[] = [
   { id: 'manager', label: 'مدير — صلاحيات كاملة', hint: 'كل الصفحات وكل القضايا، مع التعديل والتصدير وكل صلاحيات الإدارة التي تملكها.',
     preset: { sections: Object.keys(SECTIONS) as Section[], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
   { id: 'lawyer', label: 'محامٍ', hint: 'يرى القضايا المسجلة باسمه، مع الجلسات والمهام.',
     preset: { sections: ['overview', 'cases', 'clients', 'deadlines', 'work', 'conflicts'], caseScope: 'selected', caseIds: [], canEdit: true, canExport: false } },
+  { id: 'counsel', label: 'مستشار', hint: 'مستشار قانوني: كل القضايا والموكلين والتحليل والمستندات للدراسة والرأي، مع التعديل والتصدير.',
+    preset: { sections: ['overview', 'cases', 'clients', 'deadlines', 'analytics', 'verification', 'work', 'conflicts', 'documents'], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
   { id: 'secretary', label: 'سكرتارية', hint: 'السكرتارية والمواعيد والمهام لكل القضايا، مع الطباعة.',
     preset: { sections: ['secretary', 'overview', 'cases', 'deadlines', 'work'], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
+  { id: 'sessionsClerk', label: 'إداري جلسات', hint: 'الجلسات ومواعيدها وتوزيعها وطباعة رول الجلسات لكل القضايا.',
+    preset: { sections: ['overview', 'cases', 'deadlines', 'work', 'secretary'], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
+  { id: 'executionClerk', label: 'إداري تنفيذ', hint: 'متابعة التنفيذ والإعلانات والمواعيد والتحقق لكل القضايا.',
+    preset: { sections: ['overview', 'cases', 'deadlines', 'verification', 'work'], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
   { id: 'collections', label: 'تحصيل', hint: 'ملفات التحصيل وصحف الدعاوى لكل القضايا.',
+    preset: { sections: ['collections'], caseScope: 'all', caseIds: [], canEdit: true, canExport: false } },
+  { id: 'callCenter', label: 'كول سنتر', hint: 'اتصالات التحصيل وتسجيل الإفادات في ملفات التحصيل، دون تصدير.',
     preset: { sections: ['collections'], caseScope: 'all', caseIds: [], canEdit: true, canExport: false } },
   { id: 'accountant', label: 'محاسب', hint: 'المحاسبة والأتعاب والتقارير المالية.',
     preset: { sections: ['accounting'], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
@@ -66,6 +74,10 @@ export const JOB_ROLES: { id: JobRole; label: string; hint: string; preset?: Omi
     preset: { sections: ['hr'], caseScope: 'selected', caseIds: [], canEdit: true, canExport: false } },
   { id: 'archivist', label: 'أرشيف', hint: 'الملفات الورقية: أماكن حفظها وتسليمها واستلامها وطلباتها وجردها، لكل القضايا.',
     preset: { sections: ['archive'], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
+  { id: 'courier', label: 'خارجيات', hint: 'المهام الخارجية في المحاكم والجهات: الأجندة والمهام لكل القضايا، دون تصدير.',
+    preset: { sections: ['secretary', 'work'], caseScope: 'all', caseIds: [], canEdit: true, canExport: false } },
+  { id: 'officeAdmin', label: 'موظف إداري', hint: 'الأعمال الإدارية العامة: الأجندة والمهام والأرشيف، مع الطباعة.',
+    preset: { sections: ['secretary', 'work', 'archive'], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
   { id: 'custom', label: 'مخصص', hint: 'تختار الصفحات والقضايا والعمليات بنفسك.' },
 ];
 export function jobRoleLabel(role?: JobRole) { return JOB_ROLES.find(r => r.id === role)?.label.split(' — ')[0] || ''; }

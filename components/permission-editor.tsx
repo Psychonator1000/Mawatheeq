@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
-import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,Archive,SlidersHorizontal,ChevronDown,type LucideIcon} from 'lucide-react';
+import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,Archive,BookOpenCheck,Gavel,ClipboardList,Headset,Car,Building2,SlidersHorizontal,ChevronDown,type LucideIcon} from 'lucide-react';
 import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,JOB_ROLES,ADMIN_POWERS,ALL_POWERS,workspacesOf,type AdminPower,type JobRole,type Permissions,type Section} from '@/lib/permissions';
 import {type CaseRecord} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
@@ -8,7 +8,7 @@ import {normalizeSearch} from '@/lib/case-browse';
 import {lawyerLabels,matchLawyer,visibleCases} from '@/lib/lawyer-match';
 import PageNavigation from './page-navigation';
 
-const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,secretary:CalendarClock,collections:HandCoins,accountant:Calculator,hr:Users,archivist:Archive,custom:SlidersHorizontal};
+const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,counsel:BookOpenCheck,sessionsClerk:Gavel,executionClerk:ClipboardList,callCenter:Headset,courier:Car,officeAdmin:Building2,secretary:CalendarClock,collections:HandCoins,accountant:Calculator,hr:Users,archivist:Archive,custom:SlidersHorizontal};
 const same=(a:Section[],b:Section[])=>a.length===b.length&&a.every(s=>b.includes(s));
 /** Accounts saved before roles existed: recognise the role from their settings when they match one exactly. */
 export function inferRole(v:Permissions):JobRole|undefined{
@@ -54,7 +54,8 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
  const scopeText=value.caseScope==='all'?`جميع القضايا (${records.length})`:byLawyer?`قضاياه فقط (${ownCount})`:value.caseIds.length?`${value.caseIds.length} قضية مختارة`:'بلا قضايا';
  return <div className="permission-editor">
   <fieldset className="permission-group role-step"><legend>الدور الوظيفي</legend>
-   <div className="role-grid" role="radiogroup" aria-label="الدور الوظيفي">{JOB_ROLES.map(r=>{const Icon=ROLE_ICONS[r.id];const on=role===r.id;return <button type="button" role="radio" aria-checked={on} key={r.id} className={'role-card'+(on?' on':'')} onClick={()=>pickRole(r.id)}><Icon size={20} aria-hidden/><b>{r.label}</b><small>{r.hint}</small></button>})}</div>
+   <div className="role-grid" role="radiogroup" aria-label="الدور الوظيفي">{JOB_ROLES.map(r=>{const Icon=ROLE_ICONS[r.id];const on=role===r.id;return <button type="button" role="radio" aria-checked={on} key={r.id} className={'role-card'+(on?' on':'')} onClick={()=>pickRole(r.id)} title={r.hint}><Icon size={18} aria-hidden/><b>{r.label}</b></button>})}</div>
+   {role&&<p className="role-hint">{JOB_ROLES.find(r=>r.id===role)?.hint}</p>}
    {role==='manager'&&<p className="subtitle">يحصل المدير أيضاً على صلاحيات الإدارة المحددة أدناه. حساب المالك لا يُعدَّل من أي حساب آخر.</p>}
    <div className="role-summary" role="status">
     <span><small>الصفحات</small><b>{opens.length?opens.map(p=>WORKSPACE_LABELS[p]).join('، '):'لا شيء بعد'}</b></span>
