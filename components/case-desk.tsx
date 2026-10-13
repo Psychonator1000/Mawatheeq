@@ -5,7 +5,7 @@ import {type CaseRecord,emptyCase,formatDate,todayISO,daysBetween} from '@/lib/d
 import {type ClientEntity,clientName,enrichCase} from '@/lib/clients';
 import {DECISIONS,EXPERT_DECISIONS,sessionProcedure,type Venue} from '@/lib/sessions';
 import {type DeskPage,CONSULTATION_STATUSES,CONSULTATION_TYPES,POSTING_ERRORS,dueForPosting,judgmentsBetween,lastSitting,nextSitting,postingErrors,renewalDeadline,shiftDays,sittingsBetween,stayOf,withoutContract,workflowOf,type ConsultationStatus} from '@/lib/case-desk';
-import {listHtml,printHtml} from '@/lib/print';
+import {judgmentRollHtml,printHtml} from '@/lib/print';
 import {Field,DateField,Empty,api} from './shared';
 import {OfficeSelect} from './office-shared';
 import {EditorDialog} from './departments/shared';
@@ -23,7 +23,8 @@ const parties=(c:CaseRecord)=>`${clientName(c)||'—'} ضد ${c.opponent||'—'}
 const lawyersOf=(rs:CaseRecord[])=>[...new Set(rs.map(c=>String(c.lawyer||'').trim()).filter(Boolean))].sort();
 function CaseCell({c,onOpen}:{c:CaseRecord;onOpen:(c:CaseRecord)=>void}){return <button type="button" className="desk-case" onClick={()=>onOpen(c)}><b>{ref(c)}</b><small>{parties(c)}</small></button>}
 function Panel({title,note,actions,children}:{title:string;note?:string;actions?:React.ReactNode;children:React.ReactNode}){if(useContext(Bare))return <div className="desk-bare">{actions&&<div className="actions desk-bare-actions">{actions}</div>}{children}</div>;return <section className="panel desk-panel"><div className="panel-head"><div><h2 className="sr-only">{title}</h2>{note&&<p className="panel-note">{note}</p>}</div>{actions&&<div className="actions">{actions}</div>}</div><div className="panel-body">{children}</div></section>}
-function print(canExport:boolean,title:string,sub:string,headers:string[],rows:string[][],by:string){if(!canExport)return;if(!printHtml(listHtml(title,sub,headers,rows,formatDate(todayISO()),by)))toast.error('اسمح بالنوافذ المنبثقة للطباعة.')}
+/** Prints like «رول الأحكام»: landscape, numbered rows, and column widths in proportion to `widths`. */
+function print(canExport:boolean,title:string,sub:string,headers:string[],rows:string[][],by:string,widths:number[]){if(!canExport)return;if(!printHtml(judgmentRollHtml(title,sub,headers,[['',rows.map(r=>r.map(c=>[c||'—',''] as [string,string]))]],formatDate(todayISO()),by,widths)))toast.error('اسمح بالنوافذ المنبثقة للطباعة.')}
 
 export default function CaseDesk(p:Props){return <Bare.Provider value={!!p.bare}><DeskPageView {...p}/></Bare.Provider>}
 function DeskPageView(p:Props){
@@ -90,7 +91,7 @@ function Roll(p:Props){
  const rows=sittingsBetween(p.records,from,to||from).filter(s=>law.match(s.c));
  const days=[...new Set(rows.map(r=>r.date))];
  return <Panel title="مواعيد الجلسات (رول)" note="الجلسات القادمة حسب آخر ترحيل لكل قضية، مجمعة باليوم ثم المحكمة."
-  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,'رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to)}`,['التاريخ','الساعة','المحكمة','القضية','الأطراف','آخر قرار','المطلوب','المحامي'],rows.map(r=>[formatDate(r.date),r.time,r.court,ref(r.c),parties(r.c),String(r.last?.decision||''),r.required,String(r.c.lawyer||'')]),p.printedBy)}><Printer size={15}/> طباعة الرول</button>}>
+  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,'رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to)}`,['التاريخ','الساعة','المحكمة','القضية','الأطراف','آخر قرار','المطلوب','المحامي'],rows.map(r=>[formatDate(r.date),r.time,r.court,ref(r.c),parties(r.c),String(r.last?.decision||''),r.required,String(r.c.lawyer||'')]),p.printedBy,[8,5,12,8,22,14,15,10])}><Printer size={15}/> طباعة الرول</button>}>
   <div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/>{law.select}<span className="tag">{rows.length} جلسة</span></div>
   {!rows.length?<Empty title="لا جلسات في هذه الفترة"/>:days.map(d=><div key={d} className="desk-day"><h3 className="desk-sub">{formatDate(d)} <small>{rows.filter(r=>r.date===d).length} جلسة</small></h3>
    <div className="table-wrap"><table className="office-table"><thead><tr><th>الساعة</th><th>المحكمة</th><th>القضية</th><th>آخر قرار</th><th>المطلوب</th><th>المحامي</th></tr></thead><tbody>{rows.filter(r=>r.date===d).map(r=><tr key={r.c.id}><td className="nowrap">{r.time||'—'}</td><td>{r.court||'—'}{r.venue!=='المحكمة'&&<small>{r.venue}</small>}</td><td><CaseCell c={r.c} onOpen={p.onOpen}/></td><td>{String(r.last?.decision||'—')}</td><td>{r.required}</td><td>{String(r.c.lawyer||'—')}</td></tr>)}</tbody></table></div></div>)}
@@ -116,7 +117,7 @@ function Statements(p:Props){
  const headers=['القضية','رقم القضية','الأطراف','المحكمة','آخر قرار','الجلسة القادمة','الحكم'];
  const label={client:'الموكل',lawyer:'المحامي',court:'المحكمة'}[by];
  return <Panel title="كشوف القضايا" note="كشف بقضايا موكل أو محامٍ أو محكمة: آخر قرار، الجلسة القادمة والحكم. يصلح للإرسال إلى الموكل."
-  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,`كشف قضايا ${label}: ${value}`,`${rows.length} قضية${open?' مفتوحة':''}`,headers,rows.map(line),p.printedBy)}><Printer size={15}/> طباعة الكشف</button>}>
+  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,`كشف قضايا ${label}: ${value}`,`${rows.length} قضية${open?' مفتوحة':''}`,headers,rows.map(line),p.printedBy,[8,9,24,12,16,9,18])}><Printer size={15}/> طباعة الكشف</button>}>
   <div className="desk-toolbar"><OfficeSelect label="الكشف حسب" value={by} onChange={v=>{setBy(v as typeof by);setValue('')}} options={[['client','الموكل'],['lawyer','المحامي'],['court','المحكمة']]}/><OfficeSelect label={label} value={value} onChange={setValue} options={[['','اختر'],...values.map(v=>[v,v] as [string,string])]}/><label className="checkbox-line"><input type="checkbox" checked={open} onChange={e=>setOpen(e.target.checked)}/> القضايا المفتوحة فقط</label></div>
   {!value?<Empty title={`اختر ${label}`} text="يظهر الكشف هنا ويمكن طباعته."/>:!rows.length?<Empty/>:<div className="table-wrap"><table className="office-table"><thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(c=><tr key={c.id}>{line(c).map((v,i)=><td key={i}>{i===0?<CaseCell c={c} onOpen={p.onOpen}/>:v||'—'}</td>)}</tr>)}</tbody></table></div>}
  </Panel>;
@@ -169,7 +170,7 @@ function Judgments(p:Props){
  const headers=['تاريخ الحكم','الدرجة','القضية','رقم القضية','الأطراف','المحكمة','النتيجة','المنطوق'];
  const line=(j:typeof rows[number])=>[formatDate(j.date),j.level||'—',ref(j.c),j.caseNumber,parties(j.c),j.court,j.outcome,j.ruling];
  return <Panel title="الأحكام" note="كل حكم صدر في الفترة، بما فيها أحكام الدرجات السابقة المحفوظة في ملف القضية."
-  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,'الأحكام الصادرة',`من ${formatDate(from)} إلى ${formatDate(to)}`,headers,rows.map(line),p.printedBy)}><Printer size={15}/> طباعة</button>}>
+  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,'الأحكام الصادرة',`من ${formatDate(from)} إلى ${formatDate(to)}`,headers,rows.map(line),p.printedBy,[8,7,7,9,22,12,8,27])}><Printer size={15}/> طباعة</button>}>
   <div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/><OfficeSelect label="النتيجة" value={outcome} onChange={setOutcome} options={[['','الكل'],['لصالحنا','لصالحنا'],['غير صالحنا','غير صالحنا']]}/><span className="tag">{rows.length} حكم</span></div>
   {!rows.length?<Empty title="لا أحكام في هذه الفترة"/>:<div className="table-wrap"><table className="office-table"><thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(j=><tr key={j.c.id+j.date+j.level}><td className="nowrap">{formatDate(j.date)}</td><td>{j.level||'—'}{!j.current&&<small>درجة سابقة</small>}</td><td><CaseCell c={j.c} onOpen={p.onOpen}/></td><td>{j.caseNumber||'—'}</td><td>{parties(j.c)}</td><td>{j.court||'—'}</td><td><span className={'tag '+(j.outcome.startsWith('لصالحنا')?'green':j.outcome.startsWith('غير')?'red':'')}>{j.outcome||'—'}</span></td><td>{j.ruling||'—'}</td></tr>)}</tbody></table></div>}
  </Panel>;
@@ -185,7 +186,7 @@ function NoContract(p:Props){
  const [client,setClient]=useState('');
  const shown=rows.filter(c=>!client||(clientName(c)||'بلا موكل')===client);
  return <Panel title="القضايا بدون عقود" note="قضايا مفتوحة لم يُسجل لها عقد أتعاب. سجّل رقم العقد هنا أو من ملف القضية، أو علّمها «لا يلزم عقد»."
-  actions={p.canExport&&!!shown.length&&<button className="btn" onClick={()=>print(p.canExport,'القضايا بدون عقود',client||'كل الموكلين',['القضية','الأطراف','المحكمة','المحامي'],shown.map(c=>[ref(c),parties(c),String(c.court||''),String(c.lawyer||'')]),p.printedBy)}><Printer size={15}/> طباعة</button>}>
+  actions={p.canExport&&!!shown.length&&<button className="btn" onClick={()=>print(p.canExport,'القضايا بدون عقود',client||'كل الموكلين',['القضية','الأطراف','المحكمة','المحامي'],shown.map(c=>[ref(c),parties(c),String(c.court||''),String(c.lawyer||'')]),p.printedBy,[12,42,26,18])}><Printer size={15}/> طباعة</button>}>
   <div className="desk-toolbar"><OfficeSelect label="الموكل" value={client} onChange={setClient} options={[['',`كل الموكلين (${groups.length})`],...groups.map(g=>[g,`${g} (${rows.filter(c=>(clientName(c)||'بلا موكل')===g).length})`] as [string,string])]}/><span className="tag amber">{shown.length} قضية بلا عقد</span></div>
   {!shown.length?<Empty title="كل القضايا لها عقود" text="لا توجد قضايا مفتوحة بلا عقد أتعاب."/>:<div className="table-wrap"><table className="office-table desk-table"><thead><tr><th>القضية</th><th>المحامي</th><th>رقم العقد</th><th>تاريخ العقد</th><th/></tr></thead><tbody>{shown.slice(0,100).map(c=><ContractRow key={c.id} c={c} p={p}/>)}</tbody></table>{shown.length>100&&<p className="subtitle">تُعرض أول 100 قضية؛ اختر موكلاً لتضييق القائمة.</p>}</div>}
  </Panel>;
@@ -214,7 +215,7 @@ function Stayed(p:Props){
  const today=todayISO();
  const rows=p.records.map(c=>({c,s:stayOf(c)})).filter((r):r is {c:CaseRecord;s:NonNullable<ReturnType<typeof stayOf>>}=>!!r.s).sort((a,b)=>(a.s.since||'').localeCompare(b.s.since||''));
  return <Panel title="القضايا الموقوفة" note="قضايا موقوفة أو مشطوبة حسب آخر جلسة، أو موقوفة يدوياً من ملف القضية. المشطوبة تُجدَّد عادة خلال 60 يوماً من الشطب؛ التاريخ أدناه للتذكير ويؤكده المحامي."
-  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,'القضايا الموقوفة',formatDate(today),['القضية','الأطراف','السبب','منذ','موعد التجديد','المحامي'],rows.map(r=>[ref(r.c),parties(r.c),r.s.reason,formatDate(r.s.since),formatDate(renewalDeadline(r.s)),String(r.c.lawyer||'')]),p.printedBy)}><Printer size={15}/> طباعة</button>}>
+  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,'القضايا الموقوفة',formatDate(today),['القضية','الأطراف','السبب','منذ','موعد التجديد','المحامي'],rows.map(r=>[ref(r.c),parties(r.c),r.s.reason,formatDate(r.s.since),formatDate(renewalDeadline(r.s)),String(r.c.lawyer||'')]),p.printedBy,[9,30,18,9,10,14])}><Printer size={15}/> طباعة</button>}>
   {!rows.length?<Empty title="لا توجد قضايا موقوفة"/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>القضية</th><th>السبب</th><th>منذ</th><th>التجديد قبل</th><th>المحامي</th><th/></tr></thead><tbody>{rows.map(({c,s})=>{const due=renewalDeadline(s),left=due?daysBetween(today,due):null;return <tr key={c.id}><td><CaseCell c={c} onOpen={p.onOpen}/></td><td>{s.reason}{s.manual&&<small>إيقاف يدوي</small>}</td><td className="nowrap">{formatDate(s.since)}</td><td className="nowrap">{due?<>{formatDate(due)} <span className={'tag '+(left!==null&&left<0?'red':left!==null&&left<=14?'amber':'')}>{left!==null&&left<0?`فات منذ ${-left} يوم`:`${left} يوم`}</span></>:'—'}</td><td>{String(c.lawyer||'—')}</td><td><button className="btn" onClick={()=>p.onOpen(c)}><ArrowUpLeft size={15}/> فتح</button></td></tr>})}</tbody></table></div>}
  </Panel>;
 }
