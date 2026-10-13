@@ -159,7 +159,7 @@ try{
   recs=await dept('collections','records_page');assert.equal(byCode('W-2').caseId,'ui-case-1','Linked from the file');
   // From the case: the linked file shows, and another file is attached by searching.
   await switchTo('القضايا');await page.getByRole('button',{name:/^سجل الأحكام/}).first().click();await page.getByRole('button',{name:'فتح القضية TEST-1',exact:true}).click();
-  await page.getByText('ملف W-2').waitFor();await page.getByRole('button',{name:'ربط ملف تحصيل'}).click();await page.getByLabel(/ابحث برقم الملف/).fill('W-3');
+  await page.getByRole('tab',{name:/^ملفات التحصيل/}).click();await page.getByText('ملف W-2').waitFor();await page.getByRole('button',{name:'ربط ملف تحصيل'}).click();await page.getByLabel(/ابحث برقم الملف/).fill('W-3');
   await page.locator('.linked-files li').filter({hasText:'W-3'}).getByRole('button',{name:'ربط بهذه القضية'}).click();await page.getByText('ملف W-3').waitFor();await screen('case-collections');
   recs=await dept('collections','records_page');assert.equal(byCode('W-3').caseId,'ui-case-1','Linked from the case');await page.keyboard.press('Escape');
   // The client profile lists its collection files.
