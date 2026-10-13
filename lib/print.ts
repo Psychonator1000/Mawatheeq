@@ -12,7 +12,7 @@ export function brandMarkSvg(font = "'Mawatheeq Ruqaa','Aref Ruqaa',serif", acce
   return `<svg viewBox="${BRAND_MARK_VIEWBOX}" xmlns="http://www.w3.org/2000/svg" direction="ltr" aria-hidden="true" focusable="false"><g fill="currentColor" font-family="${font}" text-anchor="middle">`
     + '<path d="M84 4 L98 22 L101 28 L99 372 Q98 386 88 390 L78 388 Q83 376 83 362 L82 40 L70 34 Z"/>'
     + '<path d="M116 98 Q170 76 228 66 L218 78 Q170 86 120 106 Z"/><path d="M120 126 Q172 104 224 96 L214 107 Q170 114 124 134 Z"/>'
-    + '<text x="180" y="236" font-size="150">م</text><text x="178" y="318" font-size="96">ثيـ</text><text x="134" y="408" font-size="150">ق</text>'
+    + '<text x="180" y="236" font-size="150">م</text><text x="170" y="328" font-size="130">ثـ</text><text x="134" y="408" font-size="150">ق</text>'
     + '<path d="M30 190 l9 -15 l3 3 l-9 15z M44 140 l7 -12 l3 2 l-7 12z M138 220 l7 -12 l3 2 l-7 12z M26 300 l9 -14 l3 3 l-9 14z M214 330 q8 -6 14 0 q-6 8 -14 0z M210 390 l8 -12 l3 2 l-8 12z"/>'
     + `<text x="80" y="300" font-size="190" fill="${accent}">و</text></g></svg>`;
 }
