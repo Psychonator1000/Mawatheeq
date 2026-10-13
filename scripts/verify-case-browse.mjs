@@ -6,6 +6,7 @@ import { fils, kwd, kwdPlain, position, dueStatements, FILE_STATUSES, mapCollect
 import { custodyOf, isOverdue, nextNumber, code39, code39Ready, code39Svg, daysBetween, MOVEMENTS } from '../lib/archive.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
 import { suggestUsername } from '../lib/staff-accounts.ts';
+import { workflowOf, isFiled, lastSitting, nextSitting, dueForPosting, postingErrors, sittingsBetween, judgmentsBetween, stayOf, renewalDeadline, withoutContract, isWeekend, requiredAction } from '../lib/case-desk.ts';
 
 const fixture = (id, fields) => ({ ...emptyCase(), id, ...fields });
 const records = [
@@ -193,4 +194,34 @@ assert.ok(FILE_STATUSES.includes('تحصيل ودي'));
   assert.equal(suggestUsername('ريم الكندري', []), 'reem.alkandari');
   assert.match(suggestUsername('ا/ نادر فوزي', []), /^[a-z0-9.]{3,28}$/);
 }
-console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money, import mapping, civil ID check, debtor grouping, round-robin, login suggestions and follow-up helpers.');
+{
+  // Cases desk on synthetic records: posting, posting errors, sittings, judgments, stays, contracts, workflows.
+  const sit = (id, date, decision, followup = '', extra = {}) => ({ id, date, kind: 'جلسة', venue: 'المحكمة', court: 'الكلية', decision, text: decision, followup, ...extra });
+  const kase = (id, procedures, extra = {}) => ({ ...emptyCase(), id, code: id, procedures, ...extra });
+  const a = kase('A', [sit('a1', '2026-09-01', 'تأجيل للإعلان', '2026-10-13'), sit('a0', '2026-08-01', 'تأجيل إداري', '2026-09-01')]);
+  const b = kase('B', [sit('b1', '2026-10-01', 'تأجيل لتقديم مستندات', '2026-10-05')]);
+  const c = kase('C', [sit('c1', '2026-10-01', 'تأجيل للاطلاع والرد', '')]);
+  const d = kase('D', [sit('d1', '2026-10-01', 'تأجيل إداري', '2026-10-16')]);
+  const e = kase('E', [sit('e1', '2026-09-01', 'حجز للحكم', '2026-10-01')], { date: '' });
+  const f = kase('F', [sit('f1', '2026-09-10', 'شطب الدعوى')]);
+  const g = kase('G', [], { workflow: 'study' }), h = kase('H', [], { workflow: 'consultation' });
+  const i = kase('I', [sit('i1', '2026-10-10', 'تأجيل إداري', '2026-10-13')], { archived: true });
+  const all = [a, b, c, d, e, f, g, h, i];
+  assert.equal(lastSitting(a).id, 'a1', 'Latest sitting by date'); assert.equal(nextSitting(a), '2026-10-13');
+  assert.deepEqual(dueForPosting(all, '2026-10-13').map(x => x.id), ['A'], 'Archived cases are not posted');
+  const errs = Object.fromEntries(all.map(x => [x.id, postingErrors(x, '2026-10-13').map(e => e.kind)]));
+  assert.deepEqual(errs.B, ['notPosted']); assert.deepEqual(errs.C, ['noNextDate']); assert.deepEqual(errs.D, ['weekend'], '16 Oct 2026 is a Friday');
+  assert.deepEqual(errs.E, ['judgmentPending']); assert.deepEqual(errs.F, [], 'Striking off ends the sittings'); assert.deepEqual(errs.A, []);
+  assert.deepEqual(postingErrors(kase('X', [sit('x1', '2026-10-10', 'تأجيل إداري', '2026-10-01')]), '2026-09-01').map(e => e.kind), ['backwards']);
+  assert.ok(isWeekend('2026-10-17') && !isWeekend('2026-10-18'));
+  assert.deepEqual(sittingsBetween(all, '2026-10-13', '2026-10-20').map(s => [s.c.id, s.date, s.required]), [['A', '2026-10-13', 'متابعة إعلان الخصم'], ['D', '2026-10-16', 'تأجيل إداري']]);
+  assert.equal(requiredAction(undefined), 'الجلسة الأولى');
+  const j = kase('J', [], { date: '2026-10-02', outcome: 'لصالحنا', stage: 'استئناف', stages: [{ level: 'ابتدائي', date: '2026-05-01', outcome: 'غير صالحنا', ruling: 'رفض', caseNumber: '1/2026', court: 'الكلية' }] });
+  assert.deepEqual(judgmentsBetween([j, g], '2026-01-01', '2026-12-31').map(x => [x.level, x.date, x.current]), [['استئناف', '2026-10-02', true], ['ابتدائي', '2026-05-01', false]]);
+  assert.deepEqual(judgmentsBetween([j], '2026-06-01').map(x => x.date), ['2026-10-02']);
+  const stay = stayOf(f); assert.equal(stay.reason, 'شطب الدعوى'); assert.equal(renewalDeadline(stay), '2026-11-09', 'Renewal reminder sixty days after striking off');
+  assert.equal(stayOf(kase('M', [], { stayed: true, stayReason: 'وقف تعليقي', stayDate: '2026-10-01' })).manual, true); assert.equal(stayOf(a), null);
+  assert.deepEqual(withoutContract([a, kase('K', [], { contractNumber: 'ع-5' }), kase('W', [], { contractWaived: true }), g]).map(x => x.id), ['A']);
+  assert.equal(workflowOf(g), 'study'); assert.equal(workflowOf({ workflow: 'other' }), ''); assert.equal(isFiled(h), false); assert.equal(isFiled(a), true);
+}
+console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money, import mapping, civil ID check, debtor grouping, round-robin, login suggestions, cases desk (posting, errors, sittings, judgments, stays, contracts, workflows) and follow-up helpers.');

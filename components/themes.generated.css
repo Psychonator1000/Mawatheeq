@@ -259,6 +259,7 @@
 :root[data-theme=noir] .import-summary .warn b{color:#d2a5a9}
 :root[data-theme=noir] .workbook-import details{border:1px solid #2f2c27}
 :root[data-theme=noir] .import-list td small{color:#c2b9a8}
+:root[data-theme=noir] .nav-count.alert{background:#d2a5a9;border-color:#d2a5a9;color:#11100e}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
 :root[data-theme=noir] .workspace-option p{color:#c4bbaa}
@@ -639,6 +640,7 @@
 :root[data-theme=phantom] .import-summary .warn b{color:#ddc3c5}
 :root[data-theme=phantom] .workbook-import details{border:1px solid #222222}
 :root[data-theme=phantom] .import-list td small{color:#cbcbcb}
+:root[data-theme=phantom] .nav-count.alert{background:#ddc3c5;border-color:#ddc3c5;color:#0d0d0d}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .workspace-option p{color:#cdcdcd}
@@ -925,6 +927,7 @@
 :root[data-theme=ivory] .roll-panel{border:1px solid #dbd8d4;background:#fbfbfb}
 :root[data-theme=ivory] .import-summary>div{border:1px solid #dbd8d4;background:#fefefd}
 :root[data-theme=ivory] .workbook-import details{border:1px solid #dbd8d4}
+:root[data-theme=ivory] .nav-count.alert{color:#ffffff}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
 :root[data-theme=ivory] .department-topbar{background:#fefefed9}
 :root[data-theme=ivory] .department-brand .brand-mark{color:#faf9f8}
@@ -1195,6 +1198,7 @@
 :root[data-theme=phantom-light] .import-summary>div{border:1px solid #dbd8d4;background:#fffefe}
 :root[data-theme=phantom-light] .workbook-import details{border:1px solid #dbd8d4}
 :root[data-theme=phantom-light] .import-list td small{color:#7b7773}
+:root[data-theme=phantom-light] .nav-count.alert{color:#ffffff}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
 :root[data-theme=phantom-light] .workspace-option{border:1px solid #fafaf9;background:#fefefe;color:#403c39}
 :root[data-theme=phantom-light] .workspace-option p{color:#757270}
@@ -1709,6 +1713,12 @@
 :root[data-mode=dark] .import-summary .warn b{color:#dba7ac}
 :root[data-mode=dark] .workbook-import details{border:1px solid #2e2924}
 :root[data-mode=dark] .import-list td small{color:#c3bbb3}
+:root[data-mode=dark] .desk-sub small{color:var(--muted-foreground)}
+:root[data-mode=dark] .desk-case{color:inherit}
+:root[data-mode=dark] .desk-case b{color:var(--brand)}
+:root[data-mode=dark] .desk-case small{color:var(--muted-foreground)}
+:root[data-mode=dark] .desk-panel td small{color:var(--muted-foreground)}
+:root[data-mode=dark] .desk-table select,:root[data-mode=dark] .desk-table input:not([type=checkbox]){border:1px solid var(--border);background:var(--background);color:inherit}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}
