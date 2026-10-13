@@ -186,3 +186,54 @@
 @keyframes sakura-word{0%{opacity:0;scale:.6;filter:blur(8px)}30%{opacity:1;scale:1.05;filter:none}75%{opacity:1;scale:1}100%{opacity:0;scale:1.1}}
 @keyframes sakura-fall{0%{translate:0 0;rotate:0deg;opacity:0}15%{opacity:1}100%{translate:calc(60px - var(--i) * 3px) 110vh;rotate:540deg;opacity:.9}}
 @media (prefers-reduced-motion:reduce){:root[data-theme=rose] :is(.cursor-halo,.panel-head h2::before,.department-toolbar>h2::before,.section-title::before){animation:none}}
+
+/* ───────── YoRHa (hidden: type “nier”): NieR: Automata's parchment menus, ink lines and square marks ───────── */
+:root[data-theme=yorha]{color-scheme:light;--brand:#4e4b42;--brand-deep:#3a3832;--brand-ink:#dad4bb;--brand-hover:#5f5b50;--brand-ring:#7a7566;--glow-1:#b4ae96;--glow-2:#8f8a78;--glow-3:#4e4b42;--background:#cdc8b0;--card:#dad5bd;--popover:#dad5bd;--foreground:#4e4b42;--muted-foreground:#77735f;--border:#4e4b4255;--primary-foreground:#dad4bb;--accent-foreground:#3a3832;--radius:0px;
+ --sidebar:#45433b;--sidebar-foreground:#dad4bb;--sidebar-primary:#dad4bb;--sidebar-primary-foreground:#45433b;--sidebar-accent:#dad4bb;--sidebar-accent-foreground:#45433b;--sidebar-border:#dad4bb33;--sidebar-ring:#dad4bb}
+:root[data-theme=yorha] body{background:repeating-linear-gradient(0deg,transparent 0 3px,#4e4b420b 3px 4px),radial-gradient(#4e4b4214 1px,transparent 1.2px) 0 0/22px 22px,#cdc8b0;background-attachment:fixed;color:#4e4b42}
+:root[data-theme=yorha] ::selection{background:#4e4b42;color:#dad4bb}
+:root[data-theme=yorha]:not([data-backdrop=none]) .ambient-canvas{display:block}
+:root[data-theme=yorha] .ambient-blob{opacity:.12;background:radial-gradient(circle,#8f8a78 0,transparent 60%)!important}
+:root[data-theme=yorha] :is(h1,h2,h3,.btn,.nav-button,[role=tab],.tag){letter-spacing:.04em}
+:root[data-theme=yorha] :is(.department-hero h1,.page-head h1){background:none;-webkit-background-clip:border-box;background-clip:border-box;color:#4e4b42;animation:none;font-weight:600}
+:root[data-theme=yorha] :is(.page-head h1,.panel-head h2,.department-hero h1)::before{content:'';display:inline-block;width:.42em;height:.42em;background:#4e4b42;margin-inline-end:.45em;vertical-align:.12em}
+:root[data-theme=yorha] .eyebrow{color:#77735f;letter-spacing:.3em}
+/* Panels: flat parchment boards with a thin ink frame and a soft offset shadow */
+:root[data-theme=yorha] :is(.panel,.office-card,.client-card,.person-card,.collection-card,.device-card,.department-metrics>div,.att-stat,.my-work-item,.quick-card,.ledger-summary>div,.stat,.workspace-option){background:#dad5bd!important;border:1px solid #4e4b4266!important;border-radius:0!important;box-shadow:5px 5px 0 #4e4b421f!important}
+:root[data-theme=yorha] .panel-head{border-bottom:1px solid #4e4b4240}
+:root[data-theme=yorha] .stat.featured{background:#4e4b42!important;color:#dad4bb}
+:root[data-theme=yorha] .stat.featured :is(.stat-label,.stat-foot,.stat-num,.stat-label svg){color:#dad4bb}
+:root[data-theme=yorha] .stat-num{color:#4e4b42}
+:root[data-theme=yorha] .department-hero{background:#dad5bd!important;border:1px solid #4e4b4266!important;border-radius:0!important;box-shadow:none}
+/* Buttons and menus: outlined slabs that fill with ink, like the pause menu's highlight bar */
+:root[data-theme=yorha] .btn{border-radius:0;border:1px solid #4e4b42;background:transparent;color:#4e4b42;box-shadow:none}
+:root[data-theme=yorha] .btn:hover:not(:disabled),:root[data-theme=yorha] .btn.primary{background:#4e4b42;color:#dad4bb;border-color:#4e4b42}
+:root[data-theme=yorha] .btn.primary:hover:not(:disabled){background:#3a3832}
+:root[data-theme=yorha] :is(input,select,textarea,.date-picker-button){border-radius:0!important;background:#e2ddc6!important;border-color:#4e4b4266!important;color:#4e4b42}
+:root[data-theme=yorha] [data-slot=sidebar-container]{background:#45433b;border-inline-start:1px solid #dad4bb33}
+:root[data-theme=yorha] :is(.brand-en,.brand-ar,.nav-section,.sidebar-foot){color:#dad4bbcc}
+:root[data-theme=yorha] .nav-button{color:#dad4bb!important;border-radius:0!important;position:relative}
+:root[data-theme=yorha] .nav-button:hover{background:#dad4bb22!important}
+:root[data-theme=yorha] .nav-button[data-active=true]{background:#dad4bb!important;color:#45433b!important;box-shadow:none!important}
+:root[data-theme=yorha] .nav-button[data-active=true]::before{content:'';position:absolute;inset-inline-start:-12px;top:50%;width:7px;height:7px;background:#dad4bb;translate:0 -50%}
+:root[data-theme=yorha] .nav-count{border-color:#dad4bb55;border-radius:0}
+:root[data-theme=yorha] .tag{border-radius:0;background:#4e4b421a;color:#4e4b42;border:1px solid #4e4b4240}
+:root[data-theme=yorha] :is(.case-table,.office-table) th{background:#4e4b42!important;color:#dad4bb!important}
+:root[data-theme=yorha] :is(.case-table,.office-table) tbody tr:hover{background:#4e4b4214!important}
+:root[data-theme=yorha] [role=dialog]{border-radius:0!important;background:#dad5bd!important;border:1px solid #4e4b42!important}
+:root[data-theme=yorha] :is(.chip,.status-chips .chip){border-radius:0}
+:root[data-theme=yorha] :is(.chip.on,[role=tab][data-state=active]){background:#4e4b42!important;color:#dad4bb!important;border-color:#4e4b42!important}
+:root[data-theme=yorha] .topbar{background:#d4cfb7e6;border-bottom:1px solid #4e4b4240}
+/* Boot screen when the theme is switched on */
+.yorha-splash{position:fixed;inset:0;z-index:96;pointer-events:none;background:#cdc8b0;display:grid;place-items:center;animation:yorha-out 2.6s steps(1) forwards,yorha-flicker 2.6s linear}
+.yorha-splash::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,#4e4b4214 3px 4px);pointer-events:none}
+.yorha-boot{font-family:ui-monospace,Menlo,Consolas,monospace;color:#4e4b42;min-width:min(520px,86vw);border:1px solid #4e4b42;padding:22px 26px;background:#dad5bd;box-shadow:6px 6px 0 #4e4b4233}
+.yorha-boot small{display:block;letter-spacing:.3em;font-size:11px;border-bottom:1px solid #4e4b4266;padding-bottom:8px;margin-bottom:12px}
+.yorha-boot p{margin:6px 0;font-size:14px;overflow:hidden;white-space:nowrap;width:0;animation:yorha-type .6s steps(28) forwards}
+.yorha-boot p:nth-of-type(2){animation-delay:.6s}
+.yorha-boot i{font-style:normal}
+.yorha-boot b{display:block;margin-top:16px;letter-spacing:.35em;font-size:18px;opacity:0;animation:yorha-show .3s 1.3s forwards}
+@keyframes yorha-type{to{width:100%}}
+@keyframes yorha-show{to{opacity:1}}
+@keyframes yorha-out{0%,92%{opacity:1}100%{opacity:0}}
+@keyframes yorha-flicker{0%{filter:brightness(1.6)}4%{filter:brightness(.7)}8%,100%{filter:none}}

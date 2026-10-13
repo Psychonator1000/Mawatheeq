@@ -1,4 +1,4 @@
-// Canvas effects: the living backdrop (constellation or fireflies) and dot-web bursts on press.
+// Canvas effects: the living backdrop (constellation, fireflies, stars, snow, ripples and the themes' own) and dot-web bursts on press.
 // Decorative only: canvases ignore the pointer, cap their pixel ratio, sleep when idle or hidden,
 // and draw a single still frame when motion is reduced or switched off.
 
@@ -18,6 +18,8 @@ const hexRgb = (value: string, fallback: RGB): RGB => {
 const rgba = (c: RGB, a: number) => `rgba(${c[0]},${c[1]},${c[2]},${Math.max(0, Math.min(1, a)).toFixed(3)})`;
 const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t].map(Math.round) as RGB;
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+/** Backdrop kinds drawn on the canvas (the others are pure CSS). */
+export const CANVAS_KINDS = ['constellation', 'web', 'fireflies', 'starfield', 'snow', 'ripples', 'bubbles', 'phantom', 'sakura', 'yorha'];
 /** One cherry-blossom petal pointing up from the origin: rounded, with the notch at its tip. */
 function petal(ctx: CanvasRenderingContext2D, len: number, light: string, deep: string) {
   const g = ctx.createLinearGradient(0, 0, 0, -len);
@@ -44,13 +46,18 @@ function sizeCanvas(canvas: HTMLCanvasElement) {
 /** The ambient backdrop. Call `pulse` to send a shockwave through it from a press point. */
 export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) {
   let nodes: Node[] = [], frame = 0, last = 0, palette = readPalette(), kind = '';
+  let meteor: { x: number; y: number; vx: number; vy: number; life: number } | null = null, nextMeteor = 0;
   const waves: { x: number; y: number; born: number }[] = [];
   const seed = (w: number, h: number) => {
     if (kind === 'bubbles') { nodes = Array.from({ length: Math.min(34, Math.round(w * h / 45000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .15, vy: -(.15 + Math.random() * .35), r: 8 + Math.random() * 34, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
     if (kind === 'sakura') { nodes = Array.from({ length: Math.min(42, Math.round(w * h / 32000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: .1 + Math.random() * .35, vy: .35 + Math.random() * .55, r: 6.5 + Math.random() * 7.5, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
+    if (kind === 'starfield') { nodes = Array.from({ length: Math.min(170, Math.round(w * h / 9000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: 0, vy: 0, r: Math.pow(Math.random(), 2.2) * 1.9 + .35, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
+    if (kind === 'snow') { nodes = Array.from({ length: Math.min(110, Math.round(w * h / 14000)) }, () => { const r = .8 + Math.pow(Math.random(), 1.6) * 3.4; return { x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .1, vy: .18 + r * .12, r, phase: Math.random() * Math.PI * 2, hue: Math.random() }; }); return; }
+    if (kind === 'ripples') { nodes = Array.from({ length: 7 }, (_, i) => ({ x: Math.random() * w, y: Math.random() * h, vx: 0, vy: 0, r: 120 + Math.random() * 160, phase: i / 7, hue: Math.random() })); return; }
+    if (kind === 'yorha') { nodes = Array.from({ length: Math.min(48, Math.round(w * h / 26000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .08, vy: -(.05 + Math.random() * .16), r: 3 + Math.random() * 9, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
     if (kind === 'phantom') { nodes = Array.from({ length: 16 }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: -(.3 + Math.random() * .6), vy: .15 + Math.random() * .35, r: 6 + Math.random() * 16, phase: Math.random() * Math.PI * 2, hue: Math.random() })); return; }
     const fireflies = kind === 'fireflies';
-    const count = fireflies ? Math.min(46, Math.round(w * h / 30000)) : Math.min(120, Math.round(w * h / 13000));
+    const count = fireflies ? Math.min(46, Math.round(w * h / 30000)) : kind === 'web' ? Math.min(210, Math.round(w * h / 6500)) : Math.min(120, Math.round(w * h / 13000));
     nodes = Array.from({ length: count }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * (fireflies ? .12 : .22), vy: fireflies ? -(.08 + Math.random() * .22) : (Math.random() - .5) * .22, r: fireflies ? 1.4 + Math.random() * 2.2 : .9 + Math.random() * 1.6, phase: Math.random() * Math.PI * 2, hue: Math.random() }));
   };
   const draw = (now: number, animate: boolean) => {
@@ -70,11 +77,17 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
         // Sakura: petals fall and sway, carried by a slow gust that comes and goes.
         else if (kind === 'sakura') { const gust = .55 + Math.sin(now / 5200) * .45; n.x += (n.vx * gust + Math.sin(n.phase * 1.3) * .45) * dt * speed; n.y += (n.vy + Math.cos(n.phase) * .12) * dt * speed; }
         else if (kind === 'fireflies') { n.x += (n.vx + Math.sin(n.phase) * .18) * dt * speed; n.y += n.vy * dt * speed; }
+        // Stars drift slowly sideways, nearer (bigger) ones faster.
+        else if (kind === 'starfield') { n.x -= n.r * .06 * dt * speed; }
+        else if (kind === 'snow') { n.x += (n.vx + Math.sin(n.phase * .8) * .22) * dt * speed; n.y += n.vy * dt * speed; }
+        // Ripples: each ring grows and fades, then starts again somewhere else.
+        else if (kind === 'ripples') { n.phase += .0035 * dt * speed - .02 * dt * speed; if (n.phase >= 1) { n.phase = 0; n.x = Math.random() * w; n.y = Math.random() * h; n.r = 120 + Math.random() * 160; } }
+        else if (kind === 'yorha') { n.x += n.vx * dt * speed; n.y += n.vy * dt * speed; }
         else { n.x += n.vx * dt * speed; n.y += n.vy * dt * speed; }
-        n.y -= s.scrollV * 1.6 * dt * (.4 + n.r / 3);
+        if (kind !== 'ripples') n.y -= s.scrollV * 1.6 * dt * (kind === 'starfield' ? .3 + n.r / 4 : .4 + n.r / 3);
         if (near) {
           const dx = n.x - px, dy = n.y - py, d = Math.hypot(dx, dy);
-          if (kind === 'phantom' ? false : kind === 'fireflies' ? d < 260 && d > 30 : d < 150 && d > .1) {
+          if (kind === 'phantom' || kind === 'ripples' || kind === 'starfield' ? false : kind === 'fireflies' ? d < 260 && d > 30 : d < 150 && d > .1) {
             const f = kind === 'fireflies' ? -.012 * (1 - d / 260) : 1.6 * (1 - d / 150);
             n.x += (kind === 'fireflies' ? dx * f : dx / d * f) * dt; n.y += (kind === 'fireflies' ? dy * f : dy / d * f) * dt;
           }
@@ -83,7 +96,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
           const age = (now - wv.born) / 1100, radius = easeOut(age) * 260, dx = n.x - wv.x, dy = n.y - wv.y, d = Math.hypot(dx, dy) || 1;
           if (Math.abs(d - radius) < 36) { const push = (1 - age) * 2.4 * dt; n.x += dx / d * push; n.y += dy / d * push; }
         }
-        const m = n.r + 20;
+        const m = kind === 'ripples' ? 0 : n.r + 20;
         if (n.x < -m) n.x = w + m; else if (n.x > w + m) n.x = -m;
         if (n.y < -m) n.y = h + m; else if (n.y > h + m) n.y = -m;
       }
@@ -126,6 +139,49 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
         ctx.fillStyle = n.hue > .6 ? 'rgba(230,0,18,.7)' : n.hue > .3 ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.6)';
         ctx.beginPath(); for (let k = 0; k < 10; k++) { const rr = k % 2 ? n.r * .42 : n.r; ctx.lineTo(Math.cos(k * Math.PI / 5) * rr, Math.sin(k * Math.PI / 5) * rr); } ctx.closePath(); ctx.fill(); ctx.restore();
       }
+    } else if (kind === 'starfield') {
+      // Stars twinkle in the theme's colours; now and then a shooting star crosses.
+      for (const n of nodes) {
+        const tw = .55 + .45 * Math.sin(n.phase * (1.5 + n.hue)), c = mix(palette.brand, palette.glow2, n.hue);
+        ctx.fillStyle = rgba(c, (.25 + .5 * tw) * Math.min(1, n.r)); ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill();
+        if (n.r > 1.6) { ctx.strokeStyle = rgba(c, .25 * tw); ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(n.x - n.r * 3, n.y); ctx.lineTo(n.x + n.r * 3, n.y); ctx.moveTo(n.x, n.y - n.r * 3); ctx.lineTo(n.x, n.y + n.r * 3); ctx.stroke(); }
+      }
+      if (live) {
+        if (!meteor && now > nextMeteor) { meteor = { x: w * (.3 + Math.random() * .7), y: h * Math.random() * .4, vx: -(7 + Math.random() * 4), vy: 3 + Math.random() * 2, life: 1 }; nextMeteor = now + 5000 + Math.random() * 9000; }
+        if (meteor) {
+          const m = meteor, tail = 14; m.x += m.vx * dt; m.y += m.vy * dt; m.life -= .012 * dt;
+          const g = ctx.createLinearGradient(m.x, m.y, m.x - m.vx * tail, m.y - m.vy * tail);
+          g.addColorStop(0, rgba(palette.glow2, .9 * m.life)); g.addColorStop(1, rgba(palette.glow2, 0));
+          ctx.strokeStyle = g; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x - m.vx * tail, m.y - m.vy * tail); ctx.stroke();
+          if (m.life <= 0 || m.x < -50 || m.y > h + 50) meteor = null;
+        }
+      }
+    } else if (kind === 'snow') {
+      for (const n of nodes) { ctx.fillStyle = rgba(mix(palette.glow1, [255, 255, 255], .35), .28 + n.r * .09); ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill(); }
+    } else if (kind === 'ripples') {
+      // Rings on still water; presses add their own through the shockwave.
+      ctx.lineWidth = 1.1;
+      for (const n of nodes) for (let k = 0; k < 3; k++) {
+        const t = n.phase - k * .12; if (t <= 0) continue;
+        ctx.strokeStyle = rgba(mix(palette.brand, palette.glow1, n.hue * .7), .22 * (1 - t)); ctx.beginPath(); ctx.ellipse(n.x, n.y, n.r * easeOut(t), n.r * easeOut(t) * .45, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      for (const wv of waves) { const age = (now - wv.born) / 1100; ctx.strokeStyle = rgba(palette.brand, .3 * (1 - age)); ctx.beginPath(); ctx.ellipse(wv.x, wv.y, 220 * easeOut(age), 100 * easeOut(age), 0, 0, Math.PI * 2); ctx.stroke(); }
+    } else if (kind === 'yorha') {
+      // YoRHa: hollow squares drifting up, a slow scan line, and a targeting reticle at the pointer.
+      const ink: RGB = [78, 75, 66];
+      ctx.lineWidth = 1;
+      for (const n of nodes) {
+        ctx.save(); ctx.translate(n.x, n.y); ctx.rotate(Math.sin(n.phase * .5) * .25);
+        ctx.strokeStyle = rgba(ink, .14 + n.hue * .14); ctx.strokeRect(-n.r, -n.r, n.r * 2, n.r * 2);
+        if (n.hue > .7) { ctx.fillStyle = rgba(ink, .14); ctx.fillRect(-n.r * .45, -n.r * .45, n.r * .9, n.r * .9); }
+        ctx.restore();
+      }
+      const scan = (now / 26) % (h + 80) - 40;
+      ctx.fillStyle = rgba(ink, .05); ctx.fillRect(0, scan, w, 2); ctx.fillStyle = rgba(ink, .025); ctx.fillRect(0, scan - 30, w, 30);
+      if (near) {
+        ctx.strokeStyle = rgba(ink, .35); ctx.beginPath(); ctx.arc(px, py, 18, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); for (const [a, b] of [[-30, -22], [22, 30]]) { ctx.moveTo(px + a, py); ctx.lineTo(px + b, py); ctx.moveTo(px, py + a); ctx.lineTo(px, py + b); } ctx.stroke();
+      }
     } else if (kind === 'fireflies') {
       for (const n of nodes) {
         const tw = .45 + .55 * Math.sin(n.phase * 2.3), c = mix(palette.glow1, palette.glow2, n.hue), g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 7);
@@ -134,7 +190,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
         ctx.fillStyle = rgba(mix(c, [255, 255, 255], .5), .75 * tw); ctx.beginPath(); ctx.arc(n.x, n.y, n.r * .8, 0, Math.PI * 2); ctx.fill();
       }
     } else {
-      const max = 128, max2 = max * max;
+      const max = kind === 'web' ? 150 : 128, max2 = max * max;
       ctx.lineWidth = .8;
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i];
@@ -151,7 +207,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
   const loop = (now: number) => { frame = 0; const s = state(); if (document.hidden || s.motion === 'off' || s.reduced) return; draw(now, true); frame = requestAnimationFrame(loop); };
   const sync = () => {
     palette = readPalette(); const s = state();
-    if (!['constellation', 'fireflies', 'bubbles', 'phantom', 'sakura'].includes(s.mode)) { cancelAnimationFrame(frame); frame = 0; canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height); return; }
+    if (!CANVAS_KINDS.includes(s.mode)) { cancelAnimationFrame(frame); frame = 0; canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height); return; }
     if (s.motion === 'off' || s.reduced) { cancelAnimationFrame(frame); frame = 0; draw(performance.now(), false); return; }
     if (!frame && !document.hidden) { last = 0; frame = requestAnimationFrame(loop); }
   };

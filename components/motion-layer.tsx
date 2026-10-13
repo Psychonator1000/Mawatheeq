@@ -40,7 +40,7 @@ export default function MotionLayer() {
   let scrollDir='down',lastScrollAt=0;
   let lastTop=scrollY,lastTime=performance.now(),velocity=0,velFrame=0,settle=0,lastTick=0;
   const fx:FxState={mode:'',motion:'',reduced:false,pointerX:-999,pointerY:-999,pointerOn:false,scrollV:0};
-  const state=()=>{const backdropMode=root.dataset.backdrop||'constellation',theme=root.dataset.theme;fx.mode=backdropMode==='none'?'none':theme==='sky'?'bubbles':theme==='rose'?'sakura':theme?.startsWith('phantom')?'phantom':backdropMode;fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches||root.dataset.perf==='lite';fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
+  const state=()=>{const backdropMode=root.dataset.backdrop||'constellation',theme=root.dataset.theme;fx.mode=backdropMode==='none'?'none':theme==='sky'?'bubbles':theme==='rose'?'sakura':theme?.startsWith('phantom')?'phantom':theme==='yorha'?'yorha':backdropMode==='petals'?'sakura':backdropMode;fx.motion=root.dataset.motion||'full';fx.reduced=reducedQuery.matches||root.dataset.perf==='lite';fx.pointerX=x;fx.pointerY=y;fx.pointerOn=pointerOn;fx.scrollV=velocity;return fx};
   const backdrop=ambient.current?createBackdrop(ambient.current,state):null,bursts=burst.current?createBursts(burst.current):null;
   const unset=(...names:string[])=>(el:HTMLElement)=>names.forEach(n=>el.style.removeProperty(n));
   const trackTilt=tracker(unset('--tilt-x','--tilt-y')),trackMagnet=tracker(unset('--mag-x','--mag-y')),trackGlow=tracker(unset('--gx','--gy'));
@@ -158,7 +158,7 @@ export default function MotionLayer() {
    const word=Object.keys(SECRET_WORDS).find(w=>typed.endsWith(w));if(!word)return;
    typed='';const theme=SECRET_WORDS[word];
    if(!toggleSecretTheme(theme)){setSplash('');return}
-   if(motionAllowed()){setSplash(theme);clearTimeout(splashTimer);splashTimer=window.setTimeout(()=>setSplash(''),theme==='phantom'?1900:1500)}
+   if(motionAllowed()){setSplash(theme);clearTimeout(splashTimer);splashTimer=window.setTimeout(()=>setSplash(''),theme==='phantom'?1900:theme==='yorha'?2600:1500)}
   };
   addEventListener('keydown',onKey);
   const onAppearance=()=>{backdrop?.sync()};
@@ -203,6 +203,7 @@ export default function MotionLayer() {
   <canvas ref={burst} className="burst-canvas" aria-hidden="true"/>
   {splash==='phantom'&&<div className="egg-splash phantom-splash" aria-hidden="true"><div className="calling-card" dir="ltr" lang="en"><small>CALLING CARD</small><b>{ransom("WE'RE GONNA STEAL YOUR HEART!")}</b><span>— The Phantom Thieves</span></div></div>}
   {splash==='rose'&&<div className="egg-splash sakura-splash" aria-hidden="true">{Array.from({length:28},(_,i)=><i key={i} style={{'--i':i} as CSSProperties}/>)}<b>桜</b></div>}
+  {splash==='yorha'&&<div className="egg-splash yorha-splash" aria-hidden="true" dir="ltr" lang="en"><div className="yorha-boot"><small>YoRHa SYSTEM · UNIT 2B</small><p>&gt; REBOOTING INTERFACE<i>...</i></p><p>&gt; RECOVERING PERSONAL DATA<i>... OK</i></p><b>GLORY TO MANKIND</b></div></div>}
   {splash==='sky'&&<div className="egg-splash aero-splash" aria-hidden="true">{Array.from({length:14},(_,i)=><i key={i} style={{'--i':i} as CSSProperties}/>)}<b>Aero</b></div>}
   <div className="cursor-halo" aria-hidden="true"/>
   <div className="scroll-progress" aria-hidden="true"/>

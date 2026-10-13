@@ -166,7 +166,8 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 
 /* ── Living layer: canvases, cursor halo, section rail and scroll-reactive content ── */
 .ambient-canvas{position:absolute;inset:0;width:100%;height:100%;display:none}
-:root:is([data-backdrop=constellation],[data-backdrop=fireflies]) .ambient-canvas{display:block}
+:root:is([data-backdrop=constellation],[data-backdrop=fireflies],[data-backdrop=web],[data-backdrop=starfield],[data-backdrop=snow],[data-backdrop=ripples],[data-backdrop=petals],[data-backdrop=bubbles]) .ambient-canvas{display:block}
+:root:is([data-backdrop=web],[data-backdrop=starfield],[data-backdrop=snow],[data-backdrop=ripples],[data-backdrop=petals],[data-backdrop=bubbles]) .ambient-blob{opacity:.28}
 :root[data-backdrop=constellation] .ambient-blob{opacity:.34}
 :root[data-backdrop=fireflies] .ambient-blob{opacity:.28;filter:blur(70px)}
 :root:is([data-backdrop=constellation],[data-backdrop=fireflies]) .ambient-spot{opacity:.35}

@@ -44,6 +44,10 @@ const THEMES = {
   phantom: c => c.l >= .5
     ? { ...c, l: clamp(.05 + (1 - c.l) * .55), s: chroma(c) > .12 ? c.s * .6 : 0, h: chroma(c) > .12 ? c.h : 0 }
     : { ...c, l: clamp(.96 - c.l * .35), s: chroma(c) > .12 ? c.s * .5 : 0, h: c.h },
+  // YoRHa (NieR: Automata): every surface becomes parchment and every ink a warm grey-brown; colours are muted.
+  yorha: c => c.l >= .5
+    ? { ...c, h: chroma(c) > .12 ? c.h : 48, s: chroma(c) > .12 ? c.s * .3 : .17, l: clamp(.7 + (c.l - .5) * .34) }
+    : { ...c, h: chroma(c) > .12 ? c.h : 45, s: chroma(c) > .12 ? c.s * .35 : .08, l: clamp(.2 + c.l * .32) },
   // White and gold: warm creams become clean whites, borders turn neutral grey; text and accents stay.
   ivory: c => c.l >= .9 ? { ...c, l: clamp(c.l + (1 - c.l) * .6), s: c.s * .15 } : c.l >= .72 ? { ...c, s: c.s * .3 } : c,
 };
