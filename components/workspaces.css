@@ -106,3 +106,4 @@
 .collection-toolbar>.actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;padding-top:16px;border-top:1px solid var(--border)}
 .status-chips{margin-bottom:18px}
 .pick-bar{margin-bottom:18px;border-radius:12px}
+.archive-missing{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}

@@ -109,6 +109,10 @@ try{
  await page.getByRole('button',{name:/^المواقع/}).click();await page.getByRole('button',{name:/^جرد$/}).click();await click('تحديد الكل');await click('تسجيل الجرد (1)');await page.getByRole('dialog').waitFor({state:'detached'});
  const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','return']);
  await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
+ // Every case gets a paper file: the cases without one are offered in one step, numbered from their office code.
+ await page.getByRole('button',{name:/^الملفات/}).click();await page.locator('.archive-missing').getByText('24').waitFor();await click('إنشاء ملفاتها');
+ await page.getByText('أُنشئ 24 ملف ورقي').waitFor({timeout:30000});await page.locator('.archive-missing').waitFor({state:'detached'});
+ const papers=(await dept('archive','records_page')).filter(r=>r.kind==='file');assert.equal(papers.length,25,'One paper file per case');assert.ok(papers.some(r=>r.payload.number==='ARC-TEST-0'&&r.caseId==='ui-case-0'),'Numbered from the office code');
  // import (synthetic): files without a case, an automatic link by court number, then manual links from the file and from the case.
  await rpc('mawatheeq_local_request',[login.token,'save_case',JSON.stringify({case:{id:'ui-case-auto',code:'AUTO-1',autoNumber:'260000001',client:'شركة اختبار الواجهة',clientGroup:'شركة اختبار الواجهة',opponent:'خصم آلي',date:'2026-09-01',type:'حكم أول درجة',outcome:'لصالحنا',procedures:[],revision:0}})]);
  await db.exec('reset role');

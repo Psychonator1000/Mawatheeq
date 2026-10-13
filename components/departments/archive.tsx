@@ -55,6 +55,15 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
  const openScan=()=>{const v=scan.trim().toUpperCase();if(!v)return;const f=files.find(f=>f.payload.number.toUpperCase()===v);if(f){setScan('');setView('files');setEditing(f)}else toast.error('لا يوجد ملف بهذا الرقم: '+v)};
  const views:[View,string,LucideIcon,number?][]=[['files','الملفات',BookCopy],['custody','العهدة',ArrowLeftRight,out.length],['requests','الطلبات',Inbox,pending.length],['locations','المواقع',MapPin],['log','سجل الحركة',History]];
  const newFile=()=>setEditing(newDepartmentRecord('archive','file',blankFile(nextNumber(files))) as unknown as ArchiveFile);
+ // Every case has a paper file in the archive: one per office code, whichever of its judgments it is linked to.
+ const missing=useMemo(()=>{const covered=new Set(files.map(f=>caseOf(f.caseId)?.code).filter(Boolean));const seen=new Set<string>();
+  return cases.filter(c=>!c.archived&&c.code&&!covered.has(c.code)&&!seen.has(c.code)&&seen.add(c.code))},[files,cases]);// eslint-disable-line react-hooks/exhaustive-deps
+ const [making,setMaking]=useState(0);
+ async function createMissing(){const taken=new Set(files.map(f=>f.payload.number.toLowerCase()));let made=0;setMaking(1);
+  try{for(const c of missing){let number=/^[A-Za-z0-9-]{1,30}$/.test(c.code)?'ARC-'+c.code:'';if(!number||taken.has(number.toLowerCase())){let i=1;do number='ARC-X'+String(i++).padStart(5,'0');while(taken.has(number.toLowerCase()))}
+    taken.add(number.toLowerCase());
+    await save({...newDepartmentRecord('archive','file',{...blankFile(number),title:[clientName(c),c.opponent].filter(Boolean).join(' ضد ').slice(0,300)||'ملف قضية '+c.code,intakeDate:'',notes:'أُدرج لكل قضية في السجل'}),caseId:c.id});made++;setMaking(made+1)}
+   toast.success(`أُنشئ ${made} ملف ورقي`)}catch(e){toast.error(`أُنشئ ${made} ملف ثم توقف: ${(e as Error).message}`)}finally{setMaking(0);reload()}}
  return <><section className="department-hero"><div><div className="eyebrow">الملفات الورقية</div><h1>الأرشيف</h1><p>أين كل ملف الآن، ومع من، ومتى يعود. كل تسليم واستلام وجرد مسجل باسم من قام به.</p></div><Archive size={64}/></section>
  <div className="archive-scan"><ScanLine size={20} aria-hidden/><label className="field"><span>مسح الباركود أو كتابة رقم الأرشيف</span><input dir="ltr" value={scan} onChange={e=>setScan(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();openScan()}}} placeholder="ARC-00001"/></label><button className="btn" onClick={openScan}>فتح الملف</button></div>
  <div className="department-metrics collection-metrics">
@@ -67,6 +76,7 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
  </div>
  <div className="department-tabs view-switch" role="group" aria-label="أقسام الأرشيف">{views.map(([id,l,Icon,n])=><button key={id} className={'btn '+(view===id?'primary':'')} aria-pressed={view===id} onClick={()=>setView(id)}><Icon size={15}/> {l}{n?` (${n})`:''}</button>)}</div>
  <StatusMessage loading={loading} error={error}/>
+ {!loading&&!error&&view==='files'&&access.canEdit&&all&&missing.length>0&&<div className="notice archive-missing" role="status"><span><b>{missing.length}</b> قضية في السجل بلا ملف ورقي في الأرشيف.</span><button className="btn primary" disabled={!!making} onClick={()=>void createMissing()}>{making?`جارٍ الإنشاء ${making-1} من ${missing.length}…`:'إنشاء ملفاتها'}</button></div>}
  {!loading&&!error&&view==='files'&&<section className="panel">
   <div className="status-chips" role="group" aria-label="مكان الملف">{(['',...Object.keys(CUSTODY_STATES)] as string[]).map(s=><button type="button" key={s||'all'} className={'chip'+(state===s?' on':'')} onClick={()=>{setState(s);setPage(1)}}>{s?CUSTODY_STATES[s as keyof typeof CUSTODY_STATES]:'كل الملفات'} <b>{active.filter(f=>!s||cu(f).state===s).length}</b></button>)}{overdue.length>0&&<button type="button" className={'chip warn'+(state==='overdue'?' on':'')} onClick={()=>{setState('overdue');setPage(1)}}>متأخرة <b>{overdue.length}</b></button>}</div>
   <div className="department-toolbar"><Field label="بحث الأرشيف" value={search} onChange={v=>{setSearch(v);setPage(1)}} placeholder="رقم الأرشيف، العنوان، الكود، الأطراف أو المستلم"/>
