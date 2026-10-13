@@ -1,6 +1,6 @@
 # Cases desk (أعمال القضايا)
 
-Nine pages under «أعمال القضايا» in the cases workspace sidebar, plus the sessions roll, which opens from «رول الجلسات» beside «رول الأحكام» in the judgments register. Anyone who can open the cases section sees them. They only show the cases that account may already see, and they edit those cases with the same save path and the same edit permission as the case file. No new tables, migrations or permissions are needed: the extra fields are stored in the case record.
+Eight pages under «أعمال القضايا» in the cases workspace sidebar, plus two that open from buttons beside «رول الأحكام» in the judgments register: the sessions roll («رول الجلسات») and the judgments issued in a period («الأحكام الصادرة»). Anyone who can open the cases section sees them. They only show the cases that account may already see, and they edit those cases with the same save path and the same edit permission as the case file. No new tables, migrations or permissions are needed: the extra fields are stored in the case record.
 
 | Page | What it does |
 | --- | --- |
@@ -10,7 +10,7 @@ Nine pages under «أعمال القضايا» in the cases workspace sidebar, p
 | متابعة الجلسات | The next 7, 14 or 30 days of sittings, showing:<br>• what is required at each one<br>• who is assigned to attend, taken from the hearings in «المهام والجلسات»<br>• how many days are left |
 | كشوف القضايا | A printable statement of the cases for one client, lawyer or court: last decision, next sitting and judgment. |
 | الاستشارات | Consultations linked to a client, with type, subject, requester, the dates they were received and are due, status, answer and fee. «تحويل إلى قضية» moves one to cases under study. |
-| الأحكام | Every judgment issued in a period at every court level, including earlier levels saved in the case. Can be filtered by outcome and printed. |
+| الأحكام الصادرة | Every judgment issued in a period at every court level, including earlier levels saved in the case. Can be filtered by outcome and printed. |
 | القضايا بدون عقود | Open filed cases with no fee agreement. The contract number can be saved from the page, or the case marked «لا يلزم عقد». |
 | قضايا تحت الدراسة | Matters prepared before filing. «قيد الدعوى» records the case number, court, filing date and first hearing date. The case then moves into the register, and its first hearing appears in the roll and in posting. |
 | القضايا الموقوفة | Cases stayed or struck off by the last sitting's decision, or stayed by hand from the case file. Struck-off cases show a renewal reminder 60 days after striking off. The reminder is advisory; the lawyer confirms the actual deadline. |
