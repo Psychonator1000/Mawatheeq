@@ -15,6 +15,7 @@ import Accounting from './accounting';
 import HR from './hr';
 import ArchiveRoom from './archive';
 import BatchPrint from './batch-print';
+import BrandLogo from '../brand-logo';
 export default function DepartmentWorkspace({workspace,access}:{workspace:Department;access:Permissions}) {
  const [cases,setCases]=useState<CaseSummary[]>([]),[context,setContext]=useState<OfficeContext|null>(null),[work,setWork]=useState<WorkItem[]>([]);
  const [version,setVersion]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selected,setSelected]=useState<CaseSummary|null>(null);
@@ -23,7 +24,7 @@ export default function DepartmentWorkspace({workspace,access}:{workspace:Depart
   return()=>{active=false};
  },[workspace,version]);
  const refresh=()=>setVersion(v=>v+1),meta=WORKSPACES[workspace];
- return <main className={'department-shell theme-'+workspace} dir="rtl"><header className="department-topbar"><div className="department-brand"><span className="brand-mark">M</span><span>مواثيق <small>{meta.name}</small></span></div><div className="actions"><button className="btn" onClick={refresh} disabled={loading}><RefreshCw size={16}/> تحديث</button><AccountMenu/></div></header>
+ return <main className={'department-shell theme-'+workspace} dir="rtl"><header className="department-topbar"><div className="department-brand"><BrandLogo/><span>مواثيق <small>{meta.name}</small></span></div><div className="actions"><button className="btn" onClick={refresh} disabled={loading}><RefreshCw size={16}/> تحديث</button><AccountMenu/></div></header>
  <div className="department-content"><StatusMessage loading={loading} error={error}/>{!loading&&!error&&<>
  {!access.canEdit&&<p className="notice">حسابك للقراءة فقط في هذه المساحة.</p>}
  {workspace==='secretary'&&context&&<Secretary items={work} context={context} records={cases} onChanged={refresh} onOpenCase={setSelected}/>}

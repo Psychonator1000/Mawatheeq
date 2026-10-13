@@ -1,0 +1,16 @@
+/* Aref Ruqaa and Cinzel (SIL Open Font License, see fonts/), bundled with the app for the logo only. */
+@font-face{font-family:'Mawatheeq Ruqaa';src:url('./fonts/aref-ruqaa-arabic-700.woff2') format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:'Mawatheeq Cinzel';src:url('./fonts/cinzel-latin-600.woff2') format('woff2');font-weight:600;font-display:swap}
+.brand-logo{--logo-h:64px;--logo-ink:var(--foreground);--logo-accent:var(--brand);display:inline-flex;flex-direction:column;align-items:center;color:var(--logo-ink);flex:none;line-height:1;user-select:none}
+.brand-logo-mark{display:block;height:var(--logo-h);aspect-ratio:240/420}.brand-logo-mark svg{display:block;width:100%;height:100%;overflow:visible}
+.brand-logo-lines{display:flex;flex-direction:column;align-items:center;gap:calc(var(--logo-h)*.035);margin-top:calc(var(--logo-h)*.06)}
+.brand-logo-en{font:600 calc(var(--logo-h)*.2)/1 'Mawatheeq Cinzel','Cinzel','Trajan Pro',Georgia,serif;letter-spacing:.06em;direction:ltr;position:relative;padding-bottom:calc(var(--logo-h)*.02)}
+.brand-logo-lines small{font:600 calc(var(--logo-h)*.074)/1.2 'Mawatheeq Cinzel','Cinzel',Georgia,serif;letter-spacing:.09em;direction:ltr;opacity:.85}
+.brand-logo-ar{font-size:calc(var(--logo-h)*.082);font-weight:600;opacity:.9;white-space:nowrap}
+.brand-logo.full{--logo-h:150px}
+/* On the sidebar the logo takes the sidebar's own ink, with the accent a warm tone of the theme. */
+.sidebar-brand .brand-logo{--logo-h:58px;--logo-ink:var(--sidebar-foreground);--logo-accent:color-mix(in oklab,var(--sidebar-primary) 62%,#d58f55)}
+.sidebar-brand{gap:14px}.sidebar-brand .brand-en{font-family:'Mawatheeq Cinzel','Cinzel',Georgia,serif;letter-spacing:.08em}
+.department-brand .brand-logo{--logo-h:44px}
+.auth-card .brand-logo{margin:0 auto 14px;display:flex}.auth-card .brand-logo.full{--logo-h:170px}
+.workspace-chooser header .brand-logo{margin-bottom:22px}.workspace-chooser header .brand-logo.full{--logo-h:130px}

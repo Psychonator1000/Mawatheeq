@@ -2,6 +2,21 @@ import type { CaseRecord } from './domain';
 import type { WorkItem } from './office';
 import type { MonthSummary } from './attendance';
 
+/**
+ * The office logo, redrawn as a vector: the tall alif with its pointed head, «م» with the two flourishes, the «و» in the
+ * accent colour crossing the alif, and «ثيق» stacked beneath with «ق» at the base. Ink is currentColor and the accent is
+ * the --logo-accent variable, so it takes every theme's colours. Shared by the app and the printed letterhead.
+ */
+export const BRAND_MARK_VIEWBOX = '0 0 240 420';
+export function brandMarkSvg(font = "'Mawatheeq Ruqaa','Aref Ruqaa',serif", accent = 'var(--logo-accent, #8a2d2a)') {
+  return `<svg viewBox="${BRAND_MARK_VIEWBOX}" xmlns="http://www.w3.org/2000/svg" direction="ltr" aria-hidden="true" focusable="false"><g fill="currentColor" font-family="${font}" text-anchor="middle">`
+    + '<path d="M84 4 L98 22 L101 28 L99 372 Q98 386 88 390 L78 388 Q83 376 83 362 L82 40 L70 34 Z"/>'
+    + '<path d="M116 98 Q170 76 228 66 L218 78 Q170 86 120 106 Z"/><path d="M120 126 Q172 104 224 96 L214 107 Q170 114 124 134 Z"/>'
+    + '<text x="180" y="236" font-size="150">م</text><text x="178" y="318" font-size="96">ثيـ</text><text x="134" y="408" font-size="150">ق</text>'
+    + '<path d="M30 190 l9 -15 l3 3 l-9 15z M44 140 l7 -12 l3 2 l-7 12z M138 220 l7 -12 l3 2 l-7 12z M26 300 l9 -14 l3 3 l-9 14z M214 330 q8 -6 14 0 q-6 8 -14 0z M210 390 l8 -12 l3 2 l-8 12z"/>'
+    + `<text x="80" y="300" font-size="190" fill="${accent}">و</text></g></svg>`;
+}
+
 const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
 const dmy = (iso: string) => /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : iso;
 const sections: [string, [keyof CaseRecord, string, boolean?][]][] = [
@@ -36,8 +51,8 @@ ${footer(printedAt, printedBy)}`);
 }
 
 const footer = (printedAt: string, printedBy: string) => `<footer><span>طُبع من نظام مواثيق في ${escape(printedAt)}${printedBy ? ' بواسطة ' + escape(printedBy) : ''}</span><span>ملف داخلي سري</span></footer>`;
-/** The office logo, redrawn in type: «مواثيق» in Ruqaa calligraphy («مو» in the logo's maroon) inside a gold-ringed seal. */
-const SEAL = `<div class="seal" aria-hidden="true"><span class="seal-ar"><span class="mo">مو</span>اثيق</span><span class="seal-en">MAWATHEEQ</span></div>`;
+/** The office logo (the same vector mark as in the app), with «و» in the logo's maroon. */
+const SEAL = `<div class="seal" aria-hidden="true">${brandMarkSvg("'Aref Ruqaa',serif", '#8a2d2a')}</div>`;
 /**
  * Printed pages have no browser margin, so the browser cannot add its own header and footer (page address, title, date).
  * The page spacing comes instead from a frame table whose empty head and foot rows repeat on every printed page. The
@@ -45,7 +60,7 @@ const SEAL = `<div class="seal" aria-hidden="true"><span class="seal-ar"><span c
  */
 function page(title: string, body: string, landscape = false) {
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escape(title)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Cormorant+Garamond:wght@600;700&family=Noto+Kufi+Arabic:wght@600;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap"><style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=Cinzel:wght@600&family=Cormorant+Garamond:wght@600;700&family=Noto+Kufi+Arabic:wght@600;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap"><style>
 @page{size:A4 ${landscape ? 'landscape' : 'portrait'};margin:0}
 html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Noto Sans Arabic',Tahoma,Arial,sans-serif;color:#2a201b;margin:0;padding:0 13mm;font-size:12.5px;line-height:1.55;background:#fff}
@@ -55,11 +70,9 @@ body{font-family:'Noto Sans Arabic',Tahoma,Arial,sans-serif;color:#2a201b;margin
 .brand{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:10px;border-bottom:2px solid #6e1f33;position:relative;margin-bottom:6px}
 .brand::after{content:'';position:absolute;left:0;right:0;bottom:-5px;height:1px;background:#c9a24a}
 .brand-id{display:flex;align-items:center;gap:14px}
-.seal{width:66px;height:66px;flex-shrink:0;border-radius:50%;background:#fff;border:1.6px solid #c9a24a;box-shadow:0 0 0 3px #fff,0 0 0 4px #6e1f33;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
-.seal-ar{font-family:'Aref Ruqaa','Noto Kufi Arabic',serif;font-weight:700;font-size:21px;line-height:1.05;white-space:nowrap;color:#1d1714}.seal-ar .mo{color:#8a2d2a}
-.seal-en{font-family:'Cormorant Garamond',Georgia,serif;font-weight:700;font-size:6.6px;letter-spacing:.14em;color:#3a2b25}
+.seal{width:42px;height:74px;flex-shrink:0;color:#1d1714}.seal svg{width:100%;height:100%;overflow:visible}
 .brand-name strong{display:block;font-family:'Noto Kufi Arabic','Noto Sans Arabic',Tahoma,sans-serif;font-size:15.5px;font-weight:700;color:#5a1a2b;line-height:1.45}
-.brand-name small{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-size:10px;letter-spacing:.2em;color:#a8873e;font-weight:700;direction:ltr;text-align:right}
+.brand-name small{display:block;font-family:'Cinzel','Cormorant Garamond',Georgia,serif;font-size:9.5px;letter-spacing:.14em;color:#a8873e;font-weight:700;direction:ltr;text-align:right}
 .brand-meta{font-size:10px;color:#8a7568;text-align:left;line-height:1.7}
 header{margin:16px 0 10px}h1{font-family:'Noto Kufi Arabic','Noto Sans Arabic',Tahoma,sans-serif;font-size:19px;font-weight:700;margin:0;color:#2a201b}header p{margin:3px 0 0;color:#76645a;font-size:11.5px}
 h2{font-size:13px;color:#6e1f33;margin:16px 0 6px;padding-inline-start:8px;border-inline-start:3px solid #c9a24a;break-after:avoid}

@@ -9,6 +9,7 @@ import {workspaceStorageKey} from '@/lib/departments';
 import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, isSwitchedSession, returnToOwner, type LocalUser } from '@/lib/local-auth';
 import type { Permissions } from '@/lib/permissions';
 import { cachedUser, cachedAccess, rememberUser, rememberAccess } from '@/lib/boot-cache';
+import BrandLogo from '@/components/brand-logo';
 
 /** After leaving a staff account, the owner lands back on the staff list they switched from. */
 function backToStaffList() { sessionStorage.setItem(workspaceStorageKey, 'legal'); history.replaceState(null, '', '#settings'); }
@@ -111,7 +112,7 @@ export default function SharedApp() {
   </AccountContext.Provider>;
 
   return <><MotionLayer /><ConnectionStatus /><main className="auth-page"><section className="auth-card">
-    <div className="brand-mark">M</div><h1>مواثيق</h1><p>مساحة المكتب المشتركة للأحكام والتنفيذ والمستندات.</p>
+    <BrandLogo full/><h1 className="sr-only">مواثيق</h1><p>مساحة المكتب المشتركة للأحكام والتنفيذ والمستندات.</p>
     {!ready ? <p role="status">جارٍ فتح مساحة العمل…</p> : passwordForm ? <>
       <h2>تغيير كلمة المرور</h2><p>{passwordRequired ? 'عيّن كلمة مرور خاصة بك لفتح مساحة المكتب.' : 'تُسجّل الجلسات الأخرى خروجها عند تغيير كلمة المرور.'}</p>
       <form onSubmit={updatePassword}>
