@@ -5,7 +5,7 @@ import {toast} from 'sonner';
 import {chatRequest,fileRequest} from '@/lib/local-auth';
 import {backend} from '@/lib/supabase-client';
 import {requestOpen} from '@/lib/open-record';
-import {FILE_TYPES,MAX_FILE,bodyParts,chatTime,conversationName,fileSize,refToken,typedTrigger,type ChatConversation,type ChatMessage,type ChatPerson,type ChatRef,type ChatSummary} from '@/lib/chat';
+import {FILE_TYPES,MAX_FILE,bodyParts,chatTime,conversationName,fileSize,refToken,triggerRefs,typedTrigger,type ChatConversation,type ChatMessage,type ChatPerson,type ChatRef,type ChatSummary} from '@/lib/chat';
 
 const FAST=5000,SLOW=30000,HIDDEN=60000;
 const missing=(e:unknown)=>/Could not find the function|PGRST202|404/.test(String((e as Error)?.message||e));
@@ -37,15 +37,25 @@ export default function Chat({userId}:{userId:string}){
  </>;
 }
 
+/** Conversations closed from the list on this device, with the time of their last message when closed. */
+const closedKey=(me:string)=>'mawatheeq.chat-closed.'+me;
+const readClosed=(me:string):Record<string,string>=>{try{const v=JSON.parse(localStorage.getItem(closedKey(me))||'{}');return v&&typeof v==='object'?v:{}}catch{return {}}};
 function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:ChatSummary|null;me:string;onOpen:(id:string)=>void;onNew:()=>void;onGroup:()=>void;onClose:()=>void}){
- const [q,setQ]=useState('');
- const list=(summary?.conversations||[]).filter(c=>(conversationName(c,me)+' '+c.members.map(m=>m.name).join(' ')).includes(q.trim()));
+ const [q,setQ]=useState(''),[closed,setClosed]=useState(()=>readClosed(me)),[showClosed,setShowClosed]=useState(false);
+ const saveClosed=(next:Record<string,string>)=>{setClosed(next);try{localStorage.setItem(closedKey(me),JSON.stringify(next))}catch{/* kept for this visit only */}};
+ // A closed conversation stays saved; it returns to the list when a new message arrives, or when searched for.
+ const isClosed=(c:ChatConversation)=>!!closed[c.id]&&c.lastAt<=closed[c.id];
+ const matches=(summary?.conversations||[]).filter(c=>(conversationName(c,me)+' '+c.members.map(m=>m.name).join(' ')).includes(q.trim()));
+ const hiddenCount=matches.filter(isClosed).length;
+ const list=matches.filter(c=>q.trim()||showClosed||!isClosed(c));
  const mine=list.filter(c=>c.isMember),review=list.filter(c=>!c.isMember);
  const canNotify='Notification' in window&&Notification.permission==='default';
- const row=(c:ChatConversation)=><button type="button" key={c.id} className={'chat-row'+(c.unread?' unread':'')} onClick={()=>onOpen(c.id)}>
+ const row=(c:ChatConversation)=><div key={c.id} className="chat-row-wrap"><button type="button" className={'chat-row'+(c.unread?' unread':'')+(isClosed(c)?' closed':'')} onClick={()=>onOpen(c.id)}>
   <span className="chat-avatar" aria-hidden>{c.kind==='group'?<Users size={16}/>:conversationName(c,me).replace(/^ا[/.]\s*/,'').slice(0,1)}</span>
   <span className="chat-row-text"><b>{conversationName(c,me)}</b><small>{c.last?(c.last.kind==='event'?'':c.last.mine?'أنت: ':c.kind==='group'?c.last.sender+': ':'')+c.last.body:'لا رسائل بعد'}</small></span>
-  <span className="chat-row-meta"><small>{chatTime(c.lastAt)}</small>{c.unread>0&&<span className="chat-badge inline">{c.unread}</span>}</span></button>;
+  <span className="chat-row-meta"><small>{chatTime(c.lastAt)}</small>{c.unread>0&&<span className="chat-badge inline">{c.unread}</span>}</span></button>
+  {isClosed(c)?<button type="button" className="chat-row-close" onClick={()=>{const next={...closed};delete next[c.id];saveClosed(next)}} aria-label={'إعادة '+conversationName(c,me)+' إلى القائمة'} title="إعادة إلى القائمة"><Plus size={14}/></button>
+   :<button type="button" className="chat-row-close" onClick={()=>saveClosed({...closed,[c.id]:c.lastAt})} aria-label={'إغلاق '+conversationName(c,me)} title="إغلاق المحادثة (تبقى محفوظة)"><X size={14}/></button>}</div>;
  return <>
   <header className="chat-head"><h2>المحادثات</h2><div className="chat-head-actions"><button type="button" className="icon-btn" onClick={onNew} aria-label="محادثة جديدة" title="محادثة جديدة"><Plus size={18}/></button><button type="button" className="icon-btn" onClick={onGroup} aria-label="مجموعة جديدة" title="مجموعة جديدة"><Users size={18}/></button><button type="button" className="icon-btn" onClick={onClose} aria-label="إغلاق المحادثات"><X size={18}/></button></div></header>
   <div className="chat-search searchbox"><Search size={15}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="ابحث في المحادثات" aria-label="بحث في المحادثات"/></div>
@@ -55,7 +65,7 @@ function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:Cha
    {mine.map(row)}
    {review.length>0&&<><h3 className="chat-section"><Eye size={14}/> مراجعة المسؤول ({review.length})</h3>{review.map(row)}</>}
   </div>
-  <footer className="chat-foot">{canNotify&&<button type="button" className="text-link" onClick={()=>void Notification.requestPermission()}><Bell size={13}/> تفعيل تنبيهات الرسائل</button>}<small>المحادثات خاصة بأعضائها، ويمكن لمسؤول المكتب مراجعتها.</small></footer>
+  <footer className="chat-foot">{(hiddenCount>0||showClosed)&&!q.trim()&&<button type="button" className="text-link" onClick={()=>setShowClosed(v=>!v)}>{showClosed?'إخفاء المحادثات المغلقة':`المحادثات المغلقة (${hiddenCount})`}</button>}{canNotify&&<button type="button" className="text-link" onClick={()=>void Notification.requestPermission()}><Bell size={13}/> تفعيل تنبيهات الرسائل</button>}<small>المحادثات خاصة بأعضائها، ويمكن لمسؤول المكتب مراجعتها.</small></footer>
  </>;
 }
 
@@ -75,7 +85,7 @@ function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeav
   // Edits and deletions of recent messages are picked up by a full reload every 30 seconds.
   let n=0;const t=window.setInterval(()=>{if(!document.hidden)void load(++n%6===0)},FAST);return()=>clearInterval(t)},[load]);
  useEffect(()=>{const el=scroller.current;if(el)el.scrollTop=el.scrollHeight},[messages.length]);
- useEffect(()=>{if(!trigger){setSuggest([]);return}const t=window.setTimeout(()=>{void chatRequest<ChatRef[]>('search',{q:trigger.query||(trigger.char==='@'?'ا':'')}).then(r=>{setSuggest(r.filter(x=>trigger.char==='@'?x.type==='user':x.type!=='user').slice(0,8));setPick(0)}).catch(()=>setSuggest([]))},trigger.query?220:0);return()=>clearTimeout(t)},[trigger]);
+ useEffect(()=>{if(!trigger){setSuggest([]);return}const t=window.setTimeout(()=>{void chatRequest<ChatRef[]>('search',{q:trigger.query||(trigger.char==='@'?'ا':'')}).then(r=>{setSuggest(triggerRefs(trigger.char,r).slice(0,8));setPick(0)}).catch(()=>setSuggest([]))},trigger.query?220:0);return()=>clearTimeout(t)},[trigger]);
  function onType(v:string){setText(v);const caret=input.current?.selectionStart??v.length;setTrigger(typedTrigger(v,caret));setRefs(r=>r.filter(x=>v.includes(refToken(x))))}
  function choose(r:ChatRef){if(!trigger)return;const before=text.slice(0,trigger.start),after=text.slice(trigger.start+1+trigger.query.length);const token=refToken(r)+' ';
   setText(before+token+after.replace(/^\s/,''));setRefs(x=>[...x.filter(y=>!(y.type===r.type&&y.id===r.id)),{type:r.type,id:r.id,label:r.label}]);setTrigger(null);requestAnimationFrame(()=>input.current?.focus())}
@@ -97,6 +107,9 @@ function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeav
   if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void send()}
   if(e.key==='Escape'&&editing){e.preventDefault();setEditing(null);setText('');setRefs([])}
  }
+ // A pasted screenshot or image is attached like a chosen file; pasted text pastes as usual.
+ function onPaste(e:React.ClipboardEvent<HTMLTextAreaElement>){const f=[...e.clipboardData.files].find(x=>x.type.startsWith('image/'));if(!f||readOnly)return;e.preventDefault();
+  const stamp=new Date().toISOString().slice(0,19).replace('T',' ').replace(/:/g,'-'),name=!f.name||/^image\.\w+$/i.test(f.name)?`لقطة شاشة ${stamp}.${f.type.split('/')[1]||'png'}`:f.name;attach(new File([f],name,{type:f.type}))}
  function attach(f:File|undefined){if(!f)return;if(f.size>MAX_FILE){toast.error('حجم الملف يجب ألا يتجاوز 5 ميغابايت.');return}if(!FILE_TYPES.includes(f.type)){toast.error('الصور وPDF وWord وExcel فقط.');return}setFile(f)}
  async function download(f:NonNullable<ChatMessage['file']>){try{const r=await fileRequest('chat_download',{path:f.path,name:f.name});window.open(r.url,'_blank','noopener')}catch(e){toast.error((e as Error).message)}}
  function openRef(r:ChatRef){if(!r.ok){toast.info('لا تملك صلاحية فتح هذا السجل.');return}if(r.type==='user'){if(r.id!==me)onDirect(r.id);return}requestOpen({type:r.type,id:r.id});onLeave()}
@@ -123,7 +136,7 @@ function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeav
    {trigger&&suggest.length>0&&<ul className="chat-suggest" role="listbox" aria-label="اقتراحات">{suggest.map((s,i)=><li key={s.type+s.id} role="option" aria-selected={i===pick}><button type="button" onMouseDown={e=>{e.preventDefault();choose(s)}}><b>{refToken(s)}</b><small>{s.sub}</small></button></li>)}</ul>}
    <div className="chat-compose-row">
     {!editing&&<><input ref={fileInput} type="file" hidden accept={FILE_TYPES.join(',')} onChange={e=>{attach(e.target.files?.[0]);e.target.value=''}}/><button type="button" className="icon-btn" aria-label="إرفاق ملف" onClick={()=>fileInput.current?.click()}><Paperclip size={18}/></button></>}
-    <textarea ref={input} rows={1} value={text} onChange={e=>onType(e.target.value)} onKeyDown={onKey} onClick={e=>setTrigger(typedTrigger(text,e.currentTarget.selectionStart))} placeholder="اكتب رسالة… # قضية أو موكل أو مهمة، @ زميل" aria-label="نص الرسالة" maxLength={4000}/>
+    <textarea ref={input} rows={1} value={text} onPaste={onPaste} onChange={e=>onType(e.target.value)} onKeyDown={onKey} onClick={e=>setTrigger(typedTrigger(text,e.currentTarget.selectionStart))} placeholder="اكتب رسالة… # كود قضية أو موكل أو مهمة، ! رقم آلي، @ زميل" aria-label="نص الرسالة" maxLength={4000}/>
     <button type="submit" className="btn primary chat-send" disabled={busy||(!text.trim()&&!file)} aria-label={editing?'حفظ التعديل':'إرسال'}><Send size={17}/></button>
    </div>
   </form>}

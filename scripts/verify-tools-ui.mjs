@@ -418,22 +418,26 @@ await lively.close();
  const panel=page.getByRole('dialog',{name:'المحادثات'});
  await panel.getByRole('button',{name:'محادثة جديدة'}).click();await panel.getByRole('button',{name:/tools_clerk/}).click();
  const box=panel.getByLabel('نص الرسالة');await box.click();await box.pressSequentially('مرحبا، راجع #TOOL-0');
- await panel.getByRole('option',{name:/#TOOL-0/}).waitFor();await box.press('Enter');await box.pressSequentially('اليوم');
- assert.equal(await box.inputValue(),'مرحبا، راجع #TOOL-0 اليوم','Choosing a suggestion inserts the reference');await box.press('Enter');
- await panel.locator('.chat-msg.mine .chat-ref').getByText('#TOOL-0').waitFor();
+ await panel.getByRole('option',{name:/كود TOOL-0/}).waitFor();await box.press('Enter');await box.pressSequentially('و !7001');
+ await panel.getByRole('option',{name:/الرقم الآلي 7001/}).waitFor();await box.press('Enter');await box.pressSequentially('اليوم');
+ assert.equal(await box.inputValue(),'مرحبا، راجع كود TOOL-0 و الرقم الآلي 7001 اليوم','«#» inserts the office code and «!» the automatic number');await box.press('Enter');
+ await panel.locator('.chat-msg.mine .chat-ref').getByText('كود TOOL-0').waitFor();await panel.locator('.chat-msg.mine .chat-ref').getByText('الرقم الآلي 7001').waitFor();
  await page.screenshot({path:artifacts+'/chat-owner.png'});
  const clerkCtx=await browser.newContext({viewport:{width:1280,height:900},reducedMotion:'reduce',timezoneId:'Asia/Kuwait'});await wireFixture(clerkCtx);
  const cp=await clerkCtx.newPage();cp.on('pageerror',e=>errors.push('clerk: '+e.message));await cp.goto(base);
  await cp.getByLabel('اسم المستخدم',{exact:true}).fill('tools_clerk');await cp.getByLabel('كلمة المرور',{exact:true}).fill('Fixture-password-123');await cp.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
  const cb=cp.getByRole('button',{name:'المحادثات، 1 غير مقروءة'});await cb.waitFor({timeout:15000});await cb.click();
- const cpanel=cp.getByRole('dialog',{name:'المحادثات'});await cpanel.getByRole('button',{name:/tools_owner/}).click();
- await cpanel.locator('.chat-ref').getByText('#TOOL-0').click();
+ const cpanel=cp.getByRole('dialog',{name:'المحادثات'});await cpanel.locator('.chat-row',{hasText:'tools_owner'}).click();
+ await cpanel.locator('.chat-ref').getByText('كود TOOL-0').click();
  await cp.locator('[data-record-window] .case-pin').getByText('TOOL-0').waitFor();assert.equal(await cpanel.count(),0,'Opening a reference shows the case');
  await cp.keyboard.press('Escape');await cp.locator('[data-record-window]').waitFor({state:'hidden'});
  await cp.getByRole('button',{name:/^المحادثات/}).click();await cpanel.getByLabel('نص الرسالة').waitFor(); // Reopening returns to the same conversation
  await cpanel.locator('input[type=file]').setInputFiles({name:'memo.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')});
  await cpanel.getByLabel('نص الرسالة').fill('المذكرة مرفقة');await cpanel.getByRole('button',{name:'إرسال'}).click();
  await cpanel.locator('.chat-msg.mine .chat-file').getByText('memo.pdf').waitFor();assert.equal(uploads.length,1,'The file went to chat storage');
+ // Pasting a screenshot attaches it like a chosen file.
+ await cpanel.getByLabel('نص الرسالة').evaluate(el=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array([137,80,78,71])],'image.png',{type:'image/png'}));el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))});
+ await cpanel.locator('.chat-editing').getByText(/لقطة شاشة .*\.png/).waitFor();await cpanel.locator('.chat-editing').getByRole('button',{name:'إزالة'}).click();
  await panel.locator('.chat-msg:not(.mine) .chat-file').getByText('memo.pdf').waitFor({timeout:15000});
  const [popup]=await Promise.all([page.waitForEvent('popup'),panel.locator('.chat-file').getByText('memo.pdf').click()]);await popup.close();
  // Edit within 15 minutes; groups with a system note.
@@ -443,6 +447,12 @@ await lively.close();
  await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();await panel.getByRole('button',{name:'مجموعة جديدة'}).click();
  await panel.getByLabel('اسم المجموعة').fill('فريق الأدوات');await panel.getByRole('checkbox').first().check();await panel.getByRole('button',{name:/إنشاء المجموعة/}).click();
  await panel.getByText(/أنشأ tools_owner المجموعة مع/).waitFor();await page.screenshot({path:artifacts+'/chat-group.png'});
+ // Closing a conversation hides it from the list but keeps it; it can be shown and restored.
+ await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();const rows=panel.locator('.chat-row-wrap'),before=await rows.count();
+ await rows.first().hover();await rows.first().getByRole('button',{name:/^إغلاق /}).click();
+ await panel.getByRole('button',{name:'المحادثات المغلقة (1)'}).waitFor();assert.equal(await rows.count(),before-1,'A closed conversation leaves the list');
+ await panel.getByRole('button',{name:'المحادثات المغلقة (1)'}).click();await panel.getByRole('button',{name:/^إعادة .* إلى القائمة$/}).click();
+ await panel.getByRole('button',{name:'إخفاء المحادثات المغلقة'}).click();assert.equal(await rows.count(),before,'A restored conversation returns');
  await page.keyboard.press('Escape');await panel.waitFor({state:'hidden'});
  await clerkCtx.close();}
 // Automatic light mode on a strong PC: the old permanent "slow" flag is ignored; a fresh one explains itself and can be cleared.
