@@ -42,9 +42,11 @@ const closedKey=(me:string)=>'mawatheeq.chat-closed.'+me;
 const readClosed=(me:string):Record<string,string>=>{try{const v=JSON.parse(localStorage.getItem(closedKey(me))||'{}');return v&&typeof v==='object'?v:{}}catch{return {}}};
 function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:ChatSummary|null;me:string;onOpen:(id:string)=>void;onNew:()=>void;onGroup:()=>void;onClose:()=>void}){
  const [q,setQ]=useState(''),[closed,setClosed]=useState(()=>readClosed(me)),[showClosed,setShowClosed]=useState(false);
+ useEffect(()=>setClosed(readClosed(me)),[me]);
  const saveClosed=(next:Record<string,string>)=>{setClosed(next);try{localStorage.setItem(closedKey(me),JSON.stringify(next))}catch{/* kept for this visit only */}};
  // A closed conversation stays saved; it returns to the list when a new message arrives, or when searched for.
- const isClosed=(c:ChatConversation)=>!!closed[c.id]&&c.lastAt<=closed[c.id];
+ const at=(v:string)=>{const t=Date.parse(v);return Number.isNaN(t)?0:t};
+ const isClosed=(c:ChatConversation)=>!!closed[c.id]&&at(c.lastAt)<=at(closed[c.id]);
  const matches=(summary?.conversations||[]).filter(c=>(conversationName(c,me)+' '+c.members.map(m=>m.name).join(' ')).includes(q.trim()));
  const hiddenCount=matches.filter(isClosed).length;
  const list=matches.filter(c=>q.trim()||showClosed||!isClosed(c));
@@ -55,7 +57,7 @@ function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:Cha
   <span className="chat-row-text"><b>{conversationName(c,me)}</b><small>{c.last?(c.last.kind==='event'?'':c.last.mine?'أنت: ':c.kind==='group'?c.last.sender+': ':'')+c.last.body:'لا رسائل بعد'}</small></span>
   <span className="chat-row-meta"><small>{chatTime(c.lastAt)}</small>{c.unread>0&&<span className="chat-badge inline">{c.unread}</span>}</span></button>
   {isClosed(c)?<button type="button" className="chat-row-close" onClick={()=>{const next={...closed};delete next[c.id];saveClosed(next)}} aria-label={'إعادة '+conversationName(c,me)+' إلى القائمة'} title="إعادة إلى القائمة"><Plus size={14}/></button>
-   :<button type="button" className="chat-row-close" onClick={()=>saveClosed({...closed,[c.id]:c.lastAt})} aria-label={'إغلاق '+conversationName(c,me)} title="إغلاق المحادثة (تبقى محفوظة)"><X size={14}/></button>}</div>;
+   :<button type="button" className="chat-row-close" onClick={()=>saveClosed({...closed,[c.id]:new Date(Math.max(at(c.lastAt),Date.now())).toISOString()})} aria-label={'إغلاق '+conversationName(c,me)} title="إغلاق المحادثة (تبقى محفوظة)"><X size={14}/></button>}</div>;
  return <>
   <header className="chat-head"><h2>المحادثات</h2><div className="chat-head-actions"><button type="button" className="icon-btn" onClick={onNew} aria-label="محادثة جديدة" title="محادثة جديدة"><Plus size={18}/></button><button type="button" className="icon-btn" onClick={onGroup} aria-label="مجموعة جديدة" title="مجموعة جديدة"><Users size={18}/></button><button type="button" className="icon-btn" onClick={onClose} aria-label="إغلاق المحادثات"><X size={18}/></button></div></header>
   <div className="chat-search searchbox"><Search size={15}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="ابحث في المحادثات" aria-label="بحث في المحادثات"/></div>
