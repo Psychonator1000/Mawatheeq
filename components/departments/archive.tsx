@@ -4,7 +4,7 @@ import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
 import {type CaseSummary,type DepartmentRecord,newDepartmentRecord} from '@/lib/departments';
 import type {Permissions} from '@/lib/permissions';
-import {CUSTODY_STATES,MOVEMENTS,FILE_TYPES,OUTSIDE_BODIES,PURPOSES,REQUEST_STATUSES,custodyOf,fileMovements,isOverdue,daysBetween,nextNumber,locationLabel,retentionDue,needsHolder,code39Ready,code39Svg,
+import {CUSTODY_STATES,MOVEMENTS,FILE_TYPES,OUTSIDE_BODIES,PURPOSES,REQUEST_STATUSES,custodyOf,fileMovements,recordedAt,isOverdue,daysBetween,nextNumber,locationLabel,retentionDue,needsHolder,code39Ready,code39Svg,
  type ArchiveFile,type ArchiveLocation,type ArchiveMovement,type ArchiveRequest,type Custody,type FileData,type LocationData,type MovementData,type MovementType,type RequestData} from '@/lib/archive';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -264,7 +264,7 @@ function Stocktake({location,files,custody,caseRef,canPrint,onClose,onDone}:{loc
 
 function MovementLog({movements,files,locOf,canPrint,onOpen}:{movements:ArchiveMovement[];files:ArchiveFile[];locOf:(id:string)=>ArchiveLocation|undefined;canPrint:boolean;onOpen:(f:ArchiveFile)=>void}) {
  const [type,setType]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[page,setPage]=useState(1);
- const list=movements.filter(m=>(!type||m.payload.type===type)&&(!from||m.payload.date>=from)&&(!to||m.payload.date<=to)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+ const list=movements.filter(m=>(!type||m.payload.type===type)&&(!from||m.payload.date>=from)&&(!to||m.payload.date<=to)).sort((a,b)=>recordedAt(b)-recordedAt(a));
  const pages=Math.max(1,Math.ceil(list.length/20)),current=Math.min(page,pages),fileOf=(id:string)=>files.find(f=>f.id===id);
  return <section className="panel"><div className="panel-head"><div><h2>سجل الحركة</h2><p className="panel-note">كل تسليم واستلام ونقل وجرد، بمن سجّله ومتى. الحركات لا تُعدّل؛ الخاطئة تُلغى بسبب.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('سجل حركة الأرشيف',(from||to)?`من ${formatDate(from)||'البداية'} إلى ${formatDate(to)||'اليوم'}`:'كل الفترات',['التاريخ','رقم الأرشيف','الملف','الحركة','المستلم / الموقع','الغرض','سجّلها','الحالة'],list.map(m=>{const f=fileOf(m.subjectId),p=m.payload;return [formatDate(p.date),f?.payload.number||'',f?.payload.title||'',MOVEMENTS[p.type].label,p.holder||locationLabel(locOf(p.locationId)),p.purpose,m.createdBy,p.status==='void'?'ملغاة: '+p.voidReason:'']}),formatDate(todayISO()),''))}><Printer size={15}/> طباعة السجل</button>}</div>
   <div className="department-toolbar"><OfficeSelect label="نوع الحركة" value={type} onChange={v=>{setType(v);setPage(1)}} options={[['','كل الحركات'],...(Object.keys(MOVEMENTS) as MovementType[]).map(t=>[t,MOVEMENTS[t].label] as [string,string])]}/><DateField label="من تاريخ" value={from} onChange={v=>{setFrom(v);setPage(1)}}/><DateField label="إلى تاريخ" value={to} onChange={v=>{setTo(v);setPage(1)}}/></div>

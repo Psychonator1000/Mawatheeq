@@ -139,6 +139,9 @@ assert.ok(FILE_STATUSES.includes('تحصيل ودي'));
     mv('c', '2026-10-05T08:00:00Z', { type: 'court', date: '2026-10-05', holder: 'إدارة الخبراء', dueDate: '2026-10-06', fromState: 'in', toState: 'court', status: 'void' }),
     mv('d', '2026-10-06T08:00:00Z', { type: 'audit', date: '2026-10-06', locationId: 'L2', fromState: 'in', toState: 'in' })];
   const c = custodyOf(file, [...log].reverse());
+  // Same second, one time without a fraction: ordering must follow the time, not text collation.
+  const sameSecond = [mv('x2', '2026-10-13T06:29:11.5+00:00', { type: 'return', date: '2026-10-13', fromState: 'staff', toState: 'in' }), mv('x1', '2026-10-13T06:29:11+00:00', { type: 'checkout', date: '2026-10-13', holder: 'محامٍ', fromState: 'in', toState: 'staff' })];
+  assert.equal(custodyOf(file, sameSecond).state, 'in', 'A return in the same second as its hand-out is the latest');
   assert.equal(c.state, 'in'); assert.equal(c.locationId, 'L2'); assert.equal(c.lastAudit, '2026-10-06'); assert.equal(c.holder, ''); assert.equal(c.last.id, 'd', 'Order follows the server record time, not the list order');
   const out = custodyOf(file, log.slice(0, 1));
   assert.equal(out.state, 'staff'); assert.equal(out.holder, 'محامٍ'); assert.equal(isOverdue(out, '2026-10-05'), true); assert.equal(isOverdue(out, '2026-10-04'), false);

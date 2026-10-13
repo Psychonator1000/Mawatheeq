@@ -32,8 +32,10 @@ export const REQUEST_STATUSES: Record<RequestStatus,string> = {pending:'بانت
 
 export type Custody = {state:CustodyState;locationId:string;holder:string;holderId:string;dueDate:string;since:string;purpose:string;lastAudit:string;last:ArchiveMovement|null};
 /** Posted movements of one file in the order they were recorded (the server's own order). */
+/** Server record time as a number: string comparison would depend on the browser's locale and on trimmed fractions. */
+export const recordedAt=(m:{createdAt:string})=>{const t=Date.parse(m.createdAt);return Number.isNaN(t)?0:t};
 export function fileMovements(fileId:string,movements:ArchiveMovement[]) {
- return movements.filter(m=>m.subjectId===fileId).sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id));
+ return movements.filter(m=>m.subjectId===fileId).sort((a,b)=>recordedAt(a)-recordedAt(b)||(a.id<b.id?-1:a.id>b.id?1:0));
 }
 /** Where the file is and who holds it: the latest posted movement decides, as on the server. */
 export function custodyOf(file:ArchiveFile,movements:ArchiveMovement[]):Custody {
