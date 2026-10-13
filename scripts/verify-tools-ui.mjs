@@ -168,8 +168,10 @@ const question=discussion.locator('.comment-list>li').filter({hasText:'هل اس
 await question.getByRole('button',{name:'رد'}).first().click();
 const replyBox=question.getByLabel(/الرد على/);await replyBox.fill('راجع ');await replyBox.pressSequentially('#TOOL');
 await question.getByRole('option').filter({hasText:'كود TOOL-0'}).first().click();await replyBox.pressSequentially('أيضاً');
+assert.match(await replyBox.inputValue(),/^راجع كود TOOL-0 أيضاً$/,'«#» inserts the office code in a reply');
 await question.getByRole('button',{name:'إرسال الرد'}).click();
-const answer=question.locator('.comment-replies>li').filter({hasText:'أيضاً'});await answer.waitFor();
+const answer=question.locator('.comment-replies>li').filter({hasText:'أيضاً'});
+await answer.waitFor({timeout:15000}).catch(async e=>{console.log('Discussion when the reply did not appear:\n'+await discussion.innerText());throw e});
 await answer.getByRole('button',{name:'كود TOOL-0'}).waitFor();
 assert.equal((await rpc('mawatheeq_comment_request',[clerkSession.token,'mentions','{}'])).items.length,2,'The answered author is notified of the reply');
 await page.screenshot({path:artifacts+'/discussion.png'});
