@@ -90,4 +90,5 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - Collection statements (إفادات) and payments are records linked to their file and its case. Collection payments, like accounting entries, are immutable in exact fils and are cancelled with an audited reason. Run test:departments and the workspaces browser test when changing collections.
 - Keep posted financial entries immutable, with exact minor-unit amounts, separate currencies and audited cancellation reasons. Never introduce paid payment services or payroll calculations implicitly.
 - HR leave approval must serialize per employee and reject overlapping approved dates. Keep profile and leave histories.
+- The archive workspace (section `archive`, 13 October 2026) tracks physical files: shared locations, files with unique archive numbers, immutable custody movements serialized per file (cancel latest first, with a reason) and requests. Files and their movements follow case scope; locations need all-case scope to change. See docs/EMPLOYEE_WORKSPACES.md.
 - Run test:departments and both synthetic browser workflows alongside existing access tests before deployment.

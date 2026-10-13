@@ -1,6 +1,6 @@
 import {useContext,useEffect,useState} from 'react';
 import {OPEN_EVENT,pendingOpen} from '@/lib/open-record';
-import {ArrowUpLeft,Scale,CalendarDays,Files,Wallet,UsersRound} from 'lucide-react';
+import {ArrowUpLeft,Scale,CalendarDays,Files,Wallet,UsersRound,Archive} from 'lucide-react';
 import {flushSync} from 'react-dom';
 import AccountMenu,{AccountContext} from './account-menu';
 import {withViewTransition} from '@/lib/appearance';
@@ -9,7 +9,7 @@ import {WORKSPACES,workspaceStorageKey,type WorkspaceId} from '@/lib/departments
 import Workspace from './workspace';
 import DepartmentWorkspace from './departments/department-shell';
 import './workspaces.css';
-const icons={legal:Scale,secretary:CalendarDays,collections:Files,accounting:Wallet,hr:UsersRound};
+const icons={legal:Scale,secretary:CalendarDays,collections:Files,accounting:Wallet,hr:UsersRound,archive:Archive};
 export default function WorkspaceHub({access,owner}:{access:Permissions;owner:boolean}) {
  const allowed=(Object.keys(WORKSPACES) as WorkspaceId[]).filter(id=>owner||(id==='legal'?access.sections.some(s=>LEGAL_SECTIONS.includes(s))||isAdmin(powersOf(access)):access.sections.includes(id)));
  // An account with a single page opens it directly, without the chooser.

@@ -193,3 +193,18 @@ export function listHtml(title: string, subtitle: string, headers: string[], row
   const sums = totals.length ? `<table class="totals" style="margin-top:12px;width:auto">${totals.map(([k, v]) => `<tr class="total"><th>${escape(k)}</th><td class="amount">${escape(v)}</td></tr>`).join('')}</table>` : '';
   return page(title, `<header><h1>${escape(title)}</h1><p>${escape(subtitle)}</p></header>${rows.length ? table : '<p>لا توجد سجلات.</p>'}${sums}${footer(printedAt, printedBy)}`, headers.length > 6);
 }
+
+export type ArchiveLabel = { number: string; barcode: string; title: string; caseRef: string; parties: string; type: string; location: string };
+/** Spine/cover labels for physical files, two per row, each with its archive number as a Code 39 barcode. */
+export function archiveLabelsHtml(labels: ArchiveLabel[], printedAt: string, printedBy: string): string {
+  const style = `<style>.labels{display:grid;grid-template-columns:1fr 1fr;gap:5mm}.label{border:1.4px solid #6e1f33;border-radius:3mm;padding:3.5mm 4mm;break-inside:avoid;display:flex;flex-direction:column;gap:1.5mm;min-height:44mm}
+.label-top{display:flex;justify-content:space-between;align-items:center;gap:3mm}.label-no{font-family:'Noto Kufi Arabic',sans-serif;font-size:18px;font-weight:700;color:#5a1a2b;direction:ltr}.label-type{font-size:10.5px;color:#7b6458;border:1px solid #d9c9b7;border-radius:99px;padding:0 7px}
+.label-title{font-weight:700;font-size:13px;line-height:1.5}.label-meta{font-size:10.5px;color:#5c4a40}.label-bar{display:flex;justify-content:center;margin-top:auto}.label-bar svg{max-width:100%;height:13mm}.label-loc{font-size:10px;color:#8a7568;text-align:center}</style>`;
+  const cards = labels.map(l => `<div class="label"><div class="label-top"><span class="label-no">${escape(l.number)}</span><span class="label-type">${escape(l.type)}</span></div><div class="label-title">${escape(l.title)}</div><div class="label-meta">${escape([l.caseRef, l.parties].filter(Boolean).join(' · '))}</div><div class="label-bar">${l.barcode}</div><div class="label-loc">${escape(l.location ? 'الموقع: ' + l.location : '')}</div></div>`).join('');
+  return page('ملصقات ملفات الأرشيف', `${style}<header><h1>ملصقات ملفات الأرشيف</h1><p>${labels.length} ملصق</p></header><div class="labels">${cards}</div>${footer(printedAt, printedBy)}`);
+}
+/** A handover or receipt slip for one file movement, with signature lines for both sides. */
+export function custodyReceiptHtml(title: string, rows: [string, string][], from: string, to: string, printedAt: string, printedBy: string): string {
+  return page(title, `<header><h1>${escape(title)}</h1><p>يُحفظ أصل هذا الإيصال في الأرشيف وتُسلّم صورته للمستلم.</p></header><table>${rows.filter(([, v]) => v).map(([k, v]) => `<tr><th>${escape(k)}</th><td>${escape(v)}</td></tr>`).join('')}</table>
+<div class="signatures"><div>${escape(from)}<br>الاسم والتوقيع</div><div>${escape(to)}<br>الاسم والتوقيع</div></div>${footer(printedAt, printedBy)}`);
+}

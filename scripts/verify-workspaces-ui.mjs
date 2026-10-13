@@ -54,7 +54,7 @@ async function downloadWord(button,expected){
 }
 try{
  await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await click('فتح مساحة العمل');
- await page.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await page.locator('.workspace-option').count(),5);
+ await page.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await page.locator('.workspace-option').count(),6);
  await screen('chooser-desktop');await page.setViewportSize({width:390,height:844});await screen('chooser-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true);await page.setViewportSize({width:1440,height:1000});
  await enter('السكرتارية');await click('إضافة مهمة');await field('عنوان العمل','تنسيق موعد تجريبي');await click('حفظ العمل');await page.getByText('تنسيق موعد تجريبي',{exact:true}).first().waitFor();
  await screen('secretary-desktop');await page.reload();await page.getByRole('heading',{name:'كل موعد في مكانه.',exact:true}).waitFor();
@@ -92,8 +92,25 @@ try{
  await switchTo('الموارد البشرية');await page.getByText('@ui_owner',{exact:true}).waitFor();await click('موظف جديد');await field('الرقم الوظيفي','EMP-UI-1');await field('اسم الموظف','موظف واجهة تجريبي');await field('المسمى الوظيفي','مساعد');await field('القسم','السكرتارية');await pickToday('تاريخ الانضمام');await click('حفظ سجل الموارد البشرية');await page.getByRole('heading',{name:'موظف واجهة تجريبي',exact:true}).waitFor();
  await screen('hr-desktop');await click('الإجازات');await click('طلب إجازة جديد');
  const people=await dept('hr','records_page');await page.getByLabel('الموظف',{exact:true}).selectOption(people.find(r=>r.kind==='employee').id);await page.getByLabel('قرار الإجازة',{exact:true}).selectOption('approved');await field('ملاحظة القرار / السبب','موافقة تجريبية');await click('حفظ سجل الموارد البشرية');await page.getByRole('cell',{name:'معتمدة',exact:true}).waitFor();
- for(const name of ['السكرتارية','التحصيل','المحاسبة','الموارد البشرية']){
-  await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero').waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
+ // Archive: a location, a paper file with its number, hand-out with a printed receipt, return, label, barcode lookup and stocktake.
+ await switchTo('الأرشيف');await page.getByRole('heading',{name:'الأرشيف',exact:true}).waitFor();
+ await page.evaluate(()=>{window.__printed='';window.__mawatheeqPrint=h=>{window.__printed+=h}});const printed=async()=>{const h=await page.evaluate(()=>window.__printed);await page.evaluate(()=>{window.__printed=''});return h};
+ await page.getByRole('button',{name:/^المواقع/}).click();await click('موقع حفظ جديد');await field('رمز الموقع','a-1');await field('اسم الموقع','غرفة الأرشيف');await field('السعة (عدد الملفات)','40');await click('حفظ الموقع');await page.getByRole('heading',{name:'غرفة الأرشيف',exact:true}).waitFor();
+ await page.getByRole('button',{name:/^الملفات/}).click();await click('ملف ورقي جديد');
+ assert.equal(await page.getByRole('dialog').getByLabel('رقم الأرشيف',{exact:true}).inputValue(),'ARC-00001','The next archive number is suggested');
+ await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-1');await page.getByLabel('موقع الحفظ',{exact:true}).selectOption({label:'A-1 · غرفة الأرشيف'});await page.getByRole('dialog').getByText('يحتوي على مستندات أصلية').click();
+ await click('حفظ بيانات الملف');await page.getByRole('tab',{name:/^العهدة والحركة/}).click();
+ await click('تسليم لموظف');await field('الموظف المستلم','ui_owner');await field('الغرض','حضور جلسة');await click('تسجيل الحركة');await page.locator('.custody-now.staff').waitFor();
+ await page.getByRole('button',{name:/طباعة إيصال التسليم/}).click();let html=await printed();assert.ok(html.includes('إيصال تسليم ملف من الأرشيف')&&html.includes('ARC-00001')&&html.includes('حضور جلسة'),'Handover receipt prints');
+ await click('إعادة للأرشيف');await click('تسجيل الحركة');await page.locator('.custody-now.in').waitFor();
+ await click('ملصق الملف');html=await printed();assert.ok(html.includes('<svg')&&html.includes('ARC-00001')&&html.includes('A-1'),'Label prints with a barcode and location');
+ await screen('archive-file');await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});
+ await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('arc-00001');await page.keyboard.press('Enter');await page.getByRole('dialog').getByText('ARC-00001').first().waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});
+ await page.getByRole('button',{name:/^المواقع/}).click();await page.getByRole('button',{name:/^جرد$/}).click();await click('تحديد الكل');await click('تسجيل الجرد (1)');await page.getByRole('dialog').waitFor({state:'detached'});
+ const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','return']);
+ await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
+ for(const name of ['السكرتارية','التحصيل','المحاسبة','الموارد البشرية','الأرشيف']){
+  await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero').waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
  }
  // Department-only read-only account gets exactly its chooser cards and safe case summaries.
  await db.exec('reset role');const staffId=(await db.query("insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values('dept_ui_reader',extensions.crypt('Synthetic-password-123',extensions.gen_salt('bf',4)),false) returning id")).rows[0].id;
@@ -111,9 +128,9 @@ try{
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();await staff.getByLabel('كلمة المرور الحالية',{exact:true}).fill('Unsaved-password-from-previous-user');
  const otherTab=await sc.newPage();await configurePage(otherTab);await otherTab.goto(base);
  await otherTab.evaluate(token=>localStorage.setItem('mawatheeq.local-session.v1',token),login.token);
- await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),5);
+ await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),6);
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();assert.equal(await staff.getByLabel('كلمة المرور الحالية',{exact:true}).inputValue(),'','Cross-tab session replacement clears old password inputs');
- assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, precise ledger/void, employee/leave forms, department-only readonly access, responsive layouts and no runtime errors.');
+ assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, precise ledger/void, employee/leave forms, archive custody/receipt/label/scan/stocktake, department-only readonly access, responsive layouts and no runtime errors.');
 }catch(e){await screen('failure');console.error(await page.locator('body').innerText());throw e}
 finally{
  await browser.close();await db.close();

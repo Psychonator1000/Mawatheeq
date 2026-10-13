@@ -9,6 +9,7 @@ After username login (and any required password change), choose an assigned work
 | التحصيل | Structured case files, source review, claim and evidence-bundle Word preparation | collections |
 | المحاسبة | Fees, receipts, expenses, currency-specific balances and cancellation history | accounting |
 | الموارد البشرية | Employee profiles, leave requests, decisions and history | hr |
+| الأرشيف | Physical files, storage locations, custody hand-outs and returns, file requests, stocktakes, labels and receipts | archive |
 
 ## Administrator setup
 
@@ -58,6 +59,20 @@ Amounts use exact integer minor units: three decimal places for KWD; two for SAR
 ## HR
 
 Employee profiles include an internal employee number, name, job title, department, phone, joining date and status. Archive a profile instead of deleting it. Record leave dates and a decision; rejected/cancelled leave requires a reason. Approval rejects any overlapping approved leave for that employee, including requests submitted concurrently. This release does not calculate employment entitlements or payroll.
+
+## Archive (الأرشيف)
+
+Added 13 October 2026 for the employee responsible for the office's paper files. Grant the «archive» section (job role «أرشيف» preselects it with all cases, edit and export).
+
+- **Locations**: rooms, cabinets, shelves and boxes with a short unique code and an optional capacity. Locations are shared; adding, editing or closing one needs edit rights with all-case scope. A location holding files cannot be closed.
+- **Files**: one record per physical file or volume, with a unique archive number (suggested as `ARC-00001`, Latin letters, digits and dashes so it prints as a Code 39 barcode), title, type, volume, page count, home location, originals and confidential flags, intake date and a keep-until date. A file is linked to a case; with all-case scope it may be a general office file. Closing a file (destroyed or retention ended) is allowed only while it is in the archive.
+- **Custody**: hand-out to a staff member, sending to an outside body (court, experts, execution…), handing originals to the client, return, move between locations, and inventory confirmation. Each movement is immutable and records who entered it; the server serializes movements per file and checks them against the current state, so a file cannot be handed out twice. A wrong movement is cancelled with a reason, latest first. The current state, holder, due date and place always come from the latest posted movement.
+- **Requests**: a colleague's request for a file with the date needed and purpose; «تسليم الملف» opens the hand-out with the request's details and marks it delivered.
+- **Overdue and retention**: files past their return date and files past their keep-until date are counted on the dashboard and filterable.
+- **Stocktake**: tick (or scan) the files found in a location; each found file gets an inventory movement, and the missing ones can be printed.
+- **Printing** (export permission): file labels with barcode and location, hand-over and receipt slips with signature lines, the custody list, location inventory sheets and the movement log. Any USB barcode scanner works in the «مسح الباركود» box without setup.
+
+Migration `20261013150000_archive.sql` extends the department record checks, adds the section to the owner's access and to permission saving, and routes `workspace: 'archive'` requests to their own function. Run `test:departments`, `test:browse` and `scripts/verify-workspaces-ui.mjs` when changing it.
 
 ## Maintenance
 

@@ -13,6 +13,7 @@ import Secretary from '../secretair';
 import Collections from './collections';
 import Accounting from './accounting';
 import HR from './hr';
+import ArchiveRoom from './archive';
 import BatchPrint from './batch-print';
 export default function DepartmentWorkspace({workspace,access}:{workspace:Department;access:Permissions}) {
  const [cases,setCases]=useState<CaseSummary[]>([]),[context,setContext]=useState<OfficeContext|null>(null),[work,setWork]=useState<WorkItem[]>([]);
@@ -30,6 +31,7 @@ export default function DepartmentWorkspace({workspace,access}:{workspace:Depart
  {workspace==='collections'&&<Collections key={version} cases={cases} access={access}/>}
  {workspace==='accounting'&&<Accounting key={version} cases={cases} access={access}/>}
  {workspace==='hr'&&<HR key={version} access={access}/>}
+ {workspace==='archive'&&<ArchiveRoom key={version} cases={cases} access={access}/>}
  </>}</div><footer className="department-footer">مواثيق · {meta.name}{workspace!=='hr'&&' · '+(access.caseScope==='all'?'جميع القضايا':'القضايا المحددة لحسابك')}</footer>
  {selected&&<EditorDialog title="ملخص القضية" description="بيانات تعريف القضية المرتبطة بهذا العمل." busy={false} onClose={()=>setSelected(null)}><dl className="summary-grid"><dt>الكود</dt><dd>{selected.code||'—'}</dd><dt>الرقم الآلي</dt><dd>{selected.autoNumber||'—'}</dd><dt>الموكل</dt><dd>{clientName(selected)}</dd><dt>الخصم</dt><dd>{selected.opponent}</dd><dt>الحالة</dt><dd>{selected.archived?'مؤرشفة':'نشطة'}</dd></dl><button className="btn" onClick={()=>setSelected(null)}>إغلاق</button></EditorDialog>}
  <Toaster position="bottom-left" dir="rtl" theme="light"/></main>;
