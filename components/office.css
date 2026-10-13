@@ -388,8 +388,9 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 @media(hover:none){.chat-row-close{opacity:.7}}
 .chat-row.closed{opacity:.6}
 /* Record windows: the tab bar stays at the top while the tab's content scrolls under it. */
-.case-window>.case-main .detail-tabs{position:sticky;top:-26px;z-index:6;box-shadow:0 8px 16px -12px #2c1c1059}
-@media(max-width:900px){.case-window>.case-main .detail-tabs{top:-18px}}
+.case-window>.case-main .detail-tabs{position:sticky;top:-26px;z-index:6;box-shadow:0 8px 16px -12px #2c1c1059;margin:-26px -30px 0;width:auto!important;max-width:none;border-radius:0;border-width:0 0 1px;padding:8px 22px!important;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.case-window>.case-main .detail-tabs>[role=tab]{flex:1 0 auto;justify-content:center;padding:8px 10px;white-space:nowrap}
+@media(max-width:900px){.case-window>.case-main .detail-tabs{top:-18px;margin:-18px -18px 0;padding:6px 10px!important}.case-window>.case-main .detail-tabs>[role=tab]{flex:0 0 auto}}
 /* Chat images and PDFs open centred over the app. */
 .chat-viewer{position:fixed;inset:0;z-index:200;background:#1a120cd9;backdrop-filter:blur(4px);display:grid;grid-template-rows:auto 1fr;place-items:center;padding:16px;gap:12px;animation:pin-in .25s ease both}
 .chat-viewer-bar{display:flex;align-items:center;gap:10px;max-width:min(900px,100%);width:100%;color:#fff}.chat-viewer-bar b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.chat-viewer-bar small{opacity:.75}.chat-viewer-bar .icon-btn{color:#fff;background:#ffffff1f}.chat-viewer-bar .icon-btn:hover{background:#ffffff3d}
@@ -398,3 +399,4 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .chat-viewer-wait{color:#fff}
 /* Deadlines toolbar: the tabs and print button line up with the date box, not its label. */
 .actions.deadline-bar{align-items:flex-end}
+@media(min-width:901px) and (max-width:1560px){.case-window>.case-main .detail-tabs>[role=tab]{padding:7px 8px;gap:5px}.case-window>.case-main .detail-tabs>[role=tab] svg{display:none}}

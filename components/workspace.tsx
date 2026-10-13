@@ -185,4 +185,12 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
 function Bars({rows,onSelect}:{rows:(string|number)[][];onSelect:(label:string)=>void}){const max=Math.max(1,...rows.map(r=>Number(r[1])));return <div className="bar-list">{rows.map(([label,count])=><button className="bar-item" key={label} onClick={()=>onSelect(String(label))}><div className="bar-label"><span>{label}</span><b className="mono">{count}</b></div><div className="bar-track"><div className="bar-fill" style={{width:`${Number(count)/max*100}%`}}/></div></button>)}</div>}
 
 /** A short greeting by time of day with the signed-in name. */
-function Greeting({name}:{name:string}){const account=useContext(AccountContext);const h=Number(new Intl.DateTimeFormat('en-GB',{hour:'numeric',hourCycle:'h23',timeZone:'Asia/Kuwait'}).format(new Date()));const text=h<12?'صباح الخير':h<17?'نهارك سعيد':'مساء الخير';return <div className="greeting">{h<17?'☀️':'🌙'} {text}{name.trim()?<>، <b>{name.trim()}</b></>:account?.username&&<>، <b dir="ltr">{account.username}</b></>}</div>}
+/** The greeting follows the time of day in Kuwait and updates itself while the page stays open. */
+function greetingFor(d:Date){const parts=new Intl.DateTimeFormat('en-GB',{hour:'numeric',hourCycle:'h23',weekday:'short',timeZone:'Asia/Kuwait'}).formatToParts(d);
+ const h=Number(parts.find(p=>p.type==='hour')?.value),fri=parts.find(p=>p.type==='weekday')?.value==='Fri';
+ if(h<4)return {icon:'🌌',text:'طاب سهرك'};if(h<6)return {icon:'🌅',text:'صباح الخير، بكّرت اليوم'};
+ if(h<12)return fri?{icon:'🕌',text:'جمعة مباركة'}:{icon:'☀️',text:'صباح الخير'};if(h<15)return {icon:'🌤️',text:'طاب نهارك'};
+ if(h<18)return {icon:'⛅',text:'طاب عصرك'};if(h<21)return {icon:'🌇',text:'مساء الخير'};return {icon:'🌙',text:'طابت ليلتك'}}
+function Greeting({name}:{name:string}){const account=useContext(AccountContext);const [now,setNow]=useState(()=>new Date());
+ useEffect(()=>{const t=setInterval(()=>setNow(new Date()),60000);return()=>clearInterval(t)},[]);const {icon,text}=greetingFor(now);
+ return <div className="greeting"><span aria-hidden>{icon}</span> {text}{name.trim()?<>، <b>{name.trim()}</b></>:account?.username&&<>، <b dir="ltr">{account.username}</b></>}</div>}
