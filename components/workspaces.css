@@ -54,7 +54,10 @@
 /* Collections follow-up: dashboard, status chips, file cards, statements and financial position. */
 .collection-metrics{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important}
 .collection-metrics>button{text-align:inherit;font:inherit;color:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;border-radius:12px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:15px}
-.collection-metrics b{font-size:22px!important}
+.collection-metrics b{font-size:22px!important;white-space:nowrap}
+/* Label above the amount, so large totals (68,483.044 د.ك) stay on one line. */
+.collection-metrics>div,.collection-metrics>button{flex-direction:column;align-items:flex-start;justify-content:center;gap:6px}
+.department-metrics b{white-space:nowrap}
 .collection-metrics>button:hover{border-color:var(--brand)}
 .collection-metrics b small{font-size:12px;font-weight:500;color:#7a6759}
 .status-chips{display:flex;flex-wrap:wrap;gap:6px;padding:14px 18px 0}

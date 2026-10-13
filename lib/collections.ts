@@ -34,7 +34,10 @@ export function fils(value: unknown): number {
   const [whole, frac = ''] = v.split('.');
   return Number(whole) * 1000 + Number((frac + '000').slice(0, 3));
 }
-export const kwd = (minor: number) => `${minor < 0 ? '-' : ''}${Math.floor(Math.abs(minor) / 1000)}.${String(Math.abs(minor) % 1000).padStart(3, '0')}`;
+/** Fils as dinars with three decimals and thousands separators (68,483.044), for screens and printouts. */
+export const kwd = (minor: number) => `${minor < 0 ? '-' : ''}${Math.floor(Math.abs(minor) / 1000).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${String(Math.abs(minor) % 1000).padStart(3, '0')}`;
+/** The same amount without separators, for spreadsheet exports that must stay numeric. */
+export const kwdPlain = (minor: number) => kwd(minor).replace(/,/g, '');
 
 export type Position = { claim: number; fee: number; total: number; paid: number; external: number; expenses: number; remaining: number; net: number };
 /**
