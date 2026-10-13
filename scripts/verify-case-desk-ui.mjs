@@ -67,7 +67,7 @@ try{
 
  await nav('أخطاء الترحيل');await page.locator('tr',{hasText:'DESK-MISSED'}).first().waitFor();await page.getByText('جلسات فائتة لم تُرحَّل (1)').waitFor();await screen('posting-errors');
  await nav('القضايا الموقوفة');await page.locator('tr',{hasText:'DESK-STRUCK'}).waitFor();await page.locator('tr',{hasText:'DESK-DUE'}).waitFor();
- await nav('مواعيد الجلسات (رول)');await page.getByText('لا جلسات في هذه الفترة').waitFor();
+ assert.equal(await page.locator('.nav-button',{hasText:'مواعيد الجلسات'}).count(),0,'The sessions roll opens beside the judgments roll, not from the sidebar');await nav('سجل الأحكام');await click('رول الجلسات');await page.getByRole('heading',{level:1,name:'مواعيد الجلسات (رول)',exact:true}).waitFor();await page.getByText('لا جلسات في هذه الفترة').waitFor();
  await nav('القضايا بدون عقود');await page.locator('tr',{hasText:'DESK-MISSED'}).waitFor();assert.equal(await page.locator('tr',{hasText:'DESK-STRUCK'}).count(),0,'Cases with a contract are not listed');
  const contract=page.locator('tr',{hasText:'DESK-MISSED'});await contract.getByLabel('رقم العقد DESK-MISSED').fill('ع-77');await contract.getByRole('button',{name:'حفظ العقد'}).click();
  await page.getByText('حُفظ في ملف القضية').waitFor();assert.equal((await caseOf('desk-missed')).contractNumber,'ع-77');

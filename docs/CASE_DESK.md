@@ -1,6 +1,6 @@
 # Cases desk (أعمال القضايا)
 
-Ten pages under «أعمال القضايا» in the cases workspace sidebar. Anyone who can open the cases section sees them. They only show the cases that account may already see, and they edit those cases with the same save path and the same edit permission as the case file. No new tables, migrations or permissions are needed: the extra fields are stored in the case record.
+Nine pages under «أعمال القضايا» in the cases workspace sidebar, plus the sessions roll, which opens from «رول الجلسات» beside «رول الأحكام» in the judgments register. Anyone who can open the cases section sees them. They only show the cases that account may already see, and they edit those cases with the same save path and the same edit permission as the case file. No new tables, migrations or permissions are needed: the extra fields are stored in the case record.
 
 | Page | What it does |
 | --- | --- |
