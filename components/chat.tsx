@@ -29,10 +29,10 @@ export default function Chat({userId}:{userId:string}){
  return <>
   <button type="button" className={'chat-bubble'+(open?' open':'')} aria-label={unread?`المحادثات، ${unread} غير مقروءة`:'المحادثات'} aria-expanded={open} onClick={()=>setOpen(o=>!o)}><MessageCircle size={24}/>{unread>0&&<span className="chat-badge">{unread>99?'99+':unread}</span>}</button>
   {open&&<section className="chat-panel" role="dialog" aria-label="المحادثات" dir="rtl" ref={panel}>
-   {conv&&view==='list'?<Conversation key={conv.id} conv={conv} me={userId} onLeave={()=>setOpen(false)} onBack={()=>setActive(null)} onInfo={()=>setView('info')} onChanged={refresh} onDirect={async id=>{const r=await chatRequest<{id:string}>('start_direct',{userId:id});await refresh();setActive(r.id)}}/>
-   :view==='new'||view==='group'?<NewChat group={view==='group'} onCancel={()=>setView('list')} onCreated={async id=>{await refresh();setView('list');setActive(id)}}/>
+   {conv&&view==='list'?<Conversation key={conv.id} conv={conv} me={userId} onLeave={()=>setOpen(false)} onBack={()=>setActive(null)} onInfo={()=>setView('info')} onChanged={refresh} onDirect={async id=>{const r=await chatRequest<{id:string}>('start_direct',{userId:id});reopenChat(userId,r.id);await refresh();setActive(r.id)}}/>
+   :view==='new'||view==='group'?<NewChat group={view==='group'} onCancel={()=>setView('list')} onCreated={async id=>{reopenChat(userId,id);await refresh();setView('list');setActive(id)}}/>
    :view==='info'&&conv?<GroupInfo conv={conv} me={userId} onBack={()=>setView('list')} onChanged={async left=>{await refresh();setView('list');if(left)setActive(null)}}/>
-   :<ConversationList key={userId} summary={summary} me={userId} onOpen={id=>{setActive(id);setView('list')}} onNew={()=>setView('new')} onGroup={()=>setView('group')} onClose={()=>setOpen(false)}/>}
+   :<ConversationList key={userId} summary={summary} me={userId} onOpen={id=>{reopenChat(userId,id);setActive(id);setView('list')}} onNew={()=>setView('new')} onGroup={()=>setView('group')} onClose={()=>setOpen(false)}/>}
   </section>}
  </>;
 }
@@ -40,23 +40,25 @@ export default function Chat({userId}:{userId:string}){
 /** Conversations closed from the list on this device, with the time of their last message when closed. */
 const closedKey=(me:string)=>'mawatheeq.chat-closed.'+me;
 const readClosed=(me:string):Record<string,string>=>{try{const v=JSON.parse(localStorage.getItem(closedKey(me))||'{}');return v&&typeof v==='object'?v:{}}catch{return {}}};
+const writeClosed=(me:string,next:Record<string,string>)=>{try{localStorage.setItem(closedKey(me),JSON.stringify(next))}catch{/* kept for this visit only */}};
+/** Opening a conversation yourself (from search, a new chat or a name) puts it back in the list, like Discord. */
+const reopenChat=(me:string,id:string)=>{const c=readClosed(me);if(c[id]){delete c[id];writeClosed(me,c)}};
 function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:ChatSummary|null;me:string;onOpen:(id:string)=>void;onNew:()=>void;onGroup:()=>void;onClose:()=>void}){
- const [q,setQ]=useState(''),[closed,setClosed]=useState(()=>readClosed(me)),[showClosed,setShowClosed]=useState(false);
- const saveClosed=(next:Record<string,string>)=>{setClosed(next);try{localStorage.setItem(closedKey(me),JSON.stringify(next))}catch{/* kept for this visit only */}};
- // A closed conversation stays saved; it returns to the list when a new message arrives, or when searched for.
+ const [q,setQ]=useState(''),[closed,setClosed]=useState(()=>readClosed(me));
+ const saveClosed=(next:Record<string,string>)=>{setClosed(next);writeClosed(me,next)};
+ // Closing removes a conversation from the list only; its messages stay. It returns when a new message arrives,
+ // when you open it again (from a new chat or a name), and searching always finds it.
  const at=(v:string)=>{const t=Date.parse(v);return Number.isNaN(t)?0:t};
  const isClosed=(c:ChatConversation)=>!!closed[c.id]&&at(c.lastAt)<=at(closed[c.id]);
  const matches=(summary?.conversations||[]).filter(c=>(conversationName(c,me)+' '+c.members.map(m=>m.name).join(' ')).includes(q.trim()));
- const hiddenCount=matches.filter(isClosed).length;
- const list=matches.filter(c=>q.trim()||showClosed||!isClosed(c));
+ const list=matches.filter(c=>q.trim()||!isClosed(c));
  const mine=list.filter(c=>c.isMember),review=list.filter(c=>!c.isMember);
  const canNotify='Notification' in window&&Notification.permission==='default';
  const row=(c:ChatConversation)=><div key={c.id} className="chat-row-wrap"><button type="button" className={'chat-row'+(c.unread?' unread':'')+(isClosed(c)?' closed':'')} onClick={()=>onOpen(c.id)}>
   <span className="chat-avatar" aria-hidden>{c.kind==='group'?<Users size={16}/>:conversationName(c,me).replace(/^ا[/.]\s*/,'').slice(0,1)}</span>
   <span className="chat-row-text"><b>{conversationName(c,me)}</b><small>{c.last?(c.last.kind==='event'?'':c.last.mine?'أنت: ':c.kind==='group'?c.last.sender+': ':'')+c.last.body:'لا رسائل بعد'}</small></span>
   <span className="chat-row-meta"><small>{chatTime(c.lastAt)}</small>{c.unread>0&&<span className="chat-badge inline">{c.unread}</span>}</span></button>
-  {isClosed(c)?<button type="button" className="chat-row-close" onClick={()=>{const next={...closed};delete next[c.id];saveClosed(next)}} aria-label={'إعادة '+conversationName(c,me)+' إلى القائمة'} title="إعادة إلى القائمة"><Plus size={14}/></button>
-   :<button type="button" className="chat-row-close" onClick={()=>saveClosed({...closed,[c.id]:new Date(Math.max(at(c.lastAt),Date.now())).toISOString()})} aria-label={'إغلاق '+conversationName(c,me)} title="إغلاق المحادثة (تبقى محفوظة)"><X size={14}/></button>}</div>;
+  {!isClosed(c)&&<button type="button" className="chat-row-close" onClick={()=>saveClosed({...closed,[c.id]:new Date(Math.max(at(c.lastAt),Date.now())).toISOString()})} aria-label={'إغلاق '+conversationName(c,me)} title="إغلاق المحادثة (تبقى محفوظة)"><X size={14}/></button>}</div>;
  return <>
   <header className="chat-head"><h2>المحادثات</h2><div className="chat-head-actions"><button type="button" className="icon-btn" onClick={onNew} aria-label="محادثة جديدة" title="محادثة جديدة"><Plus size={18}/></button><button type="button" className="icon-btn" onClick={onGroup} aria-label="مجموعة جديدة" title="مجموعة جديدة"><Users size={18}/></button><button type="button" className="icon-btn" onClick={onClose} aria-label="إغلاق المحادثات"><X size={18}/></button></div></header>
   <div className="chat-search searchbox"><Search size={15}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="ابحث في المحادثات" aria-label="بحث في المحادثات"/></div>
@@ -66,7 +68,7 @@ function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:Cha
    {mine.map(row)}
    {review.length>0&&<><h3 className="chat-section"><Eye size={14}/> مراجعة المسؤول ({review.length})</h3>{review.map(row)}</>}
   </div>
-  <footer className="chat-foot">{(hiddenCount>0||showClosed)&&!q.trim()&&<button type="button" className="text-link" onClick={()=>setShowClosed(v=>!v)}>{showClosed?'إخفاء المحادثات المغلقة':`المحادثات المغلقة (${hiddenCount})`}</button>}{canNotify&&<button type="button" className="text-link" onClick={()=>void Notification.requestPermission()}><Bell size={13}/> تفعيل تنبيهات الرسائل</button>}<small>المحادثات خاصة بأعضائها، ويمكن لمسؤول المكتب مراجعتها.</small></footer>
+  <footer className="chat-foot">{canNotify&&<button type="button" className="text-link" onClick={()=>void Notification.requestPermission()}><Bell size={13}/> تفعيل تنبيهات الرسائل</button>}<small>المحادثات خاصة بأعضائها، ويمكن لمسؤول المكتب مراجعتها.</small></footer>
  </>;
 }
 

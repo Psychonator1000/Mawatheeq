@@ -447,12 +447,12 @@ await lively.close();
  await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();await panel.getByRole('button',{name:'مجموعة جديدة'}).click();
  await panel.getByLabel('اسم المجموعة').fill('فريق الأدوات');await panel.getByRole('checkbox').first().check();await panel.getByRole('button',{name:/إنشاء المجموعة/}).click();
  await panel.getByText(/أنشأ tools_owner المجموعة مع/).waitFor();await page.screenshot({path:artifacts+'/chat-group.png'});
- // Closing a conversation hides it from the list but keeps it; it can be shown and restored.
+ // Closing a conversation removes it from the list but keeps it; starting a chat with that person brings it back with its history.
  await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();const rows=panel.locator('.chat-row-wrap'),before=await rows.count();
- await rows.first().hover();await rows.first().getByRole('button',{name:/^إغلاق /}).click();
- await panel.getByRole('button',{name:'المحادثات المغلقة (1)'}).waitFor();assert.equal(await rows.count(),before-1,'A closed conversation leaves the list');
- await panel.getByRole('button',{name:'المحادثات المغلقة (1)'}).click();await panel.getByRole('button',{name:/^إعادة .* إلى القائمة$/}).click();
- await panel.getByRole('button',{name:'إخفاء المحادثات المغلقة'}).click();assert.equal(await rows.count(),before,'A restored conversation returns');
+ const direct=rows.filter({hasText:'tools_clerk'}).filter({hasNotText:'فريق'}).first();await direct.hover();await direct.getByRole('button',{name:/^إغلاق /}).click();
+ await page.waitForTimeout(300);assert.equal(await rows.count(),before-1,'A closed conversation leaves the list');
+ await panel.getByRole('button',{name:'محادثة جديدة'}).click();await panel.locator('button',{hasText:'tools_clerk'}).first().click();
+ await panel.locator('.chat-msg').first().waitFor();await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();assert.equal(await rows.count(),before,'Messaging the person again reopens it with its history');
  await page.keyboard.press('Escape');await panel.waitFor({state:'hidden'});
  await clerkCtx.close();}
 // Automatic light mode on a strong PC: the old permanent "slow" flag is ignored; a fresh one explains itself and can be cleared.
