@@ -95,3 +95,8 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 - HR leave approval must serialize per employee and reject overlapping approved dates. Keep profile and leave histories.
 - The archive workspace (section `archive`, 13 October 2026) tracks physical files: shared locations, files with unique archive numbers, immutable custody movements serialized per file (cancel latest first, with a reason) and requests. Files and their movements follow case scope; locations need all-case scope to change. See docs/EMPLOYEE_WORKSPACES.md.
 - Run test:departments and both synthetic browser workflows alongside existing access tests before deployment.
+
+## Blocked actions explain themselves
+
+- Every disabled button or blocked action says why, what to fill and where (which tab or field), in Arabic. Use `components/needs.tsx`: `<Needs items={[...]}/>` beside the button, or the `needs` prop of `RecordWindow`, which also explains a blocked Ctrl+S save instead of ignoring it. A button disabled only while a request is running needs no reason.
+- Fields a document still needs are marked where they are entered (red outline and «مطلوب لإنشاء…»), counted on their tab, and linked from the document button, as in the collections file.

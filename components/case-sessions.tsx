@@ -9,6 +9,7 @@ import {LEVEL_TITLE,currentLevel} from '@/lib/case-stages';
 import {officeRequest} from '@/lib/local-auth';
 import type {WorkItem} from '@/lib/office';
 import {Field,DateField,Choice} from './shared';
+import Needs from './needs';
 
 /** Sessions of the current court level, newest first. */
 export function SessionTable({sessions}:{sessions:Procedure[]}){
@@ -63,6 +64,7 @@ export default function CaseSessions({c,canEdit,canSchedule,busy,username,assign
    {needsNext&&canSchedule&&<label className="checkbox-line"><input type="checkbox" checked={schedule} onChange={e=>setSchedule(e.target.checked)}/> <CalendarPlus size={15}/> أضف الجلسة القادمة إلى «المهام والجلسات» مع تنبيه في موعدها</label>}
    {d?.judgment&&<p className="subtitle"><Scale size={14}/> بعد التسجيل يُفتح «بيانات الحكم» لتسجيل الحكم ومنطوقه.</p>}
    {s.nextDate&&s.nextDate<s.date&&<p className="notice">موعد الجلسة القادمة قبل تاريخ هذه الجلسة.</p>}
+   <Needs items={[!s.date&&'اختر «تاريخ الجلسة»',!s.decision&&'اختر «قرار الجلسة»',needsNext&&!s.nextDate&&`اختر «${d?.next==='judgment'?'موعد النطق بالحكم':'موعد الجلسة القادمة'}»`]}/>
    <button type="submit" className="btn primary" disabled={!ready||busy||saving}>{saving?'جارٍ التسجيل…':'تسجيل الجلسة'}</button></fieldset></form>}
   <h3 className="section-title">جلسات {level} ({sessions.length})</h3>
   <SessionTable sessions={sessions}/>

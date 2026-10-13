@@ -10,6 +10,7 @@ import {normalizeSearch} from '@/lib/case-browse';
 import {Field,Empty} from '../shared';
 import {OfficeSelect} from '../office-shared';
 import {EditorDialog} from './shared';
+import Needs from '../needs';
 
 const fail=(e:unknown)=>toast.error((e as Error).message);
 const ago=(iso:string|null)=>{if(!iso)return 'لم يتصل بعد';const m=Math.round((Date.now()-new Date(iso).getTime())/60000);return m<1?'الآن':m<60?`قبل ${m} د`:m<1440?`قبل ${Math.round(m/60)} س`:formatDate(iso.slice(0,10))};
@@ -44,7 +45,7 @@ export default function DevicesPanel(){
  {!doorsReady&&<p className="notice">لتفعيل أجهزة الأبواب وحذف الأجهزة وخيارات المستخدمين، طبّق ملف قاعدة البيانات 20261011200000_attendance_doors.sql (راجع docs/ATTENDANCE.md).</p>}
  <section className="panel"><div className="department-toolbar"><h2><Fingerprint size={20}/> أجهزة البصمة والأبواب</h2><div className="actions"><span className={'bridge-pill '+(bridgeOnline?'on':'off')}>{bridgeOnline?<Wifi size={15}/>:<WifiOff size={15}/>} {bridgeOnline?'جسر المكتب متصل':'جسر المكتب غير متصل'}</span><button className="btn" onClick={reload}><RefreshCw size={16}/> تحديث الأجهزة</button>{manage&&<button className="btn primary" onClick={()=>setEditing(blank())}><Plus size={16}/> إضافة جهاز</button>}</div></div>
   {!devices&&!error&&<p role="status">جارٍ تحميل الأجهزة…</p>}
-  {devices&&<div className="device-grid">{devices.map(d=><article key={d.id} className={'device-card s-'+(d.enabled?d.status:'disabled')+(isDoor(d)?' is-door':'')}><header><span className="device-dot" aria-hidden/><div><h3>{d.name}</h3><small dir="ltr">{d.host}:{d.port}</small></div><span className="tag">{!d.enabled?'معطل':d.status==='online'?'متصل':d.status==='offline'?'غير متصل':'لم يُفحص'}</span></header>
+  {devices&&<div className="device-grid">{devices.map(d=><article key={d.id} className={'device-card s-'+(d.enabled?d.status:'disabled')+(isDoor(d)?' is-door':'')}><header><span className="device-dot" aria-hidden/><div><h3>{d.name}</h3><small dir="ltr">{d.host}:{d.port}</small></div><span className="tag" title={!d.enabled?'الجهاز معطل: فعّله من «تعديل» ← «الجهاز مفعل» لتعمل أزراره':undefined}>{!d.enabled?'معطل':d.status==='online'?'متصل':d.status==='offline'?'غير متصل':'لم يُفحص'}</span></header>{!d.enabled&&<p className="needs">الجهاز معطل، لذلك أزراره متوقفة. فعّله من «تعديل» ← «الجهاز مفعل».</p>}
    {d.kind&&<p className="device-kind">{isDoor(d)?<DoorOpen size={15}/>:<Fingerprint size={15}/>} {DEVICE_KINDS[d.kind]}{isDoor(d)&&' · '+doorLabel(d)}</p>}
    {isDoor(d)&&manage&&<button className="btn primary door-btn" disabled={!d.enabled||busyWith(d,'unlock_door')} onClick={()=>openDoor(d)}><DoorOpen size={18}/> {busyWith(d,'unlock_door')?'جارٍ فتح '+doorLabel(d)+'…':'فتح '+doorLabel(d)}</button>}
    <dl><dt>الموقع</dt><dd>{d.location||'—'}</dd><dt>الرقم التسلسلي</dt><dd dir="ltr">{d.serial||'—'}</dd><dt>المستخدمون</dt><dd>{d.userCount}</dd><dt>آخر اتصال</dt><dd>{ago(d.lastSeen)}</dd><dt>آخر مزامنة</dt><dd>{ago(d.lastSync)}</dd>{Object.keys(d.info||{}).length>0&&<><dt>السجلات</dt><dd>{String(d.info.logs??d.info.logCounts??'—')} / {String(d.info.capacity??d.info.logCapacity??'—')}</dd></>}</dl>
@@ -93,7 +94,7 @@ function DeviceDialog({device,doorsReady,onClose,onSaved,onDelete}:{device:AttDe
     {door&&<p className="subtitle">زر «فتح الباب» يظهر لمحرري الموارد البشرية فقط، ويُسجل كل فتح باسم من طلبه. يجب أن يكون قفل الباب موصولاً بمخرج القفل في الجهاز.</p>}
     <Field label="ملاحظات الجهاز" value={draft.notes} onChange={v=>set('notes',v)} multiline wide/></div>}
    <label className="checkbox-line"><input type="checkbox" checked={draft.enabled} onChange={e=>set('enabled',e.target.checked)}/> الجهاز مفعل (يتصل به الجسر)</label>
-   <button type="submit" className="btn primary" disabled={!valid}>حفظ الجهاز</button></fieldset></form>
+   <Needs items={[!draft.name.trim()&&'أدخل «اسم الجهاز»',!/^[0-9A-Za-z.-]{3,253}$/.test(draft.host.trim())&&'أدخل «عنوان IP» صحيحاً، مثل 192.168.1.201',!(draft.port>0&&draft.port<65536)&&'«المنفذ» رقم بين 1 و65535',!(draft.unlockSeconds>=1&&draft.unlockSeconds<=60)&&'«مدة فتح الباب» بين 1 و60 ثانية']}/><button type="submit" className="btn primary" disabled={!valid}>حفظ الجهاز</button></fieldset></form>
   {error&&<p className="notice" role="alert">{error}</p>}
   <div className="actions">{!!device.revision&&doorsReady&&<button className="btn danger" disabled={busy} onClick={()=>onDelete(device)}><Trash2 size={15}/> حذف الجهاز</button>}<button className="btn" disabled={busy} onClick={onClose}>إغلاق</button></div>
  </EditorDialog>;
@@ -118,7 +119,7 @@ function DeviceUsersDialog({device,manage,doorsReady,onClose,onQueue,onConfirm}:
    <div className="form-grid"><label className="field"><span>رقم المستخدم على الجهاز</span><input value={form.pin} disabled={form.editing} onChange={e=>setForm(f=>({...f,pin:e.target.value}))}/></label><Field label="الاسم على الجهاز" value={form.name} onChange={v=>setForm(f=>({...f,name:v}))}/>
     {doorsReady&&<><Field label="رقم البطاقة (اختياري)" value={form.card} onChange={v=>setForm(f=>({...f,card:v}))}/><OfficeSelect label="الصلاحية على الجهاز" value={form.role} onChange={v=>setForm(f=>({...f,role:v}))} options={[['0','مستخدم عادي'],['14','مدير الجهاز (يدخل القائمة)']]}/></>}</div>
    <p className="subtitle"><CreditCard size={13}/> بعد الإضافة يسجّل الموظف بصمته على الجهاز نفسه. البطاقة تتيح فتح الباب بتمريرها على أجهزة الأبواب.</p>
-   <div className="actions"><button type="submit" className="btn primary" disabled={!valid}>{form.editing?'حفظ التعديل على الجهاز':'إرسال الإضافة'}</button>{form.editing&&<button type="button" className="btn" onClick={()=>setForm(empty)}>إلغاء التعديل</button>}</div></form>}
+   <div className="actions"><Needs items={[!/^\d{1,9}$/.test(form.pin.trim())&&'«رقم المستخدم» أرقام فقط، حتى 9 خانات',!/^\d{0,10}$/.test(form.card.trim())&&'«رقم البطاقة» أرقام فقط، حتى 10 خانات',form.name.trim().length>24&&'«الاسم على الجهاز» حتى 24 حرفاً']}/><button type="submit" className="btn primary" disabled={!valid}>{form.editing?'حفظ التعديل على الجهاز':'إرسال الإضافة'}</button>{form.editing&&<button type="button" className="btn" onClick={()=>setForm(empty)}>إلغاء التعديل</button>}</div></form>}
   <button className="btn" onClick={onClose}>إغلاق</button>
  </EditorDialog>;
 }

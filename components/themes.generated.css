@@ -364,6 +364,8 @@
 :root[data-theme=noir] .output-option .output-why{color:#d4bba8}
 :root[data-theme=noir] .field-need :is(input,select,textarea,.date-picker-button,[role=combobox]){border-color:#d29f9a!important}
 :root[data-theme=noir] .field-need>small{color:#d1a4a0}
+:root[data-theme=noir] .needs{border-inline-start:3px solid #d1b799;background:#d1b79914;color:#e0cbb4}
+:root[data-theme=noir] .needs-list>span:not(:last-child)::after{color:#d1b799}
 :root[data-theme=noir] .ambient-spot{background:radial-gradient(circle,#11100eb0 0,#11100e00 68%)}
 :root[data-theme=noir][data-scrolled] .topbar{background:#171613e6}
 :root[data-theme=noir] .sidebar-rail{background:#11100e10}
@@ -750,6 +752,8 @@
 :root[data-theme=phantom] .output-option .output-why{color:#dfd0c6}
 :root[data-theme=phantom] .field-need :is(input,select,textarea,.date-picker-button,[role=combobox]){border-color:#dcbebb!important}
 :root[data-theme=phantom] .field-need>small{color:#dcc2c0}
+:root[data-theme=phantom] .needs{border-inline-start:3px solid #dbccbb;background:#dbccbb14;color:#e8dccf}
+:root[data-theme=phantom] .needs-list>span:not(:last-child)::after{color:#dbccbb}
 :root[data-theme=phantom] .ambient-spot{background:radial-gradient(circle,#0d0d0db0 0,#0d0d0d00 68%)}
 :root[data-theme=phantom][data-scrolled] .topbar{background:#111111e6}
 :root[data-theme=phantom] .sidebar-rail{background:#0d0d0d10}
@@ -1136,6 +1140,8 @@
 :root[data-theme=yorha] .output-option .output-why{color:#635043}
 :root[data-theme=yorha] .field-need :is(input,select,textarea,.date-picker-button,[role=combobox]){border-color:#6c4945!important}
 :root[data-theme=yorha] .field-need>small{color:#684845}
+:root[data-theme=yorha] .needs{border-inline-start:3px solid #6d5a45;background:#6d5a4514;color:#5c4b38}
+:root[data-theme=yorha] .needs-list>span:not(:last-child)::after{color:#6d5a45}
 :root[data-theme=yorha] .ambient-spot{background:radial-gradient(circle,#f3f2edb0 0,#f3f2ed00 68%)}
 :root[data-theme=yorha][data-scrolled] .topbar{background:#f1efeae6}
 :root[data-theme=yorha] .sidebar-rail{background:#f3f2ed10}
@@ -2101,6 +2107,8 @@
 :root[data-theme=yorha-dark] .output-option .output-why{color:#cabbb1}
 :root[data-theme=yorha-dark] .field-need :is(input,select,textarea,.date-picker-button,[role=combobox]){border-color:#c8aca9!important}
 :root[data-theme=yorha-dark] .field-need>small{color:#c8afac}
+:root[data-theme=yorha-dark] .needs{border-inline-start:3px solid #c8b9a9;background:#c8b9a914;color:#d2c5b6}
+:root[data-theme=yorha-dark] .needs-list>span:not(:last-child)::after{color:#c8b9a9}
 :root[data-theme=yorha-dark] .ambient-spot{background:radial-gradient(circle,#191815b0 0,#19181500 68%)}
 :root[data-theme=yorha-dark][data-scrolled] .topbar{background:#1c1b18e6}
 :root[data-theme=yorha-dark] .sidebar-rail{background:#19181510}
@@ -2683,6 +2691,8 @@
 :root[data-mode=dark] .output-option .output-why{color:#dcc0ab}
 :root[data-mode=dark] .field-need :is(input,select,textarea,.date-picker-button,[role=combobox]){border-color:#dca29c!important}
 :root[data-mode=dark] .field-need>small{color:#dba7a2}
+:root[data-mode=dark] .needs{border-inline-start:3px solid #dbbd9b;background:#dbbd9b14;color:#e7cfb6}
+:root[data-mode=dark] .needs-list>span:not(:last-child)::after{color:#dbbd9b}
 :root[data-mode=dark] .ambient-blob.one{background:radial-gradient(circle,var(--glow-1) 0,transparent 66%)}
 :root[data-mode=dark] .ambient-blob.two{background:radial-gradient(circle,var(--glow-2) 0,transparent 66%)}
 :root[data-mode=dark] .ambient-blob.three{background:radial-gradient(circle,var(--glow-3) 0,transparent 66%)}

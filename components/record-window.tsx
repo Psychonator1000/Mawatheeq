@@ -4,6 +4,7 @@ import {ChevronLeft,ChevronRight} from 'lucide-react';
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '@/components/ui/sheet';
 import {AlertDialog,AlertDialogContent,AlertDialogHeader,AlertDialogTitle,AlertDialogDescription,AlertDialogFooter,AlertDialogCancel,AlertDialogAction} from '@/components/ui/alert-dialog';
 import {takeCaseOrigin} from '@/lib/case-origin';
+import Needs,{blockedToast,type NeedList} from './needs';
 
 export type Enter='origin'|'prev'|'next';
 export type WindowNav={index:number;total:number;hasPrev:boolean;hasNext:boolean};
@@ -39,17 +40,19 @@ export function Facts({items}:{items:[string,ReactNode][]}){
 
 type Props={eyebrow?:string;title:ReactNode;subtitle?:ReactNode;badges?:ReactNode;facts?:[string,ReactNode][];pin?:ReactNode;quick?:ReactNode;
  nav?:WindowNav;onNavigate?:(dir:'prev'|'next')=>void;unit?:string;enter?:Enter;size?:'wide'|'compact';
- dirty?:boolean;busy?:boolean;onSave?:()=>void;onClose:()=>void;footer?:ReactNode;children:ReactNode;className?:string};
+ dirty?:boolean;busy?:boolean;onSave?:()=>void;onClose:()=>void;footer?:ReactNode;children:ReactNode;className?:string;
+ /** What still stops saving, said above the buttons and when Ctrl+S is pressed. */
+ needs?:NeedList};
 /**
  * The record window shared by cases, clients, tasks and department files: the essentials stay pinned on the side
  * while the rest scrolls, with quick actions, previous/next through the list, Ctrl+S and a guard for unsaved edits.
  */
-export default function RecordWindow({eyebrow,title,subtitle,badges,facts,pin,quick,nav,onNavigate,unit,enter='origin',size='wide',dirty=false,busy=false,onSave,onClose,footer,children,className=''}:Props){
+export default function RecordWindow({eyebrow,title,subtitle,badges,facts,pin,quick,nav,onNavigate,unit,enter='origin',size='wide',dirty=false,busy=false,onSave,onClose,footer,children,className='',needs=[]}:Props){
  const ref=useRef<HTMLDivElement>(null),[pending,setPending]=useState<{label:string;run:()=>void}|null>(null);
  const guarded=(label:string,run:()=>void)=>{if(dirty)setPending({label,run});else run()};
  const go=(dir:'prev'|'next')=>{if(onNavigate&&nav&&(dir==='prev'?nav.hasPrev:nav.hasNext))guarded('الانتقال دون حفظ',()=>onNavigate(dir))};
  useWindowOrigin(ref);
- useWindowKeys(ref,{save:onSave&&(()=>{if(!busy)onSave()}),go:onNavigate&&go});
+ useWindowKeys(ref,{save:onSave&&(()=>{if(!busy&&!blockedToast(needs))onSave()}),go:onNavigate&&go});
  return <><AlertDialog open={!!pending} onOpenChange={v=>{if(!v)setPending(null)}}><AlertDialogContent dir="rtl"><AlertDialogHeader><AlertDialogTitle>تغييرات غير محفوظة</AlertDialogTitle><AlertDialogDescription>عدّلت بيانات هذا الملف ولم تحفظها بعد. هل تريد المتابعة دون حفظ؟</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>متابعة التعديل</AlertDialogCancel><AlertDialogAction onClick={()=>{const p=pending;setPending(null);p?.run()}}>{pending?.label||'متابعة دون حفظ'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
  <Sheet open onOpenChange={v=>{if(!v&&!busy)guarded('إغلاق دون حفظ',onClose)}}><SheetContent side="left" className={'detail-sheet case-window record-window '+className} data-size={size} data-enter={enter} data-record-window ref={ref} dir="rtl"><SheetHeader className="case-pin">
   <div className="case-pin-top"><div className="case-pin-names">{eyebrow&&<small className="record-eyebrow">{eyebrow}</small>}<SheetTitle>{title}</SheetTitle>{subtitle?<SheetDescription>{subtitle}</SheetDescription>:<SheetDescription className="sr-only">ملف السجل</SheetDescription>}</div>
@@ -61,6 +64,7 @@ export default function RecordWindow({eyebrow,title,subtitle,badges,facts,pin,qu
   <p className="case-keys">{onSave&&<><kbd>Ctrl S</kbd> حفظ · </>}{nav&&nav.total>1&&onNavigate&&<><kbd>Alt ←→</kbd> السابق/التالي · </>}<kbd>Esc</kbd> إغلاق</p>
  </SheetHeader>
  <div className="case-main">{children}</div>
+ {footer&&onSave&&<Needs items={needs} className="window-needs"/>}
  {footer&&<div className="detail-actions">{footer}</div>}
  </SheetContent></Sheet></>;
 }

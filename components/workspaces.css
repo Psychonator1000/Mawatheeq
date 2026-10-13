@@ -112,3 +112,8 @@
 .field-need{display:flex;flex-direction:column;gap:4px}
 .field-need :is(input,select,textarea,.date-picker-button,[role=combobox]){border-color:#c0392b!important;box-shadow:0 0 0 3px #c0392b1f}
 .field-need>small{color:#b03a2e;font-size:11.5px;font-weight:600}
+/* Why an action is not available yet: shown beside disabled buttons across the app. */
+.needs{margin:8px 0;padding:8px 12px;border-inline-start:3px solid #c27c2c;background:#c27c2c14;color:#7a4a17;font-size:13px;line-height:1.8;border-radius:6px}
+.needs-list{display:inline}
+.needs-list>span:not(:last-child)::after{content:' · ';color:#c27c2c}
+.window-needs{margin:0 20px 8px}

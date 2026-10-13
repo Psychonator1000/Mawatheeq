@@ -7,6 +7,7 @@ import {type CaseRecord,formatDate,todayISO} from '@/lib/domain';
 import {LEVEL_TITLE,currentLevel,nextLevel,stagesOf,canUndoMove,type MoveDetails} from '@/lib/case-stages';
 import {Field,DateField} from './shared';
 import {OfficeSelect} from './office-shared';
+import Needs from './needs';
 
 /** Close the current level and open the next one: the new level gets its own case number and court. */
 export function MoveStageDialog({c,busy,onClose,onMove}:{c:CaseRecord;busy:boolean;onClose:()=>void;onMove:(d:MoveDetails)=>void}){
@@ -24,6 +25,7 @@ export function MoveStageDialog({c,busy,onClose,onMove}:{c:CaseRecord;busy:boole
    <Field label="المحكمة / الدائرة" suggestions={COURTS} value={d.court} onChange={v=>set('court',v)} wide/>
    <Field label="ملاحظة النقل (اختياري)" value={d.note} onChange={v=>set('note',v)} multiline wide/>
   </div>{c.date?null:<p className="notice">لم يُسجل تاريخ حكم {LEVEL_TITLE[from]}. يمكنك النقل الآن، لكن يُفضل تسجيل الحكم أولاً ليبقى في سجل الدرجة.</p>}
+  <Needs items={[!d.appealedBy&&'اختر «من طعن في الحكم؟»']}/>
   <div className="actions"><button type="submit" className="btn primary" disabled={busy||!d.appealedBy}>نقل إلى {LEVEL_TITLE[to]} وحفظ الملف</button><button type="button" className="btn" onClick={onClose}>إلغاء</button></div></fieldset></form>
  </DialogContent></Dialog>;
 }

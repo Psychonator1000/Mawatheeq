@@ -17,6 +17,7 @@ import {Tabs,TabsList,TabsTrigger,TabsContent} from '../ui/tabs';
 import {CasePicker,DepartmentHistory,EditorDialog,StatusMessage,useRecords,exportCsv} from './shared';
 import RecordWindow,{useListNav,type WindowNav,type Enter} from '../record-window';
 import CopyChip from '../copy-chip';
+import Needs from '../needs';
 
 type View='files'|'custody'|'requests'|'locations'|'log';
 type Person={id:string;username:string;displayName:string};
@@ -52,7 +53,7 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
  const out=active.filter(f=>cu(f).state!=='in'),overdue=out.filter(f=>isOverdue(cu(f),today)),pending=requests.filter(r=>!r.archived&&(r.payload.status==='pending'||r.payload.status==='ready'));
  const label=(f:ArchiveFile)=>({number:f.payload.number,barcode:code39Ready(f.payload.number)?code39Svg(f.payload.number):'',title:f.payload.title,caseRef:caseRef(f),parties:parties(f),type:[f.payload.type,f.payload.volume&&'مجلد '+f.payload.volume].filter(Boolean).join(' · '),location:locationLabel(locOf(cu(f).locationId))});
  const printLabels=(list:ArchiveFile[])=>{if(!printHtml(archiveLabelsHtml(list.map(label),formatDate(today),'')))toast.error('تعذر فتح نافذة الطباعة.')};
- const openScan=()=>{const v=scan.trim().toUpperCase();if(!v)return;const f=files.find(f=>f.payload.number.toUpperCase()===v);if(f){setScan('');setView('files');setEditing(f)}else toast.error('لا يوجد ملف بهذا الرقم: '+v)};
+ const openScan=()=>{const v=scan.trim().toUpperCase();if(!v){toast.error('امسح الباركود أو اكتب رقم الأرشيف أولاً.');return}const f=files.find(f=>f.payload.number.toUpperCase()===v);if(f){setScan('');setView('files');setEditing(f)}else toast.error('لا يوجد ملف بهذا الرقم: '+v)};
  const views:[View,string,LucideIcon,number?][]=[['files','الملفات',BookCopy],['custody','العهدة',ArrowLeftRight,out.length],['requests','الطلبات',Inbox,pending.length],['locations','المواقع',MapPin],['log','سجل الحركة',History]];
  const newFile=()=>setEditing(newDepartmentRecord('archive','file',blankFile(nextNumber(files))) as unknown as ArchiveFile);
  // Every case has a paper file in the archive: one per office code, whichever of its judgments it is linked to.
@@ -124,9 +125,11 @@ function FileEditor({initial,preset,cases,locations,movements,requests,people,ac
   facts={[['الموقع',locationLabel(loc(c.locationId))],['مع',c.holder],['منذ',c.since?formatDate(c.since):''],['موعد الإعادة',c.dueDate?formatDate(c.dueDate):''],['آخر جرد',c.lastAudit?formatDate(c.lastAudit):''],['الأوراق',p.pages]]}
   quick={saved.revision?<>{access.canExport&&code39Ready(saved.payload.number)&&<button type="button" className="btn" onClick={()=>{if(!printHtml(archiveLabelsHtml([label(saved)],formatDate(todayISO()),'')))toast.error('تعذر فتح نافذة الطباعة.')}}><Printer size={16}/> ملصق الملف</button>}{editable&&<button type="button" className="btn" onClick={()=>onRequest(saved)}><Inbox size={16}/> تسجيل طلب للملف</button>}</>:undefined}
   nav={nav} onNavigate={onNavigate} unit="الملف" enter={enter} dirty={dirty&&editable} busy={busy} onSave={editable?saveFile:undefined} onClose={onClose}
-  footer={<>{editable&&<button className="btn primary" type="button" onClick={saveFile} disabled={busy||!ready||(!dirty&&!!saved.revision)}>حفظ بيانات الملف</button>}{!!saved.revision&&access.canEdit&&<button className="btn" disabled={busy||dirty} onClick={()=>void run(()=>departmentRequest('archive_record',{workspace:'archive',id:saved.id,revision:saved.revision,archived:!saved.archived}),saved.archived?'أُعيد فتح الملف':'أُغلق الملف')}>{saved.archived?'إعادة فتح الملف':'إغلاق الملف (إتلاف أو انتهاء الحفظ)'}</button>}<button type="button" className="btn" disabled={busy} onClick={onClose}>إغلاق</button></>}>
+  needs={editable?[!p.number.trim()&&'أدخل «رقم الأرشيف» في «بيانات الملف»',!p.title.trim()&&'أدخل «عنوان الملف» في «بيانات الملف»',!p.type.trim()&&'اختر «نوع الملف» في «بيانات الملف»',access.caseScope!=='all'&&!draft.caseId&&'اربط الملف بقضية في «بيانات الملف»؛ حسابك يرى قضايا محددة فقط']:[]}
+  footer={<>{editable&&<button className="btn primary" type="button" onClick={saveFile} disabled={busy||!ready||(!dirty&&!!saved.revision)}>حفظ بيانات الملف</button>}{!!saved.revision&&access.canEdit&&<button className="btn" title={dirty?'احفظ تعديلات الملف أولاً':undefined} disabled={busy||dirty} onClick={()=>void run(()=>departmentRequest('archive_record',{workspace:'archive',id:saved.id,revision:saved.revision,archived:!saved.archived}),saved.archived?'أُعيد فتح الملف':'أُغلق الملف')}>{saved.archived?'إعادة فتح الملف':'إغلاق الملف (إتلاف أو انتهاء الحفظ)'}</button>}<button type="button" className="btn" disabled={busy} onClick={onClose}>إغلاق</button></>}>
  {error&&<p role="alert" className="notice">{error}</p>}
  <Tabs value={tab} onValueChange={setTab} dir="rtl"><TabsList className="detail-tabs case-tabs">{tabs.map(([v,l,Icon,n,off])=><TabsTrigger key={v} value={v} disabled={off}><Icon aria-hidden/>{l}{n?<span className="tab-count">{n}</span>:null}</TabsTrigger>)}</TabsList>
+ {!saved.revision&&<p className="subtitle">تُفتح «العهدة والحركة» و«الطلبات» و«سجل التغييرات» بعد حفظ الملف أول مرة.</p>}
  <TabsContent value="file"><fieldset className="readonly-fields" disabled={busy||!editable}>
   <CasePicker cases={cases} value={draft.caseId} optional={access.caseScope==='all'} disabled={!!saved.revision} onChange={id=>{const k=cases.find(x=>x.id===id);setDraft(r=>({...r,caseId:id,payload:{...r.payload,title:r.payload.title||(k?`${clientName(k)} ضد ${k.opponent}`:'')}}))}}/>
   <div className="form-grid"><Field label="رقم الأرشيف" value={p.number} onChange={v=>set('number',v.toUpperCase())} placeholder="ARC-00001"/><Field label="عنوان الملف" value={p.title} onChange={v=>set('title',v)}/>
@@ -172,6 +175,7 @@ function CustodyPanel({file,custody:c,log,locations,people,preset,editable,canPr
    {(form.type==='checkout'||form.type==='court')&&<DateField label="موعد الإعادة" value={form.dueDate} onChange={v=>set('dueDate',v)}/>}
    {(form.type==='return'||form.type==='move'||form.type==='audit')&&<OfficeSelect label={form.type==='move'?'الموقع الجديد':'موقع الحفظ'} value={form.locationId} onChange={v=>set('locationId',v)} empty={form.type==='move'?'اختر الموقع':'الموقع السابق'} options={locations.filter(l=>!l.archived).map(l=>[l.id,locationLabel(l)])}/>}
    <Field label="ملاحظات الحركة" value={form.notes} onChange={v=>set('notes',v)} wide placeholder={form.type==='return'?'حالة الملف عند الاستلام، أوراق ناقصة أو مضافة…':''}/></div>
+   <Needs items={[!form.date&&'اختر «تاريخ الحركة»',needsHolder(form.type)&&!form.holder.trim()&&`أدخل «${form.type==='court'?'الجهة المستلمة':form.type==='client'?'اسم مستلم الأصول':'الموظف المستلم'}»`,form.type==='move'&&!form.locationId&&'اختر «الموقع الجديد»']}/>
    <div className="actions"><button type="button" className="btn primary" disabled={busy||!form.date||(needsHolder(form.type)&&!form.holder.trim())||(form.type==='move'&&!form.locationId)} onClick={()=>void post()}>تسجيل الحركة</button><button type="button" className="btn" onClick={()=>{setForm(null);setRequestId('')}}>إلغاء</button></div></fieldset></section>}
   {last&&canPrint&&<p className="archive-receipt-hint"><button type="button" className="btn" onClick={()=>receipt(last)}><Printer size={15}/> طباعة إيصال {last.payload.type==='return'?'الاستلام':'التسليم'} للتوقيع</button></p>}
   {error&&<p className="notice" role="alert">{error}</p>}
@@ -217,6 +221,7 @@ function RequestEditor({initial,files,people,canEdit,onClose,onSaved}:{initial:A
    <Field label="الغرض" value={p.purpose} onChange={v=>set('purpose',v)} suggestions={PURPOSES}/><OfficeSelect label="حالة الطلب" value={p.status} onChange={v=>set('status',v)} options={Object.entries(REQUEST_STATUSES)}/>
    {p.status==='declined'&&<Field label="سبب الاعتذار" value={p.decisionNote} onChange={v=>set('decisionNote',v)} wide/>}<Field label="ملاحظات" value={p.notes} onChange={v=>set('notes',v)} wide/></div></fieldset>
   {error&&<p className="notice" role="alert">{error}</p>}
+  {canEdit&&<Needs items={[!draft.subjectId&&'اختر «الملف المطلوب»',!p.requester.trim()&&'أدخل «طالب الملف»',p.status==='declined'&&!p.decisionNote.trim()&&'اكتب «سبب الاعتذار»']}/>}
   <div className="actions">{canEdit&&<button className="btn primary" disabled={busy||!ready} onClick={()=>void submit()}>حفظ الطلب</button>}{canEdit&&!!initial.revision&&<button className="btn" disabled={busy} onClick={()=>{setBusy(true);departmentRequest('archive_record',{workspace:'archive',id:initial.id,revision:initial.revision,archived:true}).then(()=>{toast.success('أُزيل الطلب من القائمة');onSaved()}).catch(e=>setError(e.message)).finally(()=>setBusy(false))}}>إزالة من القائمة</button>}<button className="btn" disabled={busy} onClick={onClose}>إغلاق</button></div>
  </EditorDialog>;
 }
@@ -247,6 +252,7 @@ function LocationEditor({initial,onClose,onSaved}:{initial:ArchiveLocation;onClo
    <Field label="الخزانة" value={p.cabinet} onChange={v=>set('cabinet',v)}/><Field label="الرف" value={p.shelf} onChange={v=>set('shelf',v)}/><Field label="الصندوق" value={p.box} onChange={v=>set('box',v)}/><Field label="السعة (عدد الملفات)" value={p.capacity} onChange={v=>set('capacity',v.replace(/\D/g,''))}/>
    <Field label="ملاحظات" value={p.notes} onChange={v=>set('notes',v)} wide/></div></fieldset>
   {error&&<p className="notice" role="alert">{error}</p>}
+  {!initial.archived&&<Needs items={[!p.code.trim()&&'أدخل «رمز الموقع»',!p.name.trim()&&'أدخل «اسم الموقع»']}/>}
   <div className="actions">{!initial.archived&&<button className="btn primary" disabled={busy||!p.code.trim()||!p.name.trim()} onClick={()=>void run(()=>save(draft),'حُفظ الموقع')}>حفظ الموقع</button>}{!!initial.revision&&<button className="btn" disabled={busy} onClick={()=>void run(()=>departmentRequest('archive_record',{workspace:'archive',id:initial.id,revision:initial.revision,archived:!initial.archived}),initial.archived?'أُعيد فتح الموقع':'أُغلق الموقع')}>{initial.archived?'إعادة فتح الموقع':'إغلاق الموقع'}</button>}<button className="btn" disabled={busy} onClick={onClose}>إغلاق</button></div>
  </EditorDialog>;
 }
