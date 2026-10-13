@@ -5,6 +5,7 @@ import { suggestions, weekdayOf, CLIENT_ROLES } from '../lib/choices.ts';
 import { fils, kwd, kwdPlain, position, dueStatements, FILE_STATUSES, mapCollectionSheet, ALL_FILE_STATUSES, civilIdValid, debtorKey, roundRobin } from '../lib/collections.ts';
 import { custodyOf, isOverdue, nextNumber, code39, code39Ready, code39Svg, daysBetween, MOVEMENTS } from '../lib/archive.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
+import { suggestUsername } from '../lib/staff-accounts.ts';
 
 const fixture = (id, fields) => ({ ...emptyCase(), id, ...fields });
 const records = [
@@ -183,4 +184,13 @@ assert.ok(FILE_STATUSES.includes('تحصيل ودي'));
   assert.deepEqual(roundRobin(['a', 'b', 'c', 'd', 'e'], ['x', ' y ', '']), [['a', 'x'], ['b', 'y'], ['c', 'x'], ['d', 'y'], ['e', 'x']]);
   assert.deepEqual(roundRobin(['a'], []), []);
 }
-console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money, import mapping, civil ID check, debtor grouping, round-robin and follow-up helpers.');
+{
+  // Login suggestions: usual spellings for common names, compound names joined, vowels for و/ي, unique among taken names.
+  assert.equal(suggestUsername('المحامي يوسف الشطي', []), 'yousef.alshaty');
+  assert.equal(suggestUsername('ا/ عبد الله خالد', []), 'abdullah.khaled');
+  assert.equal(suggestUsername('ا/ أبو زيد شعبان', []), 'abuzaid.shaban');
+  assert.equal(suggestUsername('ا/ اسلام محمد', ['islam.mohammad']), 'islam.mohammad2');
+  assert.equal(suggestUsername('ريم الكندري', []), 'reem.alkandari');
+  assert.match(suggestUsername('ا/ نادر فوزي', []), /^[a-z0-9.]{3,28}$/);
+}
+console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money, import mapping, civil ID check, debtor grouping, round-robin, login suggestions and follow-up helpers.');
