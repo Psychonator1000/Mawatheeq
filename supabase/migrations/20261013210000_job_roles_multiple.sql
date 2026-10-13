@@ -1,7 +1,7 @@
 begin;
 -- Several jobs per employee, and more jobs (13 October 2026). «jobRoles» lists every job the employee does, main one
 -- first; «jobRole» stays the main job for older screens. New jobs: محامٍ متدرب، باحث قانوني، مترجم، استقبال، إدخال
--- بيانات، سائق، عامل خدمات (أوفيس بوي)، مطوّر برمجيات، مهندس شبكات، دعم فني، مهندس. As before, jobs only label the
+-- بيانات، مندوب، سائق، عامل خدمات، مطوّر برمجيات، مهندس شبكات، دعم فني، مهندس. As before, jobs only label the
 -- account and preselect settings; authority comes solely from the saved sections, case scope and edit/export flags.
 -- The earlier functions know the earlier jobs, so the others pass through them as «custom» and are stored afterwards,
 -- with the audit entry.
@@ -10,7 +10,7 @@ create function mawatheeq_private.save_access(p_user uuid,p_permissions jsonb,p_
 language plpgsql set search_path='' as $$
 declare p jsonb:=p_permissions; roles jsonb; main text; v jsonb; result jsonb;
  known text[]:=array['manager','lawyer','traineeLawyer','counsel','legalResearcher','translator','secretary','receptionist','sessionsClerk',
-  'executionClerk','collections','callCenter','accountant','hr','archivist','dataEntry','courier','driver','officeAdmin','officeBoy',
+  'executionClerk','collections','callCenter','accountant','hr','archivist','dataEntry','courier','representative','driver','officeAdmin','officeBoy',
   'developer','networkEngineer','itSupport','engineer','custom'];
  older text[]:=array['manager','lawyer','secretary','collections','accountant','hr','custom','archivist','counsel','callCenter','courier',
   'sessionsClerk','officeAdmin','executionClerk'];

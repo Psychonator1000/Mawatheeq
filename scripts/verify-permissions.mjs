@@ -211,7 +211,7 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
   assert.deepEqual(p.sections,['cases'],'Jobs alone change no pages');
   assert.deepEqual((await office(admin.token,'access_history',{id:m.id}))[0].after.jobRoles,['officeBoy','driver','networkEngineer'],'The audit records every job');
   assert.deepEqual((await local((await login('role_clerk')).token,'access')).jobRoles,['officeBoy','driver','networkEngineer'],'The account sees its jobs');
-  for(const role of ['traineeLawyer','legalResearcher','translator','receptionist','dataEntry','developer','itSupport','engineer']){
+  for(const role of ['traineeLawyer','legalResearcher','translator','receptionist','dataEntry','representative','developer','itSupport','engineer']){
    p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,jobRole:role,jobRoles:undefined}});
    p=await now();assert.equal(p.jobRole,role,role+' alone is stored');assert.deepEqual(p.jobRoles,[role]);}
   p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,jobRole:'lawyer',jobRoles:['lawyer','counsel']}});

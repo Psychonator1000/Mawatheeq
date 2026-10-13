@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
-import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,Archive,BookOpenCheck,Gavel,ClipboardList,Headset,Car,Building2,SlidersHorizontal,ChevronDown,GraduationCap,Library,Languages,ConciergeBell,Keyboard,Truck,Coffee,Code,Network,Monitor,Wrench,type LucideIcon} from 'lucide-react';
+import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,Archive,BookOpenCheck,Gavel,ClipboardList,Headset,Car,Building2,SlidersHorizontal,ChevronDown,GraduationCap,Library,Briefcase,Languages,ConciergeBell,Keyboard,Truck,Coffee,Code,Network,Monitor,Wrench,type LucideIcon} from 'lucide-react';
 import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,JOB_ROLES,ADMIN_POWERS,ALL_POWERS,workspacesOf,rolesOf,combinedPreset,type AdminPower,type JobRole,type Permissions,type Section} from '@/lib/permissions';
 import {type CaseRecord} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
@@ -8,7 +8,7 @@ import {normalizeSearch} from '@/lib/case-browse';
 import {lawyerLabels,matchLawyer,visibleCases} from '@/lib/lawyer-match';
 import PageNavigation from './page-navigation';
 
-export const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,traineeLawyer:GraduationCap,counsel:BookOpenCheck,legalResearcher:Library,translator:Languages,sessionsClerk:Gavel,executionClerk:ClipboardList,callCenter:Headset,courier:Car,driver:Truck,officeAdmin:Building2,officeBoy:Coffee,secretary:CalendarClock,receptionist:ConciergeBell,collections:HandCoins,accountant:Calculator,hr:Users,archivist:Archive,dataEntry:Keyboard,developer:Code,networkEngineer:Network,itSupport:Monitor,engineer:Wrench,custom:SlidersHorizontal};
+export const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,traineeLawyer:GraduationCap,counsel:BookOpenCheck,legalResearcher:Library,translator:Languages,sessionsClerk:Gavel,executionClerk:ClipboardList,callCenter:Headset,courier:Car,representative:Briefcase,driver:Truck,officeAdmin:Building2,officeBoy:Coffee,secretary:CalendarClock,receptionist:ConciergeBell,collections:HandCoins,accountant:Calculator,hr:Users,archivist:Archive,dataEntry:Keyboard,developer:Code,networkEngineer:Network,itSupport:Monitor,engineer:Wrench,custom:SlidersHorizontal};
 const same=(a:Section[],b:Section[])=>a.length===b.length&&a.every(s=>b.includes(s));
 /** The account's jobs; accounts saved before roles existed get the role their settings match exactly. */
 export function inferRoles(v:Permissions):JobRole[]{

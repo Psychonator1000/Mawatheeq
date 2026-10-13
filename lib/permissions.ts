@@ -55,7 +55,7 @@ export const PAGE_PRESETS: [string, Section[]][] = [
 
 /** Job roles offered when adding staff. Picking one fills in the settings below it; the owner can still adjust them. */
 export type JobRole = 'manager' | 'lawyer' | 'traineeLawyer' | 'counsel' | 'legalResearcher' | 'translator' | 'secretary' | 'receptionist' | 'sessionsClerk' | 'executionClerk'
-  | 'collections' | 'callCenter' | 'accountant' | 'hr' | 'archivist' | 'dataEntry' | 'courier' | 'driver' | 'officeAdmin' | 'officeBoy'
+  | 'collections' | 'callCenter' | 'accountant' | 'hr' | 'archivist' | 'dataEntry' | 'courier' | 'representative' | 'driver' | 'officeAdmin' | 'officeBoy'
   | 'developer' | 'networkEngineer' | 'itSupport' | 'engineer' | 'custom';
 export const JOB_ROLES: { id: JobRole; label: string; hint: string; preset?: Omit<Permissions, 'revision' | 'jobRole'> }[] = [
   { id: 'manager', label: 'مدير — صلاحيات كاملة', hint: 'كل الصفحات وكل القضايا، مع التعديل والتصدير وكل صلاحيات الإدارة التي تملكها.',
@@ -94,6 +94,8 @@ export const JOB_ROLES: { id: JobRole; label: string; hint: string; preset?: Omi
     preset: { sections: ['secretary', 'work'], caseScope: 'all', caseIds: [], canEdit: true, canExport: false } },
   { id: 'dataEntry', label: 'إدخال بيانات', hint: 'إدخال القضايا والموكلين وتحديث بياناتها، دون تصدير.',
     preset: { sections: ['overview', 'cases', 'clients'], caseScope: 'all', caseIds: [], canEdit: true, canExport: false } },
+  { id: 'representative', label: 'مندوب', hint: 'مراجعة المحاكم والوزارات والجهات وتسليم الأوراق واستلامها: الأجندة والمهام لكل القضايا، دون تصدير.',
+    preset: { sections: ['secretary', 'work'], caseScope: 'all', caseIds: [], canEdit: true, canExport: false } },
   { id: 'driver', label: 'سائق', hint: 'توصيل الملفات والمراسلات: يرى المهام المسندة إليه فقط.',
     preset: { sections: ['work'], caseScope: 'selected', caseIds: [], canEdit: true, canExport: false } },
   { id: 'officeBoy', label: 'عامل خدمات', hint: 'ضيافة المكتب ونظافته وإيصال الأوراق داخله. حساب للمحادثة والحضور فقط، دون صفحات أو قضايا.',
