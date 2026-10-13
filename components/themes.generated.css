@@ -132,6 +132,7 @@
 :root[data-theme=noir] .readonly-fields:disabled input,:root[data-theme=noir] .readonly-fields:disabled textarea,:root[data-theme=noir] .readonly-fields:disabled button,:root[data-theme=noir] .readonly-fields:disabled select{color:#cbc3be}
 :root[data-theme=noir] .access-scope{background:#1d1b18}
 :root[data-theme=noir] .role-step{background:#191714}
+:root[data-theme=noir] .role-hint{color:#c6bfb9}
 :root[data-theme=noir] .role-card{border:1px solid #2f2c27;background:#141210;color:#d9d3c8}
 :root[data-theme=noir] .role-card small{color:#c1bab5}
 :root[data-theme=noir] .role-card:hover{border-color:#4d4338}
@@ -253,6 +254,11 @@
 :root[data-theme=noir] .roll-count{background:#22201c}
 :root[data-theme=noir] .roll-count span{color:#c8c0ba}
 :root[data-theme=noir] .roll-panel{border:1px solid #2f2c27;background:#191714}
+:root[data-theme=noir] .import-summary>div{border:1px solid #2f2c27;background:#141210}
+:root[data-theme=noir] .import-summary span{color:#c1bab5}
+:root[data-theme=noir] .import-summary .warn b{color:#d2a5a9}
+:root[data-theme=noir] .workbook-import details{border:1px solid #2f2c27}
+:root[data-theme=noir] .import-list td small{color:#c2b9a8}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
 :root[data-theme=noir] .workspace-option p{color:#c4bbaa}
@@ -502,6 +508,7 @@
 :root[data-theme=phantom] .readonly-fields:disabled input,:root[data-theme=phantom] .readonly-fields:disabled textarea,:root[data-theme=phantom] .readonly-fields:disabled button,:root[data-theme=phantom] .readonly-fields:disabled select{color:#dbd6d3}
 :root[data-theme=phantom] .access-scope{background:#161616}
 :root[data-theme=phantom] .role-step{background:#121212}
+:root[data-theme=phantom] .role-hint{color:#d7d3d0}
 :root[data-theme=phantom] .role-card{border:1px solid #222222;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .role-card small{color:#d4cfcc}
 :root[data-theme=phantom] .role-card:hover{border-color:#3f362b}
@@ -623,6 +630,11 @@
 :root[data-theme=phantom] .roll-count{background:#191919}
 :root[data-theme=phantom] .roll-count span{color:#d8d4d1}
 :root[data-theme=phantom] .roll-panel{border:1px solid #222222;background:#121212}
+:root[data-theme=phantom] .import-summary>div{border:1px solid #222222;background:#0f0f0f}
+:root[data-theme=phantom] .import-summary span{color:#d4cfcc}
+:root[data-theme=phantom] .import-summary .warn b{color:#ddc3c5}
+:root[data-theme=phantom] .workbook-import details{border:1px solid #222222}
+:root[data-theme=phantom] .import-list td small{color:#cbcbcb}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .workspace-option p{color:#cdcdcd}
@@ -903,6 +915,8 @@
 :root[data-theme=ivory] .role-chip-case{background:#f7f7f8}
 :root[data-theme=ivory] .roll-count{background:#f7f6f6}
 :root[data-theme=ivory] .roll-panel{border:1px solid #dbd8d4;background:#fbfbfb}
+:root[data-theme=ivory] .import-summary>div{border:1px solid #dbd8d4;background:#fefefd}
+:root[data-theme=ivory] .workbook-import details{border:1px solid #dbd8d4}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
 :root[data-theme=ivory] .department-topbar{background:#fefefed9}
 :root[data-theme=ivory] .department-brand .brand-mark{color:#faf9f8}
@@ -1169,6 +1183,9 @@
 :root[data-theme=phantom-light] .role-chip-case{background:#fcfcfc}
 :root[data-theme=phantom-light] .roll-count{background:#fcfcfc}
 :root[data-theme=phantom-light] .roll-panel{border:1px solid #dbd8d4;background:#fefefd}
+:root[data-theme=phantom-light] .import-summary>div{border:1px solid #dbd8d4;background:#fffefe}
+:root[data-theme=phantom-light] .workbook-import details{border:1px solid #dbd8d4}
+:root[data-theme=phantom-light] .import-list td small{color:#7b7773}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
 :root[data-theme=phantom-light] .workspace-option{border:1px solid #fafaf9;background:#fefefe;color:#403c39}
 :root[data-theme=phantom-light] .workspace-option p{color:#757270}
@@ -1459,6 +1476,7 @@
 :root[data-mode=dark] .readonly-fields:disabled input,:root[data-mode=dark] .readonly-fields:disabled textarea,:root[data-mode=dark] .readonly-fields:disabled button,:root[data-mode=dark] .readonly-fields:disabled select{color:#d1c8c2}
 :root[data-mode=dark] .access-scope{border-inline-start:3px solid var(--brand);background:#1f1c19}
 :root[data-mode=dark] .role-step{background:#1c1a16}
+:root[data-mode=dark] .role-hint{color:#ccc4be}
 :root[data-mode=dark] .role-card{border:1px solid #2e2924;background:#181613;color:#d9d4cf}
 :root[data-mode=dark] .role-card svg{color:var(--brand)}
 :root[data-mode=dark] .role-card small{color:#c8c0ba}
@@ -1672,6 +1690,12 @@
 :root[data-mode=dark] .roll-count b{color:var(--brand)}
 :root[data-mode=dark] .roll-count span{color:#cec5bf}
 :root[data-mode=dark] .roll-panel{border:1px solid #2e2924;background:#1c1a16}
+:root[data-mode=dark] .import-summary>div{border:1px solid #2e2924;background:#181613}
+:root[data-mode=dark] .import-summary b{color:var(--brand)}
+:root[data-mode=dark] .import-summary span{color:#c8c0ba}
+:root[data-mode=dark] .import-summary .warn b{color:#dba7ac}
+:root[data-mode=dark] .workbook-import details{border:1px solid #2e2924}
+:root[data-mode=dark] .import-list td small{color:#c3bbb3}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

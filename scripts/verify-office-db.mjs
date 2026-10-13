@@ -112,8 +112,29 @@ await assert.rejects(()=>request(owner.token,'export_page',{kind:'accounts'}),/�
  assert.equal(sc.stages[0].ruling,'تصحيح المسؤول');assert.equal(sc.stages[0].closedBy,'editor','A correction keeps the original closing stamp');
  const imported=await local(owner.token,'import_cases',{cases:[{client:'Synthetic Client',opponent:'Synthetic Opponent',code:'STG',autoNumber:'777',date:'2026-01-01',type:'حكم أول درجة',procedures:[]}]});
  assert.equal(imported.added,0,'A workbook row for the closed level matches the case instead of duplicating it');
+ assert.equal((await local(owner.token,'import_workbook',{file:'x.xlsx',dryRun:true,cases:[{client:'Synthetic Client',opponent:'Synthetic Opponent',code:'STG',autoNumber:'777',date:'2026-01-01',type:'حكم أول درجة',procedures:[],_row:4}]})).added,0,'The workbook import does not duplicate a closed level either');
  sc=await local(owner.token,'save_case',{case:{...sc,stages:[],stage:'ابتدائي'}});assert.deepEqual(sc.stages,[],'The owner can undo a move');}
+ // Supplementing from a newer workbook: fill empty fields, list differing values for review, add unmatched rows.
+ {const wb=(dry,cases)=>local(owner.token,'import_workbook',{file:'synthetic.xlsx',dryRun:dry,cases});
+  let w0=await local(owner.token,'save_case',{case:{id:'wb-fixture',client:'شركة الاختبار',opponent:'خصم تجريبي 123456',code:'W1',autoNumber:'900100',date:'2026-03-01',type:'حكم أول درجة',outcome:'لصالحنا',ruling:'',copyDate:'',notes:'ملاحظة الموقع',procedures:[],revision:0}});
+  const row={client:'شركه الاختبار',opponent:'خصم تجريبي',code:'W1',autoNumber:'900100',date:'2026-03-01',type:'حكم استئناف',outcome:'غير محدد',ruling:'رفض الدعوى',copyDate:'2026-03-20',notes:'ملاحظة Excel',procedures:[],_row:7,_issues:['تاريخ إعلان الصيغة: «10/9/20256» تاريخ غير صالح في الملف؛ لم يُسجل']};
+  const fresh={client:'شركة جديدة',opponent:'خصم جديد',code:'W2',autoNumber:'',date:'2026-04-02',type:'حكم أول درجة',outcome:'لصالحنا',procedures:[],_row:9};
+  await assert.rejects(()=>local(editor.token,'import_workbook',{file:'x',dryRun:true,cases:[row]}),e=>e.code==='42501','Staff without the settings power cannot import');
+  const dry=await wb(true,[row,fresh]);
+  assert.deepEqual([dry.added,dry.updated,dry.filled,dry.conflicts],[1,1,2,3],'Dry run counts: one new, one supplemented (2 fills; type, notes and the bad date flagged)');
+  await db.exec('reset role');assert.equal((await db.query("select count(*)::int n from public.mawatheeq_cases where payload->>'code'='W2'")).rows[0].n,0,'A dry run writes nothing');await db.exec('set role anon');
+  const done=await wb(false,[row,fresh]);assert.equal(done.added,1);assert.equal(done.updated,1);
+  const stored=async id=>{await db.exec('reset role');const r=(await db.query('select payload from public.mawatheeq_cases where id=$1',[id])).rows[0]?.payload;await db.exec('set role anon');return r};
+  const got=await stored('wb-fixture');
+  assert.equal(got.ruling,'رفض الدعوى');assert.equal(got.copyDate,'2026-03-20','Empty fields are filled');
+  assert.equal(got.type,'حكم أول درجة');assert.equal(got.outcome,'لصالحنا');assert.equal(got.notes,'ملاحظة الموقع','Website values are never replaced');
+  assert.equal(got.opponent,'خصم تجريبي 123456','A shortened opponent is not a conflict');
+  assert.match(got.importReview,/نوع الحكم: «حكم استئناف»/);assert.match(got.importReview,/صف 7/);assert.match(got.importReview,/20256/);assert.doesNotMatch(got.importReview,/الموكل/,'Spelling variants are not conflicts');
+  assert.equal(got.revision,w0.revision+1,'The update bumps the revision so stale edits are refused');
+  const again=await wb(false,[row,fresh]);assert.deepEqual([again.added,again.updated,again.unchanged,again.ambiguous],[0,0,2,0],'Re-importing the same file changes nothing');
+  await db.exec('reset role');assert.equal((await db.query("select count(*)::int n from public.mawatheeq_cases where payload->>'code'='W2'")).rows[0].n,1,'The new judgment is added once');await db.exec('set role anon');}
+
 await db.exec('reset role');
 assert.equal((await db.query("select count(*)::int n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='mawatheeq_office_request' and p.prosecdef")).rows[0].n,0);
 await db.close();
-console.log('Passed office database: court levels (server-stamped, locked for staff, owner corrections, import matching), session denial, evidence gates, authoritative reviewers, stale approvals, history, local staff controls, tasks/hearings, conflicts, portable export and revocation.');
+console.log('Passed office database: court levels (server-stamped, locked for staff, owner corrections, import matching), workbook supplement (dry run, fills, review list, no overwrites, idempotent), session denial, evidence gates, authoritative reviewers, stale approvals, history, local staff controls, tasks/hearings, conflicts, portable export and revocation.');

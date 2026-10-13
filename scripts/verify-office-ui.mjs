@@ -168,6 +168,23 @@ try{
   await dep.getByRole('row').filter({has:dep.getByText('ui_clerk',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
   assert.equal(await dep.getByRole('checkbox',{name:/^النسخة الكاملة للبيانات/}).isDisabled(),true,'An admin cannot grant a power they lack');
   await dep.screenshot({path:artifacts+'/admin-deputy.png'});await ctx2.close();}
- assert.deepEqual(errors,[]);console.log('Passed office UI: lawyer accounts following their name on the cases, owner switch-to-user and return, generated passwords, account rename and permanent staff password, form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');
+ // «استيراد Excel» from a newer workbook: preview first, then new judgments, filled blanks and a review list.
+ {const X=require(require.resolve('xlsx',{paths:[process.cwd()]}));const w=X.utils.book_new();
+  X.utils.book_append_sheet(w,X.utils.aoa_to_sheet([['معرف السجل الداخلي','الكود','إدخال الرقم الآلي','الموكل','الخصم','نوع الحكم','حالة الحكم','تاريخ الحكم','تاريخ استلام الصيغة التنفيذية','تاريخ إعلان الصيغة'],
+   ['R0004','TEST-3','1003','شركة اختبار الواجهة','خصم تجريبي 3','حكم استئناف','لصالحنا','1/9/2026','5/9/2026',''],
+   ['R0005','TEST-4','1004','شركة اختبار الواجهة','خصم تجريبي 4','حكم أول درجة','لصالحنا','1/9/2026','','1/9/20256'],
+   ['','UI-NEW','7777','موكل جديد تجريبي','خصم جديد','حكم أول درجة','لصالحنا','1/10/2026','',''],
+   [],['الكود','الرقم الآلي','تاريخ الحكم','الموكل'],['X','8888','2026-01-01','صف مساعد لا يُستورد']]),'الأحكام');
+  await page.locator('input.upload-input').setInputFiles({name:'synthetic-cases.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(X.write(w,{type:'array',bookType:'xlsx'}))});
+  const dlg=page.getByRole('dialog');await dlg.getByText('حكم جديد يُضاف').waitFor();
+  const stat=async label=>dlg.locator('.import-summary>div').filter({hasText:label}).locator('b').innerText();
+  assert.equal(await stat('حكم جديد يُضاف'),'1');assert.equal(await stat('صف فيه تاريخ غير صالح'),'1');assert.equal(await stat('قيمة مختلفة للمراجعة'),'2','The judgment type and the bad date are listed, not applied');
+  await dlg.getByText('UI-NEW').waitFor();await page.screenshot({path:artifacts+'/workbook-import.png'});
+  await dlg.getByRole('button',{name:'تطبيق الاستيراد'}).click();await dlg.waitFor({state:'detached'});await page.getByText(/أُضيف 1 حكم/).first().waitFor();
+  await db.exec('reset role');const got=(await db.query("select payload from public.mawatheeq_cases where id='ui-case-3'")).rows[0].payload;
+  const added=(await db.query("select count(*)::int n from public.mawatheeq_cases where payload->>'code'='UI-NEW'")).rows[0].n,helper=(await db.query("select count(*)::int n from public.mawatheeq_cases where payload->>'autoNumber'='8888'")).rows[0].n;await db.exec('set role anon');
+  assert.equal(got.copyDate,'2026-09-05','Empty field filled');assert.equal(got.type,'حكم أول درجة','Website value kept');assert.match(got.importReview,/حكم استئناف/);
+  assert.equal(added,1,'New judgment added');assert.equal(helper,0,'Helper table rows are not imported');}
+ assert.deepEqual(errors,[]);console.log('Passed office UI: workbook import preview/apply (new rows, filled blanks, review list, bad dates, helper tables skipped), lawyer accounts following their name on the cases, owner switch-to-user and return, generated passwords, account rename and permanent staff password, form-only case entry, PDF-free source approval, stale approval, audit history, analytics links/refresh, pagination, task completion, linked hearings, party search, admin grants on creation/edit, selected-case isolation, hidden sections/direct hash denial, read-only forms, restricted edits, revoked active sessions, mobile layout, and no runtime errors.');
 }catch(e){await page.screenshot({path:artifacts+'/office-ui-failure.png',fullPage:true});console.error(await page.locator('body').innerText());throw e}
 finally{await browser.close();await db.close()}

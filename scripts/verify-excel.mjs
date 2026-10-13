@@ -29,5 +29,16 @@ try {
  }
  assert.equal((await readWorkbook(file([['الموكل','الرقم الآلي','تاريخ الحكم'],['Example C','00012','27/9/2026']]))).length,1,'Plain exports do not require legacy internal IDs');
  await assert.rejects(()=>readWorkbook(file([header,['R0001','Example A','001234','حكم اول درجة','31/2/2026']])),/تاريخ غير صالح/);
- console.log('Passed: legacy workbook helper exclusion, text IDs, single-digit dates, calendar dates across timezones, type spelling normalization, execution dates and invalid-date rejection.');
+ // Lenient reading for supplementing the website: new rows without an ID, the helper table pasted below is not read,
+ // and a bad date is reported on its row instead of failing the file.
+ const lenient=await readWorkbook(file([header,
+  ['R0001','Example A','001234','حكم اول درجة','7/9/2026','8/9/2026','26/3/202'],
+  ['','New judgment','005555','حكم استئناف','5-10-2026'],
+  ['','',''],
+  ['الكود','الرقم الآلي','تاريخ الحكم','الموكل','الخصم'],
+  ['77','000999','2026-06-30','Helper row that must not be read']]),true);
+ assert.equal(lenient.length,2,'Lenient mode reads new rows and stops at the pasted helper table');
+ assert.equal(lenient[1].date,'2026-10-05','Day-month-year with dashes');assert.equal(lenient[1]._row,3);
+ assert.equal(lenient[0].executionProcedureDate,'');assert.match(lenient[0]._issues[0],/26\/3\/202/);
+ console.log('Passed: legacy workbook helper exclusion, text IDs, single-digit dates, calendar dates across timezones, type spelling normalization, execution dates, invalid-date rejection, and lenient supplement reading (new rows, helper-table stop, per-row date issues).');
 } finally {fs.rmSync(temp,{recursive:true,force:true});}
