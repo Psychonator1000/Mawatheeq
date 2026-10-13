@@ -32,7 +32,7 @@ export default function Chat({userId}:{userId:string}){
    {conv&&view==='list'?<Conversation key={conv.id} conv={conv} me={userId} onLeave={()=>setOpen(false)} onBack={()=>setActive(null)} onInfo={()=>setView('info')} onChanged={refresh} onDirect={async id=>{const r=await chatRequest<{id:string}>('start_direct',{userId:id});await refresh();setActive(r.id)}}/>
    :view==='new'||view==='group'?<NewChat group={view==='group'} onCancel={()=>setView('list')} onCreated={async id=>{await refresh();setView('list');setActive(id)}}/>
    :view==='info'&&conv?<GroupInfo conv={conv} me={userId} onBack={()=>setView('list')} onChanged={async left=>{await refresh();setView('list');if(left)setActive(null)}}/>
-   :<ConversationList summary={summary} me={userId} onOpen={id=>{setActive(id);setView('list')}} onNew={()=>setView('new')} onGroup={()=>setView('group')} onClose={()=>setOpen(false)}/>}
+   :<ConversationList key={userId} summary={summary} me={userId} onOpen={id=>{setActive(id);setView('list')}} onNew={()=>setView('new')} onGroup={()=>setView('group')} onClose={()=>setOpen(false)}/>}
   </section>}
  </>;
 }
@@ -42,7 +42,6 @@ const closedKey=(me:string)=>'mawatheeq.chat-closed.'+me;
 const readClosed=(me:string):Record<string,string>=>{try{const v=JSON.parse(localStorage.getItem(closedKey(me))||'{}');return v&&typeof v==='object'?v:{}}catch{return {}}};
 function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:ChatSummary|null;me:string;onOpen:(id:string)=>void;onNew:()=>void;onGroup:()=>void;onClose:()=>void}){
  const [q,setQ]=useState(''),[closed,setClosed]=useState(()=>readClosed(me)),[showClosed,setShowClosed]=useState(false);
- useEffect(()=>setClosed(readClosed(me)),[me]);
  const saveClosed=(next:Record<string,string>)=>{setClosed(next);try{localStorage.setItem(closedKey(me),JSON.stringify(next))}catch{/* kept for this visit only */}};
  // A closed conversation stays saved; it returns to the list when a new message arrives, or when searched for.
  const at=(v:string)=>{const t=Date.parse(v);return Number.isNaN(t)?0:t};
