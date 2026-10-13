@@ -2,8 +2,12 @@
 
 export const FILE_STATUSES = ['تحصيل ودي', 'جاهز للمحكمة', 'أمر أداء', 'دعوى قضائية', 'تنفيذ', 'تقسيط', 'مسدد', 'موقوف', 'مغلق'];
 /** Further statuses the collections team uses. */
-export const EXTRA_STATUSES = ['سوفت', 'تحت الرفع', 'سكت', 'حفظ'];
+export const EXTRA_STATUSES = ['تحت الرفع', 'حفظ'];
 export const ALL_FILE_STATUSES = [...FILE_STATUSES, ...EXTRA_STATUSES];
+/** Short-hand statuses found in collection spreadsheets, read as the plain Arabic status they mean. */
+export const STATUS_WORDS: Record<string, string> = { 'سوفت': 'تحصيل ودي', 'سكت': 'موقوف' };
+/** The status to keep for a status as written (short-hand translated), or '' when it is not one. */
+export const standardStatus = (s: string) => { const v = STATUS_WORDS[s] || s; return ALL_FILE_STATUSES.includes(v) ? v : ''; };
 export const EXECUTION_STATUSES = ['لم يُفتح', 'مفتوح', 'حجز', 'منع سفر', 'ضبط وإحضار', 'حبس', 'مسدد', 'مغلق'];
 /** Statuses that count as finished files in the dashboard. */
 export const CLOSED_STATUSES = ['مسدد', 'مغلق'];
@@ -80,14 +84,14 @@ export function mapCollectionSheet(header: unknown[], rows: unknown[][], dateOf:
   const keep = (v: string) => (EMPTY_MARKER.test(v) ? '' : v);
   return rows.flatMap((r, n) => {
     const code = at(r, c.file); if (!code) return [];
-    const auto = at(r, c.auto), status = at(r, c.status);
+    const auto = at(r, c.auto), status = at(r, c.status), standard = standardStatus(status);
     const payload: Record<string, string> = {
       code, company: at(r, c.client), defendant: at(r, c.defendant), civilId: keep(at(r, c.civil)), nationality: keep(at(r, c.nationality)),
       address: keep(at(r, c.address)), address2: [at(r, c.area) && 'المنطقة ' + at(r, c.area), at(r, c.block) && 'قطعة ' + at(r, c.block)].filter(Boolean).join('، '),
       amount: money(at(r, c.amount)), account: keep(at(r, c.contract)), customerId: keep(at(r, c.customer)), fileAutoNumber: keep(auto),
-      fileStatus: ALL_FILE_STATUSES.includes(status) ? status : '', arrivalDate: dateOf(r[c.arrival]), defendantJob: keep(at(r, c.job)),
+      fileStatus: standard, arrivalDate: dateOf(r[c.arrival]), defendantJob: keep(at(r, c.job)),
       tag1: keep(at(r, c.tag1)), tag2: keep(at(r, c.tag2)), tag3: keep(at(r, c.tag3)), tag4: keep(at(r, c.tag4)),
-      notes: [keep(at(r, c.notes1)), keep(at(r, c.notes2)), status && !ALL_FILE_STATUSES.includes(status) ? 'الحالة في الملف: ' + status : ''].filter(Boolean).join(' · '),
+      notes: [keep(at(r, c.notes1)), keep(at(r, c.notes2)), status && !standard ? 'الحالة في الملف: ' + status : ''].filter(Boolean).join(' · '),
       sourceReference: 'ملف ' + code,
     };
     return [{ row: n + 2, payload, paid: money(at(r, c.paid)), expenses: money(at(r, c.expenses)), autoNumber: /^\d{6,12}$/.test(auto) ? auto : '' }];

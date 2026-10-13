@@ -165,7 +165,7 @@ assert.ok(FILE_STATUSES.includes('تحصيل ودي'));
   assert.equal(files.length, 2, 'Rows without a file number are skipped');
   const [a, b] = files;
   assert.equal(a.payload.code, '1001'); assert.equal(a.payload.customerId, '50000001', 'سبب المديونية is the customer number at the client');
-  assert.equal(a.payload.fileStatus, 'سوفت'); assert.ok(ALL_FILE_STATUSES.includes('تحت الرفع'));
+  assert.equal(a.payload.fileStatus, 'تحصيل ودي', 'سوفت is read as تحصيل ودي'); assert.ok(ALL_FILE_STATUSES.includes('تحت الرفع') && !ALL_FILE_STATUSES.includes('سوفت') && !ALL_FILE_STATUSES.includes('سكت'));
   assert.equal(a.payload.amount, '177.8'); assert.equal(a.paid, '68.9'); assert.equal(a.expenses, '');
   assert.equal(a.payload.tag1, '', 'بدون is empty'); assert.equal(a.payload.tag4, ''); assert.equal(a.payload.notes, '', 'فارغ and null are empty');
   assert.equal(a.payload.fileAutoNumber, 'هولد'); assert.equal(a.autoNumber, '', 'Only a numeric court number links a case');

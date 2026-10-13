@@ -184,7 +184,7 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
 {const office=await member('collect_office',{...grants(['collections']),caseScope:'all'});
  const file=(n,extra={})=>record('collections','file',{...collectionData,code:'COL-'+n,evidence:[],sourceReference:'',notes:'',fileStatus:'سوفت',customerId:'5109347'+n,fileAutoNumber:'هولد',defendantJob:'خارج البلاد',...extra});
  await denied(()=>save(collector,'collections',file(1)),'A file without a case needs all-case scope');
- let f1=await save(office,'collections',file(1));assert.equal(f1.caseId,'');assert.equal(f1.payload.fileStatus,'سوفت');assert.equal(f1.payload.customerId,'51093471');assert.equal(f1.payload.fileAutoNumber,'هولد');
+ let f1=await save(office,'collections',file(1));assert.equal(f1.caseId,'');assert.equal(f1.payload.fileStatus,'تحصيل ودي','سوفت is saved as تحصيل ودي');assert.equal(f1.payload.customerId,'51093471');assert.equal(f1.payload.fileAutoNumber,'هولد');
  await assert.rejects(()=>save(office,'collections',file(1)),/duplicate|unique|department_collection_code/,'File numbers are unique');
  await assert.rejects(()=>save(office,'collections',file(9,{fileStatus:'حالة مخترعة'})),/حالة الملف/);
  const st=await save(office,'collections',record('collections','statement',{category:'calls',action:'اتصال',reviewDate:'2026-10-20',status:'notDone',text:'لم يرد',phone:'',contactParty:'',method:''},'',f1.id));
