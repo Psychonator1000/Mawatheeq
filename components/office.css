@@ -380,7 +380,7 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .desk-bare-actions{justify-content:flex-end;margin-bottom:12px}
 .chat-row-wrap{position:relative}
 .chat-row-wrap .chat-row{padding-inline-end:40px}
-.chat-row-close{position:absolute;inset-inline-end:8px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:0;background:transparent;color:#8a766a;display:grid;place-items:center;opacity:0;transition:opacity .15s,background .15s}
+.chat-row-close{position:absolute;inset-inline-end:8px;top:50%;translate:0 -50%;width:26px;height:26px;border-radius:50%;border:0;background:transparent;color:#8a766a;display:grid;place-items:center;opacity:0;transition:opacity .15s,background .15s}
 .chat-row-wrap:hover .chat-row-close,.chat-row-close:focus-visible{opacity:1}
 .chat-row-close:hover{background:#efe4d8;color:var(--brand)}
 @media(hover:none){.chat-row-close{opacity:.7}}
