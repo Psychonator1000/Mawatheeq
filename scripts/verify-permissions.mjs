@@ -202,7 +202,24 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
   assert.equal((await office(admin.token,'access_history',{id:m.id}))[0].after.jobRole,role,'The audit records '+role);void saved;
  }
  const cur=(await office(admin.token,'context')).members.find(x=>x.username==='role_clerk').permissions;
- await assert.rejects(()=>office(admin.token,'set_member_access',{id:m.id,revision:cur.revision,permissions:{...cur,jobRole:'boss'}}),/دور الموظف/,'Unknown roles are still rejected');}
+ await assert.rejects(()=>office(admin.token,'set_member_access',{id:m.id,revision:cur.revision,permissions:{...cur,jobRole:'boss'}}),/دور الموظف/,'Unknown roles are still rejected');
+ // Several jobs per employee: stored in order without repeats, the first is the main job, audited; jobs grant nothing.
+ {const now=()=>office(admin.token,'context').then(c=>c.members.find(x=>x.username==='role_clerk').permissions);
+  let p=await now();
+  await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,jobRoles:['officeBoy','driver','officeBoy','networkEngineer']}});
+  p=await now();assert.deepEqual(p.jobRoles,['officeBoy','driver','networkEngineer']);assert.equal(p.jobRole,'officeBoy','The first job is the main one');
+  assert.deepEqual(p.sections,['cases'],'Jobs alone change no pages');
+  assert.deepEqual((await office(admin.token,'access_history',{id:m.id}))[0].after.jobRoles,['officeBoy','driver','networkEngineer'],'The audit records every job');
+  assert.deepEqual((await local((await login('role_clerk')).token,'access')).jobRoles,['officeBoy','driver','networkEngineer'],'The account sees its jobs');
+  for(const role of ['traineeLawyer','legalResearcher','translator','receptionist','dataEntry','developer','itSupport','engineer']){
+   p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,jobRole:role,jobRoles:undefined}});
+   p=await now();assert.equal(p.jobRole,role,role+' alone is stored');assert.deepEqual(p.jobRoles,[role]);}
+  p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,jobRole:'lawyer',jobRoles:['lawyer','counsel']}});
+  p=await now();assert.deepEqual(p.jobRoles,['lawyer','counsel'],'Earlier jobs combine too');assert.equal(p.jobRole,'lawyer');
+  await assert.rejects(async()=>{const q=await now();await office(admin.token,'set_member_access',{id:m.id,revision:q.revision,permissions:{...q,jobRoles:['lawyer','boss']}})},/دور الموظف/,'Unknown jobs in the list are rejected');
+  await assert.rejects(async()=>{const q=await now();await office(admin.token,'set_member_access',{id:m.id,revision:q.revision,permissions:{...q,jobRoles:'lawyer'}})},/دور الموظف/);
+  p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,jobRole:undefined,jobRoles:[]}});
+  p=await now();assert.equal(p.jobRole,undefined,'Jobs can be cleared');assert.equal(p.jobRoles,undefined);}}
 // Delegated admins: specific powers, granted only by holders, never over the owner, oneself or a stronger admin.
 {const pw='Temporary-password-123',ready=async(u)=>{const t=await login(u,pw);await local(t.token,'password',{currentPassword:pw,newPassword:'Fixture-password-123'});return login(u)};
  const id=async u=>(await office(admin.token,'context')).members.find(m=>m.username===u);
@@ -238,4 +255,4 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  assert.equal((await office(sw.token,'context')).canManage,false);
  const history=await office(admin.token,'access_history',{id:d.id});assert.deepEqual(history[0].after.adminPowers,['chat','staff'],'The audit records the powers');}
 await db.close();
-console.log('Passed permissions: delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
+console.log('Passed permissions: several jobs per employee (ordered, audited, granting nothing), delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');

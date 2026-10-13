@@ -40,6 +40,10 @@ await page.route('https://office-fixture.supabase.co/**',async route=>{
 await configurePage(page);
 const base='http://127.0.0.1:4175/Mawatheeq/';
 const go=async(name)=>{await page.getByRole('button',{name:name==='سجل الأحكام'?/^سجل الأحكام/:name,exact:name!=='سجل الأحكام'}).first().click()};
+// Staff accounts live on their own admin page («فريق المكتب»); the cases workspace keeps office settings.
+const openSpace=async(id,hash)=>{await page.evaluate(([k,v,h])=>{sessionStorage.setItem(k,v);if(h)location.hash=h},['mawatheeq.workspace.v1',id,hash]);await page.reload()};
+const openTeam=async()=>{await openSpace('team');await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor()};
+const openLegal=async(hash='overview')=>{await openSpace('legal',hash);await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).waitFor()};
 try{
  await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await go('فتح مساحة العمل');await go('فتح القضايا');
  await page.getByRole('heading',{name:'كل قضاياك، في مكان واحد'}).waitFor();await page.getByRole('button',{name:/بيانات أحكام معتمدة بالمراجعة/}).waitFor();
@@ -87,12 +91,15 @@ try{
  await go('فتح العمل');await page.getByLabel('حالة العمل',{exact:true}).selectOption('done');assert.equal(await page.getByRole('button',{name:'حفظ العمل',exact:true}).isDisabled(),true);await page.getByLabel('نتيجة المهمة / قرار الجلسة',{exact:true}).fill('تمت المتابعة التجريبية');await go('حفظ العمل');await page.getByRole('button',{name:'مغلقة 1',exact:true}).click();await page.getByText('متابعة تجريبية',{exact:true}).waitFor();
  await go('إضافة جلسة');await page.getByLabel('عنوان العمل',{exact:true}).fill('جلسة تجريبية');assert.equal(await page.getByRole('button',{name:'حفظ العمل',exact:true}).isDisabled(),true);await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-2');await go('حفظ العمل');await page.getByLabel('المواعيد',{exact:true}).selectOption('active');await page.getByText('جلسة تجريبية',{exact:true}).waitFor();
  await go('فحص الأطراف');await page.getByLabel('اسم الطرف أو الجهة المراد فحصها',{exact:true}).fill('خصم تجريبي 2');await page.getByText('خصم',{exact:true}).first().waitFor();
- await go('الإعدادات والبيانات');await go('إضافة موظف');await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_staff');await page.getByLabel('كلمة المرور',{exact:true}).fill('Temporary-synthetic-123');await page.getByRole('checkbox',{name:'اطلب من الموظف تغييرها عند الدخول التالي',exact:true}).check();
+ assert.equal(await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).count(),0,'Staff accounts are not part of the cases settings');
+ await openTeam();await go('إضافة موظف');await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_staff');await page.getByLabel('كلمة المرور',{exact:true}).fill('Temporary-synthetic-123');await page.getByRole('checkbox',{name:'اطلب من الموظف تغييرها عند الدخول التالي',exact:true}).check();
  // A role fills in the settings; «مخصص» opens them for a hand-picked account.
  assert.equal(await page.getByRole('checkbox',{name:'سجل الأحكام',exact:true}).count(),0,'Details stay folded until a role is chosen');
- await page.getByRole('radio',{name:/^محاسب/}).click();await page.locator('.role-summary').getByText('المحاسبة',{exact:true}).waitFor();await page.locator('.role-summary').getByText('قراءة وتعديل · تصدير وطباعة',{exact:true}).waitFor();
- await page.getByRole('radio',{name:/^محامٍ/}).click();await page.locator('.role-summary').getByText('قضاياه فقط (0)',{exact:true}).waitFor();await page.screenshot({path:artifacts+'/role-picker.png'});
- await page.getByRole('radio',{name:/^مخصص/}).click();await page.getByRole('checkbox',{name:'المحاسبة',exact:true}).uncheck();for(const s of ['نظرة عامة','الموكلون','المواعيد والمتابعة','فحص الأطراف'])await page.getByRole('checkbox',{name:s,exact:true}).uncheck();
+ await page.getByRole('checkbox',{name:/^محاسب/}).click();await page.locator('.role-summary').getByText('المحاسبة',{exact:true}).waitFor();await page.locator('.role-summary').getByText('قراءة وتعديل · تصدير وطباعة',{exact:true}).waitFor();
+ // Several jobs combine their pages; removing one leaves the other's.
+ await page.getByRole('checkbox',{name:'محامٍ',exact:true}).click();await page.locator('.role-summary').getByText('القضايا (الصفحة الرئيسية)، المحاسبة',{exact:true}).waitFor();await page.getByText('الأساسي',{exact:true}).waitFor();
+ await page.getByRole('checkbox',{name:/^محاسب/}).click();await page.locator('.role-summary').getByText('قضاياه فقط (0)',{exact:true}).waitFor();await page.screenshot({path:artifacts+'/role-picker.png'});
+ await page.getByRole('checkbox',{name:/^مخصص/}).click();await page.getByRole('checkbox',{name:'المحاسبة',exact:true}).uncheck();for(const s of ['نظرة عامة','الموكلون','المواعيد والمتابعة','فحص الأطراف'])await page.getByRole('checkbox',{name:s,exact:true}).uncheck();
  await page.getByRole('radio',{name:'قضايا أختارها فقط'}).check();await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).uncheck();
  await page.getByRole('checkbox',{name:'سجل الأحكام',exact:true}).check();await page.getByRole('checkbox',{name:'التحليل والإحصائيات',exact:true}).check();await page.getByRole('checkbox',{name:'التحقق من القضايا',exact:true}).check();await page.getByRole('checkbox',{name:'المهام والجلسات',exact:true}).check();
  await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-2');await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).check();
@@ -101,10 +108,10 @@ try{
  await page.screenshot({path:artifacts+'/permission-editor-desktop.png',fullPage:true});await go('حفظ الحساب');await page.getByText('Temporary-synthetic-123',{exact:true}).waitFor();await go('تم');await page.getByRole('cell',{name:'ui_staff',exact:true}).waitFor();
  // Changing only the job role keeps the pages; the new title shows in the staff list.
  {const row=page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_staff',exact:true})});await row.getByRole('button',{name:'الدور الوظيفي',exact:true}).click();
-  const dlg=page.getByRole('dialog');await dlg.getByRole('radio',{name:'مستشار',exact:true}).click();await dlg.getByText('يتغير المسمى فقط',{exact:false}).waitFor();
-  await dlg.getByRole('radio',{name:'كول سنتر',exact:true}).click();await dlg.getByRole('button',{name:'حفظ الدور الوظيفي',exact:true}).click();await dlg.waitFor({state:'detached'});
-  await row.locator('.role-chip').getByText('كول سنتر',{exact:true}).waitFor();}
- await go('التحليل والإحصائيات');await page.screenshot({path:artifacts+'/office-analytics-desktop.png',fullPage:true});
+  const dlg=page.getByRole('dialog');await dlg.getByRole('checkbox',{name:'مستشار',exact:true}).click();await dlg.getByText('تتغير المسميات فقط',{exact:false}).waitFor();
+  await dlg.getByRole('checkbox',{name:'كول سنتر',exact:true}).click();await dlg.getByRole('button',{name:'حفظ الدور الوظيفي',exact:true}).click();await dlg.waitFor({state:'detached'});
+  await row.locator('.role-chip').getByText('مستشار · كول سنتر',{exact:true}).waitFor();}
+ await openLegal('analytics');await page.screenshot({path:artifacts+'/office-analytics-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});await page.reload();await page.getByRole('heading',{name:'التحليل والإحصائيات',exact:true}).waitFor();await page.screenshot({path:artifacts+'/office-analytics-mobile.png',fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'No horizontal viewport overflow on mobile');
  // Independent staff browser keeps its session active while the admin changes grants.
@@ -121,7 +128,7 @@ try{
  await staff.evaluate(()=>{location.hash='settings'});await staff.getByRole('heading',{name:'هذا القسم غير متاح لحسابك',exact:true}).waitFor();assert.equal(await staff.getByRole('button',{name:'إضافة موظف',exact:true}).count(),0);
  await staffGo('التحليل والإحصائيات');await staff.getByText('تُحسب الأعداد من 1 سجل حكم نشط',{exact:false}).waitFor();await staff.screenshot({path:artifacts+'/restricted-analytics-desktop.png',fullPage:true});
  await staff.setViewportSize({width:390,height:844});await staff.screenshot({path:artifacts+'/restricted-analytics-mobile.png',fullPage:true});assert.equal(await staff.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true);await staff.setViewportSize({width:1360,height:900});
- await page.setViewportSize({width:1440,height:1000});await go('الإعدادات والبيانات');await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_staff',exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
+ await page.setViewportSize({width:1440,height:1000});await openTeam();await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_staff',exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
  await page.getByRole('button',{name:/تعديل التفاصيل/}).click();await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-2');assert.equal(await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).isChecked(),true);await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).uncheck();
  await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-3');await page.getByRole('checkbox',{name:'إتاحة القضية TEST-3',exact:true}).check();await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).check();await go('حفظ الصلاحيات وإنهاء الجلسات');
  await page.getByRole('dialog').waitFor({state:'hidden'});await staff.evaluate(()=>window.dispatchEvent(new Event('focus')));await staff.getByRole('heading',{name:'تسجيل الدخول',exact:true}).waitFor();
@@ -144,30 +151,32 @@ try{
  assert.equal(await page.locator('.case-table tbody tr').count(),5,'the lawyer sees only the cases under their name');assert.equal(await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).count(),0);
  await page.screenshot({path:artifacts+'/switched-user-desktop.png'});
  await page.locator('.switch-banner').getByRole('button',{name:'العودة إلى حسابي',exact:true}).click();await page.locator('.switch-banner').waitFor({state:'detached'});
- await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).waitFor();
+ await openTeam();
  // The lawyer's account follows his name on the cases: «قضاياه فقط» is selected and new cases are included.
- await page.evaluate(()=>{location.hash='settings'});await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText(/قضاياه فقط: 5 قضية/).waitFor();
+ await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText(/قضاياه فقط: 5 قضية/).waitFor();
  await page.getByLabel('بحث في فريق المكتب').fill('سالم');assert.equal(await page.locator('.office-staff tbody tr').count(),1,'Staff search finds the lawyer by name');await page.getByLabel('بحث في فريق المكتب').fill('');
- await page.evaluate(()=>{location.hash='settings'});await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
- await page.getByRole('radio',{name:/^محامٍ/,checked:true}).waitFor();await page.getByRole('button',{name:/تعديل التفاصيل/}).click();
+ await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
+ await page.getByRole('checkbox',{name:'محامٍ',exact:true,checked:true}).waitFor();await page.getByRole('button',{name:/تعديل التفاصيل/}).click();
  assert.equal(await page.getByRole('radio',{name:/قضاياه فقط/}).isChecked(),true,'Bulk lawyer accounts see their own cases by name');
  assert.equal(await page.getByRole('checkbox',{name:'قضايا ا/ سالم تجريبي'}).isChecked(),true);
  await page.getByText(/يرى 5 قضية الآن/).waitFor();await page.screenshot({path:artifacts+'/lawyer-scope.png'});await page.keyboard.press('Escape');
  // Delegated admin: «مدير» ticks every power the owner holds; the owner unticks backups.
- await page.evaluate(()=>{location.hash='settings'});await go('إضافة موظف');await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_deputy');await page.getByLabel('كلمة المرور',{exact:true}).fill('Deputy-synthetic-123');
- await page.getByRole('radio',{name:/^مدير/}).click();
+ await go('إضافة موظف');await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_deputy');await page.getByLabel('كلمة المرور',{exact:true}).fill('Deputy-synthetic-123');
+ await page.getByRole('checkbox',{name:/^مدير/}).click();
  for(const p of ['إدارة الموظفين والصلاحيات','الاعتماد وتصحيح الدرجات','إعدادات المكتب والاستيراد','النسخة الكاملة للبيانات','مراجعة المحادثات والتعليقات'])assert.equal(await page.getByRole('checkbox',{name:new RegExp('^'+p)}).isChecked(),true,'Manager gets '+p);
  await page.getByRole('checkbox',{name:/^النسخة الكاملة للبيانات/}).uncheck();await page.screenshot({path:artifacts+'/admin-powers.png'});
  await go('حفظ الحساب');await go('تم');await page.getByRole('row').filter({has:page.getByText('ui_deputy',{exact:true})}).getByText(/مسؤول: .*إدارة الموظفين والصلاحيات/).waitFor();
  {const ctx2=await browser.newContext({viewport:{width:1360,height:900},reducedMotion:'reduce'});const dep=await ctx2.newPage();await configurePage(dep);
   await dep.goto(base);await dep.getByLabel('اسم المستخدم',{exact:true}).fill('ui_deputy');await dep.getByLabel('كلمة المرور',{exact:true}).fill('Deputy-synthetic-123');await dep.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
-  await dep.getByRole('button',{name:'فتح القضايا'}).click();await dep.evaluate(()=>{location.hash='settings'});await dep.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();
-  assert.equal(await dep.getByRole('heading',{name:'نسخة كاملة للبيانات'}).count(),0,'No backup without the backup power');await dep.getByRole('heading',{name:'مدد احتساب المواعيد'}).waitFor();
+  await dep.getByRole('button',{name:'فتح فريق المكتب'}).click();await dep.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();
   const ownerRow=dep.getByRole('row').filter({has:dep.getByText('ui_owner',{exact:true})});assert.equal(await ownerRow.getByRole('button').count(),0,'The owner account cannot be managed by an admin');
   await dep.getByRole('row').filter({has:dep.getByText('ui_deputy',{exact:true})}).getByText(/حسابك/).waitFor();
   await dep.getByRole('row').filter({has:dep.getByText('ui_clerk',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
   assert.equal(await dep.getByRole('checkbox',{name:/^النسخة الكاملة للبيانات/}).isDisabled(),true,'An admin cannot grant a power they lack');
-  await dep.screenshot({path:artifacts+'/admin-deputy.png'});await ctx2.close();}
+  await dep.screenshot({path:artifacts+'/admin-deputy.png'});await dep.keyboard.press('Escape');
+  // Office settings stay in the cases workspace, without backups for an admin lacking that power.
+  await dep.evaluate(()=>{sessionStorage.setItem('mawatheeq.workspace.v1','legal');location.hash='settings'});await dep.reload();await dep.getByRole('heading',{name:'مدد احتساب المواعيد'}).waitFor();
+  assert.equal(await dep.getByRole('heading',{name:'نسخة كاملة للبيانات'}).count(),0,'No backup without the backup power');assert.equal(await dep.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).count(),0);await ctx2.close();}
  // «استيراد Excel» from a newer workbook: preview first, then new judgments, filled blanks and a review list.
  {const X=require(require.resolve('xlsx',{paths:[process.cwd()]}));const w=X.utils.book_new();
   X.utils.book_append_sheet(w,X.utils.aoa_to_sheet([['معرف السجل الداخلي','الكود','إدخال الرقم الآلي','الموكل','الخصم','نوع الحكم','حالة الحكم','تاريخ الحكم','تاريخ استلام الصيغة التنفيذية','تاريخ إعلان الصيغة'],
@@ -175,7 +184,7 @@ try{
    ['R0005','TEST-4','1004','شركة اختبار الواجهة','خصم تجريبي 4','حكم أول درجة','لصالحنا','1/9/2026','','1/9/20256'],
    ['','UI-NEW','7777','موكل جديد تجريبي','خصم جديد','حكم أول درجة','لصالحنا','1/10/2026','',''],
    [],['الكود','الرقم الآلي','تاريخ الحكم','الموكل'],['X','8888','2026-01-01','صف مساعد لا يُستورد']]),'الأحكام');
-  await page.locator('input.upload-input').setInputFiles({name:'synthetic-cases.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(X.write(w,{type:'array',bookType:'xlsx'}))});
+  await openLegal('settings');await page.locator('input.upload-input').setInputFiles({name:'synthetic-cases.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(X.write(w,{type:'array',bookType:'xlsx'}))});
   const dlg=page.getByRole('dialog');await dlg.getByText('حكم جديد يُضاف').waitFor();
   const stat=async label=>dlg.locator('.import-summary>div').filter({hasText:label}).locator('b').innerText();
   assert.equal(await stat('حكم جديد يُضاف'),'1');assert.equal(await stat('صف فيه تاريخ غير صالح'),'1');assert.equal(await stat('قيمة مختلفة للمراجعة'),'2','The judgment type and the bad date are listed, not applied');

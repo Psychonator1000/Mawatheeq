@@ -1,20 +1,26 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
-import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,Archive,BookOpenCheck,Gavel,ClipboardList,Headset,Car,Building2,SlidersHorizontal,ChevronDown,type LucideIcon} from 'lucide-react';
-import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,JOB_ROLES,ADMIN_POWERS,ALL_POWERS,workspacesOf,type AdminPower,type JobRole,type Permissions,type Section} from '@/lib/permissions';
+import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,Archive,BookOpenCheck,Gavel,ClipboardList,Headset,Car,Building2,SlidersHorizontal,ChevronDown,GraduationCap,Library,Languages,ConciergeBell,Keyboard,Truck,Coffee,Code,Network,Monitor,Wrench,type LucideIcon} from 'lucide-react';
+import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,JOB_ROLES,ADMIN_POWERS,ALL_POWERS,workspacesOf,rolesOf,combinedPreset,type AdminPower,type JobRole,type Permissions,type Section} from '@/lib/permissions';
 import {type CaseRecord} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
 import {lawyerLabels,matchLawyer,visibleCases} from '@/lib/lawyer-match';
 import PageNavigation from './page-navigation';
 
-const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,counsel:BookOpenCheck,sessionsClerk:Gavel,executionClerk:ClipboardList,callCenter:Headset,courier:Car,officeAdmin:Building2,secretary:CalendarClock,collections:HandCoins,accountant:Calculator,hr:Users,archivist:Archive,custom:SlidersHorizontal};
+export const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,traineeLawyer:GraduationCap,counsel:BookOpenCheck,legalResearcher:Library,translator:Languages,sessionsClerk:Gavel,executionClerk:ClipboardList,callCenter:Headset,courier:Car,driver:Truck,officeAdmin:Building2,officeBoy:Coffee,secretary:CalendarClock,receptionist:ConciergeBell,collections:HandCoins,accountant:Calculator,hr:Users,archivist:Archive,dataEntry:Keyboard,developer:Code,networkEngineer:Network,itSupport:Monitor,engineer:Wrench,custom:SlidersHorizontal};
 const same=(a:Section[],b:Section[])=>a.length===b.length&&a.every(s=>b.includes(s));
-/** Accounts saved before roles existed: recognise the role from their settings when they match one exactly. */
+/** The account's jobs; accounts saved before roles existed get the role their settings match exactly. */
+export function inferRoles(v:Permissions):JobRole[]{
+ const saved=rolesOf(v);if(saved.length)return saved;
+ const one=inferRole(v);return one?[one]:[];
+}
+/** Main job: the saved one, or the role the settings match exactly. */
 export function inferRole(v:Permissions):JobRole|undefined{
  if(v.jobRole)return v.jobRole;
  if(v.caseScope==='selected'&&v.lawyerNames?.length)return 'lawyer';
- return JOB_ROLES.find(r=>r.preset&&r.id!=='lawyer'&&same(r.preset.sections,v.sections)&&r.preset.caseScope===v.caseScope&&r.preset.canEdit===v.canEdit&&r.preset.canExport===v.canExport)?.id;
+ // Jobs that open no pages (services, technical) are never guessed: a new account with no pages has no job yet.
+ return JOB_ROLES.find(r=>r.preset&&r.preset.sections.length>0&&r.id!=='lawyer'&&same(r.preset.sections,v.sections)&&r.preset.caseScope===v.caseScope&&r.preset.canEdit===v.canEdit&&r.preset.canExport===v.canExport)?.id;
 }
 
 export default function PermissionEditor({value,onChange,records,suggestLawyer='',grantable=[]}:{value:Permissions;onChange:(v:Permissions)=>void;records:CaseRecord[];suggestLawyer?:string;grantable?:AdminPower[]}) {
@@ -32,17 +38,21 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
  const patch=(next:Partial<Permissions>)=>onChange({...value,...next});
  const toggle=(id:string,checked:boolean)=>patch({caseIds:checked?[...value.caseIds,id]:value.caseIds.filter(x=>x!==id)});
  const opens=workspacesOf(value),powers=value.adminPowers||[];
- const role=inferRole(value);
+ const roles=inferRoles(value),role=roles[0];
  // New accounts start folded until a role is chosen; older accounts that match no role open the details.
  const [details,setDetails]=useState(role==='custom'||(!role&&value.revision>0));
  // A lawyer's name typed for a new account ticks the matching name on the cases.
  useEffect(()=>{if(byLawyer&&!names.length&&suggested)onChange({...value,lawyerNames:[suggested]})},[suggested]);// eslint-disable-line react-hooks/exhaustive-deps
+ /** A person may do several jobs. «مدير» and «مخصص» stand alone; the other jobs combine, and their suggested pages add up. */
  function pickRole(id:JobRole){
-  const r=JOB_ROLES.find(x=>x.id===id)!;
-  if(!r.preset){setLawyerMode(false);setDetails(true);onChange({...value,jobRole:id});return}
-  const lawyer=id==='lawyer';setLawyerMode(lawyer);
+  const alone=(r:JobRole)=>r==='manager'||r==='custom';
+  const next=alone(id)?(roles.includes(id)?[]:[id]):roles.includes(id)?roles.filter(r=>r!==id):[...roles.filter(r=>!alone(r)),id];
+  if(!next.length){setLawyerMode(false);onChange({...value,jobRole:undefined,jobRoles:[]});return}
+  if(next[0]==='custom'){setLawyerMode(false);setDetails(true);onChange({...value,jobRole:'custom',jobRoles:['custom']});return}
+  const preset=combinedPreset(next)!;
+  const lawyer=next.includes('lawyer')&&preset.caseScope==='selected';setLawyerMode(lawyer);
   // «مدير» also receives every admin power the person granting it holds; other roles keep the powers already chosen.
-  onChange({...value,...r.preset,caseIds:[],jobRole:id,lawyerNames:lawyer?(names.length?names:suggested?[suggested]:[]):[],...(id==='manager'?{adminPowers:[...grantable]}:{})});
+  onChange({...value,...preset,caseIds:[],jobRole:next[0],jobRoles:next,lawyerNames:lawyer?(names.length?names:suggested?[suggested]:[]):[],...(next[0]==='manager'?{adminPowers:[...grantable]}:{})});
  }
  function lawyerPicker(){return <div className="permission-lawyers">
     {!names.length&&<p className="notice" role="alert">{suggestLawyer?`لم يُعثر على «${suggestLawyer}» في خانة «المحامي» بالقضايا. `:''}اختر اسمه كما هو مكتوب في القضايا من القائمة أدناه.</p>}
@@ -54,8 +64,9 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
  const scopeText=value.caseScope==='all'?`جميع القضايا (${records.length})`:byLawyer?`قضاياه فقط (${ownCount})`:value.caseIds.length?`${value.caseIds.length} قضية مختارة`:'بلا قضايا';
  return <div className="permission-editor">
   <fieldset className="permission-group role-step"><legend>الدور الوظيفي</legend>
-   <div className="role-grid" role="radiogroup" aria-label="الدور الوظيفي">{JOB_ROLES.map(r=>{const Icon=ROLE_ICONS[r.id];const on=role===r.id;return <button type="button" role="radio" aria-checked={on} key={r.id} className={'role-card'+(on?' on':'')} onClick={()=>pickRole(r.id)} title={r.hint}><Icon size={18} aria-hidden/><b>{r.label}</b></button>})}</div>
-   {role&&<p className="role-hint">{JOB_ROLES.find(r=>r.id===role)?.hint}</p>}
+   <p className="subtitle">اختر عملاً واحداً أو أكثر؛ تُجمع الصفحات المقترحة لكل الأعمال المختارة. «مدير» و«مخصص» يُختاران وحدهما.</p>
+   <div className="role-grid" role="group" aria-label="الدور الوظيفي">{JOB_ROLES.map(r=>{const Icon=ROLE_ICONS[r.id];const on=roles.includes(r.id);return <button type="button" role="checkbox" aria-checked={on} key={r.id} className={'role-card'+(on?' on':'')} onClick={()=>pickRole(r.id)} title={r.hint}><Icon size={18} aria-hidden/><b>{r.label}</b>{on&&roles.length>1&&roles[0]===r.id&&<small>الأساسي</small>}</button>})}</div>
+   {roles.map(id=><p className="role-hint" key={id}><b>{JOB_ROLES.find(r=>r.id===id)?.label.split(' — ')[0]}:</b> {JOB_ROLES.find(r=>r.id===id)?.hint}</p>)}
    {role==='manager'&&<p className="subtitle">يحصل المدير أيضاً على صلاحيات الإدارة المحددة أدناه. حساب المالك لا يُعدَّل من أي حساب آخر.</p>}
    <div className="role-summary" role="status">
     <span><small>الصفحات</small><b>{opens.length?opens.map(p=>WORKSPACE_LABELS[p]).join('، '):'لا شيء بعد'}</b></span>
