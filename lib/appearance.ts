@@ -22,6 +22,14 @@ type ThemeInfo = { label: string; swatch: string; accent: string; hidden?: boole
 /** Hidden themes appear in the list only after their secret word is typed (an easter egg). */
 export const SECRET_WORDS: Record<string, keyof typeof THEMES> = { persona: 'phantom', phantom: 'phantom', aero: 'sky', sakura: 'rose', nier: 'yorha', yorha: 'yorha' };
 export const TEXT_SIZES = { normal: { label: 'عادي' }, large: { label: 'كبير' }, xlarge: { label: 'كبير جداً' } } as const;
+/** Interface fonts: text and headings. «مكتبي» pairs a crisp sans for records with a Naskh for titles, the style of legal papers. */
+export const FONTS = {
+  office: { label: 'مكتبي', hint: 'IBM Plex للنص، ونسخ للعناوين' },
+  classic: { label: 'كلاسيكي', hint: 'Noto للنص، وأميري للعناوين' },
+  modern: { label: 'عصري', hint: 'Readex Pro' },
+  gulf: { label: 'خليجي', hint: 'Tajawal' },
+  plain: { label: 'البسيط', hint: 'Noto Sans Arabic لكل شيء (الخط السابق)' },
+} as const;
 export const DENSITIES = { comfortable: { label: 'مريحة' }, compact: { label: 'مضغوطة', hint: 'صفوف أقل ارتفاعاً لعرض سجلات أكثر' } } as const;
 export const isHidden = (t: string) => !!(THEMES as Record<string, ThemeInfo>)[t]?.hidden;
 export const BACKDROPS = {
@@ -60,8 +68,8 @@ export const CURSORS = {
   themed: { label: 'بألوان السمة', hint: 'مؤشر الفأرة يتلون مع السمة' },
   system: { label: 'مؤشر النظام' },
 } as const;
-export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; density: keyof typeof DENSITIES; mode: keyof typeof MODES; performance: keyof typeof PERFORMANCE; follower: keyof typeof FOLLOWERS; cursor: keyof typeof CURSORS; unlocked: string[]; previous?: keyof typeof THEMES };
-export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', density: 'comfortable', mode: 'auto', performance: 'auto', follower: 'ring', cursor: 'themed', unlocked: [] };
+export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; font: keyof typeof FONTS; density: keyof typeof DENSITIES; mode: keyof typeof MODES; performance: keyof typeof PERFORMANCE; follower: keyof typeof FOLLOWERS; cursor: keyof typeof CURSORS; unlocked: string[]; previous?: keyof typeof THEMES };
+export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', font: 'office', density: 'comfortable', mode: 'auto', performance: 'auto', follower: 'ring', cursor: 'themed', unlocked: [] };
 /** Themes whose own look is dark. */
 const DARK_NATIVE = new Set<string>(['noir', 'phantom']);
 /**
@@ -87,6 +95,7 @@ export function loadAppearance(): Appearance {
       backdrop: saved.backdrop in BACKDROPS ? saved.backdrop : DEFAULT_APPEARANCE.backdrop,
       motion: saved.motion in MOTION_LEVELS ? saved.motion : DEFAULT_APPEARANCE.motion,
       text: saved.text in TEXT_SIZES ? saved.text : DEFAULT_APPEARANCE.text,
+      font: saved.font in FONTS ? saved.font : DEFAULT_APPEARANCE.font,
       density: saved.density in DENSITIES ? saved.density : DEFAULT_APPEARANCE.density,
       mode: saved.theme === 'ivory' && (saved.mode ?? 'auto') === 'auto' ? 'light' : saved.mode in MODES ? saved.mode : DEFAULT_APPEARANCE.mode,
       performance: saved.performance in PERFORMANCE ? saved.performance : DEFAULT_APPEARANCE.performance,
@@ -100,7 +109,7 @@ export function loadAppearance(): Appearance {
 export function applyAppearance(a: Appearance) {
   const root = document.documentElement;
   const view = resolveTheme(a);
-  root.dataset.theme = view.theme; root.dataset.backdrop = a.backdrop; root.dataset.motion = a.motion; root.dataset.text = a.text; root.dataset.density = a.density;
+  root.dataset.theme = view.theme; root.dataset.backdrop = a.backdrop; root.dataset.motion = a.motion; root.dataset.text = a.text; root.dataset.font = a.font; root.dataset.density = a.density;
   root.dataset.follower = a.follower; root.dataset.cursor = a.cursor;
   if (liteMode(a)) root.dataset.perf = 'lite'; else delete root.dataset.perf;
   if (view.mode) root.dataset.mode = view.mode; else delete root.dataset.mode;

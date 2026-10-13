@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
-import {BACKDROPS,CURSORS,DENSITIES,DEFAULT_APPEARANCE,FOLLOWERS,MODES,MOTION_LEVELS,PERFORMANCE,liteMode,liteReason,markedSlow,clearSlow,TEXT_SIZES,THEMES,isHidden,loadAppearance,saveAppearance,type Appearance} from '@/lib/appearance';
+import {BACKDROPS,CURSORS,DENSITIES,FONTS,DEFAULT_APPEARANCE,FOLLOWERS,MODES,MOTION_LEVELS,PERFORMANCE,liteMode,liteReason,markedSlow,clearSlow,TEXT_SIZES,THEMES,isHidden,loadAppearance,saveAppearance,type Appearance} from '@/lib/appearance';
 
 /** Colour theme, background animation and motion level; saved on this device and applied instantly. */
 export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
@@ -21,6 +21,7 @@ export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
    {markedSlow()&&<button type="button" className="btn" onClick={()=>{clearSlow();const v={...value};setValue(v);saveAppearance(v)}}>إعادة تفعيل المؤثرات وقياس الجهاز من جديد</button>}<p className="subtitle">أو اختر «كامل» لتشغيل كل المؤثرات دائماً على هذا الجهاز.</p></div>}
   {group('cursor','مؤشر الفأرة',CURSORS)}
   {group('follower','الشكل الذي يتبع المؤشر',FOLLOWERS)}
+  {group('font','نوع الخط',FONTS)}
   {group('text','حجم الخط',TEXT_SIZES)}
   {group('density','كثافة العرض',DENSITIES)}
   <p className="subtitle">إذا كان جهازك مضبوطاً على تقليل الحركة، تبقى الواجهة ثابتة مهما كان الاختيار.</p>

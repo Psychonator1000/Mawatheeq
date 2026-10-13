@@ -3,6 +3,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from 'next-themes';
 import '@fontsource-variable/noto-sans-arabic';
+import '@/components/fonts.css';
 import '../app/globals.css';
 import './pages.css';
 import SharedApp from './shared-app';
