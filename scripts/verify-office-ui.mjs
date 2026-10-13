@@ -99,6 +99,11 @@ try{
  assert.equal(await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).isChecked(),false);
  await page.locator('.permission-summary').getByText('ويفتحها مباشرة',{exact:false}).waitFor();
  await page.screenshot({path:artifacts+'/permission-editor-desktop.png',fullPage:true});await go('حفظ الحساب');await page.getByText('Temporary-synthetic-123',{exact:true}).waitFor();await go('تم');await page.getByRole('cell',{name:'ui_staff',exact:true}).waitFor();
+ // Changing only the job role keeps the pages; the new title shows in the staff list.
+ {const row=page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_staff',exact:true})});await row.getByRole('button',{name:'الدور الوظيفي',exact:true}).click();
+  const dlg=page.getByRole('dialog');await dlg.getByRole('radio',{name:'مستشار',exact:true}).click();await dlg.getByText('يتغير المسمى فقط',{exact:false}).waitFor();
+  await dlg.getByRole('radio',{name:'كول سنتر',exact:true}).click();await dlg.getByRole('button',{name:'حفظ الدور الوظيفي',exact:true}).click();await dlg.waitFor({state:'detached'});
+  await row.locator('.role-chip').getByText('كول سنتر',{exact:true}).waitFor();}
  await go('التحليل والإحصائيات');await page.screenshot({path:artifacts+'/office-analytics-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});await page.reload();await page.getByRole('heading',{name:'التحليل والإحصائيات',exact:true}).waitFor();await page.screenshot({path:artifacts+'/office-analytics-mobile.png',fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'No horizontal viewport overflow on mobile');
@@ -117,7 +122,7 @@ try{
  await staffGo('التحليل والإحصائيات');await staff.getByText('تُحسب الأعداد من 1 سجل حكم نشط',{exact:false}).waitFor();await staff.screenshot({path:artifacts+'/restricted-analytics-desktop.png',fullPage:true});
  await staff.setViewportSize({width:390,height:844});await staff.screenshot({path:artifacts+'/restricted-analytics-mobile.png',fullPage:true});assert.equal(await staff.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true);await staff.setViewportSize({width:1360,height:900});
  await page.setViewportSize({width:1440,height:1000});await go('الإعدادات والبيانات');await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_staff',exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
- await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-2');assert.equal(await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).isChecked(),true);await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).uncheck();
+ await page.getByRole('button',{name:/تعديل التفاصيل/}).click();await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-2');assert.equal(await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).isChecked(),true);await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).uncheck();
  await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-3');await page.getByRole('checkbox',{name:'إتاحة القضية TEST-3',exact:true}).check();await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).check();await go('حفظ الصلاحيات وإنهاء الجلسات');
  await page.getByRole('dialog').waitFor({state:'hidden'});await staff.evaluate(()=>window.dispatchEvent(new Event('focus')));await staff.getByRole('heading',{name:'تسجيل الدخول',exact:true}).waitFor();
  await staff.getByLabel('اسم المستخدم',{exact:true}).fill('ui_staff');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Staff-synthetic-123');await staffGo('فتح مساحة العمل');await staff.getByRole('heading',{name:'التحليل والإحصائيات',exact:true}).waitFor();await staffGo('سجل الأحكام');

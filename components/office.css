@@ -27,8 +27,8 @@
 .account-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px;align-items:start}
 .account-fields>.checkbox-line{grid-column:1/-1;margin:0 0 6px!important}
 .role-step{background:#fbf7ef}
-.role-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.role-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;border:1px solid #e4d9cb;border-radius:12px;background:#fffdf8;color:#47392f;text-align:right;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+.role-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}.role-hint{margin:10px 2px 0;font-size:13px;line-height:1.8;color:#6f5d50}
+.role-card{display:flex;flex-direction:row;align-items:center;gap:8px;padding:10px 12px;border:1px solid #e4d9cb;border-radius:12px;background:#fffdf8;color:#47392f;text-align:right;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
 .role-card svg{color:var(--brand)}
 .role-card b{font-size:14px;font-weight:650}
 .role-card small{font-size:12px;line-height:1.7;color:#7a6759}

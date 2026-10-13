@@ -192,7 +192,17 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  await denied(()=>local(clerk.token,'cases_page'));
  const ctx=await office(admin.token,'context');const m=ctx.members.find(x=>x.username==='role_clerk');assert.equal(m.permissions.jobRole,'secretary');
  await office(admin.token,'set_member_access',{id:m.id,revision:m.permissions.revision,permissions:{...m.permissions,jobRole:'lawyer',sections:['cases'],lawyerNames:['المحامي المثال']}});
- const history=await office(admin.token,'access_history',{id:m.id});assert.equal(history[0].after.jobRole,'lawyer','The audit records the role');assert.deepEqual(history[0].after.lawyerNames,['المحامي المثال'],'Names still stored with a role');}
+ const history=await office(admin.token,'access_history',{id:m.id});assert.equal(history[0].after.jobRole,'lawyer','The audit records the role');assert.deepEqual(history[0].after.lawyerNames,['المحامي المثال'],'Names still stored with a role');
+ // Newer roles are labels too; changing only the role keeps the pages and is audited.
+ for(const role of ['counsel','callCenter','courier','sessionsClerk','officeAdmin','executionClerk','archivist']){
+  const cur=(await office(admin.token,'context')).members.find(x=>x.username==='role_clerk').permissions;
+  const saved=await office(admin.token,'set_member_access',{id:m.id,revision:cur.revision,permissions:{...cur,jobRole:role}});
+  const now=(await office(admin.token,'context')).members.find(x=>x.username==='role_clerk').permissions;
+  assert.equal(now.jobRole,role,role+' is stored');assert.deepEqual(now.sections,['cases'],'Changing the role alone keeps the pages');assert.deepEqual(now.lawyerNames,['المحامي المثال']);
+  assert.equal((await office(admin.token,'access_history',{id:m.id}))[0].after.jobRole,role,'The audit records '+role);void saved;
+ }
+ const cur=(await office(admin.token,'context')).members.find(x=>x.username==='role_clerk').permissions;
+ await assert.rejects(()=>office(admin.token,'set_member_access',{id:m.id,revision:cur.revision,permissions:{...cur,jobRole:'boss'}}),/دور الموظف/,'Unknown roles are still rejected');}
 // Delegated admins: specific powers, granted only by holders, never over the owner, oneself or a stronger admin.
 {const pw='Temporary-password-123',ready=async(u)=>{const t=await login(u,pw);await local(t.token,'password',{currentPassword:pw,newPassword:'Fixture-password-123'});return login(u)};
  const id=async u=>(await office(admin.token,'context')).members.find(m=>m.username===u);
@@ -228,4 +238,4 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  assert.equal((await office(sw.token,'context')).canManage,false);
  const history=await office(admin.token,'access_history',{id:d.id});assert.deepEqual(history[0].after.adminPowers,['chat','staff'],'The audit records the powers');}
 await db.close();
-console.log('Passed permissions: delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
+console.log('Passed permissions: delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
