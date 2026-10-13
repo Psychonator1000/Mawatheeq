@@ -320,7 +320,7 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .pick-cell{width:36px;padding-inline:12px 4px!important}.pick-cell input{width:17px;height:17px;accent-color:var(--brand);cursor:pointer}
 .case-table-rows>tbody>tr.case-row.picked{background:#f6eee3}
 .pick-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:#f3eadf;border-bottom:1px solid #e4d9cb}.pick-bar b{margin-inline-end:auto;font-size:13.5px}
-.pick-tools{display:flex;gap:8px;flex-wrap:wrap;padding:8px 16px 0}.pick-bar .field{min-width:180px}.pick-bar small.muted{flex-basis:100%}
+.pick-tools{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}.pick-bar .field{min-width:180px}.pick-bar small.muted{flex-basis:100%}
 .roll-dialog{max-width:1100px!important}
 .roll-options{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:end;margin-top:10px}
 .roll-options .field{margin:0}

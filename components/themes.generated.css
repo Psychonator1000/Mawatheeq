@@ -1848,6 +1848,7 @@
 :root[data-mode=dark] .linked-files li small{color:#c3bbb3}
 :root[data-mode=dark] .case-link p small{color:#c3bbb3}
 :root[data-mode=dark] .page-loading{color:var(--muted-foreground)}
+:root[data-mode=dark] .collection-toolbar>.actions{border-top:1px solid var(--border)}
 :root[data-mode=dark] .ambient-blob.one{background:radial-gradient(circle,var(--glow-1) 0,transparent 66%)}
 :root[data-mode=dark] .ambient-blob.two{background:radial-gradient(circle,var(--glow-2) 0,transparent 66%)}
 :root[data-mode=dark] .ambient-blob.three{background:radial-gradient(circle,var(--glow-3) 0,transparent 66%)}
