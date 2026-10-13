@@ -3,6 +3,7 @@ import { emptyCase } from '../lib/domain.ts';
 import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT } from '../lib/case-browse.ts';
 import { suggestions, weekdayOf, CLIENT_ROLES } from '../lib/choices.ts';
 import { fils, kwd, position, dueStatements, FILE_STATUSES } from '../lib/collections.ts';
+import { custodyOf, isOverdue, nextNumber, code39, code39Ready, code39Svg, daysBetween, MOVEMENTS } from '../lib/archive.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
 
 const fixture = (id, fields) => ({ ...emptyCase(), id, ...fields });
@@ -127,4 +128,27 @@ assert.equal(fils('153.75'),153750);assert.equal(fils('0.001'),1);assert.equal(f
  assert.deepEqual(pos,{claim:150000,fee:3750,total:153750,paid:60500,external:10000,expenses:2250,remaining:93250,net:58250},'Cancelled payments do not count');}
 assert.deepEqual(dueStatements([{payload:{status:'notDone',reviewDate:'2026-10-13'}},{payload:{status:'done',reviewDate:'2026-10-01'}},{payload:{status:'postponed',reviewDate:'2026-10-20'}},{payload:{status:'postponed',reviewDate:'2026-10-01'},archived:true}],'2026-10-13').length,1);
 assert.ok(FILE_STATUSES.includes('تحصيل ودي'));
-console.log('Passed collections money and follow-up helpers.');
+
+// Archive custody: the latest posted movement decides; cancelled ones are skipped; locations carry forward.
+{
+  const file = { id: 'f1', payload: { locationId: 'L1', intakeDate: '2026-10-01', number: 'ARC-00007' } };
+  const mv = (id, at, p) => ({ id, subjectId: 'f1', createdAt: at, revision: 1, payload: { holder: '', holderId: '', purpose: '', dueDate: '', locationId: '', notes: '', status: 'posted', voidReason: '', ...p } });
+  assert.deepEqual([custodyOf(file, []).state, custodyOf(file, []).locationId], ['in', 'L1']);
+  const log = [mv('a', '2026-10-02T08:00:00Z', { type: 'checkout', date: '2026-10-02', holder: 'محامٍ', dueDate: '2026-10-04', fromState: 'in', toState: 'staff' }),
+    mv('b', '2026-10-03T08:00:00Z', { type: 'return', date: '2026-10-03', locationId: 'L2', fromState: 'staff', toState: 'in' }),
+    mv('c', '2026-10-05T08:00:00Z', { type: 'court', date: '2026-10-05', holder: 'إدارة الخبراء', dueDate: '2026-10-06', fromState: 'in', toState: 'court', status: 'void' }),
+    mv('d', '2026-10-06T08:00:00Z', { type: 'audit', date: '2026-10-06', locationId: 'L2', fromState: 'in', toState: 'in' })];
+  const c = custodyOf(file, [...log].reverse());
+  assert.equal(c.state, 'in'); assert.equal(c.locationId, 'L2'); assert.equal(c.lastAudit, '2026-10-06'); assert.equal(c.holder, ''); assert.equal(c.last.id, 'd', 'Order follows the server record time, not the list order');
+  const out = custodyOf(file, log.slice(0, 1));
+  assert.equal(out.state, 'staff'); assert.equal(out.holder, 'محامٍ'); assert.equal(isOverdue(out, '2026-10-05'), true); assert.equal(isOverdue(out, '2026-10-04'), false);
+  assert.equal(daysBetween('2026-10-04', '2026-10-05'), 1); assert.equal(daysBetween('2026-03-28', '2026-03-30'), 2, 'No timezone drift'); assert.equal(daysBetween('', '2026-10-05'), 0);
+  assert.deepEqual(MOVEMENTS.return.from, ['staff', 'court', 'client']); assert.deepEqual(MOVEMENTS.checkout.from, ['in']);
+  assert.equal(nextNumber([file, { payload: { number: 'arc-00012' } }, { payload: { number: 'X-99' } }]), 'ARC-00013'); assert.equal(nextNumber([]), 'ARC-00001');
+  // Code 39 «A» is 100001001: wide bar, then narrow elements, framed by «*» start/stop and narrow gaps.
+  assert.deepEqual(code39('A').slice(10, 19), [3, 1, 1, 1, 1, 3, 1, 1, 3]); assert.equal(code39('ARC-1').length, 7 * 10 - 1);
+  assert.equal(code39Ready('ARC-00001'), true); assert.equal(code39Ready('ملف'), false); assert.equal(code39Ready('A*B'), false);
+  assert.throws(() => code39('ب')); assert.match(code39Svg('ARC-1'), /^<svg[^>]+viewBox="0 0 [\d.]+ 34"/);
+}
+
+console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money and follow-up helpers.');

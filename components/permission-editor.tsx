@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
-import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,SlidersHorizontal,ChevronDown,type LucideIcon} from 'lucide-react';
+import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,Archive,SlidersHorizontal,ChevronDown,type LucideIcon} from 'lucide-react';
 import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,JOB_ROLES,ADMIN_POWERS,ALL_POWERS,workspacesOf,type AdminPower,type JobRole,type Permissions,type Section} from '@/lib/permissions';
 import {type CaseRecord} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
@@ -8,7 +8,7 @@ import {normalizeSearch} from '@/lib/case-browse';
 import {lawyerLabels,matchLawyer,visibleCases} from '@/lib/lawyer-match';
 import PageNavigation from './page-navigation';
 
-const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,secretary:CalendarClock,collections:HandCoins,accountant:Calculator,hr:Users,custom:SlidersHorizontal};
+const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,secretary:CalendarClock,collections:HandCoins,accountant:Calculator,hr:Users,archivist:Archive,custom:SlidersHorizontal};
 const same=(a:Section[],b:Section[])=>a.length===b.length&&a.every(s=>b.includes(s));
 /** Accounts saved before roles existed: recognise the role from their settings when they match one exactly. */
 export function inferRole(v:Permissions):JobRole|undefined{

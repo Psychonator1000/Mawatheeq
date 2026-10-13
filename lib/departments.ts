@@ -1,7 +1,7 @@
 import type {CaseRecord} from './domain';
 import type {DocumentData} from './document-fields';
 import {departmentRequest} from './local-auth';
-export type Department = 'secretary'|'collections'|'accounting'|'hr';
+export type Department = 'secretary'|'collections'|'accounting'|'hr'|'archive';
 export type WorkspaceId = 'legal'|Department;
 export const WORKSPACES = {
  legal:{name:'القضايا',description:'ملفات القضايا، الموكلون، التنفيذ والتحليل'},
@@ -9,10 +9,11 @@ export const WORKSPACES = {
  collections:{name:'التحصيل',description:'ملفات المطالبات وإعداد صحيفة الدعوى والحافظة'},
  accounting:{name:'المحاسبة',description:'الأتعاب والمقبوضات والمصروفات'},
  hr:{name:'الموارد البشرية',description:'ملفات الموظفين والإجازات'},
+ archive:{name:'الأرشيف',description:'الملفات الورقية: أماكن حفظها وعهدتها وطلباتها'},
 };
 export type CaseSummary = Pick<CaseRecord,'id'|'code'|'autoNumber'|'client'|'clientGroup'|'clientEntityName'|'opponent'|'revision'|'archived'>;
 export type DepartmentRecord<P=Record<string,string>> = {
- id:string;workspace:Exclude<Department,'secretary'>;kind:'file'|'entry'|'employee'|'leave'|'statement'|'payment';
+ id:string;workspace:Exclude<Department,'secretary'>;kind:'file'|'entry'|'employee'|'leave'|'statement'|'payment'|'location'|'movement'|'request';
  caseId:string;subjectId:string;payload:P;revision:number;archived:boolean;createdAt:string;updatedAt:string;createdBy:string;updatedBy:string;
  review:{recordRevision:number;caseRevision:number;reviewer:string;createdAt:string;sourceReference:string}|null;
 };
