@@ -104,6 +104,9 @@ export function ClientSelect({ clients, value, onChange, onCreate }: { clients: 
   </div>;
 }
 
+/** Client cards per page: twenty fills whole rows of five, four or two. */
+const PER_PAGE = 20;
+
 export default function ClientDirectory({ clients, records, canMerge, canCollections=false, readOnly=false, onSaved, onReload, onShowCases, onAddCase, onOpenCase }: {
   clients: ClientEntity[]; records: CaseRecord[]; canMerge: boolean; canCollections?: boolean; readOnly?: boolean; onSaved: (c: ClientEntity) => void;
   onReload: () => Promise<void>; onShowCases: (id: string) => void; onAddCase?: (id: string) => void; onOpenCase: (c: CaseRecord) => void;
@@ -111,12 +114,12 @@ export default function ClientDirectory({ clients, records, canMerge, canCollect
   const [search, setSearch] = useState(''), [reviewOnly, setReviewOnly] = useState(false), [page, setPage] = useState(1), [selected, setSelectedRaw] = useState<ClientEntity | null>(null);
   const counts = useMemo(() => { const map = new Map<string, number>(); for (const c of records) if (!c.archived && c.clientEntityId) map.set(c.clientEntityId, (map.get(c.clientEntityId) || 0) + 1); return map; }, [records]);
   const filtered = clients.filter(c => (!reviewOnly || c.needsReview || c.contacts.some(p => p.needsReview)) && normalizeSearch([c.name, ...c.aliases, ...c.contacts.map(p=>p.name)].join(' ')).includes(normalizeSearch(search))).sort((a,b)=>(counts.get(b.id)||0)-(counts.get(a.id)||0)||a.name.localeCompare(b.name,'ar'));
-  const pages = Math.max(1, Math.ceil(filtered.length / 18)), current = clampPage(page, pages);
+  const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE)), current = clampPage(page, pages);
   const { nav, step, enter, openItem: setSelected } = useListNav(filtered, selected, setSelectedRaw);
   return <><div className="page-head"><div><div className="eyebrow">MAWATHEEQ / CLIENTS</div><h1>الموكلون</h1><p className="subtitle">ملف مستقل لكل جهة أو فرد، يجمع الأشخاص المرتبطين به وقضاياه.</p></div>{!readOnly&&<button className="btn primary" onClick={()=>setSelected(emptyClient())}><Plus/> إضافة موكل</button>}</div>
     <section className="panel"><div className="toolbar"><div className="searchbox"><Search/><input aria-label="بحث في الموكلين والأشخاص" placeholder="ابحث باسم الجهة أو أحد الأشخاص…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/></div>
       <label className="checkbox-line"><input type="checkbox" checked={reviewOnly} onChange={e=>{setReviewOnly(e.target.checked);setPage(1);}}/> يحتاج مراجعة ({clients.filter(c=>c.needsReview||c.contacts.some(p=>p.needsReview)).length})</label></div>
-      <div className="client-grid">{filtered.slice((current-1)*18,current*18).map(c=><button className="client-card" data-tilt key={c.id} onClick={()=>setSelected(c)}><div className="client-card-top"><Building2 size={22}/><span className="tag">{counts.get(c.id)||0} قضية</span></div><h3>{c.name}</h3><p>{CLIENT_KINDS[c.kind]} · {CLIENT_SECTORS[c.sector]}</p><div className="client-card-people"><Users size={15}/>{c.contacts.length ? `${c.contacts.length} شخص مرتبط` : 'الأشخاص غير مسجلين'}</div>{(c.needsReview||c.contacts.some(p=>p.needsReview))&&<span className="tag amber">يحتاج مراجعة</span>}</button>)}</div>
+      <div className="client-grid">{filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).map(c=><button className="client-card" data-tilt key={c.id} onClick={()=>setSelected(c)}><div className="client-card-top"><Building2 size={22}/><span className="tag">{counts.get(c.id)||0} قضية</span></div><h3>{c.name}</h3><p>{CLIENT_KINDS[c.kind]} · {CLIENT_SECTORS[c.sector]}</p><div className="client-card-people"><Users size={15}/>{c.contacts.length ? `${c.contacts.length} شخص مرتبط` : 'الأشخاص غير مسجلين'}</div>{(c.needsReview||c.contacts.some(p=>p.needsReview))&&<span className="tag amber">يحتاج مراجعة</span>}</button>)}</div>
       {!filtered.length&&<Empty/>}<PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></section>
     {selected&&<ClientEditor nav={nav} onNavigate={step} enter={enter} readOnly={readOnly} key={selected.id} entity={selected} clients={clients} records={records} canMerge={canMerge} canCollections={canCollections} onClose={()=>setSelected(null)} onSaved={onSaved} onMerged={onReload} onOpenCase={onOpenCase} onShowCases={onShowCases} onAddCase={onAddCase}/>}
   </>;
