@@ -2,6 +2,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf,suggestions} from '@/lib/choices';
 import {Files,Plus,FileCheck2,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
 import BatchPrint from './batch-print';
+import LegacyImport from './legacy-import';
 import {suggestedEvidence} from '@/lib/document-tools';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
@@ -9,7 +10,7 @@ import {type CaseSummary,type CollectionData,type CollectionRecord,newDepartment
 import type {Permissions} from '@/lib/permissions';
 import {blankDocument,amountInWords} from '@/lib/document-fields';
 import {COLLECTION_FIELDS,missingDocumentFields} from '@/lib/collection-documents';
-import {FILE_STATUSES,CLOSED_STATUSES,STATEMENT_CATEGORIES,STATEMENT_STATUSES,PAYMENT_TYPES,dueStatements,fils,kwd,position} from '@/lib/collections';
+import {ALL_FILE_STATUSES as FILE_STATUSES,CLOSED_STATUSES,STATEMENT_CATEGORIES,STATEMENT_STATUSES,PAYMENT_TYPES,dueStatements,fils,kwd,position} from '@/lib/collections';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
 import {formatDate,todayISO} from '@/lib/domain';
@@ -34,13 +35,13 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
   const group=<T extends {subjectId:string}>(list:T[])=>{const m=new Map<string,T[]>();for(const r of list)m.set(r.subjectId,[...(m.get(r.subjectId)||[]),r]);return m};
   return {files,allStatements,allPayments,statementsOf:group(allStatements),paymentsOf:group(allPayments)};
  },[rows]);
- const [search,setSearch]=useState(''),[status,setStatus]=useState('active'),[fileStatus,setFileStatus]=useState(''),[batch,setBatch]=useState(''),[assignee,setAssignee]=useState(''),[page,setPage]=useState(1),[editing,setEditingRaw]=useState<CollectionRecord|null>(null);
+ const [search,setSearch]=useState(''),[status,setStatus]=useState('active'),[fileStatus,setFileStatus]=useState(''),[batch,setBatch]=useState(''),[linked,setLinked]=useState(''),[assignee,setAssignee]=useState(''),[page,setPage]=useState(1),[editing,setEditingRaw]=useState<CollectionRecord|null>(null);
  const [picked,setPicked]=useState<Set<string>>(()=>new Set()),[assignTo,setAssignTo]=useState(''),[bulkStatus,setBulkStatus]=useState(''),[bulkBusy,setBulkBusy]=useState(false);
- const reviewed=(r:CollectionRecord)=>!!r.review&&r.review.caseRevision===cases.find(c=>c.id===r.caseId)?.revision&&r.review.recordRevision===r.revision;
+ const reviewed=(r:CollectionRecord)=>!!r.review&&(r.review.caseRevision??null)===(cases.find(c=>c.id===r.caseId)?.revision??null)&&r.review.recordRevision===r.revision;
  const pos=(r:CollectionRecord)=>position(r.payload,(paymentsOf.get(r.id)||[]).map(p=>p.payload));
  const filtered=files.filter(r=>(status==='all'||status==='archived'?status==='all'||r.archived:!r.archived&&(status!=='review'||!reviewed(r)))
-  &&(!fileStatus||(fileStatus==='none'?!r.payload.fileStatus:r.payload.fileStatus===fileStatus))&&(!batch||r.payload.batchNumber===batch)&&(!assignee||(assignee==='none'?!r.payload.assignedTo:r.payload.assignedTo===assignee))
-  &&normalizeSearch([r.payload.code,r.payload.company,r.payload.defendant,r.payload.civilId,r.payload.account,r.payload.phone,r.payload.batchNumber,r.payload.tag1,r.payload.tag2,r.payload.tag3,r.payload.tag4].join(' ')).includes(normalizeSearch(search)));
+  &&(!fileStatus||(fileStatus==='none'?!r.payload.fileStatus:r.payload.fileStatus===fileStatus))&&(!batch||r.payload.batchNumber===batch)&&(!linked||(linked==='yes')===!!r.caseId)&&(!assignee||(assignee==='none'?!r.payload.assignedTo:r.payload.assignedTo===assignee))
+  &&normalizeSearch([r.payload.code,r.payload.company,r.payload.defendant,r.payload.civilId,r.payload.account,r.payload.customerId,r.payload.phone,r.payload.batchNumber,r.payload.tag1,r.payload.tag2,r.payload.tag3,r.payload.tag4].join(' ')).includes(normalizeSearch(search)));
  const pages=Math.max(1,Math.ceil(filtered.length/12)),current=Math.min(page,pages);
  const {nav,step,enter,openItem:setEditing}=useListNav(filtered,editing,setEditingRaw);
  const [view,setView]=useState<View>('files');
@@ -73,11 +74,12 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  {view==='files'&&<section className="panel">
   <div className="status-chips" role="group" aria-label="حالة الملف">{['',...FILE_STATUSES].map(s=>{const n=active.filter(r=>!s||r.payload.fileStatus===s).length;return (n||!s||fileStatus===s)&&<button type="button" key={s||'all'} className={'chip'+(fileStatus===s?' on':'')} onClick={()=>{setFileStatus(s);setPage(1)}}>{s||'كل الحالات'} <b>{n}</b></button>})}</div>
   <div className="department-toolbar"><Field label="بحث ملفات التحصيل" value={search} onChange={v=>{setSearch(v);setPage(1)}} placeholder="الكود، الأطراف، الرقم المدني، العقد، الهاتف أو الترقيم"/><OfficeSelect label="عرض" value={status} onChange={v=>{setStatus(v);setPage(1)}} options={[['active','الملفات النشطة'],['review','تحتاج مراجعة'],['archived','المؤرشفة'],['all','كل الملفات']]}/>
+   <OfficeSelect label="الارتباط بقضية" value={linked} onChange={v=>{setLinked(v);setPage(1)}} options={[['','الكل'],['yes','مرتبطة بقضية'],['no','بلا قضية بعد']]}/>
    <OfficeSelect label="الباتش (القائمة)" value={batch} onChange={v=>{setBatch(v);setPage(1)}} options={[['','كل الباتشات'],...batches.map(b=>[b,b] as [string,string])]}/>
    <OfficeSelect label="الموظف المسؤول" value={assignee} onChange={v=>{setAssignee(v);setPage(1)}} options={[['','كل الموظفين'],['none','غير موزّع'],...assignees.map(a=>[a,a] as [string,string])]}/>
-   <div className="actions">{access.canExport&&<button className="btn" onClick={()=>void exportCsv('collections','Mawatheeq-collections',[['الكود','الموكل','الخصم','حالة الملف','الباتش','المسؤول','المطالبة','المسدد','الباقي','المراجعة'],...filtered.map(r=>{const p=pos(r);return [r.payload.code,r.payload.company,r.payload.defendant,r.payload.fileStatus||'',r.payload.batchNumber||'',r.payload.assignedTo||'',kwd(p.total),kwd(p.paid),kwd(p.remaining),reviewed(r)?'راجعت البيانات الحالية':'تحتاج مراجعة']})]).catch(e=>toast.error(e.message))}>تصدير القائمة</button>}{access.canEdit&&<button className="btn primary" onClick={()=>setEditing(newDepartmentRecord('collections','file',{...blankDocument(),sourceReference:'',notes:''}))}><Plus size={17}/> ملف تحصيل جديد</button>}</div></div>
+   <div className="actions">{access.canExport&&<button className="btn" onClick={()=>void exportCsv('collections','Mawatheeq-collections',[['الكود','الموكل','الخصم','حالة الملف','الباتش','المسؤول','المطالبة','المسدد','الباقي','المراجعة'],...filtered.map(r=>{const p=pos(r);return [r.payload.code,r.payload.company,r.payload.defendant,r.payload.fileStatus||'',r.payload.batchNumber||'',r.payload.assignedTo||'',kwd(p.total),kwd(p.paid),kwd(p.remaining),reviewed(r)?'راجعت البيانات الحالية':'تحتاج مراجعة']})]).catch(e=>toast.error(e.message))}>تصدير القائمة</button>}{access.canEdit&&access.caseScope==='all'&&<LegacyImport files={files} cases={cases} onDone={reload}/>}{access.canEdit&&<button className="btn primary" onClick={()=>setEditing(newDepartmentRecord('collections','file',{...blankDocument(),sourceReference:'',notes:''}))}><Plus size={17}/> ملف تحصيل جديد</button>}</div></div>
   {access.canEdit&&picked.size>0&&<div className="pick-bar" role="status"><b>تم تحديد {picked.size} ملف</b><Field label="توزيع / نقل إلى الموظف" value={assignTo} onChange={setAssignTo} suggestions={assignees}/><label className="field"><span>تغيير الحالة</span><Choice label="تغيير الحالة" empty="بدون تغيير" value={bulkStatus} onChange={setBulkStatus} options={FILE_STATUSES}/></label><button className="btn primary" disabled={bulkBusy||(!assignTo.trim()&&!bulkStatus)} onClick={()=>void distribute()}><UserCheck size={15}/> تطبيق على المحدد</button><button className="btn" onClick={()=>setPicked(new Set())}>إلغاء التحديد</button></div>}
-  <StatusMessage loading={loading} error={error}/>{!loading&&!error&&<><div className="collection-grid">{filtered.slice((current-1)*12,current*12).map(r=>{const p=pos(r),open=(statementsOf.get(r.id)||[]).filter(s=>!s.archived&&s.payload.status!=='done').length;return <article className={'collection-card'+(picked.has(r.id)?' picked':'')} key={r.id}><header>{access.canEdit&&!r.archived&&<input type="checkbox" aria-label={'تحديد الملف '+(r.payload.code||r.payload.defendant)} checked={picked.has(r.id)} onChange={e=>setPicked(old=>{const n=new Set(old);if(e.target.checked)n.add(r.id);else n.delete(r.id);return n})}/>}<span className="collection-code">{r.payload.code||cases.find(c=>c.id===r.caseId)?.code||'بلا كود'}</span>{r.payload.fileStatus&&<span className={'tag '+statusTone(r.payload.fileStatus)}>{r.payload.fileStatus}</span>}<span className={'tag '+(reviewed(r)?'green':'amber')}>{r.archived?'مؤرشف':reviewed(r)?'تمت المراجعة':'يحتاج مراجعة'}</span></header>
+  <StatusMessage loading={loading} error={error}/>{!loading&&!error&&<><div className="collection-grid">{filtered.slice((current-1)*12,current*12).map(r=>{const p=pos(r),open=(statementsOf.get(r.id)||[]).filter(s=>!s.archived&&s.payload.status!=='done').length;return <article className={'collection-card'+(picked.has(r.id)?' picked':'')} key={r.id}><header>{access.canEdit&&!r.archived&&<input type="checkbox" aria-label={'تحديد الملف '+(r.payload.code||r.payload.defendant)} checked={picked.has(r.id)} onChange={e=>setPicked(old=>{const n=new Set(old);if(e.target.checked)n.add(r.id);else n.delete(r.id);return n})}/>}<span className="collection-code">{r.payload.code||cases.find(c=>c.id===r.caseId)?.code||'بلا كود'}</span>{!r.caseId&&<span className="tag">بلا قضية</span>}{r.payload.fileStatus&&<span className={'tag '+statusTone(r.payload.fileStatus)}>{r.payload.fileStatus}</span>}<span className={'tag '+(reviewed(r)?'green':'amber')}>{r.archived?'مؤرشف':reviewed(r)?'تمت المراجعة':'يحتاج مراجعة'}</span></header>
    <h2>{r.payload.company||'موكل غير مكتمل'}</h2><p>ضد {r.payload.defendant||'طرف غير مكتمل'}</p>
    <div className="collection-amount">{kwd(Math.max(0,p.remaining))} <small>د.ك باقٍ من {kwd(p.total)}</small></div>
    <div className="collection-meta">{r.payload.assignedTo?<span><Users size={13}/> {r.payload.assignedTo}</span>:<span className="muted">غير موزّع</span>}{r.payload.batchNumber&&<span>باتش {r.payload.batchNumber}</span>}{open>0&&<span className="tag amber">{open} إفادة مفتوحة</span>}</div>
@@ -111,14 +113,15 @@ function CollectionEditor({initial,cases,access,statements,payments,assignees,ba
  const [tab,setTab]=useState(initial.revision?'file':'parties');
  const intent=useRef<Record<string,string>>({});
  const dirty=JSON.stringify(draft)!==JSON.stringify(saved),c=cases.find(c=>c.id===draft.caseId);
- const reviewed=!!saved.review&&saved.review.recordRevision===saved.revision&&saved.review.caseRevision===c?.revision;
+ const reviewed=!!saved.review&&saved.review.recordRevision===saved.revision&&(saved.review.caseRevision??null)===(c?.revision??null);
+ const allScope=access.caseScope==='all';
  const editable=access.canEdit&&!draft.archived;
  useEffect(()=>{let active=true;if(saved.revision)departmentRequest<typeof outputs>('outputs',{workspace:'collections',id:saved.id}).then(r=>{if(active)setOutputs(r)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[saved.id,saved.revision,outputVersion]);
  const set=(key:string,value:unknown)=>setDraft(r=>({...r,payload:{...r.payload,[key]:value,...(key==='amount'?{amountWords:amountInWords(String(value))}:{})}}));
  async function mutate(action:string,data:Record<string,unknown>){setBusy(true);setError('');try{const r=await departmentRequest<CollectionRecord>(action,{workspace:'collections',id:saved.id,revision:saved.revision,...data});setSaved(r);setDraft(r);setAttested(false);onChanged();toast.success('حُفظ ملف التحصيل')}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  async function generate(kind:'claim'|'bundle'){setBusy(true);setError('');try{const key=saved.revision+kind;const outputId=intent.current[key]??=crypto.randomUUID();const output=await departmentRequest<{id:string;data:CollectionData;templateVersion:string}>('generate',{workspace:'collections',id:saved.id,revision:saved.revision,kind,outputId});if(output.templateVersion!=='office-word-v1')throw new Error('نسخة القالب غير مدعومة. حدّث الصفحة.');const {generateWord}=await import('@/lib/document-tools');saveBlob(await generateWord(kind,output.data),`Mawatheeq-${kind}-${output.id}.docx`);setOutputVersion(v=>v+1);toast.success('تم إعداد Word وحفظ نسخة بيانات الإنشاء')}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  const p=draft.payload,included=p.evidence.filter(e=>e.included).length,money=position(saved.payload,payments.map(x=>x.payload));
- const canSave=editable&&!busy&&!!draft.caseId&&(dirty||!saved.revision);
+ const canSave=editable&&!busy&&(!!draft.caseId||allScope)&&(dirty||!saved.revision);
  const save=()=>{if(canSave)void mutate('save_record',{record:draft})};
  const openStatements=statements.filter(s=>!s.archived&&s.payload.status!=='done').length;
  const tabs:[string,string,LucideIcon,number?,boolean?][]=[['file','بيانات الملف',FileText],['parties','الأطراف والمطالبة',Users],['papers','الحافظة والمستندات',ScrollText],['statements','إفادات الملف',ClipboardList,statements.filter(s=>!s.archived).length,!saved.revision],['money','الوضع المالي',Wallet,payments.filter(x=>x.payload.status!=='void').length,!saved.revision],['history','السجل',History,undefined,!saved.revision]];
@@ -128,7 +131,7 @@ function CollectionEditor({initial,cases,access,statements,payments,assignees,ba
   pin={p.amountWords?<p className="amount-words">{p.amountWords}</p>:undefined}
   quick={saved.revision?<><button type="button" className="btn" onClick={()=>setTab('statements')}><ClipboardList size={16}/> إفادات الملف</button><button type="button" className="btn" onClick={()=>setTab('money')}><Wallet size={16}/> الوضع المالي</button><button type="button" className="btn" onClick={()=>setTab('papers')}><FileCheck2 size={16}/> المراجعة والمستندات</button></>:undefined}
   nav={nav} onNavigate={onNavigate} unit="الملف" enter={enter} dirty={dirty&&editable} busy={busy} onSave={editable?save:undefined} onClose={onClose}
-  footer={<>{editable&&<button className="btn primary" type="button" onClick={save} disabled={busy||!draft.caseId||(!dirty&&!!saved.revision)}>حفظ ملف التحصيل</button>}{!!saved.revision&&access.canEdit&&<button className="btn" disabled={busy||dirty} onClick={()=>void mutate('archive_record',{archived:!saved.archived})}>{saved.archived?'إعادة فتح الملف':'أرشفة الملف'}</button>}<button type="button" className="btn" disabled={busy} onClick={onClose}>إغلاق الملف</button></>}>
+  footer={<>{editable&&<button className="btn primary" type="button" onClick={save} disabled={busy||(!draft.caseId&&!allScope)||(!dirty&&!!saved.revision)}>حفظ ملف التحصيل</button>}{!!saved.revision&&access.canEdit&&<button className="btn" disabled={busy||dirty} onClick={()=>void mutate('archive_record',{archived:!saved.archived})}>{saved.archived?'إعادة فتح الملف':'أرشفة الملف'}</button>}<button type="button" className="btn" disabled={busy} onClick={onClose}>إغلاق الملف</button></>}>
  {error&&<p role="alert" className="notice">{error}</p>}
  <Tabs value={tab} onValueChange={setTab} dir="rtl"><TabsList className="detail-tabs case-tabs">{tabs.map(([v,l,Icon,n,off])=><TabsTrigger key={v} value={v} disabled={off}><Icon aria-hidden/>{l}{n?<span className="tab-count">{n}</span>:null}</TabsTrigger>)}</TabsList>
  <TabsContent value="file"><fieldset className="readonly-fields" disabled={busy||!editable}>
@@ -137,7 +140,8 @@ function CollectionEditor({initial,cases,access,statements,payments,assignees,ba
  </fieldset></TabsContent>
  <TabsContent value="parties"><fieldset className="readonly-fields" disabled={busy||!editable}>
   <p className="subtitle">دوّن البيانات كما وردت في المصدر. الحقول غير المعروفة تبقى فارغة، وتُراجع البيانات قبل إنشاء المستندات.</p>
-  <CasePicker cases={cases} value={draft.caseId} disabled={!!saved.revision} onChange={id=>{const c=cases.find(c=>c.id===id);setDraft(r=>({...r,caseId:id,payload:{...r.payload,code:c?.code||'',company:c?clientName(c):'',defendant:c?.opponent||''}}))}}/>
+  {saved.revision?<CaseLink file={saved} cases={cases} editable={editable&&!dirty} allScope={allScope} onLinked={r=>{setSaved(r);setDraft(r);onChanged()}}/>
+   :<CasePicker cases={cases} value={draft.caseId} optional={allScope} onChange={id=>{const c=cases.find(c=>c.id===id);setDraft(r=>({...r,caseId:id,payload:{...r.payload,code:r.payload.code||c?.code||'',company:r.payload.company||(c?clientName(c):''),defendant:r.payload.defendant||c?.opponent||''}}))}}/>}
   {COLLECTION_FIELDS.map(([title,fields])=><section className="department-form-section" key={title}><h3>{title}</h3><div className="form-grid">{fields.map(([key,label])=>key.toLowerCase().includes('date')?<DateField key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>{set(key,v);if(key==='hearingDate'&&weekdayOf(v))set('hearingDay',weekdayOf(v))}}/>:key==='hearingDay'?<label key={key} className="field"><span>{label}</span><Choice label={label} value={String(draft.payload[key]||'')} onChange={v=>set(key,v)} options={[...new Set([...WEEKDAYS,String(draft.payload[key]||'')])]}/></label>:<Field key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>set(key,v)} suggestions={key==='nationality'?NATIONALITIES:key==='court'||key==='hearingCourt'?COURTS:undefined} type={key==='phone'?'tel':'text'}/>)}</div></section>)}
   <Field label="مرجع المصدر الذي تمت مطابقته" value={draft.payload.sourceReference} onChange={v=>set('sourceReference',v)} placeholder="رقم الملف أو العقد، الجهة، وتاريخ الاطلاع"/><Field label="ملاحظات التحصيل" value={draft.payload.notes} onChange={v=>set('notes',v)} multiline/>
  </fieldset></TabsContent>
@@ -153,4 +157,17 @@ function CollectionEditor({initial,cases,access,statements,payments,assignees,ba
  <TabsContent value="history"><DepartmentHistory workspace="collections" id={saved.id} revision={saved.revision}/></TabsContent></>}
  </Tabs>
  </RecordWindow>;
+}
+
+/** The file's case: link it once a lawsuit exists, change it, or (with all-case scope) detach it. Statements and payments follow. */
+function CaseLink({file,cases,editable,allScope,onLinked}:{file:CollectionRecord;cases:CaseSummary[];editable:boolean;allScope:boolean;onLinked:(r:CollectionRecord)=>void}) {
+ const [picking,setPicking]=useState(false),[pick,setPick]=useState(''),[busy,setBusy]=useState(false);
+ const c=cases.find(x=>x.id===file.caseId);
+ async function link(caseId:string){setBusy(true);try{const r=await departmentRequest<CollectionRecord>('link_case',{workspace:'collections',id:file.id,revision:file.revision,caseId});onLinked(r);setPicking(false);setPick('');toast.success(caseId?'رُبط الملف بالقضية':'فُك ربط الملف بالقضية')}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
+ return <section className="department-form-section case-link"><h3>القضية المرتبطة</h3>
+  {file.caseId?<p><b>{c?`${c.code||c.autoNumber||'بلا كود'} · ${clientName(c)} / ${c.opponent}`:'قضية غير متاحة لحسابك'}</b>{c?.autoNumber&&<small> · الرقم الآلي {c.autoNumber}</small>}</p>:<p className="subtitle">الملف غير مرتبط بقضية بعد. اربطه بالقضية عند رفع الدعوى أو عند تسجيلها في سجل الأحكام.</p>}
+  {editable&&!picking&&<div className="actions"><button type="button" className="btn" onClick={()=>setPicking(true)}>{file.caseId?'تغيير القضية':'ربط بقضية'}</button>{file.caseId&&allScope&&<button type="button" className="btn" disabled={busy} onClick={()=>{if(window.confirm('فك ربط الملف بهذه القضية؟ تبقى إفادات الملف ودفعاته معه.'))void link('')}}>فك الربط</button>}</div>}
+  {picking&&<><CasePicker cases={cases} value={pick} onChange={setPick}/><div className="actions"><button type="button" className="btn primary" disabled={busy||!pick} onClick={()=>void link(pick)}>ربط الملف بالقضية</button><button type="button" className="btn" onClick={()=>setPicking(false)}>إلغاء</button></div></>}
+  {!editable&&file.revision>0&&<small className="muted">احفظ تعديلات الملف أولاً لتغيير ربطه.</small>}
+ </section>;
 }

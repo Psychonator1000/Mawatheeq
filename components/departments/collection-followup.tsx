@@ -7,7 +7,7 @@ import type {CollectionRecord,DepartmentRecord} from '@/lib/departments';
 import {formatDate,todayISO} from '@/lib/domain';
 import {listHtml,printHtml} from '@/lib/print';
 import {phoneLinks} from '@/lib/contact-links';
-import {FILE_STATUSES,EXECUTION_STATUSES,STATEMENT_CATEGORIES,STATEMENT_ACTIONS,STATEMENT_STATUSES,CONTACT_PARTIES,CONTACT_METHODS,PAYMENT_TYPES,PAYMENT_METHODS,fils,kwd,position,
+import {ALL_FILE_STATUSES as FILE_STATUSES,EXECUTION_STATUSES,STATEMENT_CATEGORIES,STATEMENT_ACTIONS,STATEMENT_STATUSES,CONTACT_PARTIES,CONTACT_METHODS,PAYMENT_TYPES,PAYMENT_METHODS,fils,kwd,position,
  type StatementCategory,type StatementData,type StatementStatus,type PaymentData,type PaymentType} from '@/lib/collections';
 import {Field,DateField,Choice,PickOrType} from '../shared';
 import {officeTime} from '../office-shared';

@@ -65,7 +65,7 @@ let file=await save(collector,'collections',record('collections','file',collecti
 const hiddenFile=await save(owner,'collections',record('collections','file',{...collectionData,defendant:'Hidden collection'},hidden.id));
 assert.equal((await dept(collector.token,'collections','records_page')).length,1);
 assert.equal((await dept(collector.token,'collections','records_page',{offset:1})).length,0);
-await assert.rejects(()=>save(collector,'collections',record('collections','file',collectionData,visible.id)),e=>e.code==='23505','One file per case');
+// Several collection files may lead to one case (13 October 2026); see the linking checks below.
 await denied(()=>action(collector,'collections','history',hiddenFile));
 await denied(()=>save(reader,'collections',{...file,payload:{...file.payload,notes:'Denied'}}));
 await denied(()=>action(hr,'collections','history',file));
@@ -180,6 +180,32 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  await assert.rejects(()=>action(collector,'collections','generate',s1,{kind:'claim',outputId:uuid(200)}),/لملف التحصيل/);
  const after=(await dept(collector.token,'collections','records_page')).find(r=>r.id===f.id);assert.equal(after.revision,reviewedBefore,'Statements and payments do not change or unreview the file');
  assert.ok((await action(collector,'collections','history',v)).length>=2,'Payment history keeps the cancellation');}
+// Collection files before a case exists, imported statuses, many files per case, and linking from either side.
+{const office=await member('collect_office',{...grants(['collections']),caseScope:'all'});
+ const file=(n,extra={})=>record('collections','file',{...collectionData,code:'COL-'+n,evidence:[],sourceReference:'',notes:'',fileStatus:'سوفت',customerId:'5109347'+n,fileAutoNumber:'هولد',defendantJob:'خارج البلاد',...extra});
+ await denied(()=>save(collector,'collections',file(1)),'A file without a case needs all-case scope');
+ let f1=await save(office,'collections',file(1));assert.equal(f1.caseId,'');assert.equal(f1.payload.fileStatus,'سوفت');assert.equal(f1.payload.customerId,'51093471');assert.equal(f1.payload.fileAutoNumber,'هولد');
+ await assert.rejects(()=>save(office,'collections',file(1)),/duplicate|unique|department_collection_code/,'File numbers are unique');
+ await assert.rejects(()=>save(office,'collections',file(9,{fileStatus:'حالة مخترعة'})),/حالة الملف/);
+ const st=await save(office,'collections',record('collections','statement',{category:'calls',action:'اتصال',reviewDate:'2026-10-20',status:'notDone',text:'لم يرد',phone:'',contactParty:'',method:''},'',f1.id));
+ const pay=await save(office,'collections',record('collections','payment',{type:'payment',date:'2026-10-10',amount:'10.500',method:'نقدي',reference:'',notes:'رصيد منقول'},'',f1.id));
+ await assert.rejects(()=>save(office,'collections',{...pay,payload:{...pay.payload,amount:'1'}}),/ثابتة/,'Payments stay immutable on files without a case');
+ await assert.rejects(()=>save(office,'collections',record('collections','statement',st.payload,visible.id,f1.id)),/فعالاً/,'A statement carries its file\'s case');
+ // Link to a case: the file, its statement and payment move under that case's scope.
+ await denied(()=>dept(collector.token,'collections','link_case',{id:f1.id,revision:f1.revision,caseId:visible.id}),'Selected-scope staff cannot see the unlinked file');
+ f1=await dept(office.token,'collections','link_case',{id:f1.id,revision:f1.revision,caseId:visible.id});assert.equal(f1.caseId,visible.id);
+ const seen=await dept(collector.token,'collections','records_page');assert.ok(seen.some(r=>r.id===f1.id)&&seen.some(r=>r.id===st.id)&&seen.some(r=>r.id===pay.id),'Linked records follow the case scope');
+ assert.ok((await dept(office.token,'collections','history',{id:f1.id})).length>=2,'The link is in the file history');
+ const f2=await save(office,'collections',file(2));
+ assert.deepEqual((await dept(collector.token,'collections','find_files',{q:'COL-'})).map(r=>r.id),[f1.id],'Search stays within case scope');
+ assert.equal((await dept(office.token,'collections','find_files',{q:'51093472'}))[0].id,f2.id,'Search by the customer number');
+ await dept(office.token,'collections','link_case',{id:f2.id,revision:f2.revision,caseId:visible.id});
+ assert.equal((await dept(collector.token,'collections','case_files',{caseId:visible.id})).filter(r=>r.payload.code?.startsWith('COL-')).length,2,'One case can come from several files');
+ await denied(()=>dept(collector.token,'collections','case_files',{caseId:hidden.id}));
+ await denied(()=>dept(collector.token,'collections','link_case',{id:f1.id,revision:f1.revision,caseId:''}),'Detaching needs all-case scope');
+ await assert.rejects(()=>dept(office.token,'collections','link_case',{id:f1.id,revision:f1.revision-1,caseId:''}),e=>e.code==='40001');
+ const back=await dept(office.token,'collections','link_case',{id:f1.id,revision:f1.revision,caseId:''});assert.equal(back.caseId,'');
+ await denied(()=>dept(legal.token,'collections','case_files',{caseId:visible.id}),'The legal section alone does not open collection files');}
 // Archive: locations, files, immutable custody movements, requests; case scope, state machine and the archive section.
 {const archivist=await member('archivist',{...grants(['archive']),caseScope:'all',jobRole:'archivist'});
  const scoped=await member('archive_scoped',grants(['archive']));
@@ -241,4 +267,4 @@ const backup=await dept(owner.token,'collections','backup_page',{kind:'outputs'}
 assert.equal(backup.length,2);assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
 await office(owner.token,'set_member_access',{id:collector.user.id,revision:collector.member.permissions?.revision||1,permissions:grants([])});
 await assert.rejects(()=>dept(collector.token,'collections','records_page'),e=>e.code==='28000','Grant changes revoke active department sessions');
-await db.close();console.log('Passed departments: archive (section, scope, custody state machine, immutable movements cancelled latest first, unique numbers, locations, requests), collection statements/payments (scope, validation, immutable payments with audited cancellation, file review untouched), scoped summaries, shared secretary work, collection review/output snapshots, stale edits, exact money/void trail, HR isolation/leave overlap, account-linked HR files, private grants and session revocation.');
+await db.close();console.log('Passed departments: collection files without a case (all-case scope, unique numbers, imported statuses, linking both ways with statements/payments following, search, many files per case), archive (section, scope, custody state machine, immutable movements cancelled latest first, unique numbers, locations, requests), collection statements/payments (scope, validation, immutable payments with audited cancellation, file review untouched), scoped summaries, shared secretary work, collection review/output snapshots, stale edits, exact money/void trail, HR isolation/leave overlap, account-linked HR files, private grants and session revocation.');

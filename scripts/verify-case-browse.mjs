@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { emptyCase } from '../lib/domain.ts';
 import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT } from '../lib/case-browse.ts';
 import { suggestions, weekdayOf, CLIENT_ROLES } from '../lib/choices.ts';
-import { fils, kwd, position, dueStatements, FILE_STATUSES } from '../lib/collections.ts';
+import { fils, kwd, position, dueStatements, FILE_STATUSES, mapLegacy, ALL_FILE_STATUSES } from '../lib/collections.ts';
 import { custodyOf, isOverdue, nextNumber, code39, code39Ready, code39Svg, daysBetween, MOVEMENTS } from '../lib/archive.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
 
@@ -151,4 +151,23 @@ assert.ok(FILE_STATUSES.includes('تحصيل ودي'));
   assert.throws(() => code39('ب')); assert.match(code39Svg('ARC-1'), /^<svg[^>]+viewBox="0 0 [\d.]+ 34"/);
 }
 
-console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money and follow-up helpers.');
+{
+  // export mapping, on synthetic rows: customer number, statuses kept, empty markers dropped, court number only when numeric.
+  const header = ['إسم الموكل', 'رقم الملف', 'إسم الخصم', 'حالة الملف', 'سبب المديونية', 'قيمة المطالبة', 'رقم العقد', 'الرقم الآلى - ملف', 'ترقيم 1', 'ترقيم 4', 'تاريخ الورود', 'رقم الهوية - الخصم', 'عنوان المنزل - الخصم', 'ملاحظات 1', 'ملاحظات 2', 'الجنسية - الخصم', 'الوظيفة - الخصم', 'المنطقة', 'القطعة', 'إجمالى المدفوعات', 'إجمالى المصروفات'];
+  const files = mapLegacy(header, [
+    ['شركة تجريبية', 1001, 'SYNTHETIC PERSON', 'سوفت', '50000001', 177.8, 'C-1', 'هولد', 'بدون', '0', '2026-10-03', '200000000001', 'منطقة تجريبية', 'فارغ', 'null', 'TESTLAND', 'خارج البلاد', '', '', 68.9, 0],
+    ['شركة تجريبية', 1002, 'SECOND PERSON', 'حالة أخرى', '50000002', '1,004.61', 'C-2', '261234560', 'SA', '60000000', '', '', '', 'م', '', '', '', 'الأولى', '3', 0, 12],
+    ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  ], v => String(v));
+  assert.equal(files.length, 2, 'Rows without a file number are skipped');
+  const [a, b] = files;
+  assert.equal(a.payload.code, '1001'); assert.equal(a.payload.customerId, '50000001', 'سبب المديونية is the customer number at the client');
+  assert.equal(a.payload.fileStatus, 'سوفت'); assert.ok(ALL_FILE_STATUSES.includes('تحت الرفع'));
+  assert.equal(a.payload.amount, '177.8'); assert.equal(a.paid, '68.9'); assert.equal(a.expenses, '');
+  assert.equal(a.payload.tag1, '', 'بدون is empty'); assert.equal(a.payload.tag4, ''); assert.equal(a.payload.notes, '', 'فارغ and null are empty');
+  assert.equal(a.payload.fileAutoNumber, 'هولد'); assert.equal(a.autoNumber, '', 'Only a numeric court number links a case');
+  assert.equal(b.autoNumber, '261234560'); assert.equal(b.payload.amount, '1004.61'); assert.equal(b.payload.fileStatus, '');
+  assert.match(b.payload.notes, /حالة سابقة: حالة أخرى/, 'Unknown statuses are kept in the notes'); assert.equal(b.payload.address2, 'المنطقة الأولى، قطعة 3');
+  assert.throws(() => mapLegacy(['x'], [], String), /رقم الملف/);
+}
+console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money, import mapping and follow-up helpers.');

@@ -1,7 +1,7 @@
 import type {CollectionData} from './departments';
 export const COLLECTION_FIELDS:[string,[string,string][]][]=[
- ['الأطراف والعنوان',[['company','الشركة المدعية'],['defendant','المدعى عليه'],['civilId','الرقم المدني للمدعى عليه'],['nationality','الجنسية'],['address','العنوان'],['address2','تفاصيل إضافية للعنوان'],['companyCivil','الرقم المدني للشركة'],['companyRegister','السجل التجاري'],['phone','الهاتف']]],
- ['المطالبة وأمر الأداء',[['code','كود الملف'],['account','رقم العقد / الحساب'],['amount','مبلغ المطالبة (د.ك)'],['orderNumber','رقم أمر الأداء'],['court','محكمة أمر الأداء'],['rejectedDate','تاريخ رفض أمر الأداء'],['demandDate','تاريخ التكليف بالوفاء'],['statementDate','تاريخ كشف الحساب']]],
+ ['الأطراف والعنوان',[['company','الشركة المدعية'],['defendant','المدعى عليه'],['defendantJob','وظيفة / إقامة المدعى عليه'],['civilId','الرقم المدني للمدعى عليه'],['nationality','الجنسية'],['address','العنوان'],['address2','تفاصيل إضافية للعنوان'],['companyCivil','الرقم المدني للشركة'],['companyRegister','السجل التجاري'],['phone','الهاتف']]],
+ ['المطالبة وأمر الأداء',[['code','رقم الملف'],['customerId','رقم العميل لدى الموكل'],['fileAutoNumber','الرقم الآلي للملف (كما ورد)'],['account','رقم العقد / الحساب'],['amount','مبلغ المطالبة (د.ك)'],['orderNumber','رقم أمر الأداء'],['court','محكمة أمر الأداء'],['rejectedDate','تاريخ رفض أمر الأداء'],['demandDate','تاريخ التكليف بالوفاء'],['statementDate','تاريخ كشف الحساب']]],
  ['الدعوى والجلسة',[['lawsuitNumber','رقم الدعوى'],['lawsuitYear','سنة الدعوى'],['hearingCourt','محكمة الجلسة'],['hearingCircuit','الدائرة'],['hearingDate','تاريخ الجلسة'],['hearingDay','يوم الجلسة']]],
  ['الإيصال',[['receiptNumber','رقم الإيصال'],['receiptDate','تاريخ الإيصال'],['receiptFee','رسوم الإيصال (د.ك)'],['orderAuto','الرقم الآلي لأمر الأداء']]],
 ];
