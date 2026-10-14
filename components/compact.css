@@ -98,3 +98,9 @@
 /* A circuit is three fields that sit in the form grid as if they were separate fields. */
 :root .circuit-group{display:contents}
 :root .field-need:has(>.circuit-group){display:contents}
+/* Admin edit and delete buttons on recorded sessions. */
+:root .session-table .row-actions{width:1%;white-space:nowrap;text-align:end}
+:root .session-table .row-actions .icon-btn{display:inline-grid;width:30px;height:30px;margin:0}
+:root .icon-btn.danger:hover{background:#f6dcd6;color:#9b2c1f}
+:root .session-table tr.editing td{background:color-mix(in srgb,var(--brand) 9%,transparent)}
+:root .session-form .form-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}

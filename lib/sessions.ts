@@ -33,12 +33,18 @@ export const isSession = (p: Procedure) => p.kind === 'جلسة' || p.kind === '
 
 export type SessionInput = { date: string; venue: Venue; court: string; decision: string; details: string; nextDate: string; nextTime: string; recordedBy: string };
 /** The procedure-log entry for a session. */
-export function sessionProcedure(s: SessionInput, id = crypto.randomUUID()): Procedure {
+export function sessionProcedure(s: SessionInput, id: string = crypto.randomUUID()): Procedure {
   const d = decisionOf(s.venue, s.decision), next = d?.next === 'none' ? '' : s.nextDate;
   return {
     id, date: s.date, kind: s.venue === 'إدارة الخبراء' ? 'جلسة خبراء' : 'جلسة', venue: s.venue, court: s.court.trim(), decision: s.decision,
     text: [s.decision, s.details.trim()].filter(Boolean).join(' — '), followup: next, nextTime: next ? s.nextTime : '', recordedBy: s.recordedBy, source: 'إدخال يدوي',
   };
+}
+/** The form values of a recorded session, for editing it. */
+export function sessionInput(p: Procedure): SessionInput {
+  const decision = p.decision || '', text = p.text || '';
+  const details = decision && text.startsWith(decision) ? text.slice(decision.length).replace(/^\s*—\s*/, '') : decision ? '' : text;
+  return { date: p.date, venue: p.kind === 'جلسة خبراء' || p.venue === 'إدارة الخبراء' ? 'إدارة الخبراء' : 'المحكمة', court: p.court || '', decision, details, nextDate: p.followup || '', nextTime: p.nextTime || '', recordedBy: p.recordedBy || '' };
 }
 /** Title of the hearing created for the next session. */
 export function nextSessionTitle(s: SessionInput, level: string, c: Pick<CaseRecord, 'code' | 'autoNumber'>) {

@@ -348,6 +348,23 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  await page.getByRole('button',{name:/^يوم رول الجلسات/}).click();await page.locator('.date-popover').getByRole('button',{name:'اليوم',exact:true}).click();
  await page.getByRole('button',{name:/طباعة رول الجلسات/}).click();const roll=await page.evaluate(()=>window.__printed);
  assert.ok(roll.includes('رول الجلسات')&&roll.includes('TOOL-1')&&roll.includes('10:30'),'The roll lists the day\'s hearings');}
+// An admin can correct a recorded session (its next hearing follows) or delete it (cancelling the hearing it scheduled).
+{await page.keyboard.press('Control+k');const qs=page.getByRole('dialog',{name:'بحث سريع'});await qs.getByRole('combobox').fill('TOOL-1');await qs.getByRole('option',{name:/TOOL-1/}).first().click();
+ const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();
+ await sw.locator('.case-quick').getByRole('button',{name:/تسجيل جلسة/}).click();
+ await sw.locator('.session-table').getByRole('button',{name:/^تعديل جلسة/}).click();await sw.getByRole('heading',{name:/تعديل جلسة/}).waitFor();
+ assert.equal(await sw.getByLabel('رقم الدائرة / القاعة',{exact:true}).inputValue(),'5','Editing loads the recorded session');
+ await sw.getByLabel('الدور',{exact:true}).fill('2');await sw.getByLabel('تفاصيل القرار (اختياري)',{exact:true}).fill('تصحيح تجريبي');await sw.getByLabel('الوقت (اختياري)',{exact:true}).fill('11:15');
+ await sw.getByRole('button',{name:'حفظ التعديل'}).click();await sw.locator('.session-table').getByText('تصحيح تجريبي').waitFor();
+ await sw.locator('.next-hearing').getByText(/11:15/).waitFor({timeout:8000});
+ let sessions=(await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-1').payload.procedures.filter(p=>p.kind==='جلسة');
+ assert.deepEqual(sessions.map(p=>[p.court,p.text,p.nextTime,p.recordedBy]),[['تجاري كلي / 5 · الدور 2','تأجيل للإعلان — تصحيح تجريبي','11:15','tools_owner']],'The session is changed in place');
+ await sw.locator('.session-table').getByRole('button',{name:/^حذف جلسة/}).click();const confirm=page.getByRole('alertdialog');
+ await confirm.getByRole('checkbox',{name:/ألغِ الجلسة القادمة/}).waitFor();assert.equal(await confirm.getByRole('checkbox',{name:/ألغِ الجلسة القادمة/}).isChecked(),true);
+ await confirm.getByRole('button',{name:'حذف الجلسة'}).click();await sw.getByText('لا توجد جلسات مسجلة في هذه الدرجة بعد.').waitFor();
+ sessions=(await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-1').payload.procedures.filter(p=>p.kind==='جلسة');
+ assert.equal(sessions.length,0,'The session is deleted');await sw.locator('.next-hearing').waitFor({state:'detached',timeout:8000});
+ await page.keyboard.press('Escape');await sw.waitFor({state:'hidden'});}
 // The lawyer is picked from the office's lawyers, or typed when new; the case list offers it afterwards.
 await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-0/).click();
 const lw=page.locator('[data-record-window]');await lw.locator('.case-pin').getByText('TOOL-0').waitFor();
