@@ -1,9 +1,9 @@
 'use client';
-import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from '@/components/ui/select';
+import {FilterBox} from './filter-select';
 import {FileSearch} from 'lucide-react';
 import {useEffect,useId,useState} from 'react';
 import {requestData} from '@/lib/client-api';
-export function Choice({value,onChange,options,label,className='',empty}:{value:string;onChange:(s:string)=>void;options:string[];label?:string;className?:string;empty?:string}){return <Select dir="rtl" value={value||'__empty'} onValueChange={s=>onChange(s==='__empty'?'':s)}><SelectTrigger className={className} aria-label={label||'اختيار'}><SelectValue/></SelectTrigger><SelectContent><SelectItem value="__empty">{empty||label||'غير مسجل'}</SelectItem>{options.filter(Boolean).map(s=><SelectItem value={s} key={s}>{s}</SelectItem>)}</SelectContent></Select>}
+export function Choice({value,onChange,options,label,className='',empty}:{value:string;onChange:(s:string)=>void;options:string[];label?:string;className?:string;empty?:string}){return <FilterBox label={label||'اختيار'} value={value} onChange={onChange} className={className} empty={empty||'غير مسجل'} options={[...new Set(options.filter(Boolean))].map(s=>({value:s,label:s}))}/>}
 /** A text field. With `suggestions`, typing offers matching values already in use (the person can still type a new one). */
 export function Field({label,value,onChange,wide=false,multiline=false,placeholder='',type='text',suggestions}:{label:string;value:string;onChange:(s:string)=>void;wide?:boolean;multiline?:boolean;placeholder?:string;type?:string;suggestions?:string[]}){const listId=useId();const list=suggestions?.length&&!multiline?listId:undefined;return <label className={'field '+(wide?'wide':'')}><span>{label}</span>{multiline?<textarea value={value||''} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>:<input type={type} value={value||''} onChange={e=>onChange(e.target.value)} onBlur={list?e=>{const v=e.target.value.replace(/\s+/g,' ').trim();if(v!==e.target.value)onChange(v)}:undefined} placeholder={placeholder||(list?'اختر من القائمة أو اكتب':'')} list={list} autoComplete={list?'off':undefined}/>}{list&&<datalist id={list}>{suggestions!.map(o=><option key={o} value={o}/>)}</datalist>}</label>}
 const OTHER='أخرى…';

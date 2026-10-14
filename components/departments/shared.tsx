@@ -1,12 +1,12 @@
+import FilterSelect from '../filter-select';
 import {useEffect,useState,type ReactNode} from 'react';
 import {departmentRequest} from '@/lib/local-auth';
 import {departmentPages,type Department,type DepartmentRecord,type CaseSummary} from '@/lib/departments';
 import type {Change} from '@/lib/office';
 import {clientName} from '@/lib/clients';
-import {Field,saveBlob} from '../shared';
-import {OfficeSelect,RecordHistory} from '../office-shared';
+import {saveBlob} from '../shared';
+import {RecordHistory} from '../office-shared';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '../ui/dialog';
-import {normalizeSearch} from '@/lib/case-browse';
 import {readSnapshot,writeSnapshot} from '@/lib/boot-cache';
 export function useRecords<P>(workspace:Department) {
  const [rows,setRows]=useState<DepartmentRecord<P>[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[version,setVersion]=useState(0);
@@ -20,10 +20,10 @@ export function StatusMessage({loading,error}:{loading:boolean;error:string}) {r
 export function EditorDialog({title,description,children,busy,onClose}:{title:string;description:string;children:ReactNode;busy:boolean;onClose:()=>void}) {
  return <Dialog open onOpenChange={open=>!open&&!busy&&onClose()}><DialogContent dir="rtl" className="office-dialog department-dialog"><DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader>{children}</DialogContent></Dialog>;
 }
+/** The linked case: one list you can type into to narrow it down (code, automatic number, client or opponent). */
 export function CasePicker({value,onChange,cases,optional=false,disabled=false}:{value:string;onChange:(v:string)=>void;cases:CaseSummary[];optional?:boolean;disabled?:boolean}) {
- const [search,setSearch]=useState('');
- const filtered=cases.filter(c=>c.id===value||!c.archived&&normalizeSearch([c.code,c.autoNumber,clientName(c),c.opponent].join(' ')).includes(normalizeSearch(search)));
- return <fieldset className="case-picker" disabled={disabled}><Field label="البحث عن القضية" value={search} onChange={setSearch}/><OfficeSelect label="القضية المرتبطة" value={value} onChange={onChange} empty={optional?'قيد مكتبي غير مرتبط بقضية':'اختر قضية'} options={filtered.map(c=>[c.id,`${c.code||c.autoNumber||'بلا كود'} · ${clientName(c)} / ${c.opponent}`])}/></fieldset>;
+ const options=cases.filter(c=>c.id===value||!c.archived).map(c=>({value:c.id,label:`${c.code?'كود '+c.code:'بلا كود'} · ${clientName(c)} / ${c.opponent}`,hint:c.autoNumber?'الرقم الآلي للقضية '+c.autoNumber:undefined}));
+ return <FilterSelect label="القضية المرتبطة" value={value} onChange={onChange} options={options} disabled={disabled} empty={optional?'قيد مكتبي غير مرتبط بقضية':'اختر قضية'} className="case-picker"/>;
 }
 export function DepartmentHistory({workspace,id,revision}:{workspace:Department;id:string;revision:number}) {
  const [rows,setRows]=useState<Change[]|null>(null),[error,setError]=useState('');

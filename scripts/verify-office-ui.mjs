@@ -1,5 +1,6 @@
 // Synthetic end-to-end test. Run the Pages dev server on 127.0.0.1:4175 first.
 // Uses an isolated in-memory database and browser; never contacts the real backend.
+import {supportFilterSelects} from './filter-select-helper.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
@@ -25,6 +26,7 @@ for(let i=0;i<25;i++)await rpc('mawatheeq_local_request',[login.token,'save_case
 const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
 const page=await context.newPage();const errors=[];const calls=[];
+supportFilterSelects(page.locator('body'));
 async function configurePage(page){
 page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));

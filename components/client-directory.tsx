@@ -14,6 +14,7 @@ import { Field, Empty, api } from './shared';
 import { CONTACT_ROLES, suggestions } from '@/lib/choices';
 import PageNavigation from './page-navigation';
 import EntityCollections from './departments/entity-collections';
+import {SelectList} from './filter-select';
 
 type EditorProps = {
   entity: ClientEntity; clients: ClientEntity[]; records?: CaseRecord[]; canMerge?: boolean; readOnly?: boolean;
@@ -58,8 +59,8 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
     nav={nav} onNavigate={onNavigate} unit="الموكل" enter={enter} dirty={dirty && !readOnly} busy={busy} onSave={readOnly ? undefined : () => void save()} onClose={onClose}
     footer={!readOnly ? <button type="button" className="btn primary" disabled={busy} onClick={save}>{busy ? <LoaderCircle className="spin"/> : <Save/>} حفظ ملف الموكل</button> : undefined}>
     <fieldset className="readonly-fields" disabled={readOnly}><div className="form-grid"><Field label="اسم الموكل / الجهة" value={draft.name} onChange={v => set('name', v)} wide/>
-      <label className="field"><span>نوع الموكل</span><select value={draft.kind} onChange={e => set('kind', e.target.value as ClientEntity['kind'])}>{Object.entries(CLIENT_KINDS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}</select></label>
-      <label className="field"><span>القطاع</span><select value={draft.sector} onChange={e => set('sector', e.target.value as ClientEntity['sector'])}>{Object.entries(CLIENT_SECTORS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}</select></label>
+      <label className="field"><span>نوع الموكل</span><SelectList aria-label="نوع الموكل" value={draft.kind} onChange={e => set('kind', e.target.value as ClientEntity['kind'])}>{Object.entries(CLIENT_KINDS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}</SelectList></label>
+      <label className="field"><span>القطاع</span><SelectList aria-label="القطاع" value={draft.sector} onChange={e => set('sector', e.target.value as ClientEntity['sector'])}>{Object.entries(CLIENT_SECTORS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}</SelectList></label>
       <Field label="ملاحظات عن الموكل" value={draft.notes} onChange={v => set('notes', v)} wide multiline/>
       <label className="checkbox-line wide"><input type="checkbox" checked={draft.needsReview} onChange={e => set('needsReview', e.target.checked)}/> هوية الجهة أو بياناتها تحتاج مراجعة</label>
     </div>
@@ -86,7 +87,7 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
     </>}
     {canMerge && entity.revision && <details className="client-merge"><summary><Merge size={16}/> دمج ملف مكرر مع موكل آخر</summary>
       <p className="subtitle">استخدم الدمج فقط بعد التأكد من أن الملفين يمثلان الجهة نفسها. تُنقل القضايا والأشخاص والصيغ السابقة، وتبقى بيانات القضايا الأصلية محفوظة.</p>
-      <label className="field"><span>الملف الذي سيبقى</span><select value={targetId} onChange={e => setTargetId(e.target.value)}><option value="">اختر الموكل</option>{clients.filter(c => c.id !== entity.id).sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c => <option value={c.id} key={c.id}>{c.name} · {c.id.slice(0,8)}</option>)}</select></label>
+      <label className="field"><span>الملف الذي سيبقى</span><SelectList aria-label="الملف الذي سيبقى" value={targetId} onChange={e => setTargetId(e.target.value)}><option value="">اختر الموكل</option>{clients.filter(c => c.id !== entity.id).sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c => <option value={c.id} key={c.id}>{c.name} · {c.id.slice(0,8)}</option>)}</SelectList></label>
       {dirty && <p className="subtitle">احفظ تعديلات الملف ثم افتحه مجدداً قبل الدمج.</p>}
       {target && <AlertDialog><AlertDialogTrigger asChild><button className="btn" disabled={busy || dirty}>مراجعة الدمج</button></AlertDialogTrigger><AlertDialogContent dir="rtl"><AlertDialogHeader><AlertDialogTitle>دمج ملفَي الموكل؟</AlertDialogTitle>
         <AlertDialogDescription>سيُدمج «{entity.name}» داخل «{target.name}». ستُنقل {linked.length} قضية وجميع الأشخاص والصيغ السابقة. يظل اسم الملف الهدف وقطاعه هما المعتمدين.</AlertDialogDescription></AlertDialogHeader>
@@ -100,7 +101,7 @@ export function ClientSelect({ clients, value, onChange, onCreate }: { clients: 
   const options = clients.filter(c => c.id === value || normalizeSearch([c.name, ...c.aliases].join(' ')).includes(normalizeSearch(search))).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
   return <div className="field wide client-selector"><div className="client-section-heading"><span>الموكل / الجهة</span>{onCreate&&<button type="button" className="text-link" onClick={onCreate}><Plus size={14}/> موكل جديد</button>}</div>
     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث عن ملف الموكل الموجود أولاً" aria-label="بحث عن موكل"/>
-    <select value={value} onChange={e => onChange(e.target.value)} aria-label="الموكل / الجهة"><option value="">اختر الموكل</option>{options.map(c => <option key={c.id} value={c.id}>{c.name}{c.needsReview ? ' · يحتاج مراجعة' : ''}{clients.some(x => x.id !== c.id && x.name === c.name) ? ` · ${c.id.slice(0,8)}` : ''}</option>)}</select>
+    <SelectList value={value} onChange={e => onChange(e.target.value)} aria-label="الموكل / الجهة"><option value="">اختر الموكل</option>{options.map(c => <option key={c.id} value={c.id}>{c.name}{c.needsReview ? ' · يحتاج مراجعة' : ''}{clients.some(x => x.id !== c.id && x.name === c.name) ? ` · ${c.id.slice(0,8)}` : ''}</option>)}</SelectList>
   </div>;
 }
 

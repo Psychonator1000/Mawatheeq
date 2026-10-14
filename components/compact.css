@@ -82,3 +82,19 @@
  /* Chart rows and bars are buttons on screen; the general print rule hides buttons, so these are brought back. */
  :root button.legend-row{display:flex!important}:root button.bar-item{display:block!important}
 }
+
+/* Type-to-filter dropdowns (case picker, circuits). */
+:root .filter-select-box{position:relative;display:block}
+:root .filter-select-box input{width:100%;min-height:var(--control-h);padding:8px 11px 8px 32px;border:1px solid #dfd3c3;border-radius:8px;background:#fffdf8;font:inherit;font-size:14px;color:inherit}
+:root .filter-select-box input:focus{outline:none;border-color:var(--brand-ring,var(--brand));box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 14%,transparent);background:#fff}
+:root .filter-select-box input:disabled{opacity:.6}
+:root .filter-select-chevron{position:absolute;inset-inline-end:10px;top:50%;translate:0 -50%;opacity:.55;pointer-events:none}
+:root .filter-select-list{position:absolute;z-index:60;inset-inline:0;top:calc(100% + 4px);margin:0;padding:4px;list-style:none;max-height:260px;overflow-y:auto;background:var(--card,#fff);border:1px solid var(--border);border-radius:10px;box-shadow:0 16px 36px -18px #0008}
+:root .filter-select-box:has(>.filter-select-list),:root .field:has(.filter-select-list){position:relative;z-index:61}
+:root .filter-select-list li{display:grid;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13.5px}
+:root .filter-select-list li small{font-size:11.5px;color:var(--muted-foreground)}
+:root .filter-select-list li.active,:root .filter-select-list li[aria-selected=true]{background:color-mix(in srgb,var(--brand) 10%,transparent)}
+:root .filter-select-list .filter-select-none{cursor:default;color:var(--muted-foreground)}
+/* A circuit is three fields that sit in the form grid as if they were separate fields. */
+:root .circuit-group{display:contents}
+:root .field-need:has(>.circuit-group){display:contents}

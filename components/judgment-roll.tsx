@@ -8,6 +8,7 @@ import {ROLL_COLUMNS,DEFAULT_ROLL_COLUMNS,ROLL_GROUPS,ROLL_SORTS,EMPTY_ROLL_FILT
 import {MONTH_NAMES} from '@/lib/case-browse';
 import {formatDate,todayISO,type CaseRecord} from '@/lib/domain';
 import {Field,DateField} from './shared';
+import {SelectList} from './filter-select';
 
 type Scope='shown'|'selected'|'all';
 const COLUMNS_KEY='mawatheeq.roll-columns.v1';
@@ -34,15 +35,15 @@ export default function JudgmentRoll({shown,selected,all,shownLabel,toRow,printe
   if(filter.category)parts.push({execution:'التنفيذ',insurance:'التأمين',telecom:'الاتصالات'}[filter.category]||filter.category);
   if(group)parts.push('مجمّعة حسب '+ROLL_GROUPS.find(g=>g[0]===group)![1]);return parts.join(' · ')};
  const html=useMemo(()=>judgmentRollHtml(title.trim()||'رول الأحكام',describe(),columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![1]),groupRoll(rows,group).map(([g,list])=>[g,list.map(r=>columns.map(c=>rollCell(r,c)))]),formatDate(todayISO()),printedBy,columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![3])),[rows,group,columns,title,scope,filter]);// eslint-disable-line react-hooks/exhaustive-deps
- const select=(label:string,k:keyof RollFilter,list:string[]|[string,string][],all='الكل')=><label className="field"><span>{label}</span><select aria-label={label} value={filter[k]} onChange={e=>setF(k,e.target.value)}><option value="">{all}</option>{list.map(o=>Array.isArray(o)?<option key={o[0]} value={o[0]}>{o[1]}</option>:<option key={o} value={o}>{o}</option>)}</select></label>;
+ const select=(label:string,k:keyof RollFilter,list:string[]|[string,string][],all='الكل')=><label className="field"><span>{label}</span><SelectList aria-label={label} value={filter[k]} onChange={e=>setF(k,e.target.value)}><option value="">{all}</option>{list.map(o=>Array.isArray(o)?<option key={o[0]} value={o[0]}>{o[1]}</option>:<option key={o} value={o}>{o}</option>)}</SelectList></label>;
  return <Dialog open onOpenChange={v=>{if(!v)onClose()}}><DialogContent dir="rtl" className="office-dialog roll-dialog"><DialogHeader><DialogTitle>رول الأحكام</DialogTitle><DialogDescription>اختر القضايا وصفِّها وحدد الأعمدة، وراجع الرول قبل الطباعة. يُطبع أفقياً دون عنوان الموقع.</DialogDescription></DialogHeader>
   <div className="roll-top">
    <fieldset className="roll-scope"><legend>القضايا</legend>{([['shown',shownLabel,rowsOf.shown.length],['selected','القضايا المحددة',rowsOf.selected.length],['all','كل القضايا غير المؤرشفة',rowsOf.all.length]] as [Scope,string,number][]).map(([id,label,n])=><label key={id} className={'roll-choice'+(scope===id?' on':'')}><input type="radio" name="roll-scope" checked={scope===id} disabled={!n} onChange={()=>setScope(id)}/><span>{label}</span><b>{n}</b></label>)}</fieldset>
    <div className="roll-count" role="status"><b>{rows.length}</b><span>قضية ستُطبع</span></div>
   </div>
   <div className="roll-arrange">
-   <label className="field"><span>الترتيب</span><select aria-label="الترتيب" value={sort} onChange={e=>setSort(e.target.value as RollSort)}>{ROLL_SORTS.map(([id,l])=><option key={id} value={id}>{l}</option>)}</select></label>
-   <label className="field"><span>التجميع</span><select aria-label="التجميع" value={group} onChange={e=>setGroup(e.target.value as RollGroupKey)}>{ROLL_GROUPS.map(([id,l])=><option key={id} value={id}>{l}</option>)}</select></label>
+   <label className="field"><span>الترتيب</span><SelectList aria-label="الترتيب" value={sort} onChange={e=>setSort(e.target.value as RollSort)}>{ROLL_SORTS.map(([id,l])=><option key={id} value={id}>{l}</option>)}</SelectList></label>
+   <label className="field"><span>التجميع</span><SelectList aria-label="التجميع" value={group} onChange={e=>setGroup(e.target.value as RollGroupKey)}>{ROLL_GROUPS.map(([id,l])=><option key={id} value={id}>{l}</option>)}</SelectList></label>
    <Field label="عنوان الرول" value={title} onChange={setTitle}/>
    <div className="roll-toggles"><button type="button" className={'btn'+(panel==='filters'?' primary':'')} aria-expanded={panel==='filters'} onClick={()=>setPanel(p=>p==='filters'?'':'filters')}><Filter size={15}/> التصفية{active?` (${active})`:''}</button><button type="button" className={'btn'+(panel==='columns'?' primary':'')} aria-expanded={panel==='columns'} onClick={()=>setPanel(p=>p==='columns'?'':'columns')}><Columns3 size={15}/> الأعمدة ({columns.length})</button></div>
   </div>

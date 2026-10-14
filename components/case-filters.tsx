@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import type { ClientEntity } from '@/lib/clients';
 import type { CaseRecord } from '@/lib/domain';
 import { caseMonth, MONTH_NAMES, type CaseFilters } from '@/lib/case-browse';
+import {SelectList} from './filter-select';
 
 export default function CaseFilterFields({ records, clients, filters, onChange, onClear, hasFilters, total }: {
   records: CaseRecord[]; clients: ClientEntity[]; filters: CaseFilters; onChange: (key: keyof CaseFilters, value: string) => void;
@@ -21,14 +22,14 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
   }, [records, filters.year]);
   return <div className="case-filters">
     <div className="case-filter-grid">
-      <label className="field"><span>سنة الحكم</span><select value={filters.year} onChange={e => onChange('year', e.target.value)}>
+      <label className="field"><span>سنة الحكم</span><SelectList aria-label="سنة الحكم" value={filters.year} onChange={e => onChange('year', e.target.value)}>
         <option value="">كل السنوات</option>{options.years.map(year => <option key={year} value={year}>{year}</option>)}
-      </select></label>
-      <label className="field"><span>شهر الحكم</span><select value={filters.month} onChange={e => onChange('month', e.target.value)}>
+      </SelectList></label>
+      <label className="field"><span>شهر الحكم</span><SelectList aria-label="شهر الحكم" value={filters.month} onChange={e => onChange('month', e.target.value)}>
         <option value="">كل الأشهر</option>{MONTH_NAMES.map((month, index) => <option key={month} value={String(index + 1).padStart(2, '0')}>{month}</option>)}
-      </select></label>
+      </SelectList></label>
       <label className="field"><span>الكود</span><input value={filters.code} list={codeList} placeholder="الكود أو جزء منه" onChange={e => onChange('code', e.target.value)}/></label>
-      <label className="field"><span>الموكل / الجهة</span><select value={filters.clientEntityId} onChange={e => onChange('clientEntityId',e.target.value)}><option value="">كل الموكلين</option>{[...clients].sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c=><option key={c.id} value={c.id}>{c.name}{clients.some(x=>x.id!==c.id&&x.name===c.name)?' · '+c.id.slice(0,8):''}</option>)}</select></label>
+      <label className="field"><span>الموكل / الجهة</span><SelectList aria-label="الموكل / الجهة" value={filters.clientEntityId} onChange={e => onChange('clientEntityId',e.target.value)}><option value="">كل الموكلين</option>{[...clients].sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c=><option key={c.id} value={c.id}>{c.name}{clients.some(x=>x.id!==c.id&&x.name===c.name)?' · '+c.id.slice(0,8):''}</option>)}</SelectList></label>
       <label className="field"><span>الخصم</span><input value={filters.opponent} list={opponentList} placeholder="اسم الخصم أو جزء منه" onChange={e => onChange('opponent', e.target.value)}/></label>
     </div>
     <datalist id={codeList}>{options.codes.map(value => <option key={value} value={value}/>)}</datalist>

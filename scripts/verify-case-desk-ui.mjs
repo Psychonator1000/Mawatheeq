@@ -1,5 +1,6 @@
 // Synthetic end-to-end test. Run the Pages dev server on 127.0.0.1:4175 first.
 // Uses an isolated in-memory database and browser; never contacts the real backend.
+import {supportFilterSelects} from './filter-select-helper.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
@@ -35,6 +36,7 @@ const caseOf=async id=>(await rpc('mawatheeq_local_request',[login.token,'cases_
 const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
 const page=await context.newPage();const errors=[];const calls=[];
+supportFilterSelects(page.locator('body'));
 async function configurePage(page){
 page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));
@@ -74,7 +76,7 @@ try{
  await page.getByText('حُفظ في ملف القضية').waitFor();assert.equal((await caseOf('desk-missed')).contractNumber,'ع-77');
 
  await nav('الاستشارات');await click('استشارة جديدة');const dialog=page.getByRole('dialog');
- const client=dialog.getByLabel('الموكل',{exact:true});const options=await client.locator('option').allTextContents();assert.ok(options.includes('شركة اختبار المكتب'),'Clients can be picked');
+ const client=dialog.getByLabel('الموكل',{exact:true});await client.click();const options=await dialog.locator('.filter-select-list [role=option] b').allTextContents();await client.press('Escape');assert.ok(options.includes('شركة اختبار المكتب'),'Clients can be picked');
  await client.selectOption({label:'شركة اختبار المكتب'});await dialog.getByLabel('موضوع الاستشارة',{exact:true}).fill('مراجعة عقد إيجار تجريبي');await dialog.getByRole('button',{name:'حفظ',exact:true}).click();
  await page.getByText('حُفظت الاستشارة').waitFor();await page.locator('tr',{hasText:'مراجعة عقد إيجار تجريبي'}).waitFor();await screen('consultations');
  assert.equal(await count('سجل الأحكام','3'),'3','Consultations stay out of the judgments register');

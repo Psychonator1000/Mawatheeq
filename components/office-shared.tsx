@@ -1,10 +1,10 @@
 'use client';
-import {useId,useState} from 'react';
+import FilterSelect from './filter-select';
+import {useState} from 'react';
 import {officeRequest} from '@/lib/local-auth';
 import {changedFields,REVIEW_LABELS,type ReviewStatus,type Change} from '@/lib/office';
 export function OfficeSelect({label,value,onChange,options,empty}:{label:string;value:string;onChange:(value:string)=>void;options:[string,string][];empty?:string}) {
- const labelId=useId();
- return <label className="field"><span id={labelId}>{label}</span><select aria-labelledby={labelId} value={value} onChange={e=>onChange(e.target.value)}>{empty!==undefined&&<option value="">{empty}</option>}{options.map(([key,text])=><option key={key} value={key}>{text}</option>)}</select></label>;
+ return <FilterSelect label={label} value={value} onChange={onChange} empty={empty} options={options.map(([v,t])=>({value:v,label:t}))}/>;
 }
 /** Compact review state for dense lists: a dot (or check when approved) with the full label for screen readers and on hover. */
 export function ReviewDot({status}:{status:ReviewStatus}) {return <span className={'review-dot '+status} title={REVIEW_LABELS[status]} role="img" aria-label={REVIEW_LABELS[status]}/>}

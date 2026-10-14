@@ -11,6 +11,7 @@ import {ALL_FILE_STATUSES as FILE_STATUSES,EXECUTION_STATUSES,STATEMENT_CATEGORI
  type StatementCategory,type StatementData,type StatementStatus,type PaymentData,type PaymentType} from '@/lib/collections';
 import {Field,DateField,Choice,PickOrType} from '../shared';
 import {officeTime} from '../office-shared';
+import {SelectList} from '../filter-select';
 
 export type StatementRecord=DepartmentRecord<StatementData>;
 export type PaymentRecord=DepartmentRecord<PaymentData>;
@@ -78,7 +79,7 @@ export function FileStatements({file,rows,editable,canPrint,onChanged}:{file:Col
    <div className="form-grid">
     <PickOrType key={category+(editing?.id||'')} label="إجراء التحصيل أو التنفيذ" value={draft.action} onChange={v=>set('action',v)} options={STATEMENT_ACTIONS[category]} empty="اختر الإجراء"/>
     <DateField label="تاريخ المراجعة" value={draft.reviewDate} onChange={v=>set('reviewDate',v)}/>
-    {category==='calls'&&<><div className="field"><span>رقم الاتصال</span><div className="phone-row"><select aria-label="الطرف" value={draft.contactParty} onChange={e=>set('contactParty',e.target.value)}>{CONTACT_PARTIES.map(([id,l])=><option key={id} value={id}>{l}</option>)}</select><input type="tel" aria-label="رقم الاتصال" value={draft.phone} onChange={e=>set('phone',e.target.value.replace(/[^+0-9 ]/g,''))} placeholder="رقم الهاتف"/>{links&&<><a className="icon-btn" href={links.tel} aria-label="اتصال"><Phone size={15}/></a><a className="icon-btn" href={links.whatsapp} target="_blank" rel="noreferrer" aria-label="واتساب"><MessageCircle size={15}/></a></>}</div></div>
+    {category==='calls'&&<><div className="field"><span>رقم الاتصال</span><div className="phone-row"><SelectList aria-label="الطرف" value={draft.contactParty} onChange={e=>set('contactParty',e.target.value)}>{CONTACT_PARTIES.map(([id,l])=><option key={id} value={id}>{l}</option>)}</SelectList><input type="tel" aria-label="رقم الاتصال" value={draft.phone} onChange={e=>set('phone',e.target.value.replace(/[^+0-9 ]/g,''))} placeholder="رقم الهاتف"/>{links&&<><a className="icon-btn" href={links.tel} aria-label="اتصال"><Phone size={15}/></a><a className="icon-btn" href={links.whatsapp} target="_blank" rel="noreferrer" aria-label="واتساب"><MessageCircle size={15}/></a></>}</div></div>
      <div className="field"><span>طريقة الاتصال</span><div className="segmented small" role="radiogroup" aria-label="طريقة الاتصال">{CONTACT_METHODS.map(([id,l])=><button type="button" role="radio" aria-checked={draft.method===id} key={id||'none'} className={draft.method===id?'on':''} onClick={()=>set('method',id)}>{l}</button>)}</div></div></>}
     <div className="field"><span>حالة التنفيذ</span><div className="segmented small" role="radiogroup" aria-label="حالة التنفيذ">{STATEMENT_STATUSES.map(([id,l])=><button type="button" role="radio" aria-checked={draft.status===id} key={id} className={draft.status===id?'on':''} onClick={()=>set('status',id)}>{l}</button>)}</div></div>
     <Field label="الإجراء (نص الإفادة)" value={draft.text} onChange={v=>set('text',v)} wide multiline/>

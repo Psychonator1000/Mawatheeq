@@ -1,5 +1,6 @@
 // Synthetic end-to-end test for notifications, quick search, personal work, calendar and printing.
 // Run the Pages dev server on 127.0.0.1:4175 first. Uses an isolated in-memory database; never contacts the real backend.
+import {supportFilterSelects} from './filter-select-helper.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
@@ -48,6 +49,7 @@ const context=await browser.newContext({viewport:{width:1440,height:1000},reduce
 // The test machine has few cores; pin full effects so automatic light mode does not hide what is being tested.
 await context.addInitScript(()=>{try{const k='mawatheeq.appearance.v1',a=JSON.parse(localStorage.getItem(k)||'{}');if(!a.performance){a.performance='full';localStorage.setItem(k,JSON.stringify(a))}}catch{/* test setup */}});
 const page=await context.newPage();const errors=[];
+supportFilterSelects(page.locator('body'));
 page.on('pageerror',e=>errors.push(e.message));
 let slowServer=0;const uploads=[];
 // The synthetic backend for every page in a context: database calls, the files function and chat storage uploads.

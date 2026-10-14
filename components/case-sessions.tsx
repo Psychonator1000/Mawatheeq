@@ -1,6 +1,7 @@
 'use client';
 import {useState} from 'react';
-import {CIRCUITS,suggestions} from '@/lib/choices';
+import {suggestions} from '@/lib/choices';
+import CircuitField from './circuit-field';
 import {CalendarPlus,Gavel,Scale} from 'lucide-react';
 import {toast} from 'sonner';
 import {type CaseRecord,type Procedure,formatDate,todayISO} from '@/lib/domain';
@@ -8,7 +9,7 @@ import {DECISIONS,EXPERT_DECISIONS,VENUES,decisionOf,isSession,nextSessionTitle,
 import {LEVEL_TITLE,currentLevel} from '@/lib/case-stages';
 import {officeRequest} from '@/lib/local-auth';
 import type {WorkItem} from '@/lib/office';
-import {Field,DateField,Choice,PickOrType} from './shared';
+import {Field,DateField,Choice} from './shared';
 import Needs from './needs';
 
 /** Sessions of the current court level, newest first. */
@@ -71,10 +72,3 @@ export default function CaseSessions({c,canEdit,canSchedule,busy,username,assign
  </div>;
 }
 
-/** The circuit as «النوع / الرقم», e.g. «تجاري كلي / 5»: the kind from a list (or typed via «أخرى…») and the circuit or hall number. */
-function CircuitField({value,onChange}:{value:string;onChange:(v:string)=>void}){
- const m=/^(.*?)\s*\/\s*([^/]+)$/.exec(value),kind=(m?m[1]:value).trim(),num=(m?m[2]:'').trim();
- const join=(k:string,n:string)=>[k.trim(),n.trim()].filter(Boolean).join(' / ');
- return <><PickOrType label="الدائرة" value={kind} onChange={k=>onChange(join(k,num))} options={CIRCUITS} empty="اختر الدائرة"/>
-  <Field label="رقم الدائرة / القاعة" value={num} onChange={n=>onChange(join(kind,n))} placeholder="مثل 5"/></>;
-}

@@ -10,6 +10,7 @@ import {Field,DateField,Empty,api} from './shared';
 import {OfficeSelect} from './office-shared';
 import {EditorDialog} from './departments/shared';
 import type {Member,WorkItem} from '@/lib/office';
+import {SelectList} from './filter-select';
 
 type Props={page:DeskPage;records:CaseRecord[];clients:ClientEntity[];work:WorkItem[];members:Member[];canEdit:boolean;canCreate:boolean;canExport:boolean;printedBy:string;
  onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onNew:(c:CaseRecord)=>void;
@@ -55,7 +56,7 @@ function PostRow({c,date,p}:{c:CaseRecord;date:string;p:Props}){
    p.onSaved(await saveCase({...c,procedures:[...c.procedures,proc]},p.clients));toast.success(`رُحّلت جلسة ${ref(c)}`)}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}
  }
  return <tr><td><CaseCell c={c} onOpen={p.onOpen}/></td><td>{String(last?.court||c.court||'—')}<small>{last?`آخر قرار: ${String(last.decision||last.text||'')}`:''}</small></td>
-  <td>{p.canEdit?<select aria-label={'قرار جلسة '+ref(c)} value={decision} onChange={e=>setDecision(e.target.value)}><option value="">اختر القرار</option>{list.map(d=><option key={d.label}>{d.label}</option>)}</select>:'—'}</td>
+  <td>{p.canEdit?<SelectList aria-label={'قرار جلسة '+ref(c)} value={decision} onChange={e=>setDecision(e.target.value)}><option value="">اختر القرار</option>{list.map(d=><option key={d.label}>{d.label}</option>)}</SelectList>:'—'}</td>
   <td>{p.canEdit&&needsNext&&decision?<div className="desk-next"><DateField label={'الجلسة التالية '+ref(c)} value={next} onChange={setNext}/><input type="time" aria-label={'ساعة الجلسة التالية '+ref(c)} value={time} onChange={e=>setTime(e.target.value)}/></div>:<span className="muted">{decision?'لا جلسة تالية':'—'}</span>}</td>
   <td>{p.canEdit&&<input aria-label={'تفاصيل القرار '+ref(c)} value={details} onChange={e=>setDetails(e.target.value)} placeholder="تفاصيل (اختياري)"/>}</td>
   <td>{p.canEdit&&<button type="button" className="btn primary" disabled={busy||!decision} onClick={()=>void post()}><Save size={15}/> ترحيل</button>}</td></tr>;

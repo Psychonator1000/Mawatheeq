@@ -3,6 +3,7 @@ import { useId, useState } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, CartesianGrid, Tooltip } from 'recharts';
 import { todayISO, type CaseRecord } from '@/lib/domain';
 import { caseMonth, monthlyCaseCounts, monthLabel } from '@/lib/case-browse';
+import {SelectList} from './filter-select';
 
 export default function MonthlyCases({ records, onSelectMonth }: { records: CaseRecord[]; onSelectMonth: (month: string) => void }) {
   const currentYear = todayISO().slice(0, 4);
@@ -12,7 +13,7 @@ export default function MonthlyCases({ records, onSelectMonth }: { records: Case
   const monthly = monthlyCaseCounts(records, year);
   return <section className="panel">
     <div className="panel-head"><div><h2>حركة الأحكام</h2><p className="panel-note">اضغط على الشهر لعرض أحكامه</p></div>
-      <label className="chart-year"><span>السنة</span><select value={year} onChange={e => setYear(e.target.value)}>{years.map(y => <option key={y} value={y}>{y}</option>)}</select></label>
+      <label className="chart-year"><span>السنة</span><SelectList aria-label="السنة" value={year} onChange={e => setYear(e.target.value)}>{years.map(y => <option key={y} value={y}>{y}</option>)}</SelectList></label>
     </div>
     <div className="panel-body">
       <div className="chart-box monthly-chart"><ResponsiveContainer width="100%" height="100%">

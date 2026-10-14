@@ -1,5 +1,6 @@
 // Synthetic end-to-end test. Run the Pages dev server on 127.0.0.1:4175 first.
 // Uses an isolated in-memory database and browser; never contacts the real backend.
+import {supportFilterSelects} from './filter-select-helper.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
@@ -25,6 +26,7 @@ for(let i=0;i<25;i++)await rpc('mawatheeq_local_request',[login.token,'save_case
 const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
 const page=await context.newPage();const errors=[];const calls=[];
+supportFilterSelects(page.locator('body'));
 async function configurePage(page){
 page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));
@@ -60,10 +62,11 @@ try{
  await screen('secretary-desktop');await page.reload();await page.getByRole('heading',{name:'كل موعد في مكانه.',exact:true}).waitFor();
  await switchTo('القضايا');await click('المهام والجلسات');await page.getByText('تنسيق موعد تجريبي',{exact:true}).waitFor();
  await switchTo('التحصيل');await click('ملف تحصيل جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');
- for(const [label,value] of [['المدعي (الموكل)','شركة اختبار التحصيل'],['المدعى عليه','خصم اختبار التحصيل'],['الرقم المدني للمدعى عليه','200000000001'],['الجنسية','كويتي'],['العنوان','عنوان تجريبي'],['الهاتف','50000000'],['الرقم المدني للمدعي','SYN-1'],['السجل التجاري للمدعي','SYN-2'],['رقم العقد / الحساب','SYN-ACCOUNT'],['مبلغ المطالبة (د.ك)','125.125'],['رقم أمر الأداء','1/2026'],['محكمة أمر الأداء','محكمة تجريبية'],['رقم الدعوى','1'],['سنة الدعوى','2026'],['محكمة الجلسة','محكمة تجريبية'],['الدائرة','1'],['مرجع المصدر الذي تمت مطابقته','عقد تجريبي 1']])await field(label,value);
+ for(const [label,value] of [['المدعي (الموكل)','شركة اختبار التحصيل'],['المدعى عليه','خصم اختبار التحصيل'],['الرقم المدني للمدعى عليه','200000000001'],['الجنسية','كويتي'],['العنوان','عنوان تجريبي'],['الهاتف','50000000'],['الرقم المدني للمدعي','SYN-1'],['السجل التجاري للمدعي','SYN-2'],['رقم العقد / الحساب','SYN-ACCOUNT'],['مبلغ المطالبة (د.ك)','125.125'],['رقم أمر الأداء','1/2026'],['محكمة أمر الأداء','محكمة تجريبية'],['رقم الدعوى','1'],['سنة الدعوى','2026'],['محكمة الجلسة','محكمة تجريبية'],['رقم الدائرة / القاعة','1'],['مرجع المصدر الذي تمت مطابقته','عقد تجريبي 1']])await field(label,value);
+ await page.getByLabel('الدائرة',{exact:true}).selectOption({label:'تجاري كلي'});assert.equal(await page.getByLabel('رقم الدائرة / القاعة',{exact:true}).inputValue(),'1','The circuit number stays when the kind is picked after it');
  for(const label of ['تاريخ رفض أمر الأداء','تاريخ التكليف بالوفاء','تاريخ كشف الحساب','تاريخ الجلسة'])await pickToday(label);
  // The hearing day follows the hearing date (a choice, not typed).
- await page.getByRole('combobox',{name:'يوم الجلسة'}).getByText(/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)$/).waitFor();
+ await page.waitForFunction(()=>/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)$/.test(document.querySelector('input[role=combobox][aria-label="يوم الجلسة"]')?.value||''));
  await page.getByRole('tab',{name:/^الحافظة والمستندات/}).click();await click('إضافة مستند للحافظة');await field('وصف المستند 1','عقد تجريبي تمت مراجعته');await click('حفظ ملف التحصيل');
  await page.getByRole('heading',{name:'مراجعة المصدر',exact:true}).waitFor();await page.getByText('لا يمكن الإنشاء بعد: سجّل «مراجعة المصدر» أعلاه أولاً.').first().waitFor();assert.equal(await page.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).isDisabled(),true);
  await page.getByRole('checkbox',{name:'راجعت البيانات الحالية وطابقتها مع المصدر المسجل.',exact:true}).check();await click('تسجيل مراجعة المصدر');
