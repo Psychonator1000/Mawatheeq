@@ -120,7 +120,7 @@
 /* Making a case from a collection file. */
 .make-case-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;margin:0 0 14px;padding:12px 14px;border-radius:10px;background:var(--muted,#f4eee5)}
 .make-case-summary div{min-width:0}.make-case-summary dt{font-size:11.5px;color:var(--muted-foreground)}.make-case-summary dd{margin:0;font-weight:600;overflow-wrap:anywhere}
-.case-quick .btn:has(+ .make-case),.case-quick .make-case{grid-column:1/-1}.case-quick .make-case-needs{grid-column:1/-1;margin:0}
+.case-quick .btn:has(+ .case-actions),.case-quick .case-actions{grid-column:1/-1}.case-actions{display:grid;grid-template-columns:auto 1fr;gap:8px}.case-quick .make-case-needs{grid-column:1/-1;margin:0}
 /* Several parties on one collection file. */
 .extra-parties .extra-side+.extra-side{margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)}
 .extra-party{display:grid;grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)) auto;gap:10px;align-items:end;margin-top:10px}

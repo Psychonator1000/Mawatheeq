@@ -104,8 +104,8 @@ export function ClientSelect({ clients, value, onChange, onCreate }: { clients: 
   </div>;
 }
 
-/** Client cards per page: twenty fills whole rows of five, four or two. */
-const PER_PAGE = 20;
+/** Client cards per page: twenty-five, five rows of five on wide screens. */
+const PER_PAGE = 25;
 
 export default function ClientDirectory({ clients, records, canMerge, canCollections=false, readOnly=false, onSaved, onReload, onShowCases, onAddCase, onOpenCase }: {
   clients: ClientEntity[]; records: CaseRecord[]; canMerge: boolean; canCollections?: boolean; readOnly?: boolean; onSaved: (c: ClientEntity) => void;

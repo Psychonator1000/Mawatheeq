@@ -178,7 +178,8 @@ try{
   await page.keyboard.press('Escape');
   await dept('collections','link_case',{id:byCode('W-3').id,revision:byCode('W-3').revision,caseId:''}); // the steps below link W-3 from a case
   await page.locator('.collection-card').filter({hasText:'W-2'}).getByRole('button',{name:'فتح الملف'}).click();
-  await page.getByRole('tab',{name:/^الأطراف والمطالبة/}).click();await page.getByRole('button',{name:'ربط بقضية',exact:true}).click();
+  // The side panel's «ربط بقضية» opens the picker in «الأطراف والمطالبة».
+  await page.locator('.case-quick').getByRole('button',{name:'ربط بقضية',exact:true}).click();await page.getByRole('tab',{name:/^الأطراف والمطالبة/,selected:true}).waitFor();
   await page.getByRole('dialog').getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-1');await page.getByRole('button',{name:'ربط الملف بالقضية',exact:true}).click();
   await page.getByText('رُبط الملف بالقضية').first().waitFor();await page.keyboard.press('Escape');
   recs=await dept('collections','records_page');assert.equal(byCode('W-2').caseId,'ui-case-1','Linked from the file');

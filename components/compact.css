@@ -59,3 +59,12 @@
 :root .department-metrics{gap:12px}
 :root .department-metrics>div{padding:12px 16px}
 :root .department-metrics b{font-size:26px}
+
+/* Card lists: five in a row on wide screens, twenty-five to a page (5 × 5). */
+@media(min-width:1280px){
+ :root .collection-grid,:root .client-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+ :root .collection-card{padding:14px 16px}
+ :root .collection-card header{margin-bottom:10px;gap:5px}
+ :root .collection-card h2{font-size:15px;line-height:1.7}
+ :root .collection-card footer{padding-top:10px}
+}
