@@ -1,6 +1,6 @@
 # Cases desk (أعمال القضايا)
 
-Eight pages under «أعمال القضايا» in the cases workspace sidebar, plus two that open as windows from buttons beside «رول الأحكام» in the judgments register, the same way «رول الأحكام» does: the sessions roll («رول الجلسات») and the judgments issued in a period («الأحكام الصادرة»). Anyone who can open the cases section sees them. They only show the cases that account may already see, and they edit those cases with the same save path and the same edit permission as the case file. No new tables, migrations or permissions are needed: the extra fields are stored in the case record.
+Seven pages under «أعمال القضايا» in the cases workspace sidebar, plus three that open as windows from buttons beside «رول الأحكام» in the judgments register, the same way «رول الأحكام» does: the sessions roll («رول الجلسات»), the judgments issued in a period («الأحكام الصادرة») and the printable case statements («كشوف القضايا»). Anyone who can open the cases section sees them. They only show the cases that account may already see, and they edit those cases with the same save path and the same edit permission as the case file. No new tables, migrations or permissions are needed: the extra fields are stored in the case record.
 
 | Page | What it does |
 | --- | --- |
