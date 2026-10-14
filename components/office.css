@@ -359,7 +359,8 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .desk-panel .status-chips{padding:0 0 14px}
 .desk-toolbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:18px}
 .desk-toolbar .field{min-width:170px;flex:0 1 200px}
-.desk-toolbar .tag{align-self:center}
+/* Badges and checkboxes line up with the inputs, not with the field labels above them. */
+.desk-toolbar>:not(.field){align-self:flex-end;min-height:var(--control-h,42px);display:inline-flex;align-items:center}.desk-toolbar>.tag{min-height:0;margin-bottom:calc((var(--control-h,42px) - 29px)/2)}
 .desk-sub{display:flex;align-items:baseline;gap:10px;margin:22px 0 10px;font-size:15px}
 .desk-sub small{font-weight:400;color:var(--muted-foreground)}
 .desk-day+.desk-day{margin-top:8px}

@@ -6,6 +6,7 @@ import '@fontsource-variable/noto-sans-arabic';
 import '@/components/fonts.css';
 import '../app/globals.css';
 import './pages.css';
+import '@/components/compact.css';
 import SharedApp from './shared-app';
 import { applyAppearance, loadAppearance } from '@/lib/appearance';
 import ErrorBoundary, { reloadForUpdate } from '@/components/error-boundary';
