@@ -155,7 +155,21 @@ try{
   await page.locator('.collection-card').filter({hasText:'W-3'}).getByRole('button',{name:'فتح الملف'}).click();
   await page.getByRole('tab',{name:/^الأطراف والمطالبة/}).click();await page.getByText('ملفات أخرى لنفس الخصم (1)').waitFor();
   await page.getByText(/لا يطابق رقم التحقق/).waitFor();assert.equal(await page.getByLabel('الموكل في سجل الموكلين',{exact:true}).inputValue(),uiClient);
-  await screen('collection-debtor');await page.keyboard.press('Escape');
+  await screen('collection-debtor');
+  // «إنشاء قضية من الملف»: blocked with a reason while edits are unsaved; asks for the office code (a file number is not a case code), refuses a taken code, then opens the case and links the file.
+  const makeCase=page.getByRole('button',{name:'إنشاء قضية من الملف'});await page.getByLabel('العنوان',{exact:true}).fill('عنوان مؤقت');
+  assert.equal(await makeCase.isDisabled(),true);await screen('make-case-blocked');await page.locator('.make-case-needs').getByText('احفظ تعديلات الملف أولاً').waitFor();
+  await page.getByLabel('العنوان',{exact:true}).fill((byCode('W-3').payload.address)||'');await page.waitForFunction(()=>!document.querySelector('.make-case')?.disabled);
+  await makeCase.click();const mk=page.getByRole('dialog',{name:'إنشاء قضية من ملف التحصيل'});
+  assert.equal(await mk.getByRole('button',{name:'إنشاء القضية وربط الملف'}).isDisabled(),true);await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('TEST-0');await mk.getByText('هذا الكود مستخدم لقضية أخرى').waitFor();
+  await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('COL-W3');await screen('make-case');await mk.getByRole('button',{name:'إنشاء القضية وربط الملف'}).click();
+  await page.getByText(/أُنشئت القضية COL-W3 ورُبط بها الملف/).first().waitFor();await page.locator('.case-link').getByText(/COL-W3/).waitFor();
+  assert.equal(await makeCase.count(),0,'The button leaves once the file has a case');
+  recs=await dept('collections','records_page');const made=(await rpc('mawatheeq_local_request',[login.token,'cases_page',JSON.stringify({offset:0})])).find(c=>c.payload?.code==='COL-W3'||c.code==='COL-W3');
+  assert.ok(made,'The case is in the cases register');assert.equal(byCode('W-3').caseId,made.id,'The file is linked to the new case');
+  const mp=made.payload||made;assert.equal(mp.opponent,byCode('W-3').payload.defendant);assert.equal(mp.clientEntityId,uiClient);assert.equal(mp.workflow||'','','A filed case, not a study');
+  await page.keyboard.press('Escape');
+  await dept('collections','link_case',{id:byCode('W-3').id,revision:byCode('W-3').revision,caseId:''}); // the steps below link W-3 from a case
   await page.locator('.collection-card').filter({hasText:'W-2'}).getByRole('button',{name:'فتح الملف'}).click();
   await page.getByRole('tab',{name:/^الأطراف والمطالبة/}).click();await page.getByRole('button',{name:'ربط بقضية',exact:true}).click();
   await page.getByRole('dialog').getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-1');await page.getByRole('button',{name:'ربط الملف بالقضية',exact:true}).click();

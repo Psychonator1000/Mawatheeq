@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useRef,useState,type ReactElement} from 'react';
 import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf,suggestions} from '@/lib/choices';
-import {Files,Plus,FileCheck2,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
+import {Files,Plus,FileCheck2,Scale,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
 import BatchPrint from './batch-print';
 import CollectionImport from './collection-import';
 import {suggestedEvidence} from '@/lib/document-tools';
@@ -13,13 +13,14 @@ import {COLLECTION_FIELDS,missingDocumentFields,missingFieldKeys} from '@/lib/co
 import {ALL_FILE_STATUSES as FILE_STATUSES,CLOSED_STATUSES,STATEMENT_CATEGORIES,STATEMENT_STATUSES,PAYMENT_TYPES,dueStatements,fils,kwd,kwdPlain,position,civilIdValid,debtorKey,roundRobin} from '@/lib/collections';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
-import {formatDate,todayISO} from '@/lib/domain';
+import {emptyCase,formatDate,todayISO,type CaseRecord} from '@/lib/domain';
+import Needs,{type NeedList} from '../needs';
 import {listHtml,printHtml} from '@/lib/print';
-import {Field,DateField,Empty,saveBlob,Choice} from '../shared';
+import {Field,DateField,Empty,saveBlob,Choice,api} from '../shared';
 import {OfficeSelect,officeTime} from '../office-shared';
 import PageNavigation from '../page-navigation';
 import {Tabs,TabsList,TabsTrigger,TabsContent} from '../ui/tabs';
-import {CasePicker,DepartmentHistory,StatusMessage,useRecords,exportCsv} from './shared';
+import {CasePicker,DepartmentHistory,EditorDialog,StatusMessage,useRecords,exportCsv} from './shared';
 import {FollowFields,FileStatements,FilePosition,type StatementRecord,type PaymentRecord} from './collection-followup';
 import RecordWindow,{useListNav,type WindowNav,type Enter} from '../record-window';
 import CopyChip from '../copy-chip';
@@ -126,9 +127,12 @@ function PaymentsList({payments,fileOf,onOpen,canPrint}:{payments:PaymentRecord[
   <div className="panel-body">{!list.length?<Empty title="لا توجد حركات" text="تُضاف الدفعات من تبويب «الوضع المالي» في ملف التحصيل."/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>التاريخ</th><th>الملف</th><th>النوع</th><th>المبلغ</th><th>الطريقة / المرجع</th><th>سجّلها</th><th/></tr></thead><tbody>{list.map(p=>{const f=fileOf(p.subjectId);return <tr key={p.id} className={p.payload.status==='void'?'void-row':''}><td className="nowrap">{formatDate(p.payload.date)}</td><td><b>{f?.payload.code||'—'}</b><small>{f?.payload.defendant}</small></td><td>{typeLabel(p.payload.type)}{p.payload.status==='void'&&<small className="office-alert">ملغاة: {p.payload.voidReason}</small>}</td><td className="nowrap amount">{kwd(amount(p))} د.ك</td><td>{p.payload.method||'—'}<small>{p.payload.reference}</small></td><td>{p.createdBy}</td><td><button className="btn" onClick={()=>onOpen(p.subjectId)}>فتح الملف</button></td></tr>})}</tbody></table></div>}</div></section>;
 }
 
-function CollectionEditor({initial,cases,access,statements,payments,assignees,batches,tags,clients,related,onOpenFile,onClose,onChanged,nav,onNavigate,enter}:{clients:ClientOption[];related:CollectionRecord[];onOpenFile:(f:CollectionRecord)=>void;initial:CollectionRecord;cases:CaseSummary[];access:Permissions;statements:StatementRecord[];payments:PaymentRecord[];assignees:string[];batches:string[];tags:string[];onClose:()=>void;onChanged:()=>void;nav?:WindowNav;onNavigate?:(dir:'prev'|'next')=>void;enter?:Enter}) {
+function CollectionEditor({initial,cases:loadedCases,access,statements,payments,assignees,batches,tags,clients,related,onOpenFile,onClose,onChanged,nav,onNavigate,enter}:{clients:ClientOption[];related:CollectionRecord[];onOpenFile:(f:CollectionRecord)=>void;initial:CollectionRecord;cases:CaseSummary[];access:Permissions;statements:StatementRecord[];payments:PaymentRecord[];assignees:string[];batches:string[];tags:string[];onClose:()=>void;onChanged:()=>void;nav?:WindowNav;onNavigate?:(dir:'prev'|'next')=>void;enter?:Enter}) {
  const [saved,setSaved]=useState(initial),[draft,setDraft]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState(''),[attested,setAttested]=useState(false),[outputs,setOutputs]=useState<{id:string;kind:string;recordRevision:number;templateVersion:string;createdAt:string;actor:string}[]>([]),[outputVersion,setOutputVersion]=useState(0);
  const [tab,setTab]=useState(initial.revision?'file':'parties');
+ // Cases made from this window join the list at once, so the link shows without reloading the page.
+ const [made,setMade]=useState<CaseSummary[]>([]),[making,setMaking]=useState(false);
+ const cases=useMemo(()=>[...loadedCases,...made.filter(m=>!loadedCases.some(c=>c.id===m.id))],[loadedCases,made]);
  const intent=useRef<Record<string,string>>({});
  const dirty=JSON.stringify(draft)!==JSON.stringify(saved),c=cases.find(c=>c.id===draft.caseId);
  const reviewed=!!saved.review&&saved.review.recordRevision===saved.revision&&(saved.review.caseRevision??null)===(c?.revision??null);
@@ -141,6 +145,11 @@ function CollectionEditor({initial,cases,access,statements,payments,assignees,ba
  const p=draft.payload,money=position(saved.payload,payments.map(x=>x.payload));
  const canSave=editable&&!busy&&(!!draft.caseId||allScope)&&(dirty||!saved.revision);
  const save=()=>{if(canSave)void mutate('save_record',{record:draft})};
+ // Making a case from the file: the button stays visible, and says what is missing and where, until it can work.
+ const caseNeeds:NeedList=[!(access.canEdit&&access.caseScope==='all'&&access.sections.includes('cases'))&&'إنشاء القضايا يحتاج قسم «القضايا» وصلاحية كل القضايا؛ يمنحها مسؤول المكتب',
+  !saved.revision&&'احفظ ملف التحصيل أولاً',dirty&&'احفظ تعديلات الملف أولاً',
+  !saved.payload.clientEntityId&&'اربط الملف بملف الموكل في «الأطراف والمطالبة»',!saved.payload.defendant?.trim()&&'أدخل اسم المدعى عليه في «الأطراف والمطالبة»'];
+ const caseBlocked=caseNeeds.some(Boolean);
  const openStatements=statements.filter(s=>!s.archived&&s.payload.status!=='done').length;
  // Fields the claim or the bundle still need are marked where they are entered, and counted on their tab.
  const need=missingFieldKeys(draft.payload);
@@ -150,10 +159,11 @@ function CollectionEditor({initial,cases,access,statements,payments,assignees,ba
   badges={<>{(p.code||c?.code)&&<CopyChip label="الكود" value={p.code||c?.code||''}/>}{saved.payload.fileStatus&&<span className={'tag '+statusTone(saved.payload.fileStatus)}>{saved.payload.fileStatus}</span>}<span className={'tag '+(reviewed?'green':'amber')}>{saved.archived?'مؤرشف':reviewed?'تمت المراجعة':'يحتاج مراجعة'}</span></>}
   facts={[['إجمالي المطالبة',money.total?kwd(money.total)+' د.ك':''],['المسدد',saved.revision?kwd(money.paid)+' د.ك':''],['الباقي',saved.revision?kwd(money.remaining)+' د.ك':''],['المسؤول',saved.payload.assignedTo||''],['القضية',c?c.code||c.autoNumber||'بلا كود':''],['إفادات مفتوحة',openStatements||'']]}
   pin={p.amountWords?<p className="amount-words">{p.amountWords}</p>:undefined}
-  quick={saved.revision?<><button type="button" className="btn" onClick={()=>setTab('statements')}><ClipboardList size={16}/> إفادات الملف</button><button type="button" className="btn" onClick={()=>setTab('money')}><Wallet size={16}/> الوضع المالي</button><button type="button" className="btn" onClick={()=>setTab('papers')}><FileCheck2 size={16}/> المراجعة والمستندات</button></>:undefined}
+  quick={<>{saved.revision&&<><button type="button" className="btn" onClick={()=>setTab('statements')}><ClipboardList size={16}/> إفادات الملف</button><button type="button" className="btn" onClick={()=>setTab('money')}><Wallet size={16}/> الوضع المالي</button><button type="button" className="btn" onClick={()=>setTab('papers')}><FileCheck2 size={16}/> المراجعة والمستندات</button></>}{editable&&!saved.caseId&&<><button type="button" className="btn primary make-case" disabled={caseBlocked||busy} onClick={()=>setMaking(true)}><Scale size={16}/> إنشاء قضية من الملف</button><Needs items={caseNeeds} className="make-case-needs"/></>}</>}
   nav={nav} onNavigate={onNavigate} unit="الملف" enter={enter} dirty={dirty&&editable} busy={busy} onSave={editable?save:undefined} onClose={onClose}
   needs={editable?[!draft.caseId&&!allScope&&'اربط الملف بقضية في «الأطراف والمطالبة»؛ حسابك يرى قضايا محددة فقط']:[]}
   footer={<>{editable&&<button className="btn primary" type="button" onClick={save} disabled={busy||(!draft.caseId&&!allScope)||(!dirty&&!!saved.revision)}>حفظ ملف التحصيل</button>}{!!saved.revision&&access.canEdit&&<button className="btn" title={dirty?'احفظ تعديلات الملف أولاً':undefined} disabled={busy||dirty} onClick={()=>void mutate('archive_record',{archived:!saved.archived})}>{saved.archived?'إعادة فتح الملف':'أرشفة الملف'}</button>}<button type="button" className="btn" disabled={busy} onClick={onClose}>إغلاق الملف</button></>}>
+ {making&&<MakeCase file={saved} cases={cases} onClose={()=>setMaking(false)} onMade={(r,c)=>{setMade(m=>[...m,c]);setSaved(r);setDraft(r);setMaking(false);onChanged()}}/>}
  {error&&<p role="alert" className="notice">{error}</p>}
  <Tabs value={tab} onValueChange={setTab} dir="rtl"><TabsList className="detail-tabs case-tabs">{tabs.map(([v,l,Icon,n,off])=><TabsTrigger key={v} value={v} disabled={off}><Icon aria-hidden/>{l}{n?<span className="tab-count">{n}</span>:null}</TabsTrigger>)}</TabsList>
  {!saved.revision&&<p className="subtitle">تُفتح «إفادات الملف» و«الوضع المالي» و«السجل» بعد حفظ الملف أول مرة.</p>}
@@ -208,4 +218,36 @@ function ClientLink({value,clients,company,onChange}:{value:string;clients:Clien
   <p className="subtitle">{current?'تظهر ملفات التحصيل هذه في ملف الموكل.':'اربط الملف بملف الموكل ليظهر ضمن ملفاته.'} الاسم المكتوب في المستندات يبقى كما أُدخل.</p>
   {guess&&<button type="button" className="btn" onClick={()=>onChange(guess.id)}>ربط بـ «{guess.name}»</button>}
  </section>;
+}
+
+/** Opens a case in the cases register from a collection file and links the file to it. The office code is asked for:
+ a collection file number is not a case code. Parties, court, numbers and the next hearing are taken from the file. */
+function MakeCase({file,cases,onClose,onMade}:{file:CollectionRecord;cases:CaseSummary[];onClose:()=>void;onMade:(r:CollectionRecord,c:CaseSummary)=>void}){
+ const p=file.payload;
+ const [code,setCode]=useState(''),[autoNumber,setAutoNumber]=useState(p.fileAutoNumber||''),[caseNumber,setCaseNumber]=useState(p.lawsuitYear&&p.lawsuitNumber?`${p.lawsuitYear}/${p.lawsuitNumber}`:p.lawsuitNumber||''),[court,setCourt]=useState(p.hearingCourt||p.court||''),[busy,setBusy]=useState(false);
+ const taken=!!code.trim()&&cases.some(c=>c.code.trim().toLowerCase()===code.trim().toLowerCase());
+ const needs:NeedList=[!code.trim()&&'أدخل كود المكتب للقضية',taken&&'هذا الكود مستخدم لقضية أخرى؛ اختر كوداً جديداً'];
+ async function make(){if(needs.some(Boolean)||busy)return;setBusy(true);let made:CaseRecord|null=null;
+  try{const amount=p.amount?kwd(fils(p.amount))+' د.ك':'';
+   const first=p.hearingDate?[{id:crypto.randomUUID(),date:todayISO(),kind:'قيد الدعوى',court,text:'قيد الدعوى'+(caseNumber?' رقم '+caseNumber:'')+' (من ملف التحصيل)',followup:p.hearingDate,source:'ملف التحصيل'}]:[];
+   const d=await api('/api/cases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case:{...emptyCase(),code:code.trim(),autoNumber:autoNumber.trim(),client:p.company,clientGroup:p.company,clientEntityId:p.clientEntityId,opponent:p.defendant,caseNumber:caseNumber.trim(),court:court.trim(),
+    subject:'مطالبة مالية'+(amount?' بمبلغ '+amount:''),source:'ملف التحصيل',notes:'أُنشئت من ملف التحصيل'+(p.code?' رقم '+p.code:'')+'.',procedures:first}})});
+   made=d.case as CaseRecord;
+   const r=await departmentRequest<CollectionRecord>('link_case',{workspace:'collections',id:file.id,revision:file.revision,caseId:made.id});
+   onMade(r,{id:made.id,code:made.code,autoNumber:made.autoNumber,client:made.client,clientGroup:made.clientGroup,clientEntityName:made.clientEntityName,opponent:made.opponent,revision:made.revision,archived:false});
+   toast.success(`أُنشئت القضية ${made.code} ورُبط بها الملف، وتظهر الآن في سجل الأحكام`)}
+  catch(e){toast.error(made?`أُنشئت القضية ${made.code} لكن تعذر ربط الملف بها: ${(e as Error).message}. اربطه من «القضية المرتبطة».`:(e as Error).message)}
+  finally{setBusy(false)}}
+ return <EditorDialog title="إنشاء قضية من ملف التحصيل" description="تُفتح قضية في سجل الأحكام بأطراف هذا الملف وتُربط به. كود القضية غير رقم ملف التحصيل، فأدخله كما في سجل المكتب." busy={busy} onClose={onClose}>
+  <dl className="make-case-summary"><div><dt>الموكل</dt><dd>{p.company}</dd></div><div><dt>المدعى عليه</dt><dd>{p.defendant}</dd></div><div><dt>المطالبة</dt><dd>{p.amount?kwd(fils(p.amount))+' د.ك':'—'}</dd></div><div><dt>رقم ملف التحصيل</dt><dd>{p.code||'—'}</dd></div></dl>
+  <form className="form-grid" onSubmit={e=>{e.preventDefault();void make()}}>
+   <Field label="كود المكتب للقضية" value={code} onChange={setCode} placeholder="مثل 1250"/>
+   <Field label="الرقم الآلي" value={autoNumber} onChange={setAutoNumber}/>
+   <Field label="رقم الدعوى / السنة" value={caseNumber} onChange={setCaseNumber}/>
+   <Field label="المحكمة" value={court} onChange={setCourt} suggestions={COURTS}/>
+   {p.hearingDate&&<p className="subtitle wide">تُضاف جلسة {formatDate(p.hearingDate)} من الملف إلى رول الجلسات.</p>}
+   <Needs items={needs} className="wide"/>
+   <div className="actions wide"><button className="btn primary" disabled={busy||needs.some(Boolean)}><Scale size={15}/> {busy?'جارٍ الإنشاء…':'إنشاء القضية وربط الملف'}</button><button type="button" className="btn" disabled={busy} onClick={onClose}>إلغاء</button></div>
+  </form>
+ </EditorDialog>;
 }
