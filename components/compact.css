@@ -53,6 +53,7 @@
 @media(min-width:901px){
  :root .collection-toolbar{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 12px;margin-bottom:14px}
  :root .collection-toolbar>.actions{padding-top:12px}
+ :root .collection-toolbar>.field:first-child{grid-column:span 2} /* the search box gets room for its hint */
  :root .department-toolbar{gap:12px;margin-bottom:14px}
 }
 :root .department-metrics{gap:12px}
