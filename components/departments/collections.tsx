@@ -1,6 +1,6 @@
-import {useEffect,useMemo,useRef,useState,type ReactElement} from 'react';
+import {Fragment,useEffect,useMemo,useRef,useState,type ReactElement} from 'react';
 import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf,suggestions} from '@/lib/choices';
-import {Files,Plus,FileCheck2,Scale,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
+import {Files,Plus,FileCheck2,Scale,Trash2,UserPlus,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
 import BatchPrint from './batch-print';
 import CollectionImport from './collection-import';
 import {suggestedEvidence} from '@/lib/document-tools';
@@ -8,7 +8,7 @@ import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
 import {type CaseSummary,type CollectionData,type CollectionRecord,newDepartmentRecord} from '@/lib/departments';
 import type {Permissions} from '@/lib/permissions';
-import {blankDocument,amountInWords} from '@/lib/document-fields';
+import {blankDocument,amountInWords,joinNames,partyLabel,partyNames,type CollectionParty} from '@/lib/document-fields';
 import {COLLECTION_FIELDS,missingDocumentFields,missingFieldKeys} from '@/lib/collection-documents';
 import {ALL_FILE_STATUSES as FILE_STATUSES,CLOSED_STATUSES,STATEMENT_CATEGORIES,STATEMENT_STATUSES,PAYMENT_TYPES,dueStatements,fils,kwd,kwdPlain,position,civilIdValid,debtorKey,roundRobin} from '@/lib/collections';
 import {clientName} from '@/lib/clients';
@@ -51,13 +51,14 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  const filtered=files.filter(r=>(status==='all'||status==='archived'?status==='all'||r.archived:!r.archived&&(status!=='review'||!reviewed(r)))
   &&(!fileStatus||(fileStatus==='none'?!r.payload.fileStatus:r.payload.fileStatus===fileStatus))&&(!batch||r.payload.batchNumber===batch)&&(!linked||(linked==='yes')===!!r.caseId)&&(!assignee||(assignee==='none'?!r.payload.assignedTo:r.payload.assignedTo===assignee))
   &&(!company||r.payload.company===company)&&(!check||(check==='nophone'?!r.payload.phone:check==='badcivil'?badCivil(r):check==='shared'?sameDebtor(r).length>0:check==='noclient'?!r.payload.clientEntityId:true))
-  &&normalizeSearch([r.payload.code,r.payload.company,r.payload.defendant,r.payload.civilId,r.payload.account,r.payload.customerId,r.payload.phone,r.payload.batchNumber,r.payload.tag1,r.payload.tag2,r.payload.tag3,r.payload.tag4].join(' ')).includes(normalizeSearch(search)));
+  &&normalizeSearch([r.payload.code,r.payload.company,r.payload.defendant,...[...(r.payload.plaintiffs||[]),...(r.payload.defendants||[])].flatMap(x=>[x.name,x.civilId,x.phone]),r.payload.civilId,r.payload.account,r.payload.customerId,r.payload.phone,r.payload.batchNumber,r.payload.tag1,r.payload.tag2,r.payload.tag3,r.payload.tag4].join(' ')).includes(normalizeSearch(search)));
  const pages=Math.max(1,Math.ceil(filtered.length/12)),current=Math.min(page,pages);
  const {nav,step,enter,openItem:setEditing}=useListNav(filtered,editing,setEditingRaw);
  const [view,setView]=useState<View>('files');
  const active=files.filter(r=>!r.archived),today=todayISO();
  const totals=active.reduce((t,r)=>{const p=pos(r);return {total:t.total+p.total,paid:t.paid+p.paid,remaining:t.remaining+Math.max(0,p.remaining)}},{total:0,paid:0,remaining:0});
  const due=dueStatements(allStatements,today).filter(s=>active.some(f=>f.id===s.subjectId));
+ const opponents=useMemo(()=>[...new Set([...files.flatMap(r=>partyNames(r.payload.defendant,r.payload.defendants)),...cases.map(c=>(c.opponent||'').trim()).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ar')),[files,cases]);
  const companies=suggestions(files,r=>r.payload.company),assignees=suggestions(files,r=>r.payload.assignedTo),batches=suggestions(files,r=>r.payload.batchNumber),tags=suggestions(files.flatMap(r=>[r.payload.tag1,r.payload.tag2,r.payload.tag3,r.payload.tag4]),v=>v);
  const fileOf=(id:string)=>files.find(f=>f.id===id);
  const views=<div className="department-tabs view-switch" role="group" aria-label="أقسام التحصيل">{([['files','ملفات التحصيل'],['due',`المتابعات المستحقة${due.length?` (${due.length})`:''}`],['payments','التحصيلات'],['print','طباعة جماعية']] as [View,string][]).map(([id,l])=><button key={id} className={'btn '+(view===id?'primary':'')} aria-pressed={view===id} onClick={()=>setView(id)}>{l}</button>)}</div>;
@@ -99,11 +100,11 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
    {staffList.length>1&&<small className="muted">يُوزَّع {picked.size} ملف بالتناوب على {staffList.length} موظفين (حوالي {Math.ceil(picked.size/staffList.length)} لكل موظف).</small>}
    <button className="btn primary" title={!staffList.length&&!bulkStatus&&!bulkClient?'اختر موظفاً للتوزيع أو حالة جديدة أو ملف موكل أولاً':undefined} disabled={bulkBusy||(!staffList.length&&!bulkStatus&&!bulkClient)} onClick={()=>void distribute()}><UserCheck size={15}/> تطبيق على المحدد</button><button className="btn" onClick={()=>setPicked(new Set())}>إلغاء التحديد</button></div>}
   <StatusMessage loading={loading} error={error}/>{!loading&&!error&&<><div className="collection-grid">{filtered.slice((current-1)*12,current*12).map(r=>{const p=pos(r),open=(statementsOf.get(r.id)||[]).filter(s=>!s.archived&&s.payload.status!=='done').length;return <article className={'collection-card'+(picked.has(r.id)?' picked':'')} key={r.id}><header>{access.canEdit&&!r.archived&&<input type="checkbox" aria-label={'تحديد الملف '+(r.payload.code||r.payload.defendant)} checked={picked.has(r.id)} onChange={e=>setPicked(old=>{const n=new Set(old);if(e.target.checked)n.add(r.id);else n.delete(r.id);return n})}/>}<span className="collection-code">{r.payload.code||cases.find(c=>c.id===r.caseId)?.code||'بلا كود'}</span>{!r.caseId&&<span className="tag">بلا قضية</span>}{r.payload.fileStatus&&<span className={'tag '+statusTone(r.payload.fileStatus)}>{r.payload.fileStatus}</span>}<span className={'tag '+(reviewed(r)?'green':'amber')}>{r.archived?'مؤرشف':reviewed(r)?'تمت المراجعة':'يحتاج مراجعة'}</span>{badCivil(r)&&<span className="tag red" title="الرقم المدني لا يطابق رقم التحقق أو تاريخ الميلاد">رقم مدني؟</span>}</header>
-   <h2>{r.payload.company||'موكل غير مكتمل'}</h2><p>ضد {r.payload.defendant||'طرف غير مكتمل'}</p>
+   <h2>{partyLabel(r.payload.company,r.payload.plaintiffs)||'موكل غير مكتمل'}</h2><p>ضد {partyLabel(r.payload.defendant,r.payload.defendants)||'طرف غير مكتمل'}</p>
    <div className="collection-amount">{kwd(Math.max(0,p.remaining))} <small>د.ك باقٍ من {kwd(p.total)}</small></div>
    <div className="collection-meta">{r.payload.assignedTo?<span><Users size={13}/> {r.payload.assignedTo}</span>:<span className="muted">غير موزّع</span>}{r.payload.batchNumber&&<span>باتش {r.payload.batchNumber}</span>}{open>0&&<span className="tag amber">{open} إفادة مفتوحة</span>}{sameDebtor(r).length>0&&<span className="tag">{sameDebtor(r).length+1} ملفات للخصم</span>}</div>
    <footer><small>نسخة {r.revision}</small><button className="btn" onClick={()=>setEditing(r)}>فتح الملف</button></footer></article>})}</div>{!filtered.length&&<Empty text="أضف ملفاً مرتبطاً بقضية وابدأ بإدخال البيانات من مصدرها."/>}<PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></>}</section>}
- {editing&&<CollectionEditor key={editing.id} clients={clients} related={sameDebtor(editing)} onOpenFile={setEditing} nav={nav} onNavigate={step} enter={enter} initial={editing} cases={cases} access={access} statements={statementsOf.get(editing.id)||[]} payments={paymentsOf.get(editing.id)||[]} assignees={assignees} batches={batches} tags={tags} onClose={()=>setEditing(null)} onChanged={reload}/>}</>;
+ {editing&&<CollectionEditor key={editing.id} clients={clients} opponents={opponents} related={sameDebtor(editing)} onOpenFile={setEditing} nav={nav} onNavigate={step} enter={enter} initial={editing} cases={cases} access={access} statements={statementsOf.get(editing.id)||[]} payments={paymentsOf.get(editing.id)||[]} assignees={assignees} batches={batches} tags={tags} onClose={()=>setEditing(null)} onChanged={reload}/>}</>;
 }
 
 /** Statements whose review date has come and that are not done yet, oldest first. */
@@ -127,7 +128,7 @@ function PaymentsList({payments,fileOf,onOpen,canPrint}:{payments:PaymentRecord[
   <div className="panel-body">{!list.length?<Empty title="لا توجد حركات" text="تُضاف الدفعات من تبويب «الوضع المالي» في ملف التحصيل."/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>التاريخ</th><th>الملف</th><th>النوع</th><th>المبلغ</th><th>الطريقة / المرجع</th><th>سجّلها</th><th/></tr></thead><tbody>{list.map(p=>{const f=fileOf(p.subjectId);return <tr key={p.id} className={p.payload.status==='void'?'void-row':''}><td className="nowrap">{formatDate(p.payload.date)}</td><td><b>{f?.payload.code||'—'}</b><small>{f?.payload.defendant}</small></td><td>{typeLabel(p.payload.type)}{p.payload.status==='void'&&<small className="office-alert">ملغاة: {p.payload.voidReason}</small>}</td><td className="nowrap amount">{kwd(amount(p))} د.ك</td><td>{p.payload.method||'—'}<small>{p.payload.reference}</small></td><td>{p.createdBy}</td><td><button className="btn" onClick={()=>onOpen(p.subjectId)}>فتح الملف</button></td></tr>})}</tbody></table></div>}</div></section>;
 }
 
-function CollectionEditor({initial,cases:loadedCases,access,statements,payments,assignees,batches,tags,clients,related,onOpenFile,onClose,onChanged,nav,onNavigate,enter}:{clients:ClientOption[];related:CollectionRecord[];onOpenFile:(f:CollectionRecord)=>void;initial:CollectionRecord;cases:CaseSummary[];access:Permissions;statements:StatementRecord[];payments:PaymentRecord[];assignees:string[];batches:string[];tags:string[];onClose:()=>void;onChanged:()=>void;nav?:WindowNav;onNavigate?:(dir:'prev'|'next')=>void;enter?:Enter}) {
+function CollectionEditor({opponents,initial,cases:loadedCases,access,statements,payments,assignees,batches,tags,clients,related,onOpenFile,onClose,onChanged,nav,onNavigate,enter}:{opponents:string[];clients:ClientOption[];related:CollectionRecord[];onOpenFile:(f:CollectionRecord)=>void;initial:CollectionRecord;cases:CaseSummary[];access:Permissions;statements:StatementRecord[];payments:PaymentRecord[];assignees:string[];batches:string[];tags:string[];onClose:()=>void;onChanged:()=>void;nav?:WindowNav;onNavigate?:(dir:'prev'|'next')=>void;enter?:Enter}) {
  const [saved,setSaved]=useState(initial),[draft,setDraft]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState(''),[attested,setAttested]=useState(false),[outputs,setOutputs]=useState<{id:string;kind:string;recordRevision:number;templateVersion:string;createdAt:string;actor:string}[]>([]),[outputVersion,setOutputVersion]=useState(0);
  const [tab,setTab]=useState(initial.revision?'file':'parties');
  // Cases made from this window join the list at once, so the link shows without reloading the page.
@@ -139,6 +140,8 @@ function CollectionEditor({initial,cases:loadedCases,access,statements,payments,
  const allScope=access.caseScope==='all';
  const editable=access.canEdit&&!draft.archived;
  useEffect(()=>{let active=true;if(saved.revision)departmentRequest<typeof outputs>('outputs',{workspace:'collections',id:saved.id}).then(r=>{if(active)setOutputs(r)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[saved.id,saved.revision,outputVersion]);
+// Typing or picking a name that matches a client file links that file too.
+ const linkClient=(name:string)=>{const m=clients.find(c=>normalizeSearch(c.name)===normalizeSearch(name));if(m)setDraft(r=>r.payload.clientEntityId===m.id?r:{...r,payload:{...r.payload,clientEntityId:m.id}})};
  const set=(key:string,value:unknown)=>setDraft(r=>({...r,payload:{...r.payload,[key]:value,...(key==='amount'?{amountWords:amountInWords(String(value))}:{})}}));
  async function mutate(action:string,data:Record<string,unknown>){setBusy(true);setError('');try{const r=await departmentRequest<CollectionRecord>(action,{workspace:'collections',id:saved.id,revision:saved.revision,...data});setSaved(r);setDraft(r);setAttested(false);onChanged();toast.success('حُفظ ملف التحصيل')}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  async function generate(kind:'claim'|'bundle'){setBusy(true);setError('');try{const key=saved.revision+kind;const outputId=intent.current[key]??=crypto.randomUUID();const output=await departmentRequest<{id:string;data:CollectionData;templateVersion:string}>('generate',{workspace:'collections',id:saved.id,revision:saved.revision,kind,outputId});if(output.templateVersion!=='office-word-v1')throw new Error('نسخة القالب غير مدعومة. حدّث الصفحة.');const {generateWord}=await import('@/lib/document-tools');saveBlob(await generateWord(kind,output.data),`Mawatheeq-${kind}-${output.id}.docx`);setOutputVersion(v=>v+1);toast.success('تم إعداد Word وحفظ نسخة بيانات الإنشاء')}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
@@ -155,7 +158,7 @@ function CollectionEditor({initial,cases:loadedCases,access,statements,payments,
  const need=missingFieldKeys(draft.payload);
  const needWrap=(key:string,el:ReactElement)=>{const kinds=need.get(key);return kinds?<div key={key} className="field-need">{el}<small>مطلوب لإنشاء {kinds.map(k=>k==='claim'?'صحيفة الدعوى':'الحافظة').join(' و')}</small></div>:el};
  const tabs:[string,string,LucideIcon,number?,boolean?][]=[['file','بيانات الملف',FileText],['parties','الأطراف والمطالبة',Users,[...need.keys()].filter(k=>k!=='amountWords').length],['papers','الحافظة والمستندات',ScrollText],['statements','إفادات الملف',ClipboardList,statements.filter(s=>!s.archived).length,!saved.revision],['money','الوضع المالي',Wallet,payments.filter(x=>x.payload.status!=='void').length,!saved.revision],['history','السجل',History,undefined,!saved.revision]];
- return <RecordWindow eyebrow={saved.revision?'ملف التحصيل':'ملف تحصيل جديد'} title={p.company||'موكل غير مكتمل'} subtitle={<><span className="vs">ضد</span> {p.defendant||'طرف غير مكتمل'}</>}
+ return <RecordWindow eyebrow={saved.revision?'ملف التحصيل':'ملف تحصيل جديد'} title={partyLabel(p.company,p.plaintiffs)||'موكل غير مكتمل'} subtitle={<><span className="vs">ضد</span> {partyLabel(p.defendant,p.defendants)||'طرف غير مكتمل'}</>}
   badges={<>{(p.code||c?.code)&&<CopyChip label="الكود" value={p.code||c?.code||''}/>}{saved.payload.fileStatus&&<span className={'tag '+statusTone(saved.payload.fileStatus)}>{saved.payload.fileStatus}</span>}<span className={'tag '+(reviewed?'green':'amber')}>{saved.archived?'مؤرشف':reviewed?'تمت المراجعة':'يحتاج مراجعة'}</span></>}
   facts={[['إجمالي المطالبة',money.total?kwd(money.total)+' د.ك':''],['المسدد',saved.revision?kwd(money.paid)+' د.ك':''],['الباقي',saved.revision?kwd(money.remaining)+' د.ك':''],['المسؤول',saved.payload.assignedTo||''],['القضية',c?c.code||c.autoNumber||'بلا كود':''],['إفادات مفتوحة',openStatements||'']]}
   pin={p.amountWords?<p className="amount-words">{p.amountWords}</p>:undefined}
@@ -176,7 +179,8 @@ function CollectionEditor({initial,cases:loadedCases,access,statements,payments,
   {saved.revision?<CaseLink file={saved} cases={cases} unsaved={editable&&dirty} editable={editable&&!dirty} allScope={allScope} onLinked={r=>{setSaved(r);setDraft(r);onChanged()}}/>
    :<CasePicker cases={cases} value={draft.caseId} optional={allScope} onChange={id=>{const c=cases.find(c=>c.id===id);setDraft(r=>({...r,caseId:id,payload:{...r.payload,code:r.payload.code||c?.code||'',company:r.payload.company||(c?clientName(c):''),defendant:r.payload.defendant||c?.opponent||''}}))}}/>}
   <ClientLink value={draft.payload.clientEntityId||''} clients={clients} company={p.company} onChange={v=>set('clientEntityId',v)}/>
-  {COLLECTION_FIELDS.map(([title,fields])=><section className="department-form-section" key={title}><h3>{title}</h3><div className="form-grid">{fields.map(([key,label])=>needWrap(key,key.toLowerCase().includes('date')?<DateField key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>{set(key,v);if(key==='hearingDate'&&weekdayOf(v))set('hearingDay',weekdayOf(v))}}/>:key==='hearingDay'?<label key={key} className="field"><span>{label}</span><Choice label={label} value={String(draft.payload[key]||'')} onChange={v=>set(key,v)} options={[...new Set([...WEEKDAYS,String(draft.payload[key]||'')])]}/></label>:<Field key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>set(key,v)} suggestions={key==='nationality'?NATIONALITIES:key==='court'||key==='hearingCourt'?COURTS:undefined} type={key==='phone'?'tel':'text'}/>))}</div></section>)}
+  {COLLECTION_FIELDS.map(([title,fields],i)=><Fragment key={title}><section className="department-form-section"><h3>{title}</h3><div className="form-grid">{fields.map(([key,label])=>needWrap(key,key.toLowerCase().includes('date')?<DateField key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>{set(key,v);if(key==='hearingDate'&&weekdayOf(v))set('hearingDay',weekdayOf(v))}}/>:key==='hearingDay'?<label key={key} className="field"><span>{label}</span><Choice label={label} value={String(draft.payload[key]||'')} onChange={v=>set(key,v)} options={[...new Set([...WEEKDAYS,String(draft.payload[key]||'')])]}/></label>:<Field key={key} label={label} value={String(draft.payload[key]||'')} onChange={v=>{set(key,v);if(key==='company')linkClient(v)}} suggestions={key==='nationality'?NATIONALITIES:key==='court'||key==='hearingCourt'?COURTS:key==='company'?clients.map(c=>c.name):key==='defendant'?opponents:undefined} type={key==='phone'?'tel':'text'}/>))}</div></section>
+   {i===0&&<ExtraParties plaintiffs={p.plaintiffs||[]} defendants={p.defendants||[]} clients={clients} opponents={opponents} onChange={(k,v)=>set(k,v)}/>}</Fragment>)}
   {!!p.civilId&&!civilIdValid(p.civilId)&&<p className="notice" role="alert">الرقم المدني {p.civilId} لا يطابق رقم التحقق أو تاريخ الميلاد فيه. راجعه مع المصدر قبل إعداد المستندات.</p>}
   {!!related.length&&<section className="department-form-section"><h3>ملفات أخرى لنفس الخصم ({related.length})</h3><p className="subtitle">بنفس الرقم المدني{p.civilId?'':' أو الاسم'}. يمكن متابعتها معاً أو ضمها في دعوى واحدة.</p><ul className="linked-files">{related.map(f=><li key={f.id}><b>ملف {f.payload.code||'بلا رقم'}</b><span>{f.payload.company}</span><small>{[f.payload.fileStatus,f.payload.amount&&kwd(fils(f.payload.amount))+' د.ك',f.caseId?'مرتبط بقضية':'بلا قضية'].filter(Boolean).join(' · ')}</small><button type="button" className="btn" disabled={dirty} title={dirty?'احفظ التعديلات أولاً':undefined} onClick={()=>onOpenFile(f)}>فتح</button></li>)}</ul></section>}
   <Field label="مرجع المصدر الذي تمت مطابقته" value={draft.payload.sourceReference} onChange={v=>set('sourceReference',v)} placeholder="رقم الملف أو العقد، الجهة، وتاريخ الاطلاع"/><Field label="ملاحظات التحصيل" value={draft.payload.notes} onChange={v=>set('notes',v)} multiline/>
@@ -230,7 +234,7 @@ function MakeCase({file,cases,onClose,onMade}:{file:CollectionRecord;cases:CaseS
  async function make(){if(needs.some(Boolean)||busy)return;setBusy(true);let made:CaseRecord|null=null;
   try{const amount=p.amount?kwd(fils(p.amount))+' د.ك':'';
    const first=p.hearingDate?[{id:crypto.randomUUID(),date:todayISO(),kind:'قيد الدعوى',court,text:'قيد الدعوى'+(caseNumber?' رقم '+caseNumber:'')+' (من ملف التحصيل)',followup:p.hearingDate,source:'ملف التحصيل'}]:[];
-   const d=await api('/api/cases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case:{...emptyCase(),code:code.trim(),autoNumber:autoNumber.trim(),client:p.company,clientGroup:p.company,clientEntityId:p.clientEntityId,opponent:p.defendant,caseNumber:caseNumber.trim(),court:court.trim(),
+   const d=await api('/api/cases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case:{...emptyCase(),code:code.trim(),autoNumber:autoNumber.trim(),client:p.company,clientGroup:p.company,clientEntityId:p.clientEntityId,opponent:joinNames(partyNames(p.defendant,p.defendants)),caseNumber:caseNumber.trim(),court:court.trim(),
     subject:'مطالبة مالية'+(amount?' بمبلغ '+amount:''),source:'ملف التحصيل',notes:'أُنشئت من ملف التحصيل'+(p.code?' رقم '+p.code:'')+'.',procedures:first}})});
    made=d.case as CaseRecord;
    const r=await departmentRequest<CollectionRecord>('link_case',{workspace:'collections',id:file.id,revision:file.revision,caseId:made.id});
@@ -239,7 +243,7 @@ function MakeCase({file,cases,onClose,onMade}:{file:CollectionRecord;cases:CaseS
   catch(e){toast.error(made?`أُنشئت القضية ${made.code} لكن تعذر ربط الملف بها: ${(e as Error).message}. اربطه من «القضية المرتبطة».`:(e as Error).message)}
   finally{setBusy(false)}}
  return <EditorDialog title="إنشاء قضية من ملف التحصيل" description="تُفتح قضية في سجل الأحكام بأطراف هذا الملف وتُربط به. كود القضية غير رقم ملف التحصيل، فأدخله كما في سجل المكتب." busy={busy} onClose={onClose}>
-  <dl className="make-case-summary"><div><dt>الموكل</dt><dd>{p.company}</dd></div><div><dt>المدعى عليه</dt><dd>{p.defendant}</dd></div><div><dt>المطالبة</dt><dd>{p.amount?kwd(fils(p.amount))+' د.ك':'—'}</dd></div><div><dt>رقم ملف التحصيل</dt><dd>{p.code||'—'}</dd></div></dl>
+  <dl className="make-case-summary"><div><dt>المدعي (الموكل)</dt><dd>{joinNames(partyNames(p.company,p.plaintiffs))}</dd></div><div><dt>المدعى عليه</dt><dd>{joinNames(partyNames(p.defendant,p.defendants))}</dd></div><div><dt>المطالبة</dt><dd>{p.amount?kwd(fils(p.amount))+' د.ك':'—'}</dd></div><div><dt>رقم ملف التحصيل</dt><dd>{p.code||'—'}</dd></div></dl>
   <form className="form-grid" onSubmit={e=>{e.preventDefault();void make()}}>
    <Field label="كود المكتب للقضية" value={code} onChange={setCode} placeholder="مثل 1250"/>
    <Field label="الرقم الآلي" value={autoNumber} onChange={setAutoNumber}/>
@@ -250,4 +254,25 @@ function MakeCase({file,cases,onClose,onMade}:{file:CollectionRecord;cases:CaseS
    <div className="actions wide"><button className="btn primary" disabled={busy||needs.some(Boolean)}><Scale size={15}/> {busy?'جارٍ الإنشاء…':'إنشاء القضية وربط الملف'}</button><button type="button" className="btn" disabled={busy} onClick={onClose}>إلغاء</button></div>
   </form>
  </EditorDialog>;
+}
+
+/** Further plaintiffs and defendants: one person can sue several, and several can sue one. The first of each side stays
+ in the fields above; names are suggested from the clients register and from the opponents already on file. */
+function ExtraParties({plaintiffs,defendants,clients,opponents,onChange}:{plaintiffs:CollectionParty[];defendants:CollectionParty[];clients:ClientOption[];opponents:string[];onChange:(key:'plaintiffs'|'defendants',v:CollectionParty[])=>void}){
+ const side=(key:'plaintiffs'|'defendants',list:CollectionParty[],title:string,add:string,names:string[])=>{
+  const edit=(i:number,patch:Partial<CollectionParty>)=>onChange(key,list.map((x,j)=>j===i?{...x,...patch}:x));
+  return <div className="extra-side"><div className="client-section-heading"><b>{title}{list.length?` (${list.length})`:''}</b><button type="button" className="btn" disabled={list.length>=20} onClick={()=>onChange(key,[...list,{id:crypto.randomUUID(),name:''}])}><UserPlus size={15}/> {add}</button></div>
+   {!list.length?<p className="muted">لا يوجد. أضف طرفاً إذا كان في الملف أكثر من {key==='plaintiffs'?'مدعٍ':'مدعى عليه'}.</p>:list.map((x,i)=><div key={x.id} className="extra-party">
+    <Field label={`الاسم ${i+2}`} value={x.name} onChange={v=>{const m=key==='plaintiffs'?clients.find(c=>normalizeSearch(c.name)===normalizeSearch(v)):undefined;edit(i,{name:v,...(key==='plaintiffs'?{clientEntityId:m?.id||''}:{})})}} suggestions={names}/>
+    <Field label="الرقم المدني" value={x.civilId||''} onChange={v=>edit(i,{civilId:v})}/>
+    <Field label="الهاتف" value={x.phone||''} type="tel" onChange={v=>edit(i,{phone:v})}/>
+    <Field label={key==='plaintiffs'?'العنوان':'العنوان / الوظيفة'} value={x.address||''} onChange={v=>edit(i,{address:v})}/>
+    <button type="button" className="icon-btn" aria-label={'حذف '+(x.name||'الطرف')} onClick={()=>onChange(key,list.filter((_,j)=>j!==i))}><Trash2 size={15}/></button>
+    {key==='plaintiffs'&&x.clientEntityId&&<small className="extra-linked">مرتبط بملف الموكل</small>}
+   </div>)}</div>;
+ };
+ return <section className="department-form-section extra-parties"><h3>أطراف إضافية</h3><p className="subtitle">تُذكر كل الأسماء في صحيفة الدعوى والحافظة، ويظهر عددها في عنوان الملف.</p>
+  {side('plaintiffs',plaintiffs,'مدعون آخرون','إضافة مدعٍ',clients.map(c=>c.name))}
+  {side('defendants',defendants,'مدعى عليهم آخرون','إضافة مدعى عليه',opponents)}
+ </section>;
 }

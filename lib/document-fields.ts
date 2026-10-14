@@ -133,7 +133,7 @@ export function extractFields(raw:string,filename=''):DocumentData {
 }
 
 export function extractionSummary(d:DocumentData){
-  const labels:Record<string,string>={company:'الشركة المدعية',defendant:'المعلن إليه',amount:'مبلغ المطالبة',orderNumber:'رقم أمر الأداء',rejectedDate:'تاريخ رفض أمر الأداء',statementDate:'تاريخ كشف الحساب',demandDate:'تاريخ البعثية'};
+  const labels:Record<string,string>={company:'المدعي',defendant:'المعلن إليه',amount:'مبلغ المطالبة',orderNumber:'رقم أمر الأداء',rejectedDate:'تاريخ رفض أمر الأداء',statementDate:'تاريخ كشف الحساب',demandDate:'تاريخ البعثية'};
   const filled=Object.entries(d).filter(([k,v])=>k!=='evidence'&&typeof v==='string'&&v.trim()).length;
   const missing=Object.entries(labels).filter(([k])=>!d[k]).map(([,v])=>v);
   const core=['company','defendant','amount'].filter(k=>!!d[k]).length;
@@ -146,3 +146,15 @@ export function assessText(raw:string){
   const anchors=(text.match(/(?:المحكمة|محكمة|المدين|المدعي|المدني|المدني[ةه]|الجنسي[ةه]|الشركة|شرك[ةه]|للاتصالات|امر\s*اداء|حساب|العقد|المشترك|المبلغ|مبلغ|دينار|المطالبة|الايصال|الاطلاع|العنوان|الرسوم|ضده|تاريخ|فاتور[ةه])/g)||[]).length;
   return {letters,arabic,anchors,usable:letters>=35&&arabic>=20&&anchors>=2};
 }
+
+/** Further plaintiffs or defendants on one collection file; the first of each stays in the usual fields. */
+export type CollectionParty = { id: string; name: string; civilId?: string; job?: string; nationality?: string; address?: string; phone?: string; clientEntityId?: string };
+/** Every name on one side, the first party first, blanks dropped. */
+export const partyNames = (first: string, more: CollectionParty[] = []) => [first, ...more.map(x => x.name)].map(n => (n || '').trim()).filter(Boolean);
+/** Names as written in Arabic papers: «أ، ب و ج». */
+export const joinNames = (names: string[]) => names.length < 2 ? names[0] || '' : names.slice(0, -1).join('، ') + ' و' + names[names.length - 1];
+/** A short label for lists and window titles: the first name, and how many more. */
+export const partyLabel = (first: string, more: CollectionParty[] = []) => { const n = partyNames(first, more); return n.length > 1 ? `${n[0]} و${n.length - 1 === 1 ? 'آخر' : `${n.length - 1} آخرون`}` : n[0] || ''; };
+/** The papers name every plaintiff and every defendant. */
+export const withAllParties = <T extends DocumentData & { plaintiffs?: CollectionParty[]; defendants?: CollectionParty[] }>(d: T): T =>
+  ({ ...d, company: joinNames(partyNames(d.company, d.plaintiffs)), defendant: joinNames(partyNames(d.defendant, d.defendants)) });

@@ -60,7 +60,7 @@ try{
  await screen('secretary-desktop');await page.reload();await page.getByRole('heading',{name:'كل موعد في مكانه.',exact:true}).waitFor();
  await switchTo('القضايا');await click('المهام والجلسات');await page.getByText('تنسيق موعد تجريبي',{exact:true}).waitFor();
  await switchTo('التحصيل');await click('ملف تحصيل جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');
- for(const [label,value] of [['الشركة المدعية','شركة اختبار التحصيل'],['المدعى عليه','خصم اختبار التحصيل'],['الرقم المدني للمدعى عليه','200000000001'],['الجنسية','كويتي'],['العنوان','عنوان تجريبي'],['الهاتف','50000000'],['الرقم المدني للشركة','SYN-1'],['السجل التجاري','SYN-2'],['رقم العقد / الحساب','SYN-ACCOUNT'],['مبلغ المطالبة (د.ك)','125.125'],['رقم أمر الأداء','1/2026'],['محكمة أمر الأداء','محكمة تجريبية'],['رقم الدعوى','1'],['سنة الدعوى','2026'],['محكمة الجلسة','محكمة تجريبية'],['الدائرة','1'],['مرجع المصدر الذي تمت مطابقته','عقد تجريبي 1']])await field(label,value);
+ for(const [label,value] of [['المدعي (الموكل)','شركة اختبار التحصيل'],['المدعى عليه','خصم اختبار التحصيل'],['الرقم المدني للمدعى عليه','200000000001'],['الجنسية','كويتي'],['العنوان','عنوان تجريبي'],['الهاتف','50000000'],['الرقم المدني للمدعي','SYN-1'],['السجل التجاري للمدعي','SYN-2'],['رقم العقد / الحساب','SYN-ACCOUNT'],['مبلغ المطالبة (د.ك)','125.125'],['رقم أمر الأداء','1/2026'],['محكمة أمر الأداء','محكمة تجريبية'],['رقم الدعوى','1'],['سنة الدعوى','2026'],['محكمة الجلسة','محكمة تجريبية'],['الدائرة','1'],['مرجع المصدر الذي تمت مطابقته','عقد تجريبي 1']])await field(label,value);
  for(const label of ['تاريخ رفض أمر الأداء','تاريخ التكليف بالوفاء','تاريخ كشف الحساب','تاريخ الجلسة'])await pickToday(label);
  // The hearing day follows the hearing date (a choice, not typed).
  await page.getByRole('combobox',{name:'يوم الجلسة'}).getByText(/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)$/).waitFor();
@@ -156,6 +156,13 @@ try{
   await page.getByRole('tab',{name:/^الأطراف والمطالبة/}).click();await page.getByText('ملفات أخرى لنفس الخصم (1)').waitFor();
   await page.getByText(/لا يطابق رقم التحقق/).waitFor();assert.equal(await page.getByLabel('الموكل في سجل الموكلين',{exact:true}).inputValue(),uiClient);
   await screen('collection-debtor');
+  // Several parties: a second defendant is added, saved, counted in the title and kept with the file.
+  await page.getByRole('button',{name:'إضافة مدعى عليه'}).click();const extra=page.locator('.extra-party').first();
+  await extra.getByLabel('الاسم 2',{exact:true}).fill('SYNTHETIC THREE');await extra.getByLabel('الرقم المدني',{exact:true}).fill('280010100002');
+  await page.getByRole('button',{name:'حفظ ملف التحصيل'}).click();await page.getByText('حُفظ ملف التحصيل').first().waitFor();
+  await page.locator('[data-record-window] .case-pin').getByText(/SYNTHETIC TWO وآخر/).waitFor();await screen('collection-parties');
+  recs=await dept('collections','records_page');assert.deepEqual(byCode('W-3').payload.defendants.map(x=>[x.name,x.civilId]),[['SYNTHETIC THREE','280010100002']],'The second defendant is saved');
+  assert.equal(await page.getByText('المدعي (الموكل)',{exact:true}).count()>0,true,'The plaintiff is not assumed to be a company');
   // «إنشاء قضية من الملف»: blocked with a reason while edits are unsaved; asks for the office code (a file number is not a case code), refuses a taken code, then opens the case and links the file.
   const makeCase=page.getByRole('button',{name:'إنشاء قضية من الملف'});await page.getByLabel('العنوان',{exact:true}).fill('عنوان مؤقت');
   assert.equal(await makeCase.isDisabled(),true);await screen('make-case-blocked');await page.locator('.make-case-needs').getByText('احفظ تعديلات الملف أولاً').waitFor();
@@ -167,7 +174,7 @@ try{
   assert.equal(await makeCase.count(),0,'The button leaves once the file has a case');
   recs=await dept('collections','records_page');const made=(await rpc('mawatheeq_local_request',[login.token,'cases_page',JSON.stringify({offset:0})])).find(c=>c.payload?.code==='COL-W3'||c.code==='COL-W3');
   assert.ok(made,'The case is in the cases register');assert.equal(byCode('W-3').caseId,made.id,'The file is linked to the new case');
-  const mp=made.payload||made;assert.equal(mp.opponent,byCode('W-3').payload.defendant);assert.equal(mp.clientEntityId,uiClient);assert.equal(mp.workflow||'','','A filed case, not a study');
+  const mp=made.payload||made;assert.equal(mp.opponent,byCode('W-3').payload.defendant+' وSYNTHETIC THREE','The case names every defendant');assert.equal(mp.clientEntityId,uiClient);assert.equal(mp.workflow||'','','A filed case, not a study');
   await page.keyboard.press('Escape');
   await dept('collections','link_case',{id:byCode('W-3').id,revision:byCode('W-3').revision,caseId:''}); // the steps below link W-3 from a case
   await page.locator('.collection-card').filter({hasText:'W-2'}).getByRole('button',{name:'فتح الملف'}).click();
