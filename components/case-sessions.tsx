@@ -1,6 +1,6 @@
 'use client';
 import {useState} from 'react';
-import {suggestions} from '@/lib/choices';
+import {CIRCUITS,suggestions} from '@/lib/choices';
 import {CalendarPlus,Gavel,Scale} from 'lucide-react';
 import {toast} from 'sonner';
 import {type CaseRecord,type Procedure,formatDate,todayISO} from '@/lib/domain';
@@ -8,7 +8,7 @@ import {DECISIONS,EXPERT_DECISIONS,VENUES,decisionOf,isSession,nextSessionTitle,
 import {LEVEL_TITLE,currentLevel} from '@/lib/case-stages';
 import {officeRequest} from '@/lib/local-auth';
 import type {WorkItem} from '@/lib/office';
-import {Field,DateField,Choice} from './shared';
+import {Field,DateField,Choice,PickOrType} from './shared';
 import Needs from './needs';
 
 /** Sessions of the current court level, newest first. */
@@ -56,7 +56,7 @@ export default function CaseSessions({c,canEdit,canSchedule,busy,username,assign
    <fieldset disabled={busy||saving}><div className="form-grid">
     <DateField label="تاريخ الجلسة" value={s.date} onChange={v=>set('date',v)}/>
     <div className="field" role="radiogroup" aria-label="جهة الجلسة"><span>الجهة</span><div className="venue-choice">{VENUES.map(v=><label key={v} className="checkbox-line"><input type="radio" name="session-venue" checked={s.venue===v} onChange={()=>{set('venue',v);set('decision','')}}/>{v}</label>)}</div></div>
-    <Field label={s.venue==='إدارة الخبراء'?'مكتب الخبير / الخبير':'الدائرة / القاعة'} value={s.court} onChange={v=>set('court',v)} suggestions={suggestions(c.procedures,p=>p.venue===s.venue?p.court:'',s.venue==='إدارة الخبراء'?[]:[String(c.court||'')].filter(Boolean))}/>
+    {s.venue==='إدارة الخبراء'?<Field label="مكتب الخبير / الخبير" value={s.court} onChange={v=>set('court',v)} suggestions={suggestions(c.procedures,p=>p.venue===s.venue?p.court:'')}/>:<CircuitField value={s.court} onChange={v=>set('court',v)}/>}
     <label className="field"><span>قرار الجلسة</span><Choice label="قرار الجلسة" empty="اختر القرار" value={s.decision} onChange={v=>set('decision',v)} options={options}/></label>
     <Field label="تفاصيل القرار (اختياري)" value={s.details} onChange={v=>set('details',v)} wide/>
     {needsNext&&<><DateField label={d?.next==='judgment'?'موعد النطق بالحكم':'موعد الجلسة القادمة'} value={s.nextDate} onChange={v=>set('nextDate',v)}/><Field label="الوقت (اختياري)" type="time" value={s.nextTime} onChange={v=>set('nextTime',v)}/></>}
@@ -69,4 +69,12 @@ export default function CaseSessions({c,canEdit,canSchedule,busy,username,assign
   <h3 className="section-title">جلسات {level} ({sessions.length})</h3>
   <SessionTable sessions={sessions}/>
  </div>;
+}
+
+/** The circuit as «النوع / الرقم», e.g. «تجاري كلي / 5»: the kind from a list (or typed via «أخرى…») and the circuit or hall number. */
+function CircuitField({value,onChange}:{value:string;onChange:(v:string)=>void}){
+ const m=/^(.*?)\s*\/\s*([^/]+)$/.exec(value),kind=(m?m[1]:value).trim(),num=(m?m[2]:'').trim();
+ const join=(k:string,n:string)=>[k.trim(),n.trim()].filter(Boolean).join(' / ');
+ return <><PickOrType label="الدائرة" value={kind} onChange={k=>onChange(join(k,num))} options={CIRCUITS} empty="اختر الدائرة"/>
+  <Field label="رقم الدائرة / القاعة" value={num} onChange={n=>onChange(join(kind,n))} placeholder="مثل 5"/></>;
 }

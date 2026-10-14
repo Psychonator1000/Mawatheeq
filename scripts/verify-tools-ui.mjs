@@ -322,13 +322,15 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
 {await page.keyboard.press('Control+k');const qs=page.getByRole('dialog',{name:'بحث سريع'});await qs.getByRole('combobox').fill('TOOL-1');await qs.getByRole('option',{name:/TOOL-1/}).first().click();
  const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();
  await sw.locator('.case-quick').getByRole('button',{name:/تسجيل جلسة/}).click();
+ // The circuit is picked from a list of kinds, with its number beside it.
+ await sw.getByRole('combobox',{name:'الدائرة'}).click();await page.getByRole('option',{name:'تجاري كلي',exact:true}).click();await sw.getByLabel('رقم الدائرة / القاعة',{exact:true}).fill('5');
  await sw.getByRole('combobox',{name:'قرار الجلسة'}).click();await page.getByRole('option',{name:'تأجيل للإعلان',exact:true}).click();
  assert.equal(await sw.getByRole('button',{name:'تسجيل الجلسة'}).isDisabled(),true,'An adjournment needs the next session date');
  await sw.getByRole('button',{name:/^موعد الجلسة القادمة/}).click();await page.locator('.date-popover').getByRole('button',{name:'اليوم',exact:true}).click();
  await sw.getByLabel('الوقت (اختياري)',{exact:true}).fill('10:30');await sw.getByRole('button',{name:'تسجيل الجلسة'}).click();
  await sw.locator('.session-table').getByText('تأجيل للإعلان').waitFor();await sw.locator('.next-hearing').getByText(/10:30/).waitFor({timeout:8000});
  const saved=(await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-1').payload;
- const logged=saved.procedures.find(p=>p.kind==='جلسة');assert.equal(logged.decision,'تأجيل للإعلان');assert.equal(logged.followup,today);assert.equal(logged.recordedBy,'tools_owner');
+ const logged=saved.procedures.find(p=>p.kind==='جلسة');assert.equal(logged.decision,'تأجيل للإعلان');assert.equal(logged.court,'تجاري كلي / 5','The circuit is saved as kind and number');assert.equal(logged.followup,today);assert.equal(logged.recordedBy,'tools_owner');
  await page.screenshot({path:artifacts+'/sessions.png'});
  await sw.getByRole('tab',{name:'السير الزمني'}).click();await sw.locator('.tl-item.session').getByText('جلسة: تأجيل للإعلان').waitFor();
  assert.ok(await sw.locator('.tl-item.hearing').filter({hasText:'جلسة · أول درجة'}).count()>=1,'The scheduled session is on the timeline');
