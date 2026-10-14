@@ -241,9 +241,12 @@ function ClientLink({value,clients,company,onChange}:{value:string;clients:Clien
 function MakeCase({file,cases,onClose,onMade}:{file:CollectionRecord;cases:CaseSummary[];onClose:()=>void;onMade:(r:CollectionRecord,c:CaseSummary)=>void}){
  const p=file.payload;
  const [code,setCode]=useState(''),[autoNumber,setAutoNumber]=useState(''),[caseNumber,setCaseNumber]=useState(p.lawsuitYear&&p.lawsuitNumber?`${p.lawsuitYear}/${p.lawsuitNumber}`:p.lawsuitNumber||''),[court,setCourt]=useState(p.hearingCourt||''),[busy,setBusy]=useState(false);
- const taken=!!code.trim()&&cases.some(c=>c.code.trim().toLowerCase()===code.trim().toLowerCase());
+ // A code or automatic number that already belongs to a case shows that case and the files linked to it, and offers to link this file to it instead.
+ const same=(a:string|undefined,b:string)=>!!b.trim()&&(a||'').trim().toLowerCase()===b.trim().toLowerCase();
+ const byCode=cases.find(c=>same(c.code,code)),byAuto=cases.find(c=>same(c.autoNumber,autoNumber)),existing=byCode||byAuto;
  const orderNumbers=[p.fileAutoNumber,p.orderAuto].map(x=>(x||'').trim()).filter(Boolean);
- const needs:NeedList=[!code.trim()&&'أدخل كود المكتب للقضية',taken&&'هذا الكود مستخدم لقضية أخرى؛ اختر كوداً جديداً',
+ const needs:NeedList=[!code.trim()&&'أدخل كود المكتب للقضية',!!byCode&&'هذا الكود لقضية موجودة؛ اربط الملف بها أو اختر كوداً جديداً',
+  !!byAuto&&'هذا الرقم الآلي لقضية موجودة؛ اربط الملف بها أو صحّح الرقم',
   !!p.code&&code.trim()===p.code.trim()&&'هذا رقم ملف التحصيل؛ أدخل كود القضية في سجل المكتب',
   orderNumbers.includes(autoNumber.trim())&&'هذا الرقم الآلي لأمر الأداء؛ الرقم الآلي للقضية يصدر من بوابة العدل عند قيد الدعوى'];
  async function make(){if(needs.some(Boolean)||busy)return;setBusy(true);let made:CaseRecord|null=null;
@@ -257,6 +260,9 @@ function MakeCase({file,cases,onClose,onMade}:{file:CollectionRecord;cases:CaseS
    toast.success(`أُنشئت القضية ${made.code} ورُبط بها الملف، وتظهر الآن في سجل الأحكام`)}
   catch(e){toast.error(made?`أُنشئت القضية ${made.code} لكن تعذر ربط الملف بها: ${(e as Error).message}. اربطه من «القضية المرتبطة».`:(e as Error).message)}
   finally{setBusy(false)}}
+ async function linkExisting(c:CaseSummary){if(busy)return;setBusy(true);
+  try{const r=await departmentRequest<CollectionRecord>('link_case',{workspace:'collections',id:file.id,revision:file.revision,caseId:c.id});onMade(r,c);toast.success(`رُبط الملف بالقضية ${c.code||c.autoNumber}`)}
+  catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
  return <EditorDialog title="إنشاء قضية من ملف التحصيل" description="تُفتح قضية في سجل الأحكام بأطراف هذا الملف وتُربط به. للقضية أرقامها: كودها في سجل المكتب ورقمها الآلي في بوابة العدل، وهما غير رقم ملف التحصيل والرقم الآلي لأمر الأداء." busy={busy} onClose={onClose}>
   <dl className="make-case-summary"><div><dt>المدعي (الموكل)</dt><dd>{joinNames(partyNames(p.company,p.plaintiffs))}</dd></div><div><dt>المدعى عليه</dt><dd>{joinNames(partyNames(p.defendant,p.defendants))}</dd></div><div><dt>المطالبة</dt><dd>{p.amount?kwd(fils(p.amount))+' د.ك':'—'}</dd></div><div><dt>رقم ملف التحصيل</dt><dd>{p.code||'—'}</dd></div><div><dt>الرقم الآلي لأمر الأداء</dt><dd>{orderNumbers[0]||'—'}</dd></div></dl>
   <form className="form-grid" onSubmit={e=>{e.preventDefault();void make()}}>
@@ -264,11 +270,26 @@ function MakeCase({file,cases,onClose,onMade}:{file:CollectionRecord;cases:CaseS
    <Field label="الرقم الآلي للقضية (بوابة العدل)" value={autoNumber} onChange={setAutoNumber} placeholder="يُترك فارغاً إن لم تُقيد الدعوى بعد"/>
    <Field label="رقم الدعوى / السنة" value={caseNumber} onChange={setCaseNumber}/>
    <Field label="المحكمة" value={court} onChange={setCourt} suggestions={COURTS}/>
+   {existing&&<ExistingCase c={existing} via={byCode?'code':'auto'} fileId={file.id} busy={busy} onLink={()=>void linkExisting(existing)}/>}
    {p.hearingDate&&<p className="subtitle wide">تُضاف جلسة {formatDate(p.hearingDate)} من الملف إلى رول الجلسات.</p>}
    <Needs items={needs} className="wide"/>
    <div className="actions wide"><button className="btn primary" disabled={busy||needs.some(Boolean)}><Scale size={15}/> {busy?'جارٍ الإنشاء…':'إنشاء القضية وربط الملف'}</button><button type="button" className="btn" disabled={busy} onClick={onClose}>إلغاء</button></div>
   </form>
  </EditorDialog>;
+}
+
+/** The case a typed code or automatic number belongs to, with the collection files already linked to it. */
+function ExistingCase({c,via,fileId,busy,onLink}:{c:CaseSummary;via:'code'|'auto';fileId:string;busy:boolean;onLink:()=>void}){
+ const [files,setFiles]=useState<{caseId:string;list:CollectionRecord[]}|null>(null);
+ useEffect(()=>{let live=true;departmentRequest<CollectionRecord[]>('case_files',{workspace:'collections',caseId:c.id}).then(r=>{if(live)setFiles({caseId:c.id,list:r})}).catch(()=>{if(live)setFiles({caseId:c.id,list:[]})});return()=>{live=false}},[c.id]);
+ const list=files?.caseId===c.id?files.list:null,others=(list||[]).filter(f=>f.id!==fileId),linked=(list||[]).some(f=>f.id===fileId);
+ return <div className="existing-case wide" role="status">
+  <p><b>{via==='code'?'هذا الكود':'هذا الرقم الآلي'} لقضية موجودة في سجل الأحكام:</b> كود {c.code||'—'}{c.autoNumber?' · الرقم الآلي '+c.autoNumber:''} · {c.clientEntityName||c.client||'—'} ضد {c.opponent||'—'}</p>
+  {list===null?<small>جارٍ التحقق من ملفات التحصيل المرتبطة بها…</small>:others.length?<><small>ملفات التحصيل المرتبطة بها ({others.length}):</small>
+   <ul>{others.map(f=><li key={f.id}><b>ملف {f.payload.code||'بلا رقم'}</b> · {partyLabel(f.payload.company,f.payload.plaintiffs)} ضد {partyLabel(f.payload.defendant,f.payload.defendants)}{f.payload.amount?' · '+kwd(fils(f.payload.amount))+' د.ك':''}{f.payload.fileStatus?' · '+f.payload.fileStatus:''}</li>)}</ul></>
+   :<small>لا يرتبط بها أي ملف تحصيل بعد.</small>}
+  {linked?<small>هذا الملف مرتبط بها بالفعل.</small>:<button type="button" className="btn" disabled={busy} onClick={onLink}><Link2 size={15}/> ربط هذا الملف بهذه القضية بدلاً من إنشاء قضية</button>}
+ </div>;
 }
 
 /** Further plaintiffs and defendants: one person can sue several, and several can sue one. The first of each side stays

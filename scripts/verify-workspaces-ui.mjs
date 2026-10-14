@@ -171,7 +171,12 @@ try{
   assert.equal(await makeCase.isDisabled(),true);await screen('make-case-blocked');await page.locator('.make-case-needs').getByText('احفظ تعديلات الملف أولاً').waitFor();
   await page.getByLabel('العنوان',{exact:true}).fill((byCode('W-3').payload.address)||'');await page.waitForFunction(()=>!document.querySelector('.make-case')?.disabled);
   await makeCase.click();const mk=page.getByRole('dialog',{name:'إنشاء قضية من ملف التحصيل'});
-  assert.equal(await mk.getByRole('button',{name:'إنشاء القضية وربط الملف'}).isDisabled(),true);await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('TEST-0');await mk.getByText('هذا الكود مستخدم لقضية أخرى').waitFor();
+  assert.equal(await mk.getByRole('button',{name:'إنشاء القضية وربط الملف'}).isDisabled(),true);await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('TEST-0');await mk.getByText('هذا الكود لقضية موجودة؛').waitFor();
+  // A code (or automatic number) that belongs to a case shows that case and the files already linked to it, and offers to link to it instead.
+  const existing=mk.locator('.existing-case');await existing.getByText(/كود TEST-0 · الرقم الآلي 1000/).waitFor();await existing.getByText(/ملفات التحصيل المرتبطة بها \(\d+\)/).waitFor();
+  assert.ok(await existing.getByRole('button',{name:'ربط هذا الملف بهذه القضية بدلاً من إنشاء قضية'}).isVisible());await screen('make-case-existing');
+  await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('');await mk.getByLabel('الرقم الآلي للقضية (بوابة العدل)',{exact:true}).fill('1000');
+  await mk.getByText('هذا الرقم الآلي لقضية موجودة؛').waitFor();await existing.getByText(/^هذا الرقم الآلي لقضية موجودة/).waitFor();await mk.getByLabel('الرقم الآلي للقضية (بوابة العدل)',{exact:true}).fill('');
   await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('W-3');await mk.getByText('هذا رقم ملف التحصيل').waitFor();
   assert.equal(await mk.getByLabel('الرقم الآلي للقضية (بوابة العدل)',{exact:true}).inputValue(),'','The case automatic number is not taken from the file');
   await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('COL-W3');await screen('make-case');await mk.getByRole('button',{name:'إنشاء القضية وربط الملف'}).click();
@@ -181,7 +186,7 @@ try{
   assert.ok(made,'The case is in the cases register');assert.equal(byCode('W-3').caseId,made.id,'The file is linked to the new case');
   const mp=made.payload||made;assert.equal(mp.opponent,byCode('W-3').payload.defendant+' وSYNTHETIC THREE','The case names every defendant');assert.equal(mp.clientEntityId,uiClient);assert.equal(mp.workflow||'','','A filed case, not a study');
   await page.keyboard.press('Escape');
-  await dept('collections','link_case',{id:byCode('W-3').id,revision:byCode('W-3').revision,caseId:''}); // the steps below link W-3 from a case
+  await dept('collections','link_case',{id:byCode('W-3').id,revision:byCode('W-3').revision,caseId:'ui-case-0'}); // the steps below move W-3 to another case from that case
   await page.locator('.collection-card').filter({hasText:'W-2'}).getByRole('button',{name:'فتح الملف'}).click();
   // The side panel's «ربط بقضية» opens the picker in «الأطراف والمطالبة».
   await page.locator('.case-quick').getByRole('button',{name:'ربط بقضية',exact:true}).click();await page.getByRole('tab',{name:/^الأطراف والمطالبة/,selected:true}).waitFor();
@@ -191,7 +196,11 @@ try{
   // From the case: the linked file shows, and another file is attached by searching.
   await switchTo('القضايا');await page.getByRole('button',{name:/^سجل الأحكام/}).first().click();await page.getByRole('button',{name:'فتح القضية TEST-1',exact:true}).click();
   await page.getByRole('tab',{name:/^ملفات التحصيل/}).click();await page.getByText('ملف W-2').waitFor();await page.getByRole('button',{name:'ربط ملف تحصيل'}).click();await page.getByLabel(/ابحث برقم الملف/).fill('W-3');
-  await page.locator('.linked-files li').filter({hasText:'W-3'}).getByRole('button',{name:'ربط بهذه القضية'}).click();await page.getByText('ملف W-3').waitFor();await screen('case-collections');
+  // A file already linked elsewhere names that case, and moving it asks first.
+  const w3=page.locator('.linked-files li').filter({hasText:'W-3'});await w3.getByText(/مرتبط بالقضية كود TEST-0 · الرقم الآلي 1000/).waitFor();
+  let asked='';page.once('dialog',d=>{asked=d.message();void d.accept()});
+  await w3.getByRole('button',{name:'ربط بهذه القضية'}).click();await page.getByText('ملف W-3').waitFor();await screen('case-collections');
+  assert.match(asked,/مرتبط بالقضية كود TEST-0/,'Moving a file names the case it leaves');
   recs=await dept('collections','records_page');assert.equal(byCode('W-3').caseId,'ui-case-1','Linked from the case');await page.keyboard.press('Escape');
   // The client profile lists its collection files.
   await page.getByRole('button',{name:/^الموكلون/}).first().click();await page.locator('.client-card').filter({hasText:'شركة تجريبية للاتصالات'}).click();

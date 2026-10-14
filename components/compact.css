@@ -162,3 +162,8 @@
 :root .case-files-table td.mono{white-space:nowrap}
 :root .case-files-table .tag{white-space:nowrap}
 :root .text-link.danger{color:#a33a2c}
+/* A typed code or automatic number that belongs to a case already, with the files linked to it. */
+:root .existing-case{grid-column:1/-1;display:grid;gap:6px;padding:10px 12px;border-radius:10px;border:1px solid color-mix(in srgb,#c58b2b 45%,var(--border));background:color-mix(in srgb,#f3c86b 14%,var(--card))}
+:root .existing-case p{margin:0}:root .existing-case ul{margin:0;padding-inline-start:18px;display:grid;gap:3px;font-size:13px}
+:root .existing-case small{color:var(--muted-foreground)}:root .existing-case .btn{justify-self:start}
+:root .linked-files small.linked-elsewhere{color:#9a5b12}
