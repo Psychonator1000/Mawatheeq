@@ -64,7 +64,9 @@ function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:Cha
  // Closing removes a conversation from the list only; its messages stay. It returns when a new message arrives,
  // when you open it again (from a new chat or a name), and searching always finds it.
  const at=(v:string)=>{const t=Date.parse(v);return Number.isNaN(t)?0:t};
- const isClosed=(c:ChatConversation)=>!!closed[c.id]&&at(c.lastAt)<=at(closed[c.id]);
+ // The mark is the server time of the last message when closed (never this computer's clock, which may run ahead),
+ // and a conversation with unread messages always shows.
+ const isClosed=(c:ChatConversation)=>!!closed[c.id]&&!c.unread&&at(c.lastAt)<=at(closed[c.id]);
  const matches=(summary?.conversations||[]).filter(c=>(conversationName(c,me)+' '+c.members.map(m=>m.name).join(' ')).includes(q.trim()));
  const list=matches.filter(c=>q.trim()||!isClosed(c));
  const mine=list.filter(c=>c.isMember),review=list.filter(c=>!c.isMember);
@@ -73,7 +75,7 @@ function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:Cha
   <span className="chat-avatar" aria-hidden>{c.kind==='group'?<Users size={16}/>:conversationName(c,me).replace(/^ا[/.]\s*/,'').slice(0,1)}</span>
   <span className="chat-row-text"><b>{conversationName(c,me)}</b><small>{c.last?(c.last.kind==='event'?'':c.last.mine?'أنت: ':c.kind==='group'?c.last.sender+': ':'')+c.last.body:'لا رسائل بعد'}</small></span>
   <span className="chat-row-meta"><small>{chatTime(c.lastAt)}</small>{c.unread>0&&<span className="chat-badge inline">{c.unread}</span>}</span></button>
-  {!isClosed(c)&&<button type="button" className="chat-row-close" onClick={()=>saveClosed({...closed,[c.id]:new Date(Math.max(at(c.lastAt),Date.now())).toISOString()})} aria-label={'إغلاق '+conversationName(c,me)} title="إغلاق المحادثة (تبقى محفوظة)"><X size={14}/></button>}</div>;
+  {!isClosed(c)&&<button type="button" className="chat-row-close" onClick={()=>saveClosed({...closed,[c.id]:c.lastAt})} aria-label={'إغلاق '+conversationName(c,me)} title="إغلاق المحادثة (تبقى محفوظة)"><X size={14}/></button>}</div>;
  return <>
   <header className="chat-head"><h2>المحادثات</h2><div className="chat-head-actions"><button type="button" className="icon-btn" onClick={onNew} aria-label="محادثة جديدة" title="محادثة جديدة"><Plus size={18}/></button><button type="button" className="icon-btn" onClick={onGroup} aria-label="مجموعة جديدة" title="مجموعة جديدة"><Users size={18}/></button><button type="button" className="icon-btn" onClick={onClose} aria-label="إغلاق المحادثات"><X size={18}/></button></div></header>
   <div className="chat-search searchbox"><Search size={15}/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="ابحث في المحادثات" aria-label="بحث في المحادثات"/></div>

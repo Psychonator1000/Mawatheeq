@@ -544,6 +544,13 @@ await lively.close();
  await page.waitForTimeout(300);assert.equal(await rows.count(),before-1,'A closed conversation leaves the list');
  await panel.getByRole('button',{name:'محادثة جديدة'}).click();await panel.locator('button',{hasText:'tools_clerk'}).first().click();
  await panel.locator('.chat-msg').first().waitFor();await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();assert.equal(await rows.count(),before,'Messaging the person again reopens it with its history');
+ // A closed conversation comes back when the other person writes, even when this computer's clock runs ahead of the server.
+ await page.evaluate(()=>{const real=Date.now;window.__realNow=real;Date.now=()=>real()+30*60e3});
+ const again=rows.filter({hasText:'tools_clerk'}).filter({hasNotText:'فريق'}).first();await again.hover();await again.getByRole('button',{name:/^إغلاق /}).click();
+ await page.evaluate(()=>{Date.now=window.__realNow});await page.waitForTimeout(300);assert.equal(await rows.count(),before-1);
+ const clerkChats=await rpc('mawatheeq_chat_request',[clerkSession.token,'summary','{}']);const withOwner=clerkChats.conversations.find(c=>c.kind==='direct'&&c.members.some(m=>m.id===me));
+ await rpc('mawatheeq_chat_request',[clerkSession.token,'send',JSON.stringify({conversationId:withOwner.id,clientId:crypto.randomUUID(),body:'رسالة بعد الإغلاق'})]);
+ await rows.filter({hasText:'رسالة بعد الإغلاق'}).waitFor({timeout:15000});assert.equal(await rows.count(),before,'A new message brings a closed conversation back');
  await page.keyboard.press('Escape');await panel.waitFor({state:'hidden'});
  await clerkCtx.close();}
 // Automatic light mode on a strong PC: the old permanent "slow" flag is ignored; a fresh one explains itself and can be cleared.
