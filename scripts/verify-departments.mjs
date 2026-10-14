@@ -238,6 +238,24 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  const hiddenClientFile=await save(owner,'collections',record('collections','file',{...collectionData,code:'CLI-2',evidence:[],sourceReference:'',notes:'',clientEntityId:ent},hidden.id));
  assert.deepEqual((await dept(office.token,'collections','entity_files',{entityId:ent})).map(r=>r.id).sort(),[cf.id,hiddenClientFile.id].sort());
  assert.deepEqual((await dept(collector.token,'collections','entity_files',{entityId:ent})).map(r=>r.id),[cf.id],'Entity files follow case scope');
+ // Merging a duplicate client file moves its collection files (main client and extra plaintiffs) and keeps their review.
+ {await db.exec('reset role');
+  const dup=(await db.query("insert into mawatheeq_private.client_entities(payload) values('{\"name\":\"Synthetic Telecomm\",\"kind\":\"organization\",\"sector\":\"telecom\",\"needsReview\":false,\"aliases\":[],\"contacts\":[]}') returning id::text")).rows[0].id;
+  await db.query(`update mawatheeq_private.client_entities set payload=payload||jsonb_build_object('id',id::text,'sector','telecom','needsReview',false) where id in ($1,$2)`,[ent,dup]);
+  await db.exec('set role anon');
+  let df=await save(office,'collections',record('collections','file',{...collectionData,code:'CLI-3',evidence:[],sourceReference:'Synthetic order CLI-3',notes:'',clientEntityId:dup,plaintiffs:[{id:'p1',name:'Partner',clientEntityId:dup},{id:'p2',name:'Other',clientEntityId:''}]},visible.id));
+  df=await action(office,'collections','review_file',df,{caseRevision:(await local(owner.token,'cases_page')).find(c=>c.id===visible.id).revision,attested:true});
+  await db.exec('reset role');
+  const rev=async id=>(await db.query('select revision from mawatheeq_private.client_entities where id=$1',[id])).rows[0].revision;
+  const merged=(await db.query('select mawatheeq_private.merge_clients($1,$2,$3,$4) r',[dup,ent,await rev(dup),await rev(ent)])).rows[0].r;
+  assert.equal(merged.files,1,'The merge reports the moved collection files');
+  const moved=(await db.query('select payload,review,revision from mawatheeq_private.department_records where id=$1',[df.id])).rows[0];
+  assert.deepEqual([moved.payload.clientEntityId,moved.payload.plaintiffs.map(x=>x.clientEntityId)],[ent,[ent,'']],'Merged files point to the client file that stays');
+  assert.equal(moved.review.recordRevision,moved.revision,'Moving the link keeps the source review');
+  await db.exec('set role anon');
+  const after=(await dept(office.token,'collections','entity_files',{entityId:ent})).find(r=>r.id===df.id);
+  assert.ok(after,'The moved file is listed under the client file that stays');
+  await save(office,'collections',{...after,payload:{...after.payload,notes:'Saved after merge'}});}
  await denied(()=>dept(legal.token,'collections','entity_files',{entityId:ent}),'Entity files need the collections section');
  cf=await save(office,'collections',{...cf,payload:{...cf.payload,clientEntityId:''}});assert.equal(cf.payload.clientEntityId,'');}
 // Archive: locations, files, immutable custody movements, requests; case scope, state machine and the archive section.
