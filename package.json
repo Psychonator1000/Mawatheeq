@@ -24,6 +24,7 @@
     "test:excel": "node scripts/verify-excel.mjs",
     "test:office": "node --experimental-strip-types scripts/verify-office.mjs && node scripts/verify-office-db.mjs",
     "test:chat": "node scripts/verify-chat-db.mjs",
+    "test:case-files": "node scripts/verify-case-files-db.mjs",
     "test:permissions": "node scripts/verify-permissions.mjs",
     "test:departments": "node scripts/verify-departments.mjs",
     "test:comments": "node scripts/verify-comments.mjs",

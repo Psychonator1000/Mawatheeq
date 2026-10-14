@@ -51,7 +51,7 @@ await context.addInitScript(()=>{try{const k='mawatheeq.appearance.v1',a=JSON.pa
 const page=await context.newPage();const errors=[];
 supportFilterSelects(page.locator('body'));
 page.on('pageerror',e=>errors.push(e.message));
-let slowServer=0;const uploads=[];
+let slowServer=0;const uploads=[],caseUploads=[],caseRemoved=[];
 // The synthetic backend for every page in a context: database calls, the files function and chat storage uploads.
 async function wireFixture(ctx){
  await ctx.route('**/app-config.json',route=>route.fulfill({json:{supabaseUrl:'https://office-fixture.supabase.co',supabasePublishableKey:'sb_publishable_synthetic'}}));
@@ -60,12 +60,21 @@ async function wireFixture(ctx){
   if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
   if(url.pathname.includes('/storage/v1/object/upload/sign/mawatheeq-chat/')){uploads.push(url.pathname);return route.fulfill({json:{Key:url.pathname}})}
   if(url.pathname.includes('/storage/v1/object/sign/mawatheeq-chat/'))return route.fulfill({contentType:'application/pdf',body:'%PDF-1.4 synthetic'});
+  // Case documents: a signed upload stores the object (the database checks it exists before saving the record).
+  if(url.pathname.includes('/storage/v1/object/upload/sign/mawatheeq-case-files/')){const path=decodeURIComponent(url.pathname.split('/mawatheeq-case-files/')[1]);caseUploads.push(path);
+   if(/^cases\/[0-9a-f]{32}\/[0-9a-f-]{36}$/.test(path))await db.exec(`reset role;insert into storage.objects(bucket_id,name) values('mawatheeq-case-files','${path}');set role anon`);return route.fulfill({json:{Key:'mawatheeq-case-files/'+path}})}
+  if(url.pathname.includes('/storage/v1/object/sign/mawatheeq-case-files/'))return route.fulfill({contentType:'application/pdf',body:'%PDF-1.4 synthetic'});
   const name=url.pathname.split('/').pop();const body=req.postDataJSON();
+  if(name==='local-files'&&/^case_/.test(body.action)){const action=body.action.slice(5);
+   try{const r=await rpc('mawatheeq_case_file_request',[body.sessionToken,action,JSON.stringify(action==='upload'?{caseId:body.caseId,size:body.size,mime:body.mime}:{id:body.id})]);
+    if(action==='delete')caseRemoved.push(r.path);
+    return route.fulfill({json:action==='upload'?{path:r.path,token:'synthetic'}:action==='download'?{path:r.path,url:'https://office-fixture.supabase.co/storage/v1/object/sign/mawatheeq-case-files/'+r.path+'?token=synthetic'}:{path:r.path}})}
+   catch(e){return route.fulfill({json:{error:e.message}})}}
   if(name==='local-files'){const upload=body.action==='chat_upload';
    try{const r=await rpc('mawatheeq_chat_request',[body.sessionToken,upload?'file_upload':'file_download',JSON.stringify(upload?{conversationId:body.conversationId,name:body.name,size:body.size,mime:body.mime}:{path:body.path})]);
     return route.fulfill({json:upload?{path:r.path,token:'synthetic'}:{path:r.path,url:'https://office-fixture.supabase.co/storage/v1/object/sign/mawatheeq-chat/'+r.path+'?token=synthetic'}})}
    catch(e){return route.fulfill({json:{error:e.message}})}}
-  if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request','mawatheeq_comment_request','mawatheeq_chat_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
+  if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request','mawatheeq_comment_request','mawatheeq_chat_request','mawatheeq_case_file_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
   const args=name==='mawatheeq_local_login'?[body.p_username,body.p_password]:[body.p_token,body.p_action,JSON.stringify(body.p_data||{})];
   try{await route.fulfill({json:await rpc(name,args)})}catch(e){await route.fulfill({status:400,json:{message:e.message,code:e.code||'P0001'}})}
  });
@@ -364,6 +373,35 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  await confirm.getByRole('button',{name:'حذف الجلسة'}).click();await sw.getByText('لا توجد جلسات مسجلة في هذه الدرجة بعد.').waitFor();
  sessions=(await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-1').payload.procedures.filter(p=>p.kind==='جلسة');
  assert.equal(sessions.length,0,'The session is deleted');await sw.locator('.next-hearing').waitFor({state:'detached',timeout:8000});
+ await page.keyboard.press('Escape');await sw.waitFor({state:'hidden'});}
+// Case documents: several files chosen at once, each with a title, category and date; filtered by category, previewed, edited and deleted.
+{await page.keyboard.press('Control+k');const qs=page.getByRole('dialog',{name:'بحث سريع'});await qs.getByRole('combobox').fill('TOOL-1');await qs.getByRole('option',{name:/TOOL-1/}).first().click();
+ const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();
+ await sw.getByRole('tab',{name:/^المستندات/}).click();await sw.getByText('لا توجد مستندات مرفوعة لهذه القضية بعد.').waitFor();
+ const pdf=Buffer.from('%PDF-1.4 synthetic');
+ await sw.getByLabel('اختيار ملفات للقضية').setInputFiles([{name:'مذكرة دفاع.pdf',mimeType:'application/pdf',buffer:pdf},{name:'حافظة مستندات خبرة.pdf',mimeType:'application/pdf',buffer:pdf},
+  {name:'صورة العقد.png',mimeType:'image/png',buffer:Buffer.from('89504e47','hex')},{name:'برنامج.exe',mimeType:'application/x-msdownload',buffer:Buffer.from('MZ')}]);
+ await page.getByText(/لم تُضف هذه الملفات: برنامج\.exe/).waitFor();
+ const queue=sw.locator('.case-files-queue');await queue.getByText('3 ملفات بانتظار الرفع').waitFor();
+ assert.equal(await queue.getByLabel('تصنيف المستند 1',{exact:true}).inputValue(),'مذكرات','The category is guessed from the file name');
+ assert.equal(await queue.getByLabel('تصنيف المستند 2',{exact:true}).inputValue(),'حوافظ مستندات');
+ assert.equal(await queue.getByLabel('عنوان المستند 1',{exact:true}).inputValue(),'مذكرة دفاع','The title starts as the file name');
+ await queue.getByLabel('عنوان المستند 3',{exact:true}).fill('صورة عقد التوريد');
+ await page.screenshot({path:artifacts+'/case-files-queue.png'});
+ await queue.getByRole('button',{name:'رفع 3 ملفات'}).click();await sw.locator('.case-files-table').getByText('صورة عقد التوريد').waitFor();
+ await queue.waitFor({state:'detached'});assert.equal(caseUploads.length,3,'Each file is uploaded');
+ assert.equal(await sw.locator('.case-files-table tbody tr').count(),3);
+ await sw.locator('.case-files-cats').getByRole('tab',{name:/^مذكرات/}).click();assert.equal(await sw.locator('.case-files-table tbody tr').count(),1,'Categories filter the list');
+ await sw.locator('.case-files-cats').getByRole('tab',{name:/^الكل/}).click();
+ await sw.getByRole('button',{name:'عرض مذكرة دفاع'}).click();const frame=sw.locator('.case-files-preview iframe');await frame.waitFor();
+ assert.match(await frame.getAttribute('src'),/mawatheeq-case-files\/cases\//,'A PDF opens beside the list');
+ await page.screenshot({path:artifacts+'/case-files.png'});
+ await sw.getByRole('button',{name:'تعديل مذكرة دفاع'}).click();const dlg=page.getByRole('alertdialog');await dlg.getByLabel('عنوان المستند',{exact:true}).fill('مذكرة دفاع منا');
+ await dlg.getByRole('button',{name:'حفظ',exact:true}).click();await sw.locator('.case-files-table').getByText('مذكرة دفاع منا').waitFor();
+ await sw.getByRole('button',{name:'حذف صورة عقد التوريد'}).click();await page.getByRole('alertdialog').getByRole('button',{name:'حذف المستند'}).click();
+ await sw.locator('.case-files-table').getByText('صورة عقد التوريد').waitFor({state:'detached'});assert.equal(caseRemoved.length,1,'Deleting removes the stored file');
+ const kept=await rpc('mawatheeq_case_file_request',[login.token,'list',JSON.stringify({caseId:'tools-case-1'})]);
+ assert.deepEqual(kept.files.map(f=>f.title).sort(),['حافظة مستندات خبرة','مذكرة دفاع منا'].sort());
  await page.keyboard.press('Escape');await sw.waitFor({state:'hidden'});}
 // The lawyer is picked from the office's lawyers, or typed when new; the case list offers it afterwards.
 await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-0/).click();

@@ -19,7 +19,7 @@ Deno.serve(async (req: Request) => {
     const text = await req.text();
     if (text.length > 4096) return reply({ error: 'Request too large' }, 413);
     const body = JSON.parse(text);
-    if (!['upload', 'download', 'cleanup', 'chat_upload', 'chat_download'].includes(body.action) || !/^[a-f0-9]{64}$/.test(body.sessionToken || '')) return reply({ error: 'سجل الدخول أولاً.' }, 401);
+    if (!['upload', 'download', 'cleanup', 'chat_upload', 'chat_download', 'case_upload', 'case_download', 'case_delete'].includes(body.action) || !/^[a-f0-9]{64}$/.test(body.sessionToken || '')) return reply({ error: 'سجل الدخول أولاً.' }, 401);
     const secrets = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}');
     const key = secrets.default || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!key) return reply({ error: 'Storage is not configured' }, 503);
@@ -41,6 +41,29 @@ Deno.serve(async (req: Request) => {
       const { data, error } = await chat.createSignedUrl(access.path, 60, body.download ? { download: String(body.name || true) } : undefined);
       if (error) throw error;
       return reply({ path: access.path, url: data.signedUrl });
+    }
+    // Case documents: the case file request checks the case, edit rights, size and type, and returns the only path this session may use.
+    if (body.action === 'case_upload' || body.action === 'case_download' || body.action === 'case_delete') {
+      const action = body.action === 'case_upload' ? 'upload' : body.action === 'case_download' ? 'download' : 'delete';
+      const { data: access, error: denied } = await admin.rpc('mawatheeq_case_file_request', {
+        p_token: body.sessionToken, p_action: action,
+        p_data: action === 'upload' ? { caseId: body.caseId, size: body.size, mime: body.mime } : { id: body.id },
+      });
+      if (denied || !access?.path) return reply({ error: denied?.message || 'لا تملك صلاحية الوصول إلى الملف.' }, 403);
+      const files = admin.storage.from('mawatheeq-case-files');
+      if (action === 'upload') {
+        const { data, error } = await files.createSignedUploadUrl(access.path, { upsert: false });
+        if (error) throw error;
+        return reply({ path: access.path, token: data.token });
+      }
+      if (action === 'download') {
+        const { data, error } = await files.createSignedUrl(access.path, 300, body.download ? { download: String(access.name || true) } : undefined);
+        if (error) throw error;
+        return reply({ path: access.path, url: data.signedUrl });
+      }
+      // The record is already gone; a file left behind if this fails is unreachable.
+      await files.remove([access.path]);
+      return reply({ path: access.path });
     }
     const { data: access, error: denied } = await admin.rpc('mawatheeq_local_request', {
       p_token: body.sessionToken, p_action: 'file_' + body.action,
