@@ -1,9 +1,9 @@
 import type {CollectionData} from './departments';
 export const COLLECTION_FIELDS:[string,[string,string][]][]=[
  ['الأطراف والعنوان',[['company','المدعي (الموكل)'],['defendant','المدعى عليه'],['defendantJob','وظيفة / إقامة المدعى عليه'],['civilId','الرقم المدني للمدعى عليه'],['nationality','الجنسية'],['address','العنوان'],['address2','تفاصيل إضافية للعنوان'],['companyCivil','الرقم المدني للمدعي'],['companyRegister','السجل التجاري للمدعي'],['phone','الهاتف']]],
- ['المطالبة وأمر الأداء',[['code','رقم الملف'],['customerId','رقم العميل لدى الموكل'],['fileAutoNumber','الرقم الآلي للملف (كما ورد)'],['account','رقم العقد / الحساب'],['amount','مبلغ المطالبة (د.ك)'],['orderNumber','رقم أمر الأداء'],['court','محكمة أمر الأداء'],['rejectedDate','تاريخ رفض أمر الأداء'],['demandDate','تاريخ التكليف بالوفاء'],['statementDate','تاريخ كشف الحساب']]],
+ ['المطالبة وأمر الأداء',[['code','رقم ملف التحصيل'],['customerId','رقم العميل لدى الموكل'],['fileAutoNumber','الرقم الآلي لأمر الأداء (أعلى الطلب)'],['account','رقم العقد / الحساب'],['amount','مبلغ المطالبة (د.ك)'],['orderNumber','رقم أمر الأداء'],['court','محكمة أمر الأداء'],['rejectedDate','تاريخ رفض أمر الأداء'],['demandDate','تاريخ التكليف بالوفاء'],['statementDate','تاريخ كشف الحساب']]],
  ['الدعوى والجلسة',[['lawsuitNumber','رقم الدعوى'],['lawsuitYear','سنة الدعوى'],['hearingCourt','محكمة الجلسة'],['hearingCircuit','الدائرة'],['hearingDate','تاريخ الجلسة'],['hearingDay','يوم الجلسة']]],
- ['الإيصال',[['receiptNumber','رقم الإيصال'],['receiptDate','تاريخ الإيصال'],['receiptFee','رسوم الإيصال (د.ك)'],['orderAuto','الرقم الآلي لأمر الأداء']]],
+ ['الإيصال',[['receiptNumber','رقم الإيصال'],['receiptDate','تاريخ الإيصال'],['receiptFee','رسوم الإيصال (د.ك)'],['orderAuto','الرقم الآلي في الإيصال']]],
 ];
 export const COLLECTION_LABELS=Object.fromEntries(COLLECTION_FIELDS.flatMap(([,fields])=>fields));
 const required={

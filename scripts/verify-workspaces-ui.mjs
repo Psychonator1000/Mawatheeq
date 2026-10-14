@@ -126,10 +126,10 @@ try{
   await switchTo('التحصيل');
   await page.getByLabel('ملف Excel للتحصيل',{exact:true}).setInputFiles({name:'collections.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(X.write(w,{type:'array',bookType:'xlsx'}))});
   const dlg=page.getByRole('dialog');const stat=async label=>dlg.locator('.import-summary>div').filter({hasText:label}).locator('b').innerText();
-  await dlg.getByText('SYNTHETIC TWO').first().waitFor();assert.equal(await stat('ملف جديد'),'3');assert.equal(await stat('يُربط بقضية تلقائياً'),'1');
+  await dlg.getByText('SYNTHETIC TWO').first().waitFor();assert.equal(await stat('ملف جديد'),'3');assert.equal(await stat('بالرقم الآلي لأمر الأداء'),'1');
   await screen('collection-import');await dlg.getByRole('button',{name:'استيراد 3 ملف'}).click();await dlg.waitFor({state:'detached'});
   let recs=await dept('collections','records_page');const byCode=c=>recs.find(r=>r.kind==='file'&&r.payload.code===c);
-  assert.equal(byCode('W-1').caseId,'ui-case-auto','Linked by its court number');assert.equal(byCode('W-2').caseId,'');assert.equal(byCode('W-2').payload.customerId,'50000002');assert.equal(byCode('W-2').payload.fileStatus,'تحت الرفع');
+  assert.equal(byCode('W-1').caseId,'','A file is not linked to a case by number: the order\'s automatic number is not the case\'s');assert.equal(byCode('W-1').payload.fileAutoNumber,'260000001');assert.equal(byCode('W-1').payload.orderAuto||'','');assert.equal(byCode('W-2').caseId,'');assert.equal(byCode('W-2').payload.customerId,'50000002');assert.equal(byCode('W-2').payload.fileStatus,'تحت الرفع');
   assert.ok(recs.some(r=>r.kind==='payment'&&r.subjectId===byCode('W-1').id&&r.payload.amount==='20'),'Paid total carried over');
   // Data checks: civil IDs failing the check digit, debtors with several files, files without a phone.
   const cards=async()=>(await page.locator('.collection-card .collection-code').allInnerTexts()).filter(c=>c.startsWith('W-')).sort();
@@ -169,6 +169,8 @@ try{
   await page.getByLabel('العنوان',{exact:true}).fill((byCode('W-3').payload.address)||'');await page.waitForFunction(()=>!document.querySelector('.make-case')?.disabled);
   await makeCase.click();const mk=page.getByRole('dialog',{name:'إنشاء قضية من ملف التحصيل'});
   assert.equal(await mk.getByRole('button',{name:'إنشاء القضية وربط الملف'}).isDisabled(),true);await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('TEST-0');await mk.getByText('هذا الكود مستخدم لقضية أخرى').waitFor();
+  await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('W-3');await mk.getByText('هذا رقم ملف التحصيل').waitFor();
+  assert.equal(await mk.getByLabel('الرقم الآلي للقضية (بوابة العدل)',{exact:true}).inputValue(),'','The case automatic number is not taken from the file');
   await mk.getByLabel('كود المكتب للقضية',{exact:true}).fill('COL-W3');await screen('make-case');await mk.getByRole('button',{name:'إنشاء القضية وربط الملف'}).click();
   await page.getByText(/أُنشئت القضية COL-W3 ورُبط بها الملف/).first().waitFor();await page.locator('.case-link').getByText(/COL-W3/).waitFor();
   assert.equal(await makeCase.count(),0,'The button leaves once the file has a case');

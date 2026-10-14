@@ -199,6 +199,10 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  const f2=await save(office,'collections',file(2));
  assert.deepEqual((await dept(collector.token,'collections','find_files',{q:'COL-'})).map(r=>r.id),[f1.id],'Search stays within case scope');
  assert.equal((await dept(office.token,'collections','find_files',{q:'51093472'}))[0].id,f2.id,'Search by the customer number');
+ // A file is also found by its payment order's automatic number and by an extra defendant.
+ {const fresh=file(7),numbered=await save(office,'collections',{...fresh,payload:{...fresh.payload,fileAutoNumber:'244935050',defendants:[{id:'x1',name:'Extra Debtor Name'}]}});
+  assert.equal((await dept(office.token,'collections','find_files',{q:'244935050'}))[0].id,numbered.id,'Search by the order automatic number');
+  assert.equal((await dept(office.token,'collections','find_files',{q:'Extra Debtor'}))[0].id,numbered.id,'Search by an extra defendant');}
  await dept(office.token,'collections','link_case',{id:f2.id,revision:f2.revision,caseId:visible.id});
  assert.equal((await dept(collector.token,'collections','case_files',{caseId:visible.id})).filter(r=>r.payload.code?.startsWith('COL-')).length,2,'One case can come from several files');
  await denied(()=>dept(collector.token,'collections','case_files',{caseId:hidden.id}));
