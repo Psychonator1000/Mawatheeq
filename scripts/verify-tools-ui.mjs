@@ -373,7 +373,9 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  await confirm.getByRole('button',{name:'حذف الجلسة'}).click();await sw.getByText('لا توجد جلسات مسجلة في هذه الدرجة بعد.').waitFor();
  sessions=(await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-1').payload.procedures.filter(p=>p.kind==='جلسة');
  assert.equal(sessions.length,0,'The session is deleted');await sw.locator('.next-hearing').waitFor({state:'detached',timeout:8000});
- await page.keyboard.press('Escape');await sw.waitFor({state:'hidden'});}
+ await page.keyboard.press('Escape');await sw.waitFor({state:'hidden'});
+ await page.evaluate(()=>{location.hash='cases'});const row=page.locator('.case-row').filter({hasText:'TOOL-1'}).first();await row.waitFor();
+ assert.equal(await row.locator('.hearing-chip').count(),0,'A cancelled hearing no longer shows as the next session in the case list');}
 // Case documents: several files chosen at once, each with a title, category and date; filtered by category, previewed, edited and deleted.
 {await page.keyboard.press('Control+k');const qs=page.getByRole('dialog',{name:'بحث سريع'});await qs.getByRole('combobox').fill('TOOL-1');await qs.getByRole('option',{name:/TOOL-1/}).first().click();
  const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();

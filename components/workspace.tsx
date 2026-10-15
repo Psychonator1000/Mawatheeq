@@ -101,7 +101,7 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
  // Column sort; remaining days follow the page's report date and the execution category's own deadline.
  const sorted=useMemo(()=>sortCases(filtered,sort,c=>{const s=caseState(c,rules,view==='deadlines'?reportDate:undefined);return view==='cases'&&filters.category==='execution'?s.executionRemaining:s.days===0?null:s.remaining}),[filtered,sort,rules,view,reportDate,filters.category]);
  // Next scheduled hearing per case, from open hearings dated today or later.
- const nextHearing=useMemo(()=>{const m=new Map<string,WorkItem>(),today=todayISO();for(const w of office?.work||[])if(w.kind==='hearing'&&w.status!=='done'&&w.caseId&&w.dueDate>=today&&(!m.has(w.caseId)||w.dueDate<m.get(w.caseId)!.dueDate))m.set(w.caseId,w);return m},[office]);
+ const nextHearing=useMemo(()=>{const m=new Map<string,WorkItem>(),today=todayISO();for(const w of office?.work||[])if(w.kind==='hearing'&&w.status!=='done'&&w.status!=='cancelled'&&w.caseId&&w.dueDate>=today&&(!m.has(w.caseId)||w.dueDate<m.get(w.caseId)!.dueDate))m.set(w.caseId,w);return m},[office]);
  useEffect(()=>setPage(1),[filters,outcome,type,lawyer,view,archive,deadlineFilter,reportDate,sort]);const pageSize=20,pages=Math.max(1,Math.ceil(filtered.length/pageSize)),currentPage=clampPage(page,pages);
  useEffect(()=>setPage(current=>clampPage(current,pages)),[pages]);const recent=[...active].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
  const [searchOpen,setSearchOpen]=useState(false),[workFocus,setWorkFocus]=useState<{id:string;at:number}|null>(null);
