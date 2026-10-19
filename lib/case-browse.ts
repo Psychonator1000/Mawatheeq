@@ -66,17 +66,16 @@ export function needsAutoNumber(record: CaseRecord) {
   return !String(record.autoNumber ?? '').trim();
 }
 
-// Normalised search text per record object, built once: records are replaced (not edited) when they change, so typing in
-// the search box no longer re-normalises every case's text on each keystroke.
-const haystacks = new WeakMap<CaseRecord, string>();
+// Normalizing is the costly part: it runs again only when a record's searchable text changes.
+const haystacks = new WeakMap<CaseRecord, { raw: string; text: string }>();
 function searchText(record: CaseRecord) {
-  let text = haystacks.get(record);
-  if (text === undefined) {
-    text = normalizeSearch([record.code, record.autoNumber, record.client, record.clientGroup, record.opponent,
-      record.caseNumber, record.lawyer, record.ruling, record.clientEntityName, record.clientContactName, record.casePerson,
-      ...(Array.isArray(record.stages) ? (record.stages as { caseNumber?: string; autoNumber?: string }[]).flatMap(st => [st.caseNumber, st.autoNumber]) : [])].join(' '));
-    haystacks.set(record, text);
-  }
+  const raw = [record.code, record.autoNumber, record.client, record.clientGroup, record.opponent,
+    record.caseNumber, record.lawyer, record.ruling, record.clientEntityName, record.clientContactName, record.casePerson,
+    ...(Array.isArray(record.stages) ? (record.stages as { caseNumber?: string; autoNumber?: string }[]).flatMap(st => [st.caseNumber, st.autoNumber]) : [])].join(' ');
+  const hit = haystacks.get(record);
+  if (hit && hit.raw === raw) return hit.text;
+  const text = normalizeSearch(raw);
+  haystacks.set(record, { raw, text });
   return text;
 }
 export function matchesCaseFilters(record: CaseRecord, filters: CaseFilters) {
