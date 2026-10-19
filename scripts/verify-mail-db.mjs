@@ -85,6 +85,7 @@ counts = await mail(amal, 'counts');
 assert.equal(counts.total, 1); assert.equal(counts.byWorkspace.secretary, 1); assert.equal(counts.latest[0].subject, 'جلسة الغد');
 assert.equal((await mail(amal, 'list', { workspace: 'secretary', filter: 'unread' })).length, 1);
 assert.equal((await mail(amal, 'list', { workspace: 'secretary', q: 'الغد' })).length, 1);
+assert.equal((await mail(amal, 'list', { workspace: 'secretary', q: '%' })).length, 0, 'Search words are matched literally');
 const newest = (await mail(amal, 'list', { workspace: 'secretary', filter: 'unread' }))[0];
 const opened = await mail(amal, 'get', { id: newest.id });
 assert.equal(opened.text, 'نص الرسالة'); assert.equal(opened.readBy[0].name, 'أمل'); assert.equal(opened.canSend, true);

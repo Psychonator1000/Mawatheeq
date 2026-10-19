@@ -66,8 +66,21 @@ export function needsAutoNumber(record: CaseRecord) {
   return !String(record.autoNumber ?? '').trim();
 }
 
+// Normalised search text per record object, built once: records are replaced (not edited) when they change, so typing in
+// the search box no longer re-normalises every case's text on each keystroke.
+const haystacks = new WeakMap<CaseRecord, string>();
+function searchText(record: CaseRecord) {
+  let text = haystacks.get(record);
+  if (text === undefined) {
+    text = normalizeSearch([record.code, record.autoNumber, record.client, record.clientGroup, record.opponent,
+      record.caseNumber, record.lawyer, record.ruling, record.clientEntityName, record.clientContactName, record.casePerson,
+      ...(Array.isArray(record.stages) ? (record.stages as { caseNumber?: string; autoNumber?: string }[]).flatMap(st => [st.caseNumber, st.autoNumber]) : [])].join(' '));
+    haystacks.set(record, text);
+  }
+  return text;
+}
 export function matchesCaseFilters(record: CaseRecord, filters: CaseFilters) {
-  const includes = (value: unknown, term: string) => normalizeSearch(value).includes(normalizeSearch(term));
+  const includes = (value: unknown, term: string) => !term || normalizeSearch(value).includes(normalizeSearch(term));
   const month = caseMonth(record.date);
   return (!filters.year || month.slice(0, 4) === filters.year)
     && (!filters.month || month.slice(5) === filters.month)
@@ -76,9 +89,7 @@ export function matchesCaseFilters(record: CaseRecord, filters: CaseFilters) {
     && includes(record.code, filters.code)
     && includes(`${record.clientEntityName || ''} ${record.client || ''} ${record.clientGroup || ''}`, filters.client)
     && includes(record.opponent, filters.opponent)
-    && includes([record.code, record.autoNumber, record.client, record.clientGroup, record.opponent,
-      record.caseNumber, record.lawyer, record.ruling, record.clientEntityName, record.clientContactName, record.casePerson,
-      ...(Array.isArray(record.stages) ? (record.stages as { caseNumber?: string; autoNumber?: string }[]).flatMap(st => [st.caseNumber, st.autoNumber]) : [])].join(' '), filters.search);
+    && (!filters.search || searchText(record).includes(normalizeSearch(filters.search)));
 }
 
 export function monthlyCaseCounts(records: CaseRecord[], year: string) {

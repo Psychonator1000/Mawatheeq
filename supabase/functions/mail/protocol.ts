@@ -7,6 +7,8 @@ export type Conn = {
   close(): void;
   /** Upgrades the stream to TLS after STARTTLS; absent where the transport cannot. */
   startTls?: () => Promise<Conn>;
+  /** False on an unencrypted stream; passwords are never sent over one. */
+  secure?: boolean;
 };
 export type Connect = (host: string, port: number, tls: boolean) => Promise<Conn>;
 export type Address = { name?: string; address: string };
@@ -68,12 +70,13 @@ export class Imap {
     catch (e) { throw e instanceof MailError ? e : new MailError('connect', `تعذر الاتصال بخادم البريد ${o.host}:${o.port}.`); }
     const c = new Imap(conn, o.timeout ?? 20000);
     const hello = await c.reader.line();
-    if (!/^\* (OK|PREAUTH)/i.test(hello)) { conn.close(); throw new MailError('protocol', 'خادم البريد لا يقبل الاتصال: ' + hello.slice(0, 120)); }
+    if (!/^\* (OK|PREAUTH)/i.test(hello)) { conn.close(); throw new MailError('protocol', 'خادم البريد لا يقبل الاتصال.'); }
     if (o.security === 'starttls') {
       await c.command('STARTTLS');
       if (!conn.startTls) throw new MailError('connect', 'تعذر تشفير الاتصال (STARTTLS).');
       c.conn = await conn.startTls(); c.reader.reset(c.conn);
     }
+    if (c.conn.secure === false) { c.close(); throw new MailError('connect', 'الاتصال بخادم البريد غير مشفر؛ استخدم SSL أو STARTTLS.'); }
     try { await c.command(`LOGIN ${quote(o.username)} ${quote(o.password)}`); }
     catch (e) { c.close(); throw e instanceof MailError && e.kind === 'protocol' ? new MailError('auth', 'رفض خادم البريد اسم المستخدم أو كلمة المرور.') : e; }
     return c;
@@ -212,6 +215,7 @@ export class Smtp {
       await s.cmd('STARTTLS', [220]); s.conn = await conn.startTls(); s.reader.reset(s.conn);
       caps = await s.cmd('EHLO ' + me, [250]);
     }
+    if (s.conn.secure === false) { s.close(); throw new MailError('connect', 'خادم الإرسال لا يدعم التشفير؛ استخدم المنفذ 465 (SSL).'); }
     const plain = btoa(latin1(enc.encode('\u0000' + o.username + '\u0000' + o.password)));
     try {
       if (/AUTH[ =][^\n]*PLAIN/i.test(caps) || !/AUTH[ =][^\n]*LOGIN/i.test(caps)) await s.cmd('AUTH PLAIN ' + plain, [235], true);
@@ -253,7 +257,11 @@ export type OutgoingMessage = {
   messageId: string; inReplyTo?: string; references?: string; date?: Date;
   attachments?: { name: string; mime: string; data: Uint8Array }[];
 };
+// Message ids that came from the browser: anything else is dropped so no header can be smuggled in.
+const ids = (v?: string) => v && /^<[^<>\s]+>( <[^<>\s]+>)*$/.test(v) && v.length <= 4000 ? v : '';
+const mimeType = (v: string) => /^[\w.+-]+\/[\w.+-]+$/.test(v) ? v : 'application/octet-stream';
 export function buildMessage(m: OutgoingMessage): Uint8Array {
+  m = { ...m, inReplyTo: ids(m.inReplyTo), references: ids(m.references) };
   const h = [
     'From: ' + formatAddress(m.from),
     'To: ' + m.to.map(formatAddress).join(', '),
@@ -275,7 +283,7 @@ export function buildMessage(m: OutgoingMessage): Uint8Array {
     body = `Content-Type: multipart/mixed; boundary="${mix}"\r\n\r\n--${mix}\r\n${body}` + m.attachments.map(a => {
       const ascii = /^[\x20-\x7e]*$/.test(a.name) && !/["\\]/.test(a.name);
       const disp = ascii ? `filename="${a.name}"` : `filename*=UTF-8''${encodeURIComponent(a.name)}`;
-      return `--${mix}\r\nContent-Type: ${a.mime || 'application/octet-stream'}; name="${ascii ? a.name : encodeWord(a.name)}"\r\nContent-Disposition: attachment; ${disp}\r\nContent-Transfer-Encoding: base64\r\n\r\n${wrap76(base64(a.data))}`;
+      return `--${mix}\r\nContent-Type: ${mimeType(a.mime || '')}; name="${ascii ? a.name : encodeWord(a.name)}"\r\nContent-Disposition: attachment; ${disp}\r\nContent-Transfer-Encoding: base64\r\n\r\n${wrap76(base64(a.data))}`;
     }).join('') + `--${mix}--\r\n`;
   }
   return enc.encode(h.join('\r\n') + '\r\n' + body);

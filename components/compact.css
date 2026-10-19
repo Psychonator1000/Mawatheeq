@@ -287,3 +287,10 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .work-desk-body .office-table .btn{min-height:34px;padding:4px 12px}.work-row.late td:first-child{box-shadow:inset -3px 0 0 #a32e38}
 .work-desk-body .work-calendar{padding:10px 0}
 @media(max-width:1000px){.work-desk-grid{grid-template-columns:1fr;height:auto}.sec-agenda-list{max-height:320px}.work-desk-body{max-height:none}.department-shell:has(.desk-page) .department-footer{display:block}}
+/* UI sweep fixes. Phones: the top bar keeps one line (current page name only, shortened) so the account menu stays on screen. */
+@media(max-width:700px){.topbar{gap:8px}.breadcrumb{min-width:0;flex:1;overflow:hidden}.breadcrumb>span:first-of-type,.breadcrumb>svg{display:none}.breadcrumb b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.top-left{flex-shrink:0;gap:4px}.top-left .date-display,.top-left .topbar-clock{display:none}}
+/* Phones: tables keep readable columns and scroll sideways inside their frame instead of squeezing words letter by letter. */
+@media(max-width:700px){.table-wrap>.office-table,.table-wrap>table.case-table{min-width:640px}.table-wrap{-webkit-overflow-scrolling:touch}.work-desk-body .office-table{min-width:640px}}
+/* Section headers take less height so the section's own content starts sooner. */
+.department-hero{padding:10px 18px;margin-bottom:12px;min-height:0}.department-hero h1{font-size:24px;line-height:1.4}.department-hero .eyebrow{margin-bottom:2px}.department-hero p{font-size:13px;margin-top:2px}.department-hero>svg{width:32px;height:32px}
+@media(max-width:700px){.department-hero p{display:none}.department-hero>svg{display:none}.department-hero h1{font-size:21px}}

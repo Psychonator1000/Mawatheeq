@@ -13,11 +13,29 @@ const reply = (data: unknown, status = 200) => new Response(JSON.stringify(data)
 
 function wrap(c: Deno.TcpConn | Deno.TlsConn, host: string): Conn {
   return {
+    secure: 'handshake' in c,
     async read() { const buf = new Uint8Array(65536); const n = await c.read(buf); return n === null ? null : buf.subarray(0, n); },
     async write(data) { let off = 0; while (off < data.length) off += await c.write(data.subarray(off)); },
     close() { try { c.close(); } catch { /* closed */ } },
     startTls: 'handshake' in c ? undefined : async () => wrap(await Deno.startTls(c as Deno.TcpConn, { hostname: host }), host),
   };
+}
+
+// Mail servers only: nothing inside a private network, and only the usual mail ports.
+const PORTS = [143, 993, 465, 587, 2525];
+function privateIp(ip: string) {
+  const m = ip.match(/^(\d+)\.(\d+)\.\d+\.\d+$/);
+  if (!m) return true;
+  const a = Number(m[1]), b = Number(m[2]);
+  return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b < 128) || (a === 169 && b === 254)
+    || (a === 172 && b >= 16 && b < 32) || (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19));
+}
+async function connect(host: string, port: number, tls: boolean) {
+  const h = host.toLowerCase();
+  const refuse = () => { throw new Error('عنوان خادم البريد أو منفذه غير مسموح.'); };
+  if (!PORTS.includes(port) || !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(h) || /\.(localhost|local|internal|lan|home|arpa)$/.test(h)) refuse();
+  if (/^[\d.]+$/.test(h) ? privateIp(h) : (await Deno.resolveDns(h, 'A').catch(() => [] as string[])).some(privateIp)) refuse();
+  return wrap(tls ? await Deno.connectTls({ hostname: host, port }) : await Deno.connect({ hostname: host, port }), host);
 }
 
 // JWT verification is disabled: like «local-files», every action is checked in Postgres against the app's session token.
@@ -37,7 +55,7 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, key, { auth: { persistSession: false, autoRefreshToken: false } });
     const bucket = admin.storage.from('mawatheeq-mail');
     const deps: Deps & Storage = {
-      connect: async (host, port, tls) => wrap(tls ? await Deno.connectTls({ hostname: host, port }) : await Deno.connect({ hostname: host, port }), host),
+      connect,
       parse: async raw => await PostalMime.parse(raw) as unknown as Parsed,
       rpc: async (action, data = {}) => {
         const { data: out, error } = await admin.rpc('mawatheeq_mail_service', { p_token: body.sessionToken, p_action: action, p_data: data });

@@ -130,14 +130,17 @@ export function quoteFor(m: MailMessage, when: string) {
 /** HTML of a received message, shown in a sandboxed frame: no scripts ever, and outside pictures only when asked. */
 export function framedHtml(html: string, images: boolean) {
   const csp = `default-src 'none'; style-src 'unsafe-inline'; img-src data:${images ? ' https: http:' : ''}; font-src data:`;
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base target="_blank"><style>body{font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.6;margin:12px;color:#222;background:#fff;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${html}</body></html>`;
+  // A message's own <meta> (refresh) and <base> tags are dropped so it cannot load or redirect anything by itself.
+  const body = html.replace(/<\/?(meta|base)\b[^>]*>/gi, '');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base target="_blank"><style>body{font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.6;margin:12px;color:#222;background:#fff;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${body}</body></html>`;
 }
 
 // One poller per window, shared by the bell and the page tabs: fetch mail every minute (and on returning to the window), then read the counts.
 let counts: MailCounts | null = null, timer = 0, stopChange: (() => void) | null = null;
 const subscribers = new Set<(c: MailCounts | null) => void>();
 async function readCounts() { try { counts = await mailRequest<MailCounts>('counts'); subscribers.forEach(fn => fn(counts)); } catch { /* keep the last counts */ } }
-const tick = () => { void syncMail().finally(() => void readCounts()); };
+// Hidden tabs wait; returning to the window (focus) fetches at once.
+const tick = () => { if (document.hidden) return; void syncMail().finally(() => void readCounts()); };
 export function useMailCounts(enabled: boolean) {
   const [value, setValue] = useState<MailCounts | null>(counts);
   useEffect(() => {

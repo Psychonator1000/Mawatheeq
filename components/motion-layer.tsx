@@ -87,7 +87,10 @@ export default function MotionLayer() {
    velocity*=Math.pow(.86,Math.min(6,(now-(lastTick||now-16))/16));lastTick=now;if(Math.abs(velocity)<.01)velocity=0;
    root.style.setProperty('--scroll-v',velocity.toFixed(3));root.style.setProperty('--scroll-speed',Math.min(1,Math.abs(velocity)).toFixed(3));
    if(velocity!==0)velFrame=requestAnimationFrame(tickVelocity);else{lastTick=0;clearTimeout(settle);settle=window.setTimeout(()=>root.removeAttribute('data-scrolling'),120)}};
-  const onScroll=()=>{
+  // Scroll events can fire many times per frame; the work runs once per frame.
+  let scrollFrame=0;
+  const onScroll=()=>{if(!scrollFrame)scrollFrame=requestAnimationFrame(()=>{scrollFrame=0;onScrollFrame()})};
+  const onScrollFrame=()=>{
    const prevTop=lastTop;
    const se=document.scrollingElement||root,max=se.scrollHeight-se.clientHeight,top=se.scrollTop,now=performance.now();
    root.style.setProperty('--scroll-progress',max>0?Math.min(1,top/max).toFixed(4):'0');
@@ -189,10 +192,10 @@ export default function MotionLayer() {
   const onContextLost=()=>{if(root.dataset.perf==='lite'||document.hidden||++visibleLosses<2)return;markSlow('graphics');saveAppearance(loadAppearance());toast.message('خُففت المؤثرات لأن بطاقة الرسوميات في هذا الجهاز لا تتحملها.',{description:'يمكنك تغيير ذلك من «المظهر والحركة» ← الأداء.'})};
   const canvases=[ambient.current,burst.current].filter((c):c is HTMLCanvasElement=>!!c);
   for(const c of canvases)c.addEventListener('contextlost',onContextLost);
-  onScroll();scheduleMeasure();
+  onScrollFrame();scheduleMeasure();
   addEventListener('pointermove',onMove,{passive:true});addEventListener('pointerdown',onDown,{passive:true});addEventListener('pointerup',onUp,{passive:true});addEventListener('pointercancel',onUp,{passive:true});document.addEventListener('pointerleave',onLeave);
   addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',scheduleMeasure,{passive:true});addEventListener('mawatheeq-appearance',onAppearance);reducedQuery.addEventListener('change',onAppearance);
-  return()=>{for(const c of canvases)c.removeEventListener('contextlost',onContextLost);cancelAnimationFrame(perfFrame);clearTimeout(perfStop);cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
+  return()=>{for(const c of canvases)c.removeEventListener('contextlost',onContextLost);cancelAnimationFrame(perfFrame);clearTimeout(perfStop);cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);cancelAnimationFrame(scrollFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
    removeEventListener('pointermove',onMove);removeEventListener('pointerdown',onDown);removeEventListener('pointerup',onUp);removeEventListener('pointercancel',onUp);document.removeEventListener('pointerleave',onLeave);
    removeEventListener('keydown',onKey);clearTimeout(splashTimer);removeEventListener('scroll',onScroll);removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
    for(const a of ['data-scrolled','data-scrolling','data-pointer'])root.removeAttribute(a)};

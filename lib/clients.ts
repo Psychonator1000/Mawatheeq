@@ -12,8 +12,15 @@ export function emptyClient(): ClientEntity {
 }
 export function emptyContact(): ClientContact { return { id: crypto.randomUUID(), name: '', role: '', phone: '', notes: '' }; }
 export function clientName(record: Pick<CaseRecord,'clientEntityName'|'clientGroup'|'client'>) { return record.clientEntityName || record.clientGroup || record.client; }
+// Lookups by id, built once per client list (lists are replaced, not mutated), so enriching every case stays linear.
+const clientIndex = new WeakMap<ClientEntity[], Map<string, ClientEntity>>();
+function clientById(clients: ClientEntity[], id?: string) {
+  let index = clientIndex.get(clients);
+  if (!index) { index = new Map(clients.map(c => [c.id, c])); clientIndex.set(clients, index); }
+  return id ? index.get(id) : undefined;
+}
 export function enrichCase(record: CaseRecord, clients: ClientEntity[]): CaseRecord {
-  const entity = clients.find(c => c.id === record.clientEntityId);
+  const entity = clientById(clients, record.clientEntityId);
   return { ...record, clientEntityName: entity?.name || '', clientSector: entity?.sector || 'other',
     clientContactName: entity?.contacts.find(p => p.id === record.clientContactId)?.name || '',
     clientNeedsReview: entity?.needsReview ?? true };

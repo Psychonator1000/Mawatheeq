@@ -182,14 +182,22 @@ export async function handle(deps: Deps & Storage, body: Body): Promise<{ status
     case 'test':
     case 'save': {
       const a = body.account || {};
-      let password = String(body.password || '');
-      if (!password && a.id) { try { password = (await deps.rpc<{ password: string }>('credentials', { accountId: a.id })).password || ''; } catch (e) { return failed(e); } }
-      if (!password) return { status: 400, data: { error: 'اكتب كلمة مرور البريد أو كلمة مرور التطبيقات.' } };
+      // The session is checked before any server is contacted.
+      try { await deps.rpc('whoami'); } catch (e) { return failed(e); }
+      const s = { imapHost: String(a.imapHost || '').trim().toLowerCase(), imapPort: Number(a.imapPort) || 993, imapSecurity: (a.imapSecurity === 'starttls' ? 'starttls' : 'ssl') as 'ssl' | 'starttls',
+        smtpHost: String(a.smtpHost || '').trim().toLowerCase(), smtpPort: Number(a.smtpPort) || 465, username: String(a.username || '').trim(), password: String(body.password || ''), sentFolder: String(a.sentFolder || '') };
+      if (!s.password && a.id) {
+        let c: Credentials;
+        try { c = await deps.rpc<Credentials>('credentials', { accountId: a.id }); } catch (e) { return failed(e); }
+        // A saved password only ever goes to the servers it was saved for.
+        if (s.imapHost !== c.imapHost || s.imapPort !== c.imapPort || s.imapSecurity !== c.imapSecurity || s.username !== c.username || (s.smtpHost && (s.smtpHost !== c.smtpHost || s.smtpPort !== c.smtpPort))) {
+          return { status: 400, data: { error: 'أعد كتابة كلمة مرور البريد عند تغيير الخادم أو اسم المستخدم.' } };
+        }
+        s.password = c.password || '';
+      }
+      if (!s.password) return { status: 400, data: { error: 'اكتب كلمة مرور البريد أو كلمة مرور التطبيقات.' } };
       let found: { sentFolder: string };
-      try {
-        found = await testAccount(deps, { imapHost: String(a.imapHost || ''), imapPort: Number(a.imapPort) || 993, imapSecurity: a.imapSecurity === 'starttls' ? 'starttls' : 'ssl',
-          smtpHost: String(a.smtpHost || ''), smtpPort: Number(a.smtpPort) || 465, username: String(a.username || ''), password, sentFolder: String(a.sentFolder || '') });
-      } catch (e) { return failed(e, 422); }
+      try { found = await testAccount(deps, s); } catch (e) { return failed(e, 422); }
       if (body.action === 'test') return { status: 200, data: { ok: true, sentFolder: found.sentFolder } };
       try { return { status: 200, data: await deps.rpc('save_account', { account: { ...a, sentFolder: a.sentFolder || found.sentFolder }, password: body.password || '' }) }; }
       catch (e) { return failed(e); }

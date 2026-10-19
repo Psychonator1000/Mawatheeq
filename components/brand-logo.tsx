@@ -1,4 +1,4 @@
-import {brandMarkSvg} from '@/lib/print';
+import {brandMarkSvg} from '@/lib/brand-mark';
 import './brand-logo.css';
 const MARK = brandMarkSvg();
 /**

@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { buildMessage, encodeWord, Smtp } from '../supabase/functions/mail/protocol.ts';
-import { sendMail, syncAccount, testAccount, friendlyError } from '../supabase/functions/mail/core.ts';
+import { sendMail, syncAccount, testAccount, friendlyError, handle } from '../supabase/functions/mail/core.ts';
 import { startFakeMail } from './mail-fakes.mjs';
 
 const PostalMime = (await import(process.env.MAIL_TEST_MODULES ? pathToFileURL(path.join(process.env.MAIL_TEST_MODULES, 'postal-mime/src/postal-mime.js')).href : 'postal-mime')).default;
@@ -136,5 +136,22 @@ assert.equal((await mail('counts')).total, 25, 'The 25 new ones; the answered qu
 await sendMail(deps, { accountId: saved.id, to: [{ address: 'lawyer@example.test' }], subject: 'إعادة توجيه: عقد', text: 'للاطلاع', attachments: [{ path: full.attachmentList[0].path, name: 'contract.pdf', mime: 'application/pdf', size: 18 }] });
 assert.equal((await PostalMime.parse(smtpSent.at(-1).raw)).attachments[0].filename, 'contract.pdf');
 
+// A saved password is only ever sent to the servers it was saved for.
+const store2 = { signUpload: async () => '', signDownload: async () => '' };
+const stored = { id: saved.id, imapHost: '127.0.0.1', imapPort: IMAP_PORT, imapSecurity: 'ssl', smtpHost: '127.0.0.1', smtpPort: SMTP_PORT, username: 'amal@example.test' };
+const logins = imapLog.filter(c => c.startsWith('LOGIN')).length;
+assert.equal((await handle({ ...deps, ...store2 }, { action: 'test', account: { ...stored, imapHost: 'collector.example.test' } })).status, 400, 'Another server needs the password typed again');
+assert.equal((await handle({ ...deps, ...store2 }, { action: 'test', account: { ...stored, username: 'other@example.test' } })).status, 400);
+assert.equal(imapLog.filter(c => c.startsWith('LOGIN')).length, logins, 'Nothing was sent anywhere');
+assert.equal((await handle({ ...deps, ...store2 }, { action: 'test', account: stored })).status, 200, 'The saved servers still test without retyping');
+const noSession = { ...deps, ...store2, rpc: async () => { throw Object.assign(new Error('انتهت الجلسة.'), { code: '28000', db: true }); } };
+assert.equal((await handle(noSession, { action: 'test', account: { ...stored, id: '' }, password: 'x' })).status, 401, 'No server is contacted without a session');
+assert.equal(imapLog.filter(c => c.startsWith('LOGIN')).length, logins + 1);
+// Ids and types from the browser cannot smuggle in headers.
+const smuggled = new TextDecoder().decode(buildMessage({ from: { address: 'a@example.test' }, to: [{ address: 'b@example.test' }], subject: 's', text: 't', messageId: '<m@example.test>',
+  inReplyTo: '<x@example.test>\r\nBcc: victim@example.test', attachments: [{ name: 'a.txt', mime: 'text/plain\r\nX-Evil: 1', data: new Uint8Array([65]) }] }));
+assert.ok(!/Bcc:|X-Evil/.test(smuggled) && !/In-Reply-To/.test(smuggled), 'Header injection is dropped');
+assert.match(smuggled, /Content-Type: application\/octet-stream; name="a.txt"/);
+
 close();
-console.log('Passed mail protocol: connection test, first and later fetches without marking read, read/unread in the app carried to the server (and not when switched off), inline pictures and attachments, reply with attachment over SMTP filed in Sent, de-duplication and batching.');
+console.log('Passed mail protocol: connection test, first and later fetches without marking read, read/unread in the app carried to the server (and not when switched off), inline pictures and attachments, reply with attachment over SMTP filed in Sent, de-duplication and batching, saved passwords kept to their own servers, no connection without a session, no header injection.');
