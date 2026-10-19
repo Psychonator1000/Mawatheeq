@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState,type ReactNode} from 'react';
-import {BookOpen,Plus,Printer,Download,Scale,RotateCcw,Undo2,Ban,Trash2,Check,History,Landmark,Banknote,Receipt,ShoppingCart,NotebookPen,Lock} from 'lucide-react';
+import {BookOpen,Plus,Printer,Download,FileSpreadsheet,Scale,RotateCcw,Undo2,Ban,Trash2,Check,History,Landmark,Banknote,Receipt,ShoppingCart,NotebookPen,Lock} from 'lucide-react';
 import {toast} from 'sonner';
 import {booksRequest} from '@/lib/local-auth';
 import {ACCOUNT_TYPES,DOC_KINDS,GROUP_LABELS,docKindOf,type Doc,type DocKind,JOURNAL_TYPES,MOVE_STATES,PARTNER_KINDS,balanceSheet,balancingLine,fiscalYearStart,money,moveTotals,nextAccountCode,profitAndLoss,runningLedger,toFils,
@@ -14,12 +14,13 @@ import {OfficeSelect,officeTime} from '../office-shared';
 import FilterSelect,{FilterBox,type FilterOption} from '../filter-select';
 import PageNavigation from '../page-navigation';
 import Needs from '../needs';
-import {EditorDialog,exportCsv} from './shared';
+import {EditorDialog,exportCsv,exportXlsx} from './shared';
+import {EXTRA_REPORTS,ExtraReports,type ExtraReport} from './books-reports';
 import BankCash,{type BankSetup} from './books-bank';
 import {InvoiceEditor,InvoicingPanel,PartnerSide,PaymentEditor,ProductsPanel,TermsPanel,blankDoc,type FullSetup} from './books-invoicing';
 
 type View='dashboard'|'customers'|'vendors'|'bank'|'moves'|'reports'|'config';
-type Report='trial'|'ledger'|'pl'|'bs';
+type Report='trial'|'ledger'|'pl'|'bs'|ExtraReport;
 type Draft=Omit<Move,'lines'>&{lines:MoveLine[]};
 const JOURNAL_ICONS:Record<JournalType,typeof Landmark>={bank:Landmark,cash:Banknote,sale:Receipt,purchase:ShoppingCart,general:NotebookPen};
 const amount=(v:string)=>money(toFils(v));
@@ -166,14 +167,30 @@ function MoveEditor({setup,cases,initial,onClose,onChanged,onOpen}:{setup:BooksS
 }
 
 const REPORTS:[Report,string][]=[['trial','ميزان المراجعة'],['ledger','دفتر الأستاذ العام'],['pl','الأرباح والخسائر'],['bs','الميزانية العمومية']];
+// A period moved back by whole years, or the period of the same length just before it.
+function shiftPeriod(from:string,to:string,how:'year'|'previous'):{from:string;to:string}{
+ const d=(s:string)=>new Date(s+'T00:00:00Z'),iso=(x:Date)=>x.toISOString().slice(0,10);
+ if(how==='year'){const a=d(from),b=d(to);a.setUTCFullYear(a.getUTCFullYear()-1);b.setUTCFullYear(b.getUTCFullYear()-1);return{from:iso(a),to:iso(b)}}
+ const days=Math.round((d(to).getTime()-d(from).getTime())/864e5),end=d(from);end.setUTCDate(end.getUTCDate()-1);const start=new Date(end);start.setUTCDate(start.getUTCDate()-days);return{from:iso(start),to:iso(end)};
+}
 function Reports({setup,report,onReport,account,onAccount,onOpen,canExport,version}:{setup:BooksSetup;report:Report;onReport:(r:Report)=>void;account:string;onAccount:(a:string)=>void;onOpen:(id:string)=>void;canExport:boolean;version:number}){
+ const extras='reports' in setup?EXTRA_REPORTS:[];
+ const tabs=<div className="department-tabs books-report-tabs" role="group" aria-label="التقارير المالية">{[...REPORTS,...extras].map(([k,label])=><button key={k} className={'btn '+(report===k?'primary':'')} aria-pressed={report===k} onClick={()=>onReport(k)}>{label}</button>)}</div>;
+ if(EXTRA_REPORTS.some(r=>r[0]===report))return <section className="panel">{tabs}<ExtraReports key={report} setup={setup} report={report as ExtraReport} onOpen={onOpen} canExport={canExport} version={version}/></section>;
+ return <StatementReports setup={setup} report={report} onReport={onReport} account={account} onAccount={onAccount} onOpen={onOpen} canExport={canExport} version={version} tabs={tabs}/>;
+}
+function StatementReports({setup,report,onReport,account,onAccount,onOpen,canExport,version,tabs}:{setup:BooksSetup;report:Report;onReport:(r:Report)=>void;account:string;onAccount:(a:string)=>void;onOpen:(id:string)=>void;canExport:boolean;version:number;tabs:ReactNode}){
  const today=todayISO(),yearStart=fiscalYearStart(today,setup.settings.fiscalYearEnd);
  const [from,setFrom]=useState(yearStart),[to,setTo]=useState(today),[rows,setRows]=useState<TrialRow[]|null>(null),[lines,setLines]=useState<LedgerLine[]|null>(null),[error,setError]=useState('');
+ const [compare,setCompare]=useState<''|'year'|'previous'>(''),[prior,setPrior]=useState<TrialRow[]|null>(null);
  // The balance sheet is at a date: its trial balance runs from the start of that date's fiscal year.
  const rFrom=report==='bs'?fiscalYearStart(to||today,setup.settings.fiscalYearEnd):from;
  useEffect(()=>{let live=true;
   const tb=booksRequest<TrialRow[]>('trial_balance',{from:rFrom,to}),gl=report==='ledger'?booksRequest<LedgerLine[]>('general_ledger',{from:rFrom,to,accountId:account}):Promise.resolve(null);
-  Promise.all([tb,gl]).then(([a,b])=>{if(live){setRows(a);setLines(b);setError('')}}).catch(e=>{if(live)setError((e as Error).message)});return()=>{live=false}},[report,rFrom,to,account,version]);
+  // A comparison: the same report for last year or the period before (a balance sheet at the same date last year).
+  const cmp=compare&&(report==='pl'||report==='bs')?(report==='bs'?(()=>{const p=shiftPeriod(rFrom,to||today,'year');return{from:fiscalYearStart(p.to,setup.settings.fiscalYearEnd),to:p.to}})():shiftPeriod(rFrom,to||today,compare)):null;
+  const pr=cmp?booksRequest<TrialRow[]>('trial_balance',cmp):Promise.resolve(null);
+  Promise.all([tb,gl,pr]).then(([a,b,c])=>{if(live){setRows(a);setLines(b);setPrior(c);setError('')}}).catch(e=>{if(live)setError((e as Error).message)});return()=>{live=false}},[report,rFrom,to,account,version,compare,today,setup.settings.fiscalYearEnd]);
  const accountOptions=setup.accounts.map(a=>({value:a.id,label:a.code+' '+a.name}));
  const scope=report==='bs'?`في ${formatDate(to||today)}`:`من ${from?formatDate(from):'البداية'} إلى ${formatDate(to||today)}`;
  const name=REPORTS.find(r=>r[0]===report)![1];
@@ -183,20 +200,25 @@ function Reports({setup,report,onReport,account,onAccount,onOpen,canExport,versi
   if(report==='ledger'){const byAcc=ledgerGroups(lines||[],rows);return{headers:['الحساب','التاريخ','القيد','المرجع / البيان','مدين','دائن','الرصيد'],body:byAcc.flatMap(g=>[[g.label,'','','رصيد افتتاحي','','',money(g.opening)],...g.lines.map(l=>['',formatDate(l.date),l.name,[l.ref,l.label].filter(Boolean).join(' — '),amount(l.debit),amount(l.credit),money(l.running)])]),totals:[]}}
   const st=report==='pl'?profitAndLoss(rows):balanceSheet(rows);
   const secs:StatementSection[]='sections' in st?st.sections:[st.assets,st.liabilities,st.equity];
+  const old=prior?(report==='pl'?profitAndLoss(prior).sections:(()=>{const b=balanceSheet(prior);return [b.assets,b.liabilities,b.equity]})()):null;
+  const was=(key:string,id:string,name:string)=>{const sec=old?.find(x=>x.key===key);const l=sec?.lines.find(x=>id?x.accountId===id:x.name===name);return l?l.amount:0};
   const totals:[string,string][]='net' in st?[['مجمل الربح',money(st.gross)],['الربح التشغيلي',money(st.operating)],['صافي الربح',money(st.net)]]:[['إجمالي الأصول',money(st.assets.total)],['الالتزامات وحقوق الملكية',money(st.totalLiabilitiesEquity)]];
-  return{headers:['البند','الحساب','المبلغ'],body:secs.flatMap(s=>[[s.label,'',''],...s.lines.map(l=>['',(l.code?l.code+' ':'')+l.name,money(l.amount)]),['إجمالي '+s.label,'',money(s.total)]]),totals};
+  return{headers:['البند','الحساب','المبلغ',...(old?['المقارنة','التغير']:[])],body:secs.flatMap(s=>{const o=old?.find(x=>x.key===s.key)?.total||0;
+   return [[s.label,'',''],...s.lines.map(l=>['',(l.code?l.code+' ':'')+l.name,money(l.amount),...(old?[money(was(s.key,l.accountId,l.name)),money(l.amount-was(s.key,l.accountId,l.name))]:[])]),['إجمالي '+s.label,'',money(s.total),...(old?[money(o),money(s.total-o)]:[])]]}),totals};
  };
  const print=()=>{const t=table();if(!printHtml(listHtml(name,scope,t.headers,t.body,formatDate(today),'',t.totals)))popupBlocked()};
- const csv=()=>{const t=table();void exportCsv('accounting','Mawatheeq-'+report,[t.headers,...t.body,...t.totals.map(([k,v])=>[k,v])]).catch(fail)};
- return <section className="panel"><div className="department-toolbar"><div className="department-tabs" role="group" aria-label="التقارير المالية">{REPORTS.map(([k,label])=><button key={k} className={'btn '+(report===k?'primary':'')} aria-pressed={report===k} onClick={()=>onReport(k)}>{label}</button>)}</div>
-   <div className="actions"><button className="btn" onClick={print} disabled={!rows}><Printer size={15}/> طباعة</button>{canExport&&<button className="btn" onClick={csv} disabled={!rows}><Download size={15}/> تصدير</button>}</div></div>
+ const out=()=>{const t=table();return [[name+' '+scope],t.headers,...t.body,...t.totals.map(([k,v])=>[k,v])]};
+ return <section className="panel">{tabs}
   <div className="department-filters">{report!=='bs'&&<DateField label="من تاريخ" value={from} onChange={setFrom}/>}<DateField label={report==='bs'?'في تاريخ':'إلى تاريخ'} value={to} onChange={setTo}/>
-   {report==='ledger'&&<FilterSelect label="الحساب" value={account} onChange={onAccount} empty="كل الحسابات" options={accountOptions}/>}</div>
+   {report==='ledger'&&<FilterSelect label="الحساب" value={account} onChange={onAccount} empty="كل الحسابات" options={accountOptions}/>}
+   {(report==='pl'||report==='bs')&&<OfficeSelect label="مقارنة" value={compare} onChange={v=>setCompare(v as ''|'year'|'previous')} empty="بلا مقارنة" options={report==='pl'?[['year','الفترة نفسها من العام السابق'],['previous','الفترة السابقة مباشرة']]:[['year','التاريخ نفسه من العام السابق']]}/>}</div>
+  <div className="actions books-report-actions"><button className="btn" onClick={print} disabled={!rows}><Printer size={15}/> طباعة / PDF</button>{canExport&&<><button className="btn" disabled={!rows} onClick={()=>void exportXlsx('accounting','Mawatheeq-'+report,out()).catch(fail)}><FileSpreadsheet size={15}/> Excel</button>
+   <button className="btn" onClick={()=>void exportCsv('accounting','Mawatheeq-'+report,out()).catch(fail)} disabled={!rows}><Download size={15}/> CSV</button></>}</div>
   <p className="subtitle">{name} {scope}. تُحتسب القيود المرحّلة فقط.</p>
   {error&&<p className="notice" role="alert">{error}</p>}{!rows&&!error&&<p role="status">جارٍ إعداد التقرير…</p>}
   {rows&&report==='trial'&&<TrialTable rows={rows} onAccount={id=>{onAccount(id);onReport('ledger')}}/>}
   {rows&&report==='ledger'&&lines&&<LedgerTable groups={ledgerGroups(lines,rows)} onOpen={onOpen}/>}
-  {rows&&(report==='pl'||report==='bs')&&<Statement rows={rows} kind={report} onAccount={id=>{onAccount(id);onReport('ledger')}}/>}
+  {rows&&(report==='pl'||report==='bs')&&<Statement rows={rows} prior={prior} kind={report} onAccount={id=>{onAccount(id);onReport('ledger')}}/>}
  </section>;
 }
 function TrialTable({rows,onAccount}:{rows:TrialRow[];onAccount:(id:string)=>void}){
@@ -216,11 +238,18 @@ function LedgerTable({groups,onOpen}:{groups:ReturnType<typeof ledgerGroups>;onO
   {groups.map(g=><tbody key={g.id}><tr className="books-group"><th colSpan={5}>{g.label}<small> · رصيد افتتاحي</small></th><th dir="ltr">{money(g.opening)}</th></tr>
    {g.lines.map((l,i)=><tr key={l.moveId+i}><td>{formatDate(l.date)}</td><td><button type="button" className="link mono" onClick={()=>onOpen(l.moveId)}>{l.name}</button></td><td>{[l.ref,l.label].filter(Boolean).join(' — ')||'—'}</td><td className="ledger-value" dir="ltr">{toFils(l.debit)?amount(l.debit):''}</td><td className="ledger-value" dir="ltr">{toFils(l.credit)?amount(l.credit):''}</td><td className="ledger-value" dir="ltr">{money(l.running)}</td></tr>)}</tbody>)}</table></div>;
 }
-function Statement({rows,kind,onAccount}:{rows:TrialRow[];kind:'pl'|'bs';onAccount:(id:string)=>void}){
+function Statement({rows,prior,kind,onAccount}:{rows:TrialRow[];prior:TrialRow[]|null;kind:'pl'|'bs';onAccount:(id:string)=>void}){
  const pl=kind==='pl'?profitAndLoss(rows):null,bs=kind==='bs'?balanceSheet(rows):null;
  const secs=pl?pl.sections:[bs!.assets,bs!.liabilities,bs!.equity];
- return <div className="books-statement">{secs.map(s=><section key={s.key}><h3>{s.label}</h3><table className="office-table"><tbody>{s.lines.map((l,i)=><tr key={l.accountId||i}><td>{l.accountId?<button type="button" className="link" onClick={()=>onAccount(l.accountId)}>{l.code} {l.name}</button>:l.name}</td><td className="ledger-value" dir="ltr">{money(l.amount)}</td></tr>)}
-   {!s.lines.length&&<tr><td className="muted">لا شيء</td><td></td></tr>}</tbody><tfoot><tr><th>إجمالي {s.label}</th><th dir="ltr">{money(s.total)}</th></tr></tfoot></table></section>)}
+ const old=prior?(kind==='pl'?profitAndLoss(prior).sections:(()=>{const b=balanceSheet(prior);return [b.assets,b.liabilities,b.equity]})()):null;
+ const oldPl=prior&&kind==='pl'?profitAndLoss(prior):null;
+ // Lines in either period, so an account used only last year still shows.
+ const merged=(key:string,lines:StatementSection['lines'])=>{const o=old?.find(x=>x.key===key)?.lines||[];return [...lines,...o.filter(x=>!lines.some(l=>x.accountId?l.accountId===x.accountId:l.name===x.name)).map(x=>({...x,amount:0}))]};
+ const was=(key:string,id:string,name:string)=>old?.find(x=>x.key===key)?.lines.find(x=>id?x.accountId===id:x.name===name)?.amount||0;
+ const change=(now:number,then:number)=><><td className="ledger-value" dir="ltr">{money(then)}</td><td className="ledger-value" dir="ltr">{money(now-then)}{then?<small> ({Math.round((now-then)*1000/Math.abs(then))/10}٪)</small>:null}</td></>;
+ return <div className="books-statement">{secs.map(s=><section key={s.key}><h3>{s.label}</h3><table className="office-table">{old&&<thead><tr><th></th><th>الفترة</th><th>المقارنة</th><th>التغير</th></tr></thead>}<tbody>{merged(s.key,s.lines).map((l,i)=><tr key={l.accountId||i}><td>{l.accountId?<button type="button" className="link" onClick={()=>onAccount(l.accountId)}>{l.code} {l.name}</button>:l.name}</td><td className="ledger-value" dir="ltr">{money(l.amount)}</td>{old&&change(l.amount,was(s.key,l.accountId,l.name))}</tr>)}
+   {!s.lines.length&&!old&&<tr><td className="muted">لا شيء</td><td></td></tr>}</tbody><tfoot><tr><th>إجمالي {s.label}</th><th dir="ltr">{money(s.total)}</th>{old&&change(s.total,old.find(x=>x.key===s.key)?.total||0)}</tr></tfoot></table></section>)}
+  {oldPl&&pl&&<p className="muted">صافي الربح في فترة المقارنة: <b dir="ltr">{money(oldPl.net)}</b> · التغير <b dir="ltr">{money(pl.net-oldPl.net)}</b></p>}
   {pl&&<dl className="books-totals"><div><dt>مجمل الربح</dt><dd dir="ltr">{money(pl.gross)}</dd></div><div><dt>الربح التشغيلي</dt><dd dir="ltr">{money(pl.operating)}</dd></div><div className="net"><dt>صافي الربح</dt><dd dir="ltr">{money(pl.net)}</dd></div></dl>}
   {bs&&<dl className="books-totals"><div><dt>إجمالي الأصول</dt><dd dir="ltr">{money(bs.assets.total)}</dd></div><div><dt>الالتزامات وحقوق الملكية</dt><dd dir="ltr">{money(bs.totalLiabilitiesEquity)}</dd></div>
    <div className={bs.balanced?'net':'off'}><dt>{bs.balanced?'الميزانية متوازنة':'الميزانية غير متوازنة'}</dt><dd dir="ltr">{bs.balanced?'✓':money(bs.assets.total-bs.totalLiabilitiesEquity)}</dd></div></dl>}

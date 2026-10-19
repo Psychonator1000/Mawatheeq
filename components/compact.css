@@ -209,3 +209,6 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .books-active td{background:color-mix(in srgb,var(--dept) 7%,transparent)}
 .books-suggest{list-style:none;margin:0;padding:0;display:grid;gap:6px}.books-suggest li{border:1px solid var(--border);border-radius:8px;padding:6px 10px}
 .books-open-line{border-top:1px solid var(--border);padding-top:10px;margin-top:10px}.books-preview{max-height:300px;overflow:auto}
+.books-report-tabs{margin-bottom:16px}.books-report-actions{margin:0 0 12px}
+.books-kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px}
+.books-sub td{font-size:12.5px;background:color-mix(in srgb,var(--dept) 4%,transparent)}

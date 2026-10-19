@@ -35,3 +35,11 @@ export async function exportCsv(workspace:Department,name:string,rows:unknown[][
  const cell=(v:unknown)=>{let s=String(v??'');if(/^[\s]*[=+@-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};
  saveBlob(new Blob(['\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),name+'.csv');
 }
+/** The same rows as an Excel workbook (one sheet), after the same export permission check. */
+export async function exportXlsx(workspace:Department,name:string,rows:unknown[][]) {
+ await departmentRequest('check_export',{workspace});
+ const xlsx=await import('xlsx');const X=(xlsx as unknown as {default?:typeof xlsx}).default||xlsx;
+ const book=X.utils.book_new(),sheet=X.utils.aoa_to_sheet(rows.map(r=>r.map(v=>typeof v==='string'&&/^-?\d+(\.\d+)?$/.test(v.replace(/,/g,''))&&v.length<16?Number(v.replace(/,/g,'')):v)));
+ sheet['!views']=[{RTL:true}] as never;X.utils.book_append_sheet(book,sheet,'Report');
+ saveBlob(new Blob([X.write(book,{type:'array',bookType:'xlsx'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name+'.xlsx');
+}
