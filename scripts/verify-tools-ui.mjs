@@ -412,7 +412,7 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
   row({0:'ا/ محامٍ تجريبي',8:'للاطلاع',21:dmy(date),29:'91'+seq,43:'مطالبة من الرول',61:'مدعى',68:client}),row({0:'6',8:outcome,21:next?dmy(next):'',31:'متداول',46:'تجارى',59:'2026/9'+seq,68:opp})];
  const sheet=[row({34:'رول الجلســـات'}),...block('1','7002','شركة أدوات تجريبية','خصم الأدوات 2',before,'للحكم',soon),...block('2','880000001','موكل من الرول','خصم من الرول',soon,'','')];
  const w=X.utils.book_new();X.utils.book_append_sheet(w,X.utils.aoa_to_sheet(sheet),'Sheet');fs.writeFileSync(artifacts+'/roll.xls',X.write(w,{type:'buffer',bookType:'xls'}));
- await page.evaluate(()=>{location.hash='cases'});await page.getByRole('button',{name:'استيراد Excel',exact:true}).waitFor();
+ await page.evaluate(()=>{location.hash='cases'});await page.getByRole('button',{name:'استيراد القضايا من Excel',exact:true}).waitFor();
  await page.getByRole('button',{name:'استيراد الجلسات من الرول'}).click();const dlg=page.getByRole('dialog',{name:'استيراد الجلسات من الرول'});
  await dlg.getByLabel('ملف رول الجلسات').setInputFiles(artifacts+'/roll.xls');await dlg.getByText(/2 جلسة لـ 2 قضية/).waitFor();
  const stat=async t=>Number(await dlg.locator('.roll-stats div').filter({hasText:t}).locator('dd').textContent());

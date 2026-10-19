@@ -24,7 +24,7 @@ async function run(rows:Row[],file:string,dryRun:boolean,onProgress:(done:number
 }
 
 /**
- * «استيراد Excel» for a newer office workbook: new judgments are added, empty fields are filled, and differing values
+ * «استيراد القضايا من Excel» for a newer office workbook: new judgments are added, empty fields are filled, and differing values
  * are listed in each judgment's review box without replacing the website's. Nothing is written before confirmation.
  */
 export default function WorkbookImport({rows,file,onClose,onDone}:{rows:Row[];file:string;onClose:()=>void;onDone:()=>void}) {

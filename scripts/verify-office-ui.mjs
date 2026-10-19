@@ -179,7 +179,7 @@ try{
   // Office settings stay in the cases workspace, without backups for an admin lacking that power.
   await dep.evaluate(()=>{sessionStorage.setItem('mawatheeq.workspace.v1','legal');location.hash='settings'});await dep.reload();await dep.getByRole('heading',{name:'مدد احتساب المواعيد'}).waitFor();
   assert.equal(await dep.getByRole('heading',{name:'نسخة كاملة للبيانات'}).count(),0,'No backup without the backup power');assert.equal(await dep.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).count(),0);await ctx2.close();}
- // «استيراد Excel» from a newer workbook: preview first, then new judgments, filled blanks and a review list.
+ // «استيراد القضايا من Excel» from a newer workbook: preview first, then new judgments, filled blanks and a review list.
  {const X=require(require.resolve('xlsx',{paths:[process.cwd()]}));const w=X.utils.book_new();
   X.utils.book_append_sheet(w,X.utils.aoa_to_sheet([['معرف السجل الداخلي','الكود','إدخال الرقم الآلي','الموكل','الخصم','نوع الحكم','حالة الحكم','تاريخ الحكم','تاريخ استلام الصيغة التنفيذية','تاريخ إعلان الصيغة'],
    ['R0004','TEST-3','1003','شركة اختبار الواجهة','خصم تجريبي 3','حكم استئناف','لصالحنا','1/9/2026','5/9/2026',''],

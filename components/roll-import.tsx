@@ -47,7 +47,7 @@ export default function RollImport({onImported}:{onImported:()=>void}){
  const s=done||preview;
  const dates=parsed?parsed.cases.flatMap(c=>c.hearings.map(h=>h.date)).sort():[];
  return <>
-  <button type="button" className="btn" onClick={()=>{reset();setOpen(true)}}><CalendarPlus size={16}/> استيراد الجلسات من الرول</button>
+  <button type="button" className="btn" title="تقرير رول الجلسات من برنامج المحكمة: يسجل الجلسات المنعقدة بقراراتها ويضيف الجلسات القادمة" onClick={()=>{reset();setOpen(true)}}><CalendarPlus size={16}/> استيراد الجلسات من الرول</button>
   <Dialog open={open} onOpenChange={o=>{if(!busy)setOpen(o)}}><DialogContent className="roll-import" dir="rtl">
    <DialogHeader><DialogTitle>استيراد الجلسات من الرول</DialogTitle>
     <DialogDescription>اختر تقرير «رول الجلسات» (‎.xls) كما يُصدر من البرنامج. تُطابق القضايا بالرقم الآلي، وتُضاف القضايا غير الموجودة كقضايا متداولة، وتُسجل الجلسات المنعقدة بقراراتها، وتُضاف الجلسات القادمة إلى «المهام والجلسات». تُعرض النتيجة أولاً قبل الحفظ، واستيراد الرول نفسه مرة ثانية لا يكرر شيئاً.</DialogDescription></DialogHeader>
