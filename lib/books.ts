@@ -154,7 +154,7 @@ export type DocLine = MoveLine & { id?: string; kind: 'line' | 'product' | 'term
 export type Match = { partialId: string; amount: string; moveId: string; name: string; date: string; moveType: string; paymentType: string };
 export type Outstanding = { lineId: string; moveId: string; name: string; date: string; amount: string };
 export type Doc = Omit<Move, 'lines'> & { invoiceDateDue: string | null; paymentTermId: string; paymentType: '' | 'inbound' | 'outbound'; partnerType: '' | 'customer' | 'vendor';
-  amountTotal: string; amountResidual: string; paymentState: PaymentState; lines: DocLine[]; matches: Match[]; outstanding: Outstanding[] };
+  amountTotal: string; amountResidual: string; paymentState: PaymentState; lines: DocLine[]; matches: Match[]; outstanding: Outstanding[] } & PaymentDetails;
 export type DocSummary = { id: string; journalId: string; name: string; moveType: string; paymentType: string; partnerType: string; state: MoveState; date: string; dueDate: string | null; ref: string;
   partnerId: string; caseId: string; amountTotal: string; amountResidual: string; paymentState: PaymentState; reversedFrom: string; revision: number };
 
@@ -191,3 +191,17 @@ export function daysLate(due: string | null, today: string, residual: string): n
   if (!due || toFils(residual) <= 0 || due >= today) return 0;
   return Math.round((Date.parse(today + 'T00:00:00Z') - Date.parse(due + 'T00:00:00Z')) / 864e5);
 }
+
+// Bank and cash.
+export const PAYMENT_METHODS = { transfer: 'تحويل بنكي', cash: 'نقداً', cheque: 'شيك', knet: 'كي نت', card: 'بطاقة' } as const;
+export type PaymentMethod = keyof typeof PAYMENT_METHODS;
+export const CHEQUE_STATES = { held: 'قيد التحصيل', deposited: 'مودع', cleared: 'صُرف', bounced: 'مرتجع' } as const;
+export type BankStats = { booksBalance: string; statementBalance: string; lastStatementDate: string | null; toReconcile: number; chequesHeld: number };
+export type BankLine = { id: string; date: string; label: string; ref: string; partnerName: string; partnerId: string; amount: string; reconciled: boolean; moveId: string; moveName: string };
+export type Statement = { id: string; journalId: string; name: string; date: string; balanceStart: string; balanceEnd: string; note: string; sourceFile: string; revision: number; computedEnd: string; lines: BankLine[] };
+export type StatementSummary = { id: string; journalId: string; name: string; date: string; balanceStart: string; balanceEnd: string; computedEnd: string; lines: number; open: number };
+export type Suggestions = { items: { lineId: string; moveId: string; name: string; date: string; dueDate: string | null; partnerId: string; partner: string; residual: string; ref: string }[];
+  payments: { moveId: string; name: string; date: string; partner: string; amount: string; method: string; chequeNumber: string }[] };
+export type Cheque = { id: string; name: string; date: string; paymentType: string; partner: string; amount: string; chequeNumber: string; chequeDate: string | null; chequeBank: string; chequeState: string; journalId: string };
+export type Batch = { id: string; name: string; journalId: string; type: 'inbound' | 'outbound'; date: string; method: string; total: string; payments: { id: string; name: string; state: string; partner: string; amount: string }[] };
+export type PaymentDetails = { method?: PaymentMethod; chequeNumber?: string; chequeDate?: string | null; chequeBank?: string; chequeState?: string; batch?: string };

@@ -2,8 +2,8 @@ import {useEffect,useMemo,useState} from 'react';
 import {Plus,Printer,Download,RotateCcw,Ban,Trash2,Check,HandCoins,FileMinus2,Link2,Unlink,ArrowRightLeft,UserPlus} from 'lucide-react';
 import {toast} from 'sonner';
 import {booksRequest} from '@/lib/local-auth';
-import {DOC_KINDS,MOVE_STATES,PAYMENT_MATCH,PAYMENT_STATES,PARTNER_KINDS,daysLate,filsText,lineSubtotal,money,termSchedule,toFils,
- type BooksSetup,type Doc,type DocKind,type DocLine,type DocSummary,type InvoicingSetup,type PaymentTerm,type PaymentTermLine,type Product} from '@/lib/books';
+import {CHEQUE_STATES,DOC_KINDS,MOVE_STATES,PAYMENT_METHODS,PAYMENT_MATCH,PAYMENT_STATES,PARTNER_KINDS,daysLate,filsText,lineSubtotal,money,termSchedule,toFils,
+ type BooksSetup,type Doc,type PaymentMethod,type DocKind,type DocLine,type DocSummary,type InvoicingSetup,type PaymentTerm,type PaymentTermLine,type Product} from '@/lib/books';
 import type {CaseSummary} from '@/lib/departments';
 import {todayISO,formatDate} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
@@ -15,6 +15,7 @@ import FilterSelect,{FilterBox,type FilterOption} from '../filter-select';
 import PageNavigation from '../page-navigation';
 import Needs from '../needs';
 import {EditorDialog,exportCsv} from './shared';
+import {BatchPay} from './books-bank';
 
 export type FullSetup=BooksSetup&InvoicingSetup;
 const amount=(v:string)=>money(toFils(v));
@@ -37,14 +38,16 @@ export function blankDoc(setup:FullSetup,kind:DocKind,partnerId=''):Doc{
 const blankDocLine=():DocLine=>({kind:'product',productId:'',accountId:'',partnerId:'',caseId:'',label:'',quantity:'1',priceUnit:'',discount:'',debit:'',credit:'',dateMaturity:null});
 
 /** Invoices, bills, credit notes or payments of one kind, with what is still due. */
-export function Documents({setup,cases,kind,partner,onPartner,onOpen,onNew,version,canExport}:{setup:FullSetup;cases:CaseSummary[];kind:DocKind;partner:string;onPartner:(id:string)=>void;onOpen:(id:string)=>void;onNew:()=>void;version:number;canExport:boolean}){
+export function Documents({setup,cases,kind,partner,onPartner,onOpen,onNew,onChanged,version,canExport}:{setup:FullSetup;cases:CaseSummary[];kind:DocKind;partner:string;onPartner:(id:string)=>void;onOpen:(id:string)=>void;onNew:()=>void;onChanged?:()=>void;version:number;canExport:boolean}){
  const [state,setState]=useState(''),[paymentState,setPaymentState]=useState(''),[overdue,setOverdue]=useState(false),[q,setQ]=useState(''),[rows,setRows]=useState<DocSummary[]|null>(null),[error,setError]=useState(''),[page,setPage]=useState(1);
- useEffect(()=>{let live=true;const t=setTimeout(()=>{booksRequest<{documents:DocSummary[]}>('list_documents',{kind,state,paymentState,partnerId:partner,overdue:overdue?'1':'',q}).then(r=>{if(live){setRows(r.documents);setError('');setPage(1)}}).catch(e=>{if(live)setError((e as Error).message)})},q?250:0);return()=>{live=false;clearTimeout(t)}},[kind,state,paymentState,partner,overdue,q,version]);
- const pay=!isInvoice(kind),today=todayISO(),pName=(id:string)=>setup.partners.find(p=>p.id===id)?.name||'',cCode=(id:string)=>{const c=cases.find(x=>x.id===id);return c?c.code||c.autoNumber||'':''};
+ const [picked,setPicked]=useState<string[]>([]),[paying,setPaying]=useState(false),[again,setAgain]=useState(0);
+ useEffect(()=>{let live=true;const t=setTimeout(()=>{booksRequest<{documents:DocSummary[]}>('list_documents',{kind,state,paymentState,partnerId:partner,overdue:overdue?'1':'',q}).then(r=>{if(live){setRows(r.documents);setError('');setPage(1)}}).catch(e=>{if(live)setError((e as Error).message)})},q?250:0);return()=>{live=false;clearTimeout(t)}},[kind,state,paymentState,partner,overdue,q,version,again]);
+ const pay=!isInvoice(kind),today=todayISO(),payable=(d:DocSummary)=>!pay&&setup.canEdit&&d.state==='posted'&&toFils(d.amountResidual)>0,pName=(id:string)=>setup.partners.find(p=>p.id===id)?.name||'',cCode=(id:string)=>{const c=cases.find(x=>x.id===id);return c?c.code||c.autoNumber||'':''};
  const list=rows||[],pages=Math.max(1,Math.ceil(list.length/25)),current=Math.min(page,pages),open=list.filter(d=>d.state==='posted').reduce((t,d)=>t+toFils(d.amountResidual),0);
  const csv=()=>void exportCsv('accounting','Mawatheeq-'+kind,[['الرقم','الشريك','التاريخ',...(pay?[]:['الاستحقاق']),'المرجع','القضية','الإجمالي','المتبقي','الحالة'],
   ...list.map(d=>[d.name,pName(d.partnerId),d.date,...(pay?[]:[d.dueDate||'']),d.ref,cCode(d.caseId),d.amountTotal,d.amountResidual,d.state==='posted'?(pay?PAYMENT_MATCH:PAYMENT_STATES)[d.paymentState]:MOVE_STATES[d.state]])]).catch(fail);
  return <section className="panel"><div className="department-toolbar"><h2>{DOC_KINDS[kind].label}</h2><div className="actions">{canExport&&<button className="btn" onClick={csv}><Download size={15}/> تصدير</button>}
+   {picked.length>0&&<button className="btn primary" onClick={()=>setPaying(true)}>دفع المحدد ({picked.length})</button>}
    {setup.canEdit&&<button className="btn primary" onClick={onNew}><Plus size={15}/> {DOC_KINDS[kind].one} جديد{kind.endsWith('invoice')?'ة':''}</button>}</div></div>
   <div className="department-filters"><FilterSelect label={sideOf(kind)==='customer'?'العميل':'المورد'} value={partner} onChange={onPartner} empty="الكل" options={partnerOptions(setup,sideOf(kind),partner)}/>
    <OfficeSelect label="الحالة" value={state} onChange={setState} empty="كل الحالات" options={Object.entries(MOVE_STATES) as [string,string][]}/>
@@ -52,13 +55,14 @@ export function Documents({setup,cases,kind,partner,onPartner,onOpen,onNew,versi
    <Field label="بحث" value={q} onChange={setQ} placeholder="الرقم أو المرجع أو الاسم"/></div>
   {!pay&&<label className="check"><input type="checkbox" checked={overdue} onChange={e=>setOverdue(e.target.checked)}/> المتأخرة عن الاستحقاق فقط</label>}
   {error&&<p className="notice" role="alert">{error}</p>}{!rows&&!error&&<p role="status">جارٍ التحميل…</p>}
-  {rows&&<><div className="table-wrap"><table className="office-table books-table"><thead><tr><th>الرقم</th><th>{sideOf(kind)==='customer'?'العميل':'المورد'}</th><th>التاريخ</th>{!pay&&<th>الاستحقاق</th>}<th>المرجع</th><th>القضية</th><th>الإجمالي</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead>
+  {rows&&<><div className="table-wrap"><table className="office-table books-table"><thead><tr>{!pay&&setup.canEdit&&<th aria-label="تحديد"></th>}<th>الرقم</th><th>{sideOf(kind)==='customer'?'العميل':'المورد'}</th><th>التاريخ</th>{!pay&&<th>الاستحقاق</th>}<th>المرجع</th><th>القضية</th><th>الإجمالي</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead>
    <tbody>{list.slice((current-1)*25,current*25).map(d=>{const late=pay?0:daysLate(d.dueDate,today,d.state==='posted'?d.amountResidual:'0');
-    return <tr key={d.id} className={d.state==='cancel'?'ledger-void':''}><td className="mono">{d.name==='/'?'مسودة':d.name}</td><td>{pName(d.partnerId)||'—'}</td><td>{formatDate(d.date)}</td>
+    return <tr key={d.id} className={d.state==='cancel'?'ledger-void':''}>{!pay&&setup.canEdit&&<td>{payable(d)&&<input type="checkbox" aria-label={'تحديد '+d.name} checked={picked.includes(d.id)} onChange={e=>setPicked(p=>e.target.checked?[...p,d.id]:p.filter(x=>x!==d.id))}/>}</td>}<td className="mono">{d.name==='/'?'مسودة':d.name}</td><td>{pName(d.partnerId)||'—'}</td><td>{formatDate(d.date)}</td>
      {!pay&&<td>{d.dueDate?formatDate(d.dueDate):'—'}{late>0&&<small className="books-late"> متأخرة {late} يوماً</small>}</td>}<td>{d.ref||'—'}</td><td>{cCode(d.caseId)||'—'}</td>
      <td className="ledger-value" dir="ltr">{amount(d.amountTotal)}</td><td className="ledger-value" dir="ltr">{d.state==='posted'?amount(d.amountResidual):'—'}</td><td>{stateTag(d)}</td><td><button className="btn" onClick={()=>onOpen(d.id)}>فتح</button></td></tr>})}</tbody>
-   {list.length>0&&<tfoot><tr><th colSpan={pay?6:7}>المتبقي المفتوح</th><th dir="ltr">{money(open)}</th><th colSpan={2}></th></tr></tfoot>}</table></div>
+   {list.length>0&&<tfoot><tr><th colSpan={pay?6:setup.canEdit?8:7}>المتبقي المفتوح</th><th dir="ltr">{money(open)}</th><th colSpan={2}></th></tr></tfoot>}</table></div>
    {!list.length&&<Empty text="لا توجد مستندات مطابقة."/>}<PageNavigation page={current} pages={pages} total={list.length} onChange={setPage}/></>}
+  {paying&&<BatchPay setup={setup} ids={picked} onClose={()=>setPaying(false)} onDone={()=>{setPaying(false);setPicked([]);setAgain(x=>x+1);onChanged?.()}}/>}
  </section>;
 }
 
@@ -139,21 +143,29 @@ export function InvoiceEditor({setup,cases,initial,onClose,onChanged,onOpen,onSe
  </EditorDialog>;
 }
 
+type Method={method:PaymentMethod;chequeNumber:string;chequeDate:string;chequeBank:string};
+/** How the money moved; a cheque also needs its number, and may have its due date and bank. */
+function MethodFields({m,onChange,readOnly=false}:{m:Method;onChange:(m:Method)=>void;readOnly?:boolean}){
+ return <><OfficeSelect label="طريقة الدفع" value={m.method} onChange={v=>readOnly||onChange({...m,method:v as PaymentMethod})} options={Object.entries(PAYMENT_METHODS) as [string,string][]}/>
+  {m.method==='cheque'&&<><label className="field"><span>رقم الشيك</span><input dir="ltr" value={m.chequeNumber} readOnly={readOnly} onChange={e=>onChange({...m,chequeNumber:e.target.value})}/></label>
+   {readOnly?<label className="field"><span>تاريخ الشيك</span><input readOnly value={m.chequeDate?formatDate(m.chequeDate):'—'}/></label>:<DateField label="تاريخ الشيك" value={m.chequeDate} onChange={v=>onChange({...m,chequeDate:v})}/>}
+   <label className="field"><span>البنك المسحوب عليه</span><input value={m.chequeBank} readOnly={readOnly} onChange={e=>onChange({...m,chequeBank:e.target.value})}/></label></>}</>;
+}
 /** Pay one or more confirmed invoices of a partner from a bank or cash journal, in full or in part. */
 export function RegisterPayment({setup,docs,onClose,onDone}:{setup:FullSetup;docs:Doc[];onClose:()=>void;onDone:(p:Doc)=>void}){
  const due=docs.reduce((t,x)=>t+toFils(x.amountResidual),0),journals=setup.journals.filter(j=>j.active&&(j.type==='bank'||j.type==='cash'));
- const [journal,setJournal]=useState(journals[0]?.id||''),[date,setDate]=useState(todayISO()),[value,setValue]=useState(filsText(due)),[ref,setRef]=useState(''),[busy,setBusy]=useState(false);
+ const [journal,setJournal]=useState(journals[0]?.id||''),[date,setDate]=useState(todayISO()),[value,setValue]=useState(filsText(due)),[ref,setRef]=useState(''),[busy,setBusy]=useState(false),[m,setM]=useState<Method>({method:'transfer',chequeNumber:'',chequeDate:'',chequeBank:''});
  let paid=0,bad=false;try{paid=toFils(value)}catch{bad=true}
- const needs=[!journal&&'اختر دفتر البنك أو الصندوق',!date&&'اختر التاريخ',(bad||paid<=0)&&'اكتب مبلغاً صحيحاً'];
+ const needs=[!journal&&'اختر دفتر البنك أو الصندوق',!date&&'اختر التاريخ',(bad||paid<=0)&&'اكتب مبلغاً صحيحاً',m.method==='cheque'&&!m.chequeNumber.trim()&&'اكتب رقم الشيك'];
  return <div className="books-reverse panel"><h3>تسجيل دفعة</h3><div className="form-grid">
   <FilterSelect label="الدفع عبر" value={journal} onChange={setJournal} options={journals.map(j=>({value:j.id,label:`${j.code} · ${j.name}`}))}/>
   <DateField label="تاريخ الدفع" value={date} onChange={setDate}/>
   <label className="field"><span>المبلغ</span><input dir="ltr" inputMode="decimal" value={value} onChange={e=>setValue(e.target.value)}/></label>
-  <Field label="البيان" value={ref} onChange={setRef} placeholder={docs.map(x=>x.name).join('، ')}/></div>
+  <Field label="البيان" value={ref} onChange={setRef} placeholder={docs.map(x=>x.name).join('، ')}/><MethodFields m={m} onChange={setM}/></div>
   {!bad&&paid>0&&paid<due&&<p className="muted">دفعة جزئية: يبقى {money(due-paid)} مستحقاً.</p>}
   {!bad&&paid>due&&<p className="muted">المبلغ أكبر من المستحق؛ يبقى {money(paid-due)} رصيداً للشريك يُستخدم في فاتورة لاحقة.</p>}
   <Needs items={needs}/>
-  <div className="actions"><button className="btn primary" disabled={busy||needs.some(Boolean)} onClick={()=>{setBusy(true);booksRequest<Doc>('register_payment',{moveIds:docs.map(x=>x.id),journalId:journal,date,amount:value,ref}).then(onDone,fail).finally(()=>setBusy(false))}}>
+  <div className="actions"><button className="btn primary" disabled={busy||needs.some(Boolean)} onClick={()=>{setBusy(true);booksRequest<Doc>('register_payment',{moveIds:docs.map(x=>x.id),journalId:journal,date,amount:value,ref,...m}).then(onDone,fail).finally(()=>setBusy(false))}}>
    <Check size={15}/> تسجيل الدفعة</button><button className="btn" onClick={onClose}>تراجع</button></div></div>;
 }
 function CreditNote({doc,lock,onClose,onDone}:{doc:Doc;lock:string;onClose:()=>void;onDone:(d:Doc)=>void}){
@@ -169,13 +181,14 @@ function CreditNote({doc,lock,onClose,onDone}:{doc:Doc;lock:string;onClose:()=>v
 /** A payment received or made on its own: partner, bank or cash, amount; once posted, the documents it settles. */
 export function PaymentEditor({setup,cases,initial,onClose,onChanged,onOpen}:{setup:FullSetup;cases:CaseSummary[];initial:Doc;onClose:()=>void;onChanged:(d:Doc|null)=>void;onOpen:(id:string)=>void}){
  const [d,setD]=useState(initial),[value,setValue]=useState(initial.id?filsText(toFils(initial.amountTotal)):''),[busy,setBusy]=useState(false);
+ const [m,setM]=useState<Method>({method:initial.method||'transfer',chequeNumber:initial.chequeNumber||'',chequeDate:initial.chequeDate||'',chequeBank:initial.chequeBank||''});
  const side=d.partnerType||'customer',editable=setup.canEdit&&d.state==='draft',set=(p:Partial<Doc>)=>setD(x=>({...x,...p}));
  const lock=[setup.settings.fiscalLockDate,...(setup.canConfigure?[]:[setup.settings.lockDate])].filter(Boolean).sort().pop()||'';
  let bad=false;try{if(toFils(value)<=0)bad=true}catch{bad=true}
- const needs=editable?[!d.journalId&&'اختر دفتر البنك أو الصندوق',!d.date&&'اختر التاريخ',d.date&&lock&&d.date<=lock&&`التاريخ ضمن فترة مقفلة (حتى ${formatDate(lock)})`,bad&&'اكتب مبلغاً صحيحاً']:[];
+ const needs=editable?[!d.journalId&&'اختر دفتر البنك أو الصندوق',!d.date&&'اختر التاريخ',d.date&&lock&&d.date<=lock&&`التاريخ ضمن فترة مقفلة (حتى ${formatDate(lock)})`,bad&&'اكتب مبلغاً صحيحاً',m.method==='cheque'&&!m.chequeNumber.trim()&&'اكتب رقم الشيك']:[];
  const postNeeds=[...needs,editable&&!d.partnerId?`اختر ${side==='customer'?'العميل':'المورد'}`:''].map(x=>typeof x==='string'?x:'');
  async function act(fn:()=>Promise<Doc|null>,done:string){setBusy(true);try{const r=await fn();toast.success(done);onChanged(r)}catch(e){fail(e)}finally{setBusy(false)}}
- const save=()=>booksRequest<Doc>('save_payment',{payment:{id:d.id||undefined,revision:d.revision,paymentType:d.paymentType,partnerType:side,partnerId:d.partnerId,journalId:d.journalId,date:d.date,amount:value,ref:d.ref,narration:d.narration,caseId:d.caseId}});
+ const save=()=>booksRequest<Doc>('save_payment',{payment:{id:d.id||undefined,revision:d.revision,paymentType:d.paymentType,partnerType:side,partnerId:d.partnerId,journalId:d.journalId,date:d.date,amount:value,ref:d.ref,narration:d.narration,caseId:d.caseId,...m}});
  const pName=setup.partners.find(p=>p.id===d.partnerId)?.name||'';
  function print(){if(!printHtml(invoiceHtml({title:d.paymentType==='inbound'?'سند قبض':'سند صرف',number:d.name==='/'?'مسودة':d.name,date:d.date,due:'',partner:pName,reference:d.ref,caseLabel:'',status:MOVE_STATES[d.state],
   lines:[{label:d.ref||(d.paymentType==='inbound'?'مقبوضات':'مدفوعات'),quantity:'1',price:amount(value||'0'),discount:'',amount:amount(value||'0')}],total:amount(value||'0'),paid:amount(value||'0'),due_amount:money(0),words:amountInWords(value),schedule:[],note:''},formatDate(todayISO()),'')))popupBlocked()}
@@ -187,7 +200,10 @@ export function PaymentEditor({setup,cases,initial,onClose,onChanged,onOpen}:{se
    {editable?<DateField label="التاريخ" value={d.date} onChange={v=>set({date:v})}/>:<label className="field"><span>التاريخ</span><input readOnly value={formatDate(d.date)}/></label>}
    <label className="field"><span>المبلغ</span><input dir="ltr" inputMode="decimal" value={value} readOnly={!editable} onChange={e=>setValue(e.target.value)}/></label>
    <label className="field"><span>البيان</span><input value={d.ref} readOnly={!editable} onChange={e=>set({ref:e.target.value})} maxLength={200}/></label>
-   <FilterSelect label="القضية" value={d.caseId} onChange={v=>set({caseId:v})} disabled={!editable} empty="غير مرتبطة بقضية" options={caseOptions(cases,d.caseId)} className="case-picker"/></div>
+   <FilterSelect label="القضية" value={d.caseId} onChange={v=>set({caseId:v})} disabled={!editable} empty="غير مرتبطة بقضية" options={caseOptions(cases,d.caseId)} className="case-picker"/>
+   <MethodFields m={m} onChange={setM} readOnly={!editable}/></div>
+   {d.chequeState&&<p className="muted">حالة الشيك: <span className="tag">{CHEQUE_STATES[d.chequeState as keyof typeof CHEQUE_STATES]}</span>{d.batch&&` · ضمن ${d.batch}`}</p>}
+   {!d.chequeState&&d.batch&&<p className="muted">ضمن الدفعة المجمعة {d.batch}</p>}
    {d.state==='posted'&&<div className="books-payments">
     {d.matches.length>0&&<><b>طُبقت على:</b><ul className="books-matches">{d.matches.map(m=><li key={m.partialId}><button type="button" className="link mono" onClick={()=>onOpen(m.moveId)}>{m.name}</button> · <b dir="ltr">{amount(m.amount)}</b>
      {setup.canEdit&&<button type="button" className="btn icon" aria-label={'فك مطابقة '+m.name} title="فك المطابقة" disabled={busy} onClick={()=>void act(()=>booksRequest<Doc>('remove_partial',{id:d.id,partialId:m.partialId}),'فُكت المطابقة')}><Unlink size={14}/></button>}</li>)}</ul></>}
@@ -207,7 +223,7 @@ export function PaymentEditor({setup,cases,initial,onClose,onChanged,onOpen}:{se
 }
 
 /** «العملاء» or «الموردون»: their invoices, credit notes and payments, and who owes what. */
-export function PartnerSide({setup,cases,side,onOpen,onNew,version,canExport}:{setup:FullSetup;cases:CaseSummary[];side:'customer'|'vendor';onOpen:(id:string)=>void;onNew:(kind:DocKind,partnerId:string)=>void;version:number;canExport:boolean}){
+export function PartnerSide({setup,cases,side,onOpen,onNew,onChanged,version,canExport}:{setup:FullSetup;cases:CaseSummary[];side:'customer'|'vendor';onOpen:(id:string)=>void;onNew:(kind:DocKind,partnerId:string)=>void;onChanged:()=>void;version:number;canExport:boolean}){
  const kinds:DocKind[]=side==='customer'?['out_invoice','out_refund','customer_payment']:['in_invoice','in_refund','vendor_payment'];
  const [tab,setTab]=useState<DocKind|'partners'>(kinds[0]),[partner,setPartner]=useState('');
  const s=setup.documentStats[kinds[0]],key=side==='customer'?'receivable':'payable';
@@ -216,7 +232,7 @@ export function PartnerSide({setup,cases,side,onOpen,onNew,version,canExport}:{s
   <div className="department-metrics books-metrics"><div><span>مسودات</span><b>{s?.draft??0}</b></div><div><span>{side==='customer'?'بانتظار التحصيل':'بانتظار الدفع'}</span><b dir="ltr">{amount(s?.openAmount||'0')}</b></div><div><span>متأخرة ({s?.late??0})</span><b dir="ltr">{amount(s?.lateAmount||'0')}</b></div></div>
   <div className="department-tabs view-switch" role="group" aria-label={side==='customer'?'العملاء':'الموردون'}>{[...kinds.map(k=>[k,DOC_KINDS[k].label] as const),['partners',side==='customer'?'أرصدة العملاء':'أرصدة الموردين'] as const].map(([k,l])=>
    <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
-  {tab!=='partners'?<Documents setup={setup} cases={cases} kind={tab} partner={partner} onPartner={setPartner} onOpen={onOpen} onNew={()=>onNew(tab,partner)} version={version} canExport={canExport}/>
+  {tab!=='partners'?<Documents setup={setup} cases={cases} kind={tab} partner={partner} onPartner={setPartner} onOpen={onOpen} onNew={()=>onNew(tab,partner)} onChanged={onChanged} version={version} canExport={canExport}/>
    :<section className="panel"><div className="table-wrap"><table className="office-table books-table"><thead><tr><th>{side==='customer'?'العميل':'المورد'}</th><th>الهاتف</th><th>{side==='customer'?'مستحق لنا':'مستحق علينا'}</th><th></th></tr></thead>
     <tbody>{partners.map(p=>{const b=toFils(setup.partnerBalances[p.id]?.[key]||'0');return <tr key={p.id}><td>{p.name}</td><td dir="ltr">{p.phone||'—'}</td><td className="ledger-value" dir="ltr">{money(b)}</td>
      <td><div className="actions"><button className="btn" onClick={()=>{setPartner(p.id);setTab(kinds[0])}}>المستندات</button>{setup.canEdit&&<button className="btn" onClick={()=>onNew(kinds[0],p.id)}><Plus size={14}/> {DOC_KINDS[kinds[0]].one}</button>}</div></td></tr>})}</tbody></table>

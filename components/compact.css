@@ -204,3 +204,8 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .books-late{color:var(--destructive,#b42318);font-weight:600}
 .books-metrics{margin-bottom:6px}
 .department-dialog:has(.books-lines){width:min(1120px,96vw);max-width:none}
+.books-pick{text-align:start;cursor:pointer;font:inherit;color:inherit}.books-pick.active{border-color:var(--dept);box-shadow:0 0 0 2px color-mix(in srgb,var(--dept) 25%,transparent)}
+.books-in{color:#1f7a4d}.books-out{color:var(--destructive,#b42318)}
+.books-active td{background:color-mix(in srgb,var(--dept) 7%,transparent)}
+.books-suggest{list-style:none;margin:0;padding:0;display:grid;gap:6px}.books-suggest li{border:1px solid var(--border);border-radius:8px;padding:6px 10px}
+.books-open-line{border-top:1px solid var(--border);padding-top:10px;margin-top:10px}.books-preview{max-height:300px;overflow:auto}

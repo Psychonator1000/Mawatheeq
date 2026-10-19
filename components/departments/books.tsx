@@ -15,9 +15,10 @@ import FilterSelect,{FilterBox,type FilterOption} from '../filter-select';
 import PageNavigation from '../page-navigation';
 import Needs from '../needs';
 import {EditorDialog,exportCsv} from './shared';
+import BankCash,{type BankSetup} from './books-bank';
 import {InvoiceEditor,InvoicingPanel,PartnerSide,PaymentEditor,ProductsPanel,TermsPanel,blankDoc,type FullSetup} from './books-invoicing';
 
-type View='dashboard'|'customers'|'vendors'|'moves'|'reports'|'config';
+type View='dashboard'|'customers'|'vendors'|'bank'|'moves'|'reports'|'config';
 type Report='trial'|'ledger'|'pl'|'bs';
 type Draft=Omit<Move,'lines'>&{lines:MoveLine[]};
 const JOURNAL_ICONS:Record<JournalType,typeof Landmark>={bank:Landmark,cash:Banknote,sale:Receipt,purchase:ShoppingCart,general:NotebookPen};
@@ -47,9 +48,9 @@ export default function Books({cases,access,views}:{cases:CaseSummary[];access:P
  const reload=()=>setVersion(v=>v+1);
  // Invoices, bills and payments open in their own editor; other entries in the journal entry editor.
  async function open(id:string){try{const m=await booksRequest<Doc>('get_move',{id});if(docKindOf(m)){setEditing(null);setDoc(m)}else{setDoc(null);setEditing(m as unknown as Draft)}}catch(e){fail(e)}}
- const full=setup&&'paymentTerms' in setup?setup as FullSetup:null;
+ const full=setup&&'paymentTerms' in setup?setup as FullSetup:null,bank=setup&&'bank' in setup?setup as BankSetup:null;
  const newDoc=(kind:DocKind,partnerId='')=>{if(full){setEditing(null);setDoc(blankDoc(full,kind,partnerId))}};
- const tabs=<div className="department-tabs view-switch books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','العملاء'],['vendors','الموردون']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
+ const tabs=<div className="department-tabs view-switch books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','العملاء'],['vendors','الموردون']] as const:[]),...(bank?[['bank','البنك والنقد']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
   <button key={k} className={'btn '+(view===k?'primary':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>;
  return <>
   <section className="department-hero"><div><div className="eyebrow">القيد المزدوج</div><h1>المحاسبة</h1><p>دفاتر المكتب بالقيد المزدوج: دليل الحسابات، الدفاتر اليومية، القيود من المسودة إلى الترحيل، وميزان المراجعة ودفتر الأستاذ والأرباح والخسائر والميزانية العمومية.</p></div><BookOpen size={64}/></section>
@@ -57,7 +58,8 @@ export default function Books({cases,access,views}:{cases:CaseSummary[];access:P
   {error&&<p className="notice" role="alert">{error}</p>}{!setup&&!error&&<p role="status">جارٍ تحميل الدفاتر…</p>}
   {setup&&<div className="att-section books">
    {view==='dashboard'&&<Dashboard setup={setup} full={full} onNew={j=>setEditing(blankMove(j))} onNewDoc={newDoc} onList={j=>{setJournalFilter(j);setView('moves')}} onView={setView}/>}
-   {full&&(view==='customers'||view==='vendors')&&<PartnerSide key={view} setup={full} cases={cases} side={view==='customers'?'customer':'vendor'} onOpen={id=>void open(id)} onNew={newDoc} version={version} canExport={access.canExport}/>}
+   {full&&(view==='customers'||view==='vendors')&&<PartnerSide key={view} setup={full} cases={cases} side={view==='customers'?'customer':'vendor'} onOpen={id=>void open(id)} onNew={newDoc} onChanged={reload} version={version} canExport={access.canExport}/>}
+   {bank&&view==='bank'&&<BankCash setup={bank} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
    {view==='moves'&&<Moves setup={setup} cases={cases} journal={journalFilter} onJournal={setJournalFilter} onOpen={id=>void open(id)} onNew={()=>setEditing(blankMove(journalFilter||setup.journals.find(j=>j.type==='general')?.id||setup.journals[0]?.id||''))} version={version} canExport={access.canExport}/>}
    {view==='reports'&&<Reports setup={setup} report={report} onReport={setReport} account={ledgerAccount} onAccount={setLedgerAccount} onOpen={id=>void open(id)} canExport={access.canExport} version={version}/>}
    {view==='config'&&<Config setup={setup} full={full} onChanged={reload}/>}
