@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState,type ReactNode} from 'react';
-import {BookOpen,Plus,Printer,Download,FileSpreadsheet,Scale,RotateCcw,Undo2,Ban,Trash2,Check,History,Landmark,Banknote,Receipt,ShoppingCart,NotebookPen,Lock} from 'lucide-react';
+import {Plus,Printer,Download,FileSpreadsheet,Scale,RotateCcw,Undo2,Ban,Trash2,Check,History,Landmark,Banknote,Receipt,ShoppingCart,NotebookPen,Lock} from 'lucide-react';
 import {toast} from 'sonner';
 import {booksRequest} from '@/lib/local-auth';
 import {ACCOUNT_TYPES,DOC_KINDS,GROUP_LABELS,docKindOf,type Doc,type DocKind,JOURNAL_TYPES,MOVE_STATES,PARTNER_KINDS,balanceSheet,balancingLine,fiscalYearStart,money,moveTotals,nextAccountCode,profitAndLoss,runningLedger,toFils,
@@ -47,11 +47,11 @@ export default function Books({cases,access,views}:{cases:CaseSummary[];access:P
  async function open(id:string){try{const m=await booksRequest<Doc>('get_move',{id});if(docKindOf(m)){setEditing(null);setDoc(m)}else{setDoc(null);setEditing(m as unknown as Draft)}}catch(e){fail(e)}}
  const full=setup&&'paymentTerms' in setup?setup as FullSetup:null,bank=setup&&'bank' in setup?setup as BankSetup:null,adv=setup&&'advanced' in setup?setup as AdvSetup:null,links=!!setup&&'links' in setup;
  const newDoc=(kind:DocKind,partnerId='')=>{if(full){setEditing(null);setDoc(blankDoc(full,kind,partnerId))}};
- const tabs=<div className="department-tabs view-switch books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','العملاء'],['vendors','الموردون']] as const:[]),...(bank?[['bank','البنك والنقد']] as const:[]),...(links?[['outside','المعاملات الخارجية']] as const:[]),...(adv?[['advanced','المحاسبة المتقدمة']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
-  <button key={k} className={'btn '+(view===k?'primary':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>;
+ const tabs=<div className="work-chips books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','العملاء'],['vendors','الموردون']] as const:[]),...(bank?[['bank','البنك والنقد']] as const:[]),...(links?[['outside','المعاملات الخارجية']] as const:[]),...(adv?[['advanced','المحاسبة المتقدمة']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
+  <button key={k} className={'work-chip'+(view===k?' on':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>;
  return <>
-  <section className="department-hero"><div><div className="eyebrow">القيد المزدوج</div><h1>المحاسبة</h1><p>دفاتر المكتب بالقيد المزدوج: دليل الحسابات، الدفاتر اليومية، القيود من المسودة إلى الترحيل، وميزان المراجعة ودفتر الأستاذ والأرباح والخسائر والميزانية العمومية.</p></div><BookOpen size={64}/></section>
-  {views}{tabs}
+  {/* One screen: the section's header and the books' pages scrolling inside one panel. */}
+  <section className="panel work-desk desk-full"><div className="work-desk-head">{views}</div>{tabs}<div className="work-desk-body">
   {error&&<p className="notice" role="alert">{error}</p>}{!setup&&!error&&<p role="status">جارٍ تحميل الدفاتر…</p>}
   {setup&&<div className="att-section books">
    {view==='dashboard'&&<><Dashboard setup={setup} full={full} onNew={j=>setEditing(blankMove(j))} onNewDoc={newDoc} onList={j=>{setJournalFilter(j);setView('moves')}} onView={setView}/>{links&&<MonthlyChart key={version}/>}</>}
@@ -63,6 +63,7 @@ export default function Books({cases,access,views}:{cases:CaseSummary[];access:P
    {view==='reports'&&<Reports setup={setup} report={report} onReport={setReport} account={ledgerAccount} onAccount={setLedgerAccount} onOpen={id=>void open(id)} canExport={access.canExport} version={version}/>}
    {view==='config'&&<Config setup={setup} full={full} adv={adv} onChanged={reload}/>}
   </div>}
+  </div></section>
   {full&&doc&&(doc.paymentType?<PaymentEditor key={doc.id+':'+doc.revision+':'+doc.amountResidual+':'+doc.matches.length} setup={full} cases={cases} initial={doc} onClose={()=>setDoc(null)} onChanged={d=>{reload();setDoc(d)}} onOpen={id=>void open(id)}/>
    :<InvoiceEditor key={doc.id+':'+doc.revision+':'+doc.state+':'+doc.amountResidual+':'+doc.matches.length} setup={full} cases={cases} initial={doc} onClose={()=>setDoc(null)} onChanged={d=>{reload();setDoc(d)}} onOpen={id=>void open(id)} onSetup={reload}/>)}
   {setup&&editing&&<MoveEditor key={editing.id+':'+editing.revision} setup={setup} cases={cases} initial={editing} onClose={()=>setEditing(null)} onChanged={m=>{reload();if(m)setEditing(m);else setEditing(null)}} onOpen={id=>void open(id)}/>}

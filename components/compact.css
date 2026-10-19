@@ -314,3 +314,10 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .desk-scan{display:flex;align-items:flex-end;gap:6px;padding:0;margin:0;border:0;background:none}.desk-scan>svg{display:none}.desk-scan .field{flex:1;min-width:0}.desk-scan input{min-height:38px;height:38px}.desk-scan .btn{min-height:38px;padding:6px 12px}
 .sec-agenda-list .agenda-item.late{border-inline-start-color:#a32e38}.work-desk .archive-missing{margin:0;padding:8px 12px}.work-desk .archive-missing .btn{min-height:36px}
 .sec-agenda .archive-scan.desk-scan{border:0;padding:0;background:none;box-shadow:none;margin:0}.sec-agenda .desk-scan .field>span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.work-desk.desk-full{height:calc(100dvh - var(--desk-offset,192px));min-height:460px}.work-desk.desk-full>.books-tabs{margin-top:-2px}
+.work-desk-body .att-section>.panel,.work-desk-body .att-section .panel{box-shadow:none}.work-desk-body>.att-section{padding:12px 0}
+.desk-balance{display:grid;gap:2px;padding:10px 12px;border-radius:10px}.desk-balance b{font-size:20px}.ledger-totals.desk-stats b{font-size:14px}
+@media(max-width:1000px){.work-desk.desk-full{height:auto}}
+.work-desk .books-journals{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}.work-desk .books-journal{padding:10px 12px;gap:6px}.work-desk .books-journal h3{font-size:14.5px}
+.work-desk .books-journal p{margin:0;font-size:13px}.work-desk .books-journal .actions{gap:6px}.work-desk .books-journal .btn{min-height:32px;padding:4px 10px;font-size:12.5px}
+.work-desk-body>.att-section>.panel{padding:12px 14px}.work-desk-body .department-toolbar h2{font-size:15.5px}
