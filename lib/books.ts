@@ -14,7 +14,7 @@ export type Partner = { id: string; name: string; kind: PartnerKind; clientEntit
 export type BooksSettings = { lockDate: string | null; fiscalLockDate: string | null; taxLockDate: string | null; fiscalYearEnd: string; currency: string; revision: number };
 export type BooksSetup = { canEdit: boolean; canConfigure: boolean; accounts: Account[]; journals: Journal[]; partners: Partner[]; settings: BooksSettings;
   journalStats: Record<string, { drafts: number; posted: number; balance: string }> };
-export type MoveLine = { id?: string; accountId: string; partnerId: string; caseId: string; label: string; debit: string; credit: string; dateMaturity: string | null };
+export type MoveLine = { id?: string; accountId: string; partnerId: string; caseId: string; label: string; debit: string; credit: string; dateMaturity: string | null; analyticId?: string; taxIds?: string[]; amountCurrency?: string };
 export type Move = { id: string; journalId: string; name: string; moveType: string; state: MoveState; date: string; ref: string; narration: string; partnerId: string; caseId: string;
   reversedFrom: string; reversedBy: string; source: string; revision: number; createdBy: string; postedBy: string; postedAt: string | null; debit: string; credit: string; lines: MoveLine[] };
 export type MoveSummary = { id: string; journalId: string; name: string; moveType: string; state: MoveState; date: string; ref: string; partnerId: string; caseId: string; amount: string; reversedFrom: string; revision: number };
@@ -154,7 +154,7 @@ export type DocLine = MoveLine & { id?: string; kind: 'line' | 'product' | 'term
 export type Match = { partialId: string; amount: string; moveId: string; name: string; date: string; moveType: string; paymentType: string };
 export type Outstanding = { lineId: string; moveId: string; name: string; date: string; amount: string };
 export type Doc = Omit<Move, 'lines'> & { invoiceDateDue: string | null; paymentTermId: string; paymentType: '' | 'inbound' | 'outbound'; partnerType: '' | 'customer' | 'vendor';
-  amountTotal: string; amountResidual: string; paymentState: PaymentState; lines: DocLine[]; matches: Match[]; outstanding: Outstanding[] } & PaymentDetails;
+  amountTotal: string; amountResidual: string; paymentState: PaymentState; lines: DocLine[]; matches: Match[]; outstanding: Outstanding[]; currency?: string; currencyRate?: string; amountTotalCurrency?: string } & PaymentDetails;
 export type DocSummary = { id: string; journalId: string; name: string; moveType: string; paymentType: string; partnerType: string; state: MoveState; date: string; dueDate: string | null; ref: string;
   partnerId: string; caseId: string; amountTotal: string; amountResidual: string; paymentState: PaymentState; reversedFrom: string; revision: number };
 
@@ -205,3 +205,36 @@ export type Suggestions = { items: { lineId: string; moveId: string; name: strin
 export type Cheque = { id: string; name: string; date: string; paymentType: string; partner: string; amount: string; chequeNumber: string; chequeDate: string | null; chequeBank: string; chequeState: string; journalId: string };
 export type Batch = { id: string; name: string; journalId: string; type: 'inbound' | 'outbound'; date: string; method: string; total: string; payments: { id: string; name: string; state: string; partner: string; amount: string }[] };
 export type PaymentDetails = { method?: PaymentMethod; chequeNumber?: string; chequeDate?: string | null; chequeBank?: string; chequeState?: string; batch?: string };
+
+// Advanced: taxes, currencies, cost centres, schedules, recurring entries, follow-up and year-end.
+export type Tax = { id: string; name: string; typeUse: 'sale' | 'purchase'; amountType: 'percent' | 'fixed'; amount: string; priceInclude: boolean; accountId: string; active: boolean; revision: number };
+export type Currency = { code: string; name: string; active: boolean; rate: string; rateDate: string | null };
+export type Analytic = { id: string; code: string; name: string; plan: string; active: boolean; revision: number };
+export type AdvancedSetup = { advanced: true; taxesEnabled: boolean; taxes: Tax[]; currencies: Currency[]; analytic: Analytic[]; productTaxes: Record<string, { sale: string[]; purchase: string[] }>;
+  due: { recurring: number; schedules: number; followups: number } };
+export type ScheduleKind = 'asset' | 'deferred_revenue' | 'deferred_expense';
+export type Schedule = { id: string; kind: ScheduleKind; name: string; journalId: string; debitAccount: string; creditAccount: string; assetAccount: string; value: string; salvage: string; months: number; firstDate: string;
+  state: 'draft' | 'running' | 'closed'; partnerId: string; caseId: string; analyticId: string; ref: string; revision: number; posted: string; lines: { id: string; seq: number; date: string; amount: string; moveId: string; moveName: string }[] };
+export const SCHEDULE_KINDS: Record<ScheduleKind, { label: string; one: string; debit: string; credit: string }> = {
+  asset: { label: 'الأصول الثابتة', one: 'أصل', debit: '508000', credit: '151900' },
+  deferred_revenue: { label: 'الإيرادات المؤجلة', one: 'إيراد مؤجل', debit: '212100', credit: '401000' },
+  deferred_expense: { label: 'المصروفات المؤجلة', one: 'مصروف مؤجل', debit: '502000', credit: '132000' },
+};
+export type Recurring = { id: string; name: string; kind: 'entry' | 'out_invoice' | 'in_invoice'; template: Record<string, unknown>; interval: number; nextDate: string; endDate: string | null; autoPost: boolean; active: boolean; lastRun: string | null; revision: number };
+export type FollowupLevel = { id: string; days: number; name: string; message: string; revision?: number };
+export type FollowupPartner = { partnerId: string; name: string; phone: string; email: string; overdue: string; maxDays: number; level: FollowupLevel | null;
+  last: { date: string; level: string; levelDays: number; note: string } | null; invoices: { moveId: string; name: string; date: string; due: string; days: number; amount: string }[] };
+export type YearEnd = { yearEnd: string; from: string; drafts: number; statementLines: number; schedules: number; recurring: number; openReceivable: string; profit: string; lockDate: string | null; fiscalLockDate: string | null; closed?: boolean };
+
+/** Taxes on one line as the server books them: those included in the price come out of it, the others are added. */
+export function lineTaxes(subtotal: number, quantity: string, taxes: Pick<Tax, 'amountType' | 'amount' | 'priceInclude'>[]): { base: number; tax: number } {
+  let base = subtotal;
+  for (const t of taxes) if (t.priceInclude && t.amountType === 'percent') base = Math.round(base / (1 + Number(t.amount) / 100));
+  const included = taxes.filter(t => t.priceInclude && t.amountType === 'percent').length;
+  let tax = 0;
+  for (const t of taxes) {
+    const one = t.amountType === 'percent' ? Math.round(base * Number(t.amount) / 100) : Math.round(Number(t.amount) * 1000 * Number(quantity || 1));
+    tax += t.priceInclude && t.amountType === 'percent' && included === 1 ? subtotal - base : one;
+  }
+  return { base, tax };
+}

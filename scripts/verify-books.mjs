@@ -55,3 +55,9 @@ assert.deepEqual(termSchedule(5000, null, '2026-01-01', '2026-02-01'), [{ date: 
 assert.deepEqual([daysLate('2026-03-01', '2026-03-11', '5'), daysLate('2026-03-01', '2026-03-11', '0'), daysLate('2026-04-01', '2026-03-11', '5')], [10, 0, 0]);
 assert.deepEqual([docKindOf({ moveType: 'entry', paymentType: 'inbound', partnerType: 'customer' }), docKindOf({ moveType: 'in_refund', paymentType: '', partnerType: '' }), docKindOf({ moveType: 'entry', paymentType: '', partnerType: '' })], ['customer_payment', 'in_refund', null]);
 console.log('Passed invoicing library: service line amounts with discounts, payment term schedules, days overdue and document kinds.');
+const { lineTaxes } = await import('../lib/books.ts');
+assert.deepEqual(lineTaxes(100000, '1', [{ amountType: 'percent', amount: '5', priceInclude: false }]), { base: 100000, tax: 5000 });
+assert.deepEqual(lineTaxes(110000, '1', [{ amountType: 'percent', amount: '10', priceInclude: true }]), { base: 100000, tax: 10000 });
+assert.deepEqual(lineTaxes(50000, '2', [{ amountType: 'fixed', amount: '1.5', priceInclude: false }]), { base: 50000, tax: 3000 });
+assert.deepEqual(lineTaxes(10000, '1', []), { base: 10000, tax: 0 });
+console.log('Passed tax calculation: added, included and fixed taxes.');

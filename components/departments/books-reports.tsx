@@ -9,8 +9,8 @@ import {DateField,Empty} from '../shared';
 import FilterSelect from '../filter-select';
 import {exportCsv,exportXlsx} from './shared';
 
-export type ExtraReport='partners'|'aged_in'|'aged_out'|'cash'|'summary'|'cases'|'journal';
-export const EXTRA_REPORTS:[ExtraReport,string][]=[['summary','الملخص التنفيذي'],['partners','دفتر الشركاء'],['aged_in','أعمار ديون العملاء'],['aged_out','أعمار ديون الموردين'],['cash','التدفقات النقدية'],['cases','ربحية القضايا'],['journal','تقرير الدفتر']];
+export type ExtraReport='partners'|'aged_in'|'aged_out'|'cash'|'summary'|'cases'|'journal'|'taxes'|'analytic';
+export const EXTRA_REPORTS:[ExtraReport,string][]=[['summary','الملخص التنفيذي'],['partners','دفتر الشركاء'],['aged_in','أعمار ديون العملاء'],['aged_out','أعمار ديون الموردين'],['cash','التدفقات النقدية'],['cases','ربحية القضايا'],['journal','تقرير الدفتر'],['taxes','تقرير الضريبة'],['analytic','مراكز التكلفة']];
 const amount=(v:string)=>money(toFils(v));
 const fail=(e:unknown)=>toast.error((e as Error).message);
 type Table={headers:string[];body:string[][];totals:[string,string][]};
@@ -19,6 +19,8 @@ type AgedRow={partnerId:string;name:string;total:string;current:string;d30:strin
 type CashFlow={opening:string;closing:string;inflow:string;outflow:string;sections:{section:'operating'|'investing'|'financing';accountId:string;code:string;name:string;amount:string}[]};
 type Summary={income:string;expenses:string;cash:string;receivable:string;payable:string;overdueReceivable:string;overduePayable:string;invoiced:string;invoices:number;collected:string;bills:string;drafts:number};
 type CaseRow={caseId:string;code:string;autoNumber:string;client:string;income:string;expenses:string;recharged:string;open:string;net:string};
+type TaxRow={taxId:string;name:string;typeUse:'sale'|'purchase';base:string;tax:string};
+type AnalyticRow={analyticId:string;name:string;plan:string;income:string;expenses:string;net:string};
 type JournalMove={moveId:string;name:string;date:string;ref:string;partner:string;lines:{code:string;account:string;label:string;debit:string;credit:string}[]};
 const AGES:[keyof AgedRow,string][]=[['current','لم يستحق'],['d30','1–30 يوماً'],['d60','31–60'],['d90','61–90'],['d120','91–120'],['older','أكثر من 120']];
 const SECTIONS={operating:'الأنشطة التشغيلية',investing:'الأنشطة الاستثمارية',financing:'الأنشطة التمويلية'} as const;
@@ -29,7 +31,7 @@ export function ExtraReports({setup,report,onOpen,canExport,version}:{setup:Book
  const [data,setData]=useState<unknown>(null),[error,setError]=useState(''),[open,setOpen]=useState<string>('');
  useEffect(()=>{let live=true;
   const call=report==='partners'?booksRequest('partner_ledger',{from,to,partnerId:partner,details:true}):report==='aged_in'||report==='aged_out'?booksRequest('aged',{side:report==='aged_in'?'receivable':'payable',asOf})
-   :report==='cash'?booksRequest('cash_flow',{from,to}):report==='summary'?booksRequest('executive_summary',{from,to}):report==='cases'?booksRequest('case_report',{from,to}):booksRequest('journal_report',{journalId:journal,from,to});
+   :report==='cash'?booksRequest('cash_flow',{from,to}):report==='summary'?booksRequest('executive_summary',{from,to}):report==='cases'?booksRequest('case_report',{from,to}):report==='taxes'?booksRequest('tax_report',{from,to}):report==='analytic'?booksRequest('analytic_report',{from,to}):booksRequest('journal_report',{journalId:journal,from,to});
   call.then(r=>{if(live){setData(r);setError('')}}).catch(e=>{if(live)setError((e as Error).message)});return()=>{live=false}},[report,from,to,asOf,partner,journal,version]);
  const name=EXTRA_REPORTS.find(r=>r[0]===report)![1],scope=report.startsWith('aged')?`في ${formatDate(asOf)}`:`من ${formatDate(from)} إلى ${formatDate(to)}`;
  const table=():Table=>{
@@ -44,6 +46,9 @@ export function ExtraReports({setup,report,onOpen,canExport,version}:{setup:Book
   if(report==='summary'){const s=data as Summary;return{headers:['المؤشر','القيمة'],body:summaryRows(s),totals:[]}}
   if(report==='cases'){const rows=data as CaseRow[];return{headers:['القضية','الموكل','الإيرادات','المصروفات','صافي الربح','أتعاب غير محصلة'],body:rows.map(r=>[r.code||r.autoNumber||'—',r.client,amount(r.income),amount(r.expenses),amount(r.net),amount(r.open)]),
    totals:[['صافي الربح',money(rows.reduce((t,r)=>t+toFils(r.net),0))],['غير محصل',money(rows.reduce((t,r)=>t+toFils(r.open),0))]]}}
+  if(report==='taxes'){const rows=data as TaxRow[];const due=rows.reduce((t,r)=>t+(r.typeUse==='sale'?1:-1)*toFils(r.tax),0);
+   return{headers:['الضريبة','على','الأساس','الضريبة'],body:rows.map(r=>[r.name,r.typeUse==='sale'?'المبيعات':'المشتريات',amount(r.base),amount(r.tax)]),totals:[['ضريبة المخرجات',money(rows.filter(r=>r.typeUse==='sale').reduce((t,r)=>t+toFils(r.tax),0))],['ضريبة المدخلات',money(rows.filter(r=>r.typeUse==='purchase').reduce((t,r)=>t+toFils(r.tax),0))],[due>=0?'الصافي المستحق للسداد':'الصافي القابل للاسترداد',money(Math.abs(due))]]}}
+  if(report==='analytic'){const rows=data as AnalyticRow[];return{headers:['مركز التكلفة','الخطة','الإيرادات','المصروفات','الصافي'],body:rows.map(r=>[r.name,r.plan,amount(r.income),amount(r.expenses),amount(r.net)]),totals:[['الصافي',money(rows.reduce((t,r)=>t+toFils(r.net),0))]]}}
   const moves=data as JournalMove[];return{headers:['التاريخ','القيد','الحساب','البيان','مدين','دائن'],body:moves.flatMap(m=>m.lines.map((l,i)=>[i?'':formatDate(m.date),i?'':m.name,l.code+' '+l.account,l.label,amount(l.debit),amount(l.credit)])),
    totals:[['إجمالي المدين',money(moves.reduce((t,m)=>t+m.lines.reduce((u,l)=>u+toFils(l.debit),0),0))],['إجمالي الدائن',money(moves.reduce((t,m)=>t+m.lines.reduce((u,l)=>u+toFils(l.credit),0),0))]]};
  };
@@ -64,6 +69,7 @@ export function ExtraReports({setup,report,onOpen,canExport,version}:{setup:Book
   {data!==null&&report==='cash'&&<Cash c={data as CashFlow}/>}
   {data!==null&&report==='cases'&&<Cases rows={data as CaseRow[]}/>}
   {data!==null&&report==='journal'&&<JournalReport moves={data as JournalMove[]} onOpen={onOpen}/>}
+  {data!==null&&(report==='taxes'||report==='analytic')&&<SimpleTable t={table()}/>}
  </>;
 }
 function summaryRows(s:Summary):string[][]{
@@ -112,4 +118,9 @@ function JournalReport({moves,onOpen}:{moves:JournalMove[];onOpen:(id:string)=>v
  return <div className="table-wrap"><table className="office-table books-table"><thead><tr><th>القيد</th><th>الحساب</th><th>البيان</th><th>مدين</th><th>دائن</th></tr></thead>
   {moves.map(m=><tbody key={m.moveId}><tr className="books-group"><th colSpan={5}><button type="button" className="link mono" onClick={()=>onOpen(m.moveId)}>{m.name}</button> · {formatDate(m.date)}{m.partner&&` · ${m.partner}`}{m.ref&&` · ${m.ref}`}</th></tr>
    {m.lines.map((l,i)=><tr key={i}><td></td><td>{l.code} {l.account}</td><td>{l.label}</td><td dir="ltr">{toFils(l.debit)?amount(l.debit):''}</td><td dir="ltr">{toFils(l.credit)?amount(l.credit):''}</td></tr>)}</tbody>)}</table></div>;
+}
+function SimpleTable({t}:{t:Table}){
+ if(!t.body.length)return <Empty text="لا توجد حركات في هذه الفترة."/>;
+ return <><div className="table-wrap"><table className="office-table books-table"><thead><tr>{t.headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{t.body.map((r,i)=><tr key={i}>{r.map((c,k)=><td key={k} dir={k>1?'ltr':undefined}>{c}</td>)}</tr>)}</tbody></table></div>
+  {t.totals.length>0&&<dl className="books-totals">{t.totals.map(([k,v])=><div key={k}><dt>{k}</dt><dd dir="ltr">{v}</dd></div>)}</dl>}</>;
 }

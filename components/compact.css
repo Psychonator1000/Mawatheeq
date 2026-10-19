@@ -203,7 +203,7 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .books-outstanding{border:1px dashed var(--border);border-radius:10px;padding:10px 12px}
 .books-late{color:var(--destructive,#b42318);font-weight:600}
 .books-metrics{margin-bottom:6px}
-.department-dialog:has(.books-lines){width:min(1120px,96vw);max-width:none}
+.office-dialog.department-dialog:has(.books-lines){width:calc(100vw - 32px)!important;max-width:1120px!important}
 .books-pick{text-align:start;cursor:pointer;font:inherit;color:inherit}.books-pick.active{border-color:var(--dept);box-shadow:0 0 0 2px color-mix(in srgb,var(--dept) 25%,transparent)}
 .books-in{color:#1f7a4d}.books-out{color:var(--destructive,#b42318)}
 .books-active td{background:color-mix(in srgb,var(--dept) 7%,transparent)}
@@ -212,3 +212,8 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .books-report-tabs{margin-bottom:16px}.books-report-actions{margin:0 0 12px}
 .books-kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px}
 .books-sub td{font-size:12.5px;background:color-mix(in srgb,var(--dept) 4%,transparent)}
+.books-due{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.books-bar{display:inline-block;width:90px;height:8px;border-radius:4px;background:var(--border);vertical-align:middle;margin-inline-end:6px;overflow:hidden}.books-bar span{display:block;height:100%;background:var(--dept)}.books-bar span.over{background:var(--destructive,#b42318)}
+.books-budget{border-top:1px solid var(--border);padding-top:12px;margin-top:12px}.books-mini{display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
+.books-checklist{list-style:none;padding:0;margin:0;display:grid;gap:6px}.books-checklist li{border:1px solid var(--border);border-radius:8px;padding:8px 12px}.books-checklist li.todo{border-color:#c98a12}.books-checklist li.ok b{color:#1f7a4d}
+.books-switch{font-weight:600;display:flex;align-items:center;gap:8px;flex-direction:row}.books-chips{display:flex;gap:10px;flex-wrap:wrap}.books-level{border:1px solid var(--border);border-radius:10px;padding:10px;display:grid;gap:8px}

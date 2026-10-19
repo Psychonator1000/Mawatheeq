@@ -2,8 +2,8 @@ import {useEffect,useMemo,useState} from 'react';
 import {Plus,Printer,Download,RotateCcw,Ban,Trash2,Check,HandCoins,FileMinus2,Link2,Unlink,ArrowRightLeft,UserPlus} from 'lucide-react';
 import {toast} from 'sonner';
 import {booksRequest} from '@/lib/local-auth';
-import {CHEQUE_STATES,DOC_KINDS,MOVE_STATES,PAYMENT_METHODS,PAYMENT_MATCH,PAYMENT_STATES,PARTNER_KINDS,daysLate,filsText,lineSubtotal,money,termSchedule,toFils,
- type BooksSetup,type Doc,type PaymentMethod,type DocKind,type DocLine,type DocSummary,type InvoicingSetup,type PaymentTerm,type PaymentTermLine,type Product} from '@/lib/books';
+import {CHEQUE_STATES,DOC_KINDS,MOVE_STATES,PAYMENT_METHODS,PAYMENT_MATCH,PAYMENT_STATES,PARTNER_KINDS,daysLate,filsText,lineSubtotal,lineTaxes,money,termSchedule,toFils,
+ type AdvancedSetup,type BooksSetup,type Doc,type PaymentMethod,type DocKind,type DocLine,type DocSummary,type InvoicingSetup,type PaymentTerm,type PaymentTermLine,type Product} from '@/lib/books';
 import type {CaseSummary} from '@/lib/departments';
 import {todayISO,formatDate} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
@@ -74,15 +74,22 @@ export function InvoiceEditor({setup,cases,initial,onClose,onChanged,onOpen,onSe
  const accounts:FilterOption[]=useMemo(()=>setup.accounts.filter(a=>!a.deprecated).map(a=>({value:a.id,label:a.code+' '+a.name})),[setup.accounts]);
  const products:FilterOption[]=setup.products.filter(p=>p.active&&(side==='customer'?p.incomeAccount:p.expenseAccount)).map(p=>({value:p.id,label:p.name,hint:money(toFils(side==='customer'?p.salePrice:p.purchasePrice))}));
  const lock=[setup.settings.fiscalLockDate,...(setup.canConfigure?[]:[setup.settings.lockDate])].filter(Boolean).sort().pop()||'';
- const subs=d.lines.map(l=>{try{return lineSubtotal(l.quantity,l.priceUnit,l.discount)}catch{return NaN}}),total=subs.reduce((t,s)=>t+(isNaN(s)?0:s),0);
+ const adv='advanced' in setup?setup as unknown as AdvancedSetup:null,taxesOn=!!adv?.taxesEnabled,typeUse=side==='customer'?'sale':'purchase';
+ const taxOptions:FilterOption[]=(adv?.taxes||[]).filter(t=>t.typeUse===typeUse&&(t.active||d.lines.some(l=>l.taxIds?.includes(t.id)))).map(t=>({value:t.id,label:t.name}));
+ const analyticOptions:FilterOption[]=(adv?.analytic||[]).filter(a=>a.active||d.lines.some(l=>l.analyticId===a.id)).map(a=>({value:a.id,label:a.name}));
+ const currencies=(adv?.currencies||[]).filter(c=>c.active||c.code===(d.currency||'KWD')),cur=d.currency||'KWD',[rate,setRate]=useState(initial.currencyRate&&cur!=='KWD'?String(Number(initial.currencyRate)):'');
+ // Each line before tax and its tax, as the server will book them; the total is in the invoice's currency.
+ const subs=d.lines.map(l=>{try{return lineSubtotal(l.quantity,l.priceUnit,l.discount)}catch{return NaN}});
+ const calc=subs.map((v,i)=>isNaN(v)?{base:0,tax:0}:lineTaxes(v,d.lines[i].quantity,taxesOn?(adv?.taxes||[]).filter(t=>d.lines[i].taxIds?.includes(t.id)):[]));
+ const untaxed=calc.reduce((t,c)=>t+c.base,0),taxTotal=calc.reduce((t,c)=>t+c.tax,0),total=untaxed+taxTotal;
  const term=setup.paymentTerms.find(t=>t.id===d.paymentTermId),schedule=termSchedule(total,term?term.lines:null,d.date,d.invoiceDateDue||'');
- const pickProduct=(i:number,id:string)=>{const p=setup.products.find(x=>x.id===id);line(i,{productId:id,...(p?{label:d.lines[i].label||p.name,accountId:(side==='customer'?p.incomeAccount:p.expenseAccount)||'',priceUnit:d.lines[i].priceUnit||filsText(toFils(side==='customer'?p.salePrice:p.purchasePrice))}:{})})};
+ const pickProduct=(i:number,id:string)=>{const p=setup.products.find(x=>x.id===id);line(i,{productId:id,...(p&&taxesOn?{taxIds:adv?.productTaxes[p.id]?.[typeUse]||[]}:{}),...(p?{label:d.lines[i].label||p.name,accountId:(side==='customer'?p.incomeAccount:p.expenseAccount)||'',priceUnit:d.lines[i].priceUnit||filsText(toFils(side==='customer'?p.salePrice:p.purchasePrice))}:{})})};
  const needs=editable?[!d.journalId&&'اختر الدفتر',!d.date&&'اختر التاريخ',d.date&&lock&&d.date<=lock&&`التاريخ ضمن فترة مقفلة (حتى ${formatDate(lock)})`,subs.some(isNaN)&&'راجع الكميات والأسعار والخصم',
-  d.lines.some((l,i)=>subs[i]>0&&!l.accountId)&&'اختر الحساب أو الخدمة في كل سطر',total<=0&&'أضف بنداً بمبلغ',!!d.invoiceDateDue&&d.invoiceDateDue<d.date&&'تاريخ الاستحقاق قبل تاريخ الفاتورة']:[];
+  d.lines.some((l,i)=>subs[i]>0&&!l.accountId)&&'اختر الحساب أو الخدمة في كل سطر',cur!=='KWD'&&rate&&!(Number(rate)>0)?'سعر الصرف غير صالح':'',total<=0&&'أضف بنداً بمبلغ',!!d.invoiceDateDue&&d.invoiceDateDue<d.date&&'تاريخ الاستحقاق قبل تاريخ الفاتورة']:[];
  const postNeeds=[...needs,editable&&!d.partnerId?`اختر ${side==='customer'?'العميل':'المورد'}`:''].map(x=>typeof x==='string'?x:'');
  async function act(fn:()=>Promise<Doc|null>,done:string){setBusy(true);try{const r=await fn();toast.success(done);onChanged(r)}catch(e){fail(e)}finally{setBusy(false)}}
  const save=()=>booksRequest<Doc>('save_invoice',{invoice:{id:d.id||undefined,revision:d.revision,moveType:kind,journalId:d.journalId,date:d.date,dueDate:d.paymentTermId?'':d.invoiceDateDue||'',paymentTermId:d.paymentTermId,
-  partnerId:d.partnerId,caseId:d.caseId,ref:d.ref,narration:d.narration,lines:d.lines.map(l=>({productId:l.productId,label:l.label,accountId:l.accountId,quantity:l.quantity,priceUnit:l.priceUnit,discount:l.discount,caseId:l.caseId}))}});
+  partnerId:d.partnerId,caseId:d.caseId,ref:d.ref,narration:d.narration,currency:cur,rate:cur==='KWD'?'':rate,lines:d.lines.map(l=>({productId:l.productId,label:l.label,accountId:l.accountId,quantity:l.quantity,priceUnit:l.priceUnit,discount:l.discount,caseId:l.caseId,taxIds:l.taxIds||[],analyticId:l.analyticId||''}))}});
  const pName=setup.partners.find(p=>p.id===d.partnerId)?.name||'';
  function print(){const cs=cases.find(c=>c.id===d.caseId),paid=toFils(d.amountTotal)-toFils(d.amountResidual);
   if(!printHtml(invoiceHtml({title:DOC_KINDS[kind].one,number:d.name==='/'?'مسودة':d.name,date:d.date,due:d.invoiceDateDue||'',partner:pName,reference:d.ref,caseLabel:cs?(cs.code||cs.autoNumber||'')+' · '+clientName(cs):'',
@@ -97,13 +104,15 @@ export function InvoiceEditor({setup,cases,initial,onClose,onChanged,onOpen,onSe
     {editable&&<div className="books-quick"><label className="field"><span>{side==='customer'?'عميل جديد':'مورد جديد'}</span><input value={newPartner} onChange={e=>setNewPartner(e.target.value)} placeholder="الاسم"/></label>
      <button type="button" className="btn" disabled={busy||!newPartner.trim()} onClick={()=>void addPartner()}><UserPlus size={15}/> إضافة</button></div>}
     {editable?<DateField label="تاريخ الفاتورة" value={d.date} onChange={v=>set({date:v})}/>:<label className="field"><span>تاريخ الفاتورة</span><input readOnly value={formatDate(d.date)}/></label>}
+    {currencies.length>1&&<FilterSelect label="العملة" value={cur} onChange={v=>{set({currency:v});setRate(v==='KWD'?'':currencies.find(c=>c.code===v)?.rate||'')}} disabled={!editable} options={currencies.map(c=>({value:c.code,label:c.code+' · '+c.name}))}/>}
+    {cur!=='KWD'&&<label className="field"><span>سعر الصرف (د.ك لكل 1 {cur})</span><input dir="ltr" inputMode="decimal" value={rate} readOnly={!editable} placeholder="سعر تاريخ الفاتورة" onChange={e=>setRate(e.target.value)}/></label>}
     <FilterSelect label="شرط الدفع" value={d.paymentTermId} onChange={v=>set({paymentTermId:v})} disabled={!editable} empty="تاريخ استحقاق محدد" options={setup.paymentTerms.filter(t=>t.active||t.id===d.paymentTermId).map(t=>({value:t.id,label:t.name}))}/>
     {!d.paymentTermId&&(editable?<DateField label="تاريخ الاستحقاق" value={d.invoiceDateDue||''} onChange={v=>set({invoiceDateDue:v||null})}/>:<label className="field"><span>تاريخ الاستحقاق</span><input readOnly value={d.invoiceDateDue?formatDate(d.invoiceDateDue):'—'}/></label>)}
     <label className="field"><span>المرجع</span><input value={d.ref} readOnly={!editable} onChange={e=>set({ref:e.target.value})} maxLength={200}/></label>
     <FilterSelect label="الدفتر" value={d.journalId} onChange={v=>set({journalId:v})} disabled={!editable||d.name!=='/'} options={setup.journals.filter(j=>j.type===(side==='customer'?'sale':'purchase')&&(j.active||j.id===d.journalId)).map(j=>({value:j.id,label:`${j.code} · ${j.name}`}))}/>
     <FilterSelect label="القضية" value={d.caseId} onChange={v=>set({caseId:v})} disabled={!editable} empty="غير مرتبطة بقضية" options={caseOptions(cases,d.caseId)} className="case-picker"/>
    </div>
-   <div className="table-wrap"><table className="office-table books-lines books-invoice-lines"><thead><tr><th>الخدمة</th><th>البيان</th><th>الحساب</th><th>الكمية</th><th>السعر</th><th>خصم ٪</th><th>المبلغ</th>{editable&&<th></th>}</tr></thead>
+   <div className="table-wrap"><table className="office-table books-lines books-invoice-lines"><thead><tr><th>الخدمة</th><th>البيان</th><th>الحساب</th><th>الكمية</th><th>السعر</th><th>خصم ٪</th>{taxesOn&&<th>الضريبة</th>}{analyticOptions.length>0&&<th>مركز التكلفة</th>}<th>المبلغ</th>{editable&&<th></th>}</tr></thead>
     <tbody>{d.lines.map((l,i)=><tr key={i}>
      <td>{editable?<FilterBox label={`خدمة السطر ${i+1}`} value={l.productId} onChange={v=>pickProduct(i,v)} empty="بلا خدمة" options={products}/>:setup.products.find(p=>p.id===l.productId)?.name||'—'}</td>
      <td>{editable?<input aria-label={`بيان السطر ${i+1}`} value={l.label} onChange={e=>line(i,{label:e.target.value})} maxLength={300}/>:l.label}</td>
@@ -111,10 +120,14 @@ export function InvoiceEditor({setup,cases,initial,onClose,onChanged,onOpen,onSe
      <td>{editable?<input aria-label={`كمية السطر ${i+1}`} dir="ltr" inputMode="decimal" value={l.quantity} onChange={e=>line(i,{quantity:e.target.value})}/>:<span dir="ltr">{Number(l.quantity)}</span>}</td>
      <td>{editable?<input aria-label={`سعر السطر ${i+1}`} dir="ltr" inputMode="decimal" value={l.priceUnit} onChange={e=>line(i,{priceUnit:e.target.value})}/>:<span dir="ltr">{amount(l.priceUnit)}</span>}</td>
      <td>{editable?<input aria-label={`خصم السطر ${i+1}`} dir="ltr" inputMode="decimal" value={l.discount} onChange={e=>line(i,{discount:e.target.value})}/>:<span dir="ltr">{Number(l.discount)||''}</span>}</td>
-     <td dir="ltr" className="ledger-value">{isNaN(subs[i])?'؟':money(subs[i])}</td>
+     {taxesOn&&<td>{editable?<FilterBox label={`ضريبة السطر ${i+1}`} value={l.taxIds?.[0]||''} onChange={v=>line(i,{taxIds:v?[v]:[]})} empty="بلا ضريبة" options={taxOptions}/>:(adv?.taxes||[]).filter(t=>l.taxIds?.includes(t.id)).map(t=>t.name).join('، ')||'—'}</td>}
+     {analyticOptions.length>0&&<td>{editable?<FilterBox label={`مركز تكلفة السطر ${i+1}`} value={l.analyticId||''} onChange={v=>line(i,{analyticId:v})} empty="بلا" options={analyticOptions}/>:analyticOptions.find(a=>a.value===l.analyticId)?.label||'—'}</td>}
+     <td dir="ltr" className="ledger-value">{isNaN(subs[i])?'؟':money(calc[i].base)}</td>
      {editable&&<td><button type="button" className="btn icon" aria-label={`حذف السطر ${i+1}`} disabled={d.lines.length<=1} title={d.lines.length<=1?'يبقى سطر واحد على الأقل':undefined} onClick={()=>setD(x=>({...x,lines:x.lines.filter((_,k)=>k!==i)}))}><Trash2 size={14}/></button></td>}
     </tr>)}</tbody>
-    <tfoot><tr><th colSpan={6}>الإجمالي (KWD)</th><th dir="ltr">{money(total)}</th>{editable&&<th></th>}</tr></tfoot></table></div>
+    <tfoot>{taxTotal>0&&<><tr><th colSpan={6+(taxesOn?1:0)+(analyticOptions.length>0?1:0)}>قبل الضريبة</th><th dir="ltr">{money(untaxed)}</th>{editable&&<th></th>}</tr>
+     <tr><th colSpan={6+(taxesOn?1:0)+(analyticOptions.length>0?1:0)}>الضريبة</th><th dir="ltr">{money(taxTotal)}</th>{editable&&<th></th>}</tr></>}
+     <tr><th colSpan={6+(taxesOn?1:0)+(analyticOptions.length>0?1:0)}>الإجمالي ({cur}){cur!=='KWD'&&rate&&Number(rate)>0?` ≈ ${money(Math.round(total*Number(rate)))} د.ك`:''}</th><th dir="ltr">{money(total)}</th>{editable&&<th></th>}</tr></tfoot></table></div>
    {editable&&<div className="actions"><button type="button" className="btn" onClick={()=>setD(x=>({...x,lines:[...x.lines,blankDocLine()]}))}><Plus size={15}/> بند</button></div>}
    {schedule.length>1&&<p className="muted">الدفعات: {schedule.map(s=>`${money(s.amount)} في ${formatDate(s.date)}`).join(' · ')}</p>}
    {d.state==='posted'&&<div className="books-payments">
@@ -131,6 +144,7 @@ export function InvoiceEditor({setup,cases,initial,onClose,onChanged,onOpen,onSe
    <div className="actions">
     {editable&&<><button className="btn primary" disabled={busy||postNeeds.some(Boolean)} onClick={()=>void act(async()=>{const s=await save();return booksRequest<Doc>('post',{id:s.id,revision:s.revision})},'أُكدت '+DOC_KINDS[kind].one)}><Check size={15}/> تأكيد</button>
      <button className="btn" disabled={busy||needs.some(Boolean)} onClick={()=>void act(save,'حُفظت المسودة')}>حفظ كمسودة</button></>}
+    {setup.canEdit&&d.state==='posted'&&cur!=='KWD'&&toFils(d.amountResidual)>0&&<button className="btn" disabled={busy} title="ما بقي مفتوحاً بالدينار بسبب تغير سعر الصرف بعد سداد المبلغ كاملاً بالعملة" onClick={()=>void act(()=>booksRequest<Doc>('exchange_difference',{id:d.id,date:todayISO()}),'سُوّي فرق العملة')}>تسوية فرق العملة</button>}
     {setup.canEdit&&d.state==='posted'&&toFils(d.amountResidual)>0&&<button className="btn primary" disabled={busy} onClick={()=>setPaying(true)}><HandCoins size={15}/> تسجيل دفعة</button>}
     {setup.canEdit&&d.state==='posted'&&(kind==='out_invoice'||kind==='in_invoice')&&<button className="btn" disabled={busy} onClick={()=>setCrediting(true)}><FileMinus2 size={15}/> إشعار دائن</button>}
     {setup.canEdit&&d.id&&d.state!=='draft'&&<button className="btn" disabled={busy||!!(lock&&d.date<=lock)} title={lock&&d.date<=lock?'المستند ضمن فترة مقفلة':undefined} onClick={()=>void act(()=>booksRequest<Doc>('reset_draft',{id:d.id,revision:d.revision}),'أُعيد المستند إلى مسودة')}><RotateCcw size={15}/> إعادة إلى مسودة</button>}
