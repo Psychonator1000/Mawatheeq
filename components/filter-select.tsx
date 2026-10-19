@@ -1,4 +1,5 @@
-import {Children,Fragment,isValidElement,useEffect,useId,useMemo,useRef,useState,type ReactElement,type ReactNode} from 'react';
+import {Children,Fragment,isValidElement,useEffect,useId,useLayoutEffect,useMemo,useRef,useState,type ReactElement,type ReactNode} from 'react';
+import {createPortal} from 'react-dom';
 import {ChevronDown} from 'lucide-react';
 import {normalizeSearch} from '@/lib/case-browse';
 
@@ -11,7 +12,20 @@ export type FilterOption = { value: string; label: string; hint?: string };
  */
 export function FilterBox({label,value,onChange,options,empty,placeholder='اكتب للبحث أو اختر',disabled=false,className='',id}:{label:string;value:string;onChange:(v:string)=>void;options:FilterOption[];empty?:string;placeholder?:string;disabled?:boolean;className?:string;id?:string}) {
  const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[active,setActive]=useState(0);
- const listId=useId(),input=useRef<HTMLInputElement>(null),closing=useRef<ReturnType<typeof setTimeout>>(undefined);
+ const listId=useId(),input=useRef<HTMLInputElement>(null),list=useRef<HTMLUListElement>(null),closing=useRef<ReturnType<typeof setTimeout>>(undefined);
+ // The open list is drawn in the window, dialog or page that holds the box, not inside it, so table scroll areas and the
+ // layers of animated rows and panels cannot clip or cover it. It follows the box while anything scrolls.
+ const [host,setHost]=useState<HTMLElement|null>(null);
+ const show=()=>{if(!open)setHost((input.current?.closest('[role=dialog],[data-record-window]') as HTMLElement|null)||document.body);setOpen(true)};
+ useLayoutEffect(()=>{if(!open||!host)return;
+  const place=()=>{const el=input.current,ul=list.current;if(!el||!ul)return;
+   const r=el.getBoundingClientRect(),body=host===document.body,h=body?{top:-scrollY,left:-scrollX}:host.getBoundingClientRect();
+   const offTop=body?0:host.scrollTop-host.clientTop,offLeft=body?0:host.scrollLeft-host.clientLeft;
+   const below=innerHeight-r.bottom,height=Math.min(ul.scrollHeight,260),up=below<height+12&&r.top>below;
+   Object.assign(ul.style,{position:'absolute',insetInline:'auto',left:r.left-h.left+offLeft+'px',width:Math.max(r.width,200)+'px',
+    top:(up?r.top-h.top+offTop-height-4:r.bottom-h.top+offTop+4)+'px',zIndex:'1000'})};
+  place();addEventListener('scroll',place,true);addEventListener('resize',place);
+  return()=>{removeEventListener('scroll',place,true);removeEventListener('resize',place)}},[open,host,query]);
  // Escape closes only the open list. Dialogs listen for Escape on the document while capturing, so this listens earlier, on the window.
  useEffect(()=>{if(!open)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape'&&e.target===input.current){e.stopPropagation();e.preventDefault();setOpen(false);setQuery('')}};
   window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true)},[open]);
@@ -20,19 +34,19 @@ export function FilterBox({label,value,onChange,options,empty,placeholder='اك�
   return [...(empty!==undefined&&!q&&!options.some(o=>o.value==='')?[{value:'',label:empty}]:[]),...list].slice(0,300)},[options,query,empty]);
  const pick=(o:FilterOption)=>{if(o.value!==value)onChange(o.value);setOpen(false);setQuery('')};
  function onKey(e:React.KeyboardEvent<HTMLInputElement>){
-  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!open){setOpen(true);return}setActive(a=>(a+(e.key==='ArrowDown'?1:shown.length-1))%Math.max(shown.length,1));return}
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!open){show();return}setActive(a=>(a+(e.key==='ArrowDown'?1:shown.length-1))%Math.max(shown.length,1));return}
   if(e.key==='Enter'&&open){e.preventDefault();if(shown[active])pick(shown[active]);return}
   if(e.key==='Tab'&&open){setOpen(false);setQuery('')}
  }
  const text=open?query:current?.label??(value?value+' (كما أُدخل)':'');
  return <span className={'filter-select-box '+className}>
   <input ref={input} id={id} role="combobox" aria-label={label} aria-expanded={open} aria-controls={listId} aria-autocomplete="list" data-value={value} value={text} disabled={disabled} autoComplete="off"
-   placeholder={open?(current?.label||placeholder):placeholder} onFocus={()=>{clearTimeout(closing.current);setOpen(true);setQuery('');setActive(0)}} onClick={()=>setOpen(true)}
-   onChange={e=>{setQuery(e.target.value);setOpen(true);setActive(0)}} onKeyDown={onKey} onBlur={()=>{closing.current=setTimeout(()=>{setOpen(false);setQuery('')},120)}}/>
+   placeholder={open?(current?.label||placeholder):placeholder} onFocus={()=>{clearTimeout(closing.current);show();setQuery('');setActive(0)}} onClick={show}
+   onChange={e=>{setQuery(e.target.value);show();setActive(0)}} onKeyDown={onKey} onBlur={()=>{closing.current=setTimeout(()=>{setOpen(false);setQuery('')},120)}}/>
   <ChevronDown size={15} aria-hidden className="filter-select-chevron"/>
-  {open&&<ul id={listId} role="listbox" className="filter-select-list">{shown.length?shown.map((o,i)=><li key={o.value+'|'+i} role="option" data-value={o.value} aria-selected={o.value===value} className={i===active?'active':''}
+  {open&&host&&createPortal(<ul ref={list} id={listId} role="listbox" className="filter-select-list" dir="rtl">{shown.length?shown.map((o,i)=><li key={o.value+'|'+i} role="option" data-value={o.value} aria-selected={o.value===value} className={i===active?'active':''}
     onMouseDown={e=>{e.preventDefault();pick(o)}} onMouseEnter={()=>setActive(i)}><b>{o.label}</b>{o.hint&&<small>{o.hint}</small>}</li>)
-   :<li className="filter-select-none">لا توجد نتيجة مطابقة في القائمة</li>}</ul>}
+   :<li className="filter-select-none">لا توجد نتيجة مطابقة في القائمة</li>}</ul>,host)}
  </span>;
 }
 

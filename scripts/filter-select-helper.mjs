@@ -10,7 +10,8 @@ export function supportFilterSelects(anyLocator) {
   proto.selectOption = async function (value, options) {
     if (!(await isList(this))) return nativeSelect.call(this, value, options);
     await this.click();
-    const box = this.locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," filter-select-box ")][1]');
+    // The open list is drawn outside the box (in its window or the page); the box names it in aria-controls.
+    const box = this.page().locator('#' + (await this.getAttribute('aria-controls')).replace(/:/g, '\\:'));
     const all = box.locator('[role=option]');
     const quote = s => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
     const target = typeof value === 'object' && value && 'index' in value ? all.nth(value.index)

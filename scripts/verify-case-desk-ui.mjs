@@ -68,6 +68,10 @@ try{
  await screen('posting');
 
  await nav('أخطاء الترحيل');await page.locator('tr',{hasText:'DESK-MISSED'}).first().waitFor();await page.getByText('جلسات فائتة لم تُرحَّل (1)').waitFor();await screen('posting-errors');
+ // An open list is drawn above the rows and panels after it (each animated row cell has its own layer).
+ {const row=page.locator('tr',{hasText:'DESK-MISSED'}).first();await row.getByRole('combobox').first().click();const list=page.locator('.filter-select-list');await list.waitFor();
+  const hidden=await list.evaluate(ul=>[...ul.querySelectorAll('li')].filter(li=>{const r=li.getBoundingClientRect(),box=ul.getBoundingClientRect();if(r.bottom>innerHeight||r.top<box.top||r.bottom>box.bottom)return false;const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !hit||!ul.contains(hit)}).map(li=>li.textContent));
+  assert.deepEqual(hidden,[],'No option of an open list is covered');await screen('posting-errors-list');await page.keyboard.press('Escape');}
  await nav('القضايا الموقوفة');await page.locator('tr',{hasText:'DESK-STRUCK'}).waitFor();await page.locator('tr',{hasText:'DESK-DUE'}).waitFor();
  assert.equal(await page.locator('.nav-button',{hasText:/مواعيد الجلسات|^الأحكام/}).count(),0,'The sessions roll and judgments issued open as windows from the register, not the sidebar');await nav('سجل الأحكام');await click('رول الجلسات');const win=page.getByRole('dialog');await win.getByRole('heading',{name:'مواعيد الجلسات (رول)',exact:true}).waitFor();await win.getByText('لا جلسات في هذه الفترة').waitFor();await screen('sessions-roll-window');await page.keyboard.press('Escape');await win.waitFor({state:'detached'});
  await click('الأحكام الصادرة');await win.getByRole('heading',{name:'الأحكام الصادرة',exact:true}).waitFor();await win.getByText('لا أحكام في هذه الفترة').waitFor();await page.keyboard.press('Escape');await win.waitFor({state:'detached'});await page.getByRole('heading',{level:1,name:'سجل الأحكام',exact:true}).waitFor();
