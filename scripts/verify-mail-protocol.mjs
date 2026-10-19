@@ -84,6 +84,26 @@ const counts = await mail('counts');
 assert.equal(counts.total, 1); assert.equal(counts.latest[0].subject, 'استفسار عن القضية');
 assert.ok(imapLog.includes('UID SEARCH UID 3:*'));
 
+// Read in the app → read on the server at the next fetch; unread again → unread there; nothing when the switch is off.
+const serverSeen = uid => folders.INBOX.msgs.find(x => x.uid === uid).seen;
+const sync = async () => { const r = await syncAccount(deps, await due()); await deps.rpc('done', { accountId: saved.id }); return r; };
+await mail('get', { id: counts.latest[0].id });
+assert.equal(serverSeen(3), false, 'Nothing changes on the server until the next fetch');
+await sync();
+assert.equal(serverSeen(3), true); assert.ok(imapLog.includes('SELECT "INBOX"') && imapLog.includes('UID STORE 3 +FLAGS.SILENT (\\Seen)'));
+await mail('mark', { ids: [counts.latest[0].id], read: false }); await sync();
+assert.equal(serverSeen(3), false);
+await mail('mark', { ids: [counts.latest[0].id], read: true }); await sync();
+assert.equal(serverSeen(3), true);
+const stores = imapLog.filter(c => c.startsWith('UID STORE')).length;
+await sync(); assert.equal(imapLog.filter(c => c.startsWith('UID STORE')).length, stores, 'Each change is sent once');
+const off = await deps.rpc('save_account', { account: { ...(await mail('context')).accounts[0], ...settings, address: 'amal@example.test', username: 'amal@example.test', sentFolder: 'Sent Items', markSeen: false }, password: '' });
+assert.equal(off.markSeen, false);
+await mail('mark', { ids: [counts.latest[0].id], read: false }); await sync();
+assert.equal(serverSeen(3), true, 'With the switch off the server is left alone');
+await deps.rpc('save_account', { account: { ...off, ...settings, address: 'amal@example.test', username: 'amal@example.test', sentFolder: 'Sent Items', markSeen: true }, password: '' });
+await mail('mark', { ids: [counts.latest[0].id], read: true });
+
 // Reply with an attachment: sent over SMTP, filed in Sent on the server, recorded, original marked answered.
 const question = counts.latest[0];
 store.set(`outgoing/${saved.id}/x/notes.txt`, new TextEncoder().encode('ملاحظات'));
@@ -117,4 +137,4 @@ await sendMail(deps, { accountId: saved.id, to: [{ address: 'lawyer@example.test
 assert.equal((await PostalMime.parse(smtpSent.at(-1).raw)).attachments[0].filename, 'contract.pdf');
 
 close();
-console.log('Passed mail protocol: connection test, first and later fetches without marking read, inline pictures and attachments, reply with attachment over SMTP filed in Sent, de-duplication and batching.');
+console.log('Passed mail protocol: connection test, first and later fetches without marking read, read/unread in the app carried to the server (and not when switched off), inline pictures and attachments, reply with attachment over SMTP filed in Sent, de-duplication and batching.');

@@ -7,7 +7,7 @@ export type MailWorkspace = WorkspaceId;
 export type MailRight = 'inbox' | 'sent' | 'send';
 export type MailAccount = {
   id: string; workspace: MailWorkspace; ownerId: string; ownerName: string; label: string; address: string; displayName: string;
-  provider: Provider; active: boolean; canSend: boolean; lastSyncAt: string | null; lastError: string; lastErrorAt: string | null; revision: number; rights: MailRight[];
+  provider: Provider; active: boolean; canSend: boolean; markSeen: boolean; lastSyncAt: string | null; lastError: string; lastErrorAt: string | null; revision: number; rights: MailRight[];
   imapHost?: string; imapPort?: number; imapSecurity?: 'ssl' | 'starttls'; smtpHost?: string; smtpPort?: number; username?: string; sentFolder?: string; sinceDays?: number;
 };
 export type MailPerson = { id: string; name: string; username: string; workspaces: MailWorkspace[] };

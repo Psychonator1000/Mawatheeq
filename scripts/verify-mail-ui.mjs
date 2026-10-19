@@ -82,6 +82,7 @@ try{
   await d.getByLabel('خادم الإرسال (SMTP)، اتركه فارغاً للعرض فقط',{exact:true}).fill('127.0.0.1');await d.getByLabel('منفذ الإرسال',{exact:true}).fill('587');
   await d.getByText('الإرسال من الخادم يعمل بالمنفذ 465 (SSL) فقط').waitFor();
   await d.getByLabel('منفذ الإرسال',{exact:true}).fill(String(fake.SMTP_PORT));
+  assert.equal(await d.getByLabel(/يظهر مقروءاً في البريد الأصلي/).isChecked(),true,'Read in the app shows as read on the server by default');
   await d.getByRole('button',{name:'اختبار الاتصال',exact:true}).click();await page.getByText(/كلمة مرور التطبيقات/).first().waitFor();
   await d.getByLabel('كلمة المرور / كلمة مرور التطبيقات',{exact:true}).fill('synthetic-app-pass');
   await d.getByRole('button',{name:'اختبار الاتصال',exact:true}).click();await d.getByText('نجح الاتصال · مجلد الصادر: Sent Items').waitFor();
@@ -110,6 +111,12 @@ try{
   const body=d.locator('textarea.mail-body');await body.fill('الجلسة الأحد القادم.\n\nالمسؤول');await screen(page,'mail-reply');
   await d.getByRole('button',{name:'إرسال',exact:true}).click();await d.waitFor({state:'detached'});}
  await page.getByText('أُرسلت الرسالة').waitFor();
+ // The message opened in the app is marked read on the server at the next fetch.
+ assert.equal(fake.folders.INBOX.msgs.find(x=>x.uid===2).seen,false,'Not before the next fetch');
+ await click(page,'جلب البريد');
+ for(let i=0;i<50&&!fake.folders.INBOX.msgs.find(x=>x.uid===2).seen;i++)await new Promise(r=>setTimeout(r,200));
+ assert.equal(fake.folders.INBOX.msgs.find(x=>x.uid===2).seen,true,'Opened in the app, read on the server');
+ assert.equal(fake.folders.INBOX.msgs.find(x=>x.uid===1).seen,false,'Mail not opened in the app stays unread there');
  assert.equal(fake.smtpSent.length,1);assert.deepEqual(fake.smtpSent[0].to,['<client@example.test>']);
  assert.equal((await PostalMime.parse(fake.smtpSent[0].raw)).from.name,'مكتب مواثيق — السكرتارية');
  await reader.getByText(/رد عليها المسؤول/).waitFor();
@@ -138,5 +145,5 @@ try{
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'Mail fits a phone');
  await tempCtx.close();
  assert.deepEqual(errors,[]);
- console.log('Passed mail UI: connecting a mailbox with a connection test (wrong password and blocked port explained), first fetch as read, new mail on the mail icon and in the list, outside pictures blocked until asked, reply from the section address recorded as answered, stand-in sees the secretary\'s mail only once allowed (incoming but not outgoing), phone layout, no runtime errors.');
+ console.log('Passed mail UI: connecting a mailbox with a connection test (wrong password and blocked port explained), first fetch as read, new mail on the mail icon and in the list, outside pictures blocked until asked, opened mail marked read on the server, reply from the section address recorded as answered, stand-in sees the secretary\'s mail only once allowed (incoming but not outgoing), phone layout, no runtime errors.');
 }finally{await browser.close();fake.close()}

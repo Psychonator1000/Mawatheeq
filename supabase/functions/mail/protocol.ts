@@ -122,8 +122,9 @@ export class Imap {
     return '';
   }
 
-  async examine(folder: string) {
-    const lines = await this.command(`EXAMINE ${quote(folder)}`);
+  /** Opens a folder read-only (EXAMINE), or read-write (SELECT) to change flags. */
+  async examine(folder: string, write = false) {
+    const lines = await this.command(`${write ? 'SELECT' : 'EXAMINE'} ${quote(folder)}`);
     let validity = 0, exists = 0, uidNext = 0;
     for (const l of lines) {
       const v = l.text.match(/UIDVALIDITY (\d+)/i); if (v) validity = Number(v[1]);
@@ -159,6 +160,11 @@ export class Imap {
       if (u && l.literals.length) out.set(Number(u[1]), l.literals[l.literals.length - 1]);
     }
     return out;
+  }
+
+  /** Marks messages read or unread on the server. */
+  async setSeen(uids: number[], seen: boolean) {
+    for (let i = 0; i < uids.length; i += 200) await this.command(`UID STORE ${uids.slice(i, i + 200).join(',')} ${seen ? '+' : '-'}FLAGS.SILENT (\\Seen)`);
   }
 
   async append(folder: string, raw: Uint8Array) { await this.command(`APPEND ${quote(folder)} (\\Seen) {${raw.length}}`, raw); }

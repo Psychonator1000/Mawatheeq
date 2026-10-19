@@ -258,3 +258,4 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .mail-access>p{display:flex;gap:6px;align-items:flex-start;margin:10px 0;line-height:1.8}.mail-access .field{max-width:280px}.mail-access-table .check{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .mail-boxes td{vertical-align:middle}
 @media(max-width:900px){.mail-split{grid-template-columns:1fr}.mail-split.reading .mail-list{display:none}.mail-frame{height:70vh}.mail-page{padding:14px}}
+.mail-seen{display:flex;gap:8px;align-items:flex-start;margin:14px 0 4px;font-size:13.5px;line-height:1.8}.mail-seen input{margin-top:5px;width:17px;height:17px;accent-color:var(--brand);flex-shrink:0}

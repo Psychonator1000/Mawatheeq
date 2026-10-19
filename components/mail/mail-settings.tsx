@@ -16,7 +16,7 @@ type Edit=Partial<MailAccount>&{workspace:MailWorkspace;ownerId:string;provider:
 export default function MailSettings({ctx,workspace,onClose,onChanged}:{ctx:MailContext;workspace:MailWorkspace;onClose:()=>void;onChanged:()=>void}){
  const [tab,setTab]=useState<'boxes'|'access'>('boxes'),[edit,setEdit]=useState<Edit|null>(null),[confirm,setConfirm]=useState(''),[busy,setBusy]=useState('');
  const mine=ctx.admin?ctx.accounts:ctx.accounts.filter(a=>a.ownerId===ctx.me);
- const blank=(ws:MailWorkspace):Edit=>({workspace:ws,ownerId:ctx.admin?'':ctx.me,provider:'gmail',address:'',displayName:'',label:'',username:'',password:'',imapHost:PROVIDERS.gmail.imap,imapPort:993,imapSecurity:'ssl',smtpHost:PROVIDERS.gmail.smtp,smtpPort:465,sinceDays:30});
+ const blank=(ws:MailWorkspace):Edit=>({workspace:ws,ownerId:ctx.admin?'':ctx.me,provider:'gmail',address:'',displayName:'',label:'',username:'',password:'',imapHost:PROVIDERS.gmail.imap,imapPort:993,imapSecurity:'ssl',smtpHost:PROVIDERS.gmail.smtp,smtpPort:465,sinceDays:30,markSeen:true});
  const act=(id:string,fn:()=>Promise<unknown>,done:string)=>{setBusy(id);fn().then(()=>{toast.success(done);onChanged();mailChanged()},fail).finally(()=>setBusy(''))};
  return <EditorDialog title={ctx.admin?'إعدادات البريد':'بريدي'} description={ctx.admin?'صناديق البريد في كل قسم، ومن يرى بريد زملائه.':'اربط بريدك بالأقسام التي تعمل فيها؛ يظهر لك وحدك ما لم يسمح المسؤول لغيرك.'} busy={!!busy} onClose={onClose}>
   {ctx.admin&&<div className="department-tabs view-switch" role="group" aria-label="إعدادات البريد">{([['boxes','صناديق البريد'],['access','من يرى بريد من']] as const).map(([k,l])=><button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>}
@@ -32,7 +32,7 @@ export default function MailSettings({ctx,workspace,onClose,onChanged}:{ctx:Mail
       <button className="btn" disabled={!!busy} onClick={()=>act(a.id,()=>mailRequest('set_active',{id:a.id,active:!a.active}),a.active?'أُوقف الجلب':'استؤنف الجلب')}>{a.active?<><Pause size={14}/> إيقاف</>:<><Play size={14}/> تفعيل</>}</button>
       {confirm===a.id?<button className="btn danger" disabled={!!busy} onClick={()=>act(a.id,()=>mailRequest('delete_account',{id:a.id}),'حُذف البريد ورسائله من التطبيق')}>تأكيد الحذف</button>
        :<button className="btn" title="يحذف الرسائل المحفوظة في التطبيق فقط؛ لا يمس البريد على الخادم" onClick={()=>setConfirm(a.id)}><Trash2 size={14}/> حذف</button>}</div></td></tr>)}</tbody></table></div>}
-   <p className="muted">يقرأ التطبيق البريد دون تعليمه مقروءاً على الخادم، ولا يحذف منه شيئاً. كلمات المرور محفوظة مشفّرة في الخادم ولا تُعرض مرة أخرى.</p></>}
+   <p className="muted">لا يحذف التطبيق شيئاً من البريد الأصلي. ما يُفتح في التطبيق يظهر مقروءاً في البريد الأصلي خلال دقيقة تقريباً، ما لم يُطفأ هذا الخيار في إعدادات الصندوق. كلمات المرور محفوظة مشفّرة في الخادم ولا تُعرض مرة أخرى.</p></>}
   {tab==='access'&&ctx.admin&&<Visibility ctx={ctx} initial={workspace} onChanged={onChanged}/>}
   {edit&&<BoxEditor ctx={ctx} initial={edit} onClose={()=>setEdit(null)} onSaved={()=>{setEdit(null);onChanged();mailChanged()}}/>}
  </EditorDialog>;
@@ -48,7 +48,7 @@ function BoxEditor({ctx,initial,onClose,onSaved}:{ctx:MailContext;initial:Edit;o
  const needs=[isAddress(e.address)?'':'اكتب عنوان البريد',e.imapHost?'':'اكتب خادم الوارد (IMAP)',host(e.imapHost)&&host(e.smtpHost)?'':'اسم الخادم غير صحيح',e.id||e.password?'':'اكتب كلمة المرور',
   e.smtpHost&&(e.smtpPort===587||e.smtpPort===25)?'الإرسال من الخادم يعمل بالمنفذ 465 (SSL) فقط':''];
  const account=()=>({id:e.id||'',revision:e.revision||0,workspace:e.workspace,ownerId:e.ownerId,label:e.label||'',address:e.address.trim(),displayName:e.displayName||'',provider:e.provider,
-  imapHost:(e.imapHost||'').trim(),imapPort:Number(e.imapPort)||993,imapSecurity:e.imapSecurity||'ssl',smtpHost:(e.smtpHost||'').trim(),smtpPort:Number(e.smtpPort)||465,username:(e.username||e.address).trim(),sentFolder:e.sentFolder||'',sinceDays:Number(e.sinceDays)||30});
+  imapHost:(e.imapHost||'').trim(),imapPort:Number(e.imapPort)||993,imapSecurity:e.imapSecurity||'ssl',smtpHost:(e.smtpHost||'').trim(),smtpPort:Number(e.smtpPort)||465,username:(e.username||e.address).trim(),sentFolder:e.sentFolder||'',sinceDays:Number(e.sinceDays)||30,markSeen:e.markSeen!==false});
  const test=()=>{setBusy(true);mailFunction<{sentFolder:string}>('test',{account:account(),password:e.password}).then(r=>{setTested(r.sentFolder||'—');toast.success('نجح الاتصال')},fail).finally(()=>setBusy(false))};
  const save=()=>{setBusy(true);mailFunction<MailAccount>('save',{account:account(),password:e.password}).then(a=>{toast.success('حُفظ البريد؛ يبدأ جلب رسائل آخر '+(a.sinceDays||30)+' يوماً');void mailFunction('sync',{force:true,accountId:a.id}).then(()=>mailChanged()).catch(()=>{});onSaved()},fail).finally(()=>setBusy(false))};
  const num=(label:string,value:number|undefined,on:(n:number)=>void)=><label className="field"><span>{label}</span><input dir="ltr" inputMode="numeric" value={value??''} onChange={x=>on(Number(x.target.value.replace(/\D/g,''))||0)}/></label>;
@@ -64,6 +64,7 @@ function BoxEditor({ctx,initial,onClose,onSaved}:{ctx:MailContext;initial:Edit;o
    <Field label="وصف داخلي" value={e.label||''} onChange={v=>set({label:v})} placeholder="اختياري"/>
    <label className="field"><span>اسم المستخدم</span><input dir="ltr" value={e.username||''} onChange={x=>set({username:x.target.value})}/></label>
    <label className="field"><span>{e.id?'كلمة مرور جديدة (اتركها فارغة للإبقاء)':'كلمة المرور / كلمة مرور التطبيقات'}</span><input dir="ltr" type="password" autoComplete="new-password" value={e.password} onChange={x=>set({password:x.target.value})}/></label></div>
+  <label className="check mail-seen"><input type="checkbox" checked={e.markSeen!==false} onChange={x=>set({markSeen:x.target.checked})}/> ما يُقرأ في التطبيق يظهر مقروءاً في البريد الأصلي أيضاً (Gmail وOutlook والهاتف)، وما يُعلَّم غير مقروء يعود كذلك</label>
   <p className="notice mail-provider-note">{PROVIDERS[e.provider].note}</p>
   <details className="mail-servers" open={e.provider==='custom'}><summary>إعدادات الخادم</summary><div className="form-grid">
    <label className="field"><span>خادم الوارد (IMAP)</span><input dir="ltr" value={e.imapHost||''} onChange={x=>set({imapHost:x.target.value})}/></label>{num('منفذ الوارد',e.imapPort,n=>set({imapPort:n}))}

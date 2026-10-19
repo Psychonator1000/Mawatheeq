@@ -5,7 +5,7 @@ export async function startFakeMail({ user = 'amal@example.test', password = 'ap
   // ---- fake IMAP ----
   const folders = { INBOX: { validity: 11, msgs: [] }, 'Sent Items': { validity: 22, msgs: [] } };
   let nextUid = { INBOX: 1, 'Sent Items': 1 };
-  const add = (folder, raw, date = new Date()) => folders[folder].msgs.push({ uid: nextUid[folder]++, raw: Buffer.from(raw), date });
+  const add = (folder, raw, date = new Date()) => folders[folder].msgs.push({ uid: nextUid[folder]++, raw: Buffer.from(raw), date, seen: false });
   const imapLog = [];
   const imap = net.createServer(sock => {
     let buf = Buffer.alloc(0), selected = null, pending = null;
@@ -26,7 +26,7 @@ export async function startFakeMail({ user = 'amal@example.test', password = 'ap
         const un = t => t.replace(/\\(.)/g, '$1');
         if ((m = cmd.match(/^LOGIN "((?:[^"\\]|\\.)*)" "((?:[^"\\]|\\.)*)"$/))) send(un(m[1]) === user && un(m[2]) === password ? `${tag} OK LOGIN done\r\n` : `${tag} NO [AUTHENTICATIONFAILED] Invalid credentials\r\n`);
         else if (cmd === 'LIST "" "*"') send(`* LIST (\\HasNoChildren) "/" "INBOX"\r\n* LIST (\\HasNoChildren \\Sent) "/" "Sent Items"\r\n* LIST (\\HasNoChildren) "/" Archive\r\n${tag} OK LIST done\r\n`);
-        else if ((m = cmd.match(/^EXAMINE "(.*)"$/))) { selected = folders[m[1]]; send(`* ${selected.msgs.length} EXISTS\r\n* OK [UIDVALIDITY ${selected.validity}] ok\r\n* OK [UIDNEXT ${nextUid[m[1]]}] ok\r\n${tag} OK [READ-ONLY] EXAMINE done\r\n`); }
+        else if ((m = cmd.match(/^(EXAMINE|SELECT) "(.*)"$/))) { m = [m[0], m[2]]; selected = folders[m[1]]; selected.writable = cmd.startsWith('SELECT'); send(`* ${selected.msgs.length} EXISTS\r\n* OK [UIDVALIDITY ${selected.validity}] ok\r\n* OK [UIDNEXT ${nextUid[m[1]]}] ok\r\n${tag} OK [READ-ONLY] EXAMINE done\r\n`); }
         else if ((m = cmd.match(/^UID SEARCH (.*)$/))) {
           let uids;
           const r = m[1].match(/^UID (\d+):\*$/);
@@ -41,6 +41,10 @@ export async function startFakeMail({ user = 'amal@example.test', password = 'ap
             else { const body = m[2].includes('HEADER') ? x.raw.subarray(0, x.raw.indexOf('\r\n\r\n') + 4) : x.raw; send(`* ${k + 1} FETCH (UID ${x.uid} BODY[] {${body.length}}\r\n`); sock.write(body); send(')\r\n'); }
           });
           send(`${tag} OK FETCH done\r\n`);
+        } else if ((m = cmd.match(/^UID STORE ([\d,]+) ([+-])FLAGS\.SILENT \(\\Seen\)$/))) {
+          // Flags change only in a folder opened with SELECT, as on a real server.
+          if (!selected?.writable) send(`${tag} NO read-only\r\n`);
+          else { const want = m[1].split(',').map(Number); for (const x of selected.msgs) if (want.includes(x.uid)) x.seen = m[2] === '+'; send(`${tag} OK STORE done\r\n`); }
         } else if ((m = cmd.match(/^APPEND "(.*)" \(\\Seen\) \{(\d+)\}$/))) { pending = { tag, folder: m[1], n: Number(m[2]) }; send('+ Ready\r\n'); }
         else if (cmd === 'LOGOUT') { send(`* BYE\r\n${tag} OK LOGOUT\r\n`); sock.end(); }
         else send(`${tag} BAD unknown\r\n`);
