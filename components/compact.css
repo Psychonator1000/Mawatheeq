@@ -197,3 +197,10 @@
 .books .table-wrap h3{font-size:14px;margin:14px 0 6px;color:var(--dept)}
 button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-decoration:underline;cursor:pointer;font:inherit}
 .books-editor .form-grid .case-picker{grid-column:span 2;min-width:0}.books-editor .form-grid .case-picker .filter-select-box{width:100%}
+.books-quick{display:flex;gap:8px;align-items:end}.books-quick .field{flex:1;margin:0}
+.books-invoice-lines{min-width:860px}.books-invoice-lines td:nth-child(4) input,.books-invoice-lines td:nth-child(5) input,.books-invoice-lines td:nth-child(6) input{max-width:90px;text-align:left}
+.books-payments{display:grid;gap:10px}.books-matches,.books-outstanding ul{margin:0;padding-inline-start:18px;display:grid;gap:6px}.books-matches li,.books-outstanding li{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.books-outstanding{border:1px dashed var(--border);border-radius:10px;padding:10px 12px}
+.books-late{color:var(--destructive,#b42318);font-weight:600}
+.books-metrics{margin-bottom:6px}
+.department-dialog:has(.books-lines){width:min(1120px,96vw);max-width:none}

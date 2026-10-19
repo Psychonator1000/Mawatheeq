@@ -46,3 +46,12 @@ assert.equal(nextAccountCode([{ code: '501000' }, { code: '599000' }], 'expense'
 assert.equal(nextAccountCode([{ code: '501000' }, { code: '502000' }], 'expense'), '503000');
 assert.equal(nextAccountCode([], 'income'), '401000');
 console.log('Passed books library: amounts in fils, money display, entry totals and balancing line, fiscal year start, profit and loss, balance sheet with this and earlier years, running ledger, next account code.');
+const { lineSubtotal, termSchedule, daysLate, docKindOf } = await import('../lib/books.ts');
+assert.deepEqual([lineSubtotal('2', '150', '10'), lineSubtotal('', '30', ''), lineSubtotal('1.5', '33.333', '0')], [270000, 30000, 50000]);
+assert.throws(() => lineSubtotal('1', '1', '120'), /الخصم/);
+assert.deepEqual(termSchedule(300000, [{ kind: 'percent', percent: 50, days: 0 }, { kind: 'balance', days: 30 }], '2026-03-01'), [{ date: '2026-03-01', amount: 150000 }, { date: '2026-03-31', amount: 150000 }]);
+assert.deepEqual(termSchedule(100000, [{ kind: 'percent', percent: 33.33, days: 0 }, { kind: 'percent', percent: 33.33, days: 30 }, { kind: 'balance', days: 60 }], '2026-01-01').map(x => x.amount), [33330, 33330, 33340]);
+assert.deepEqual(termSchedule(5000, null, '2026-01-01', '2026-02-01'), [{ date: '2026-02-01', amount: 5000 }]);
+assert.deepEqual([daysLate('2026-03-01', '2026-03-11', '5'), daysLate('2026-03-01', '2026-03-11', '0'), daysLate('2026-04-01', '2026-03-11', '5')], [10, 0, 0]);
+assert.deepEqual([docKindOf({ moveType: 'entry', paymentType: 'inbound', partnerType: 'customer' }), docKindOf({ moveType: 'in_refund', paymentType: '', partnerType: '' }), docKindOf({ moveType: 'entry', paymentType: '', partnerType: '' })], ['customer_payment', 'in_refund', null]);
+console.log('Passed invoicing library: service line amounts with discounts, payment term schedules, days overdue and document kinds.');

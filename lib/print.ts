@@ -218,3 +218,18 @@ export function custodyReceiptHtml(title: string, rows: [string, string][], from
   return page(title, `<header><h1>${escape(title)}</h1><p>يُحفظ أصل هذا الإيصال في الأرشيف وتُسلّم صورته للمستلم.</p></header><table>${rows.filter(([, v]) => v).map(([k, v]) => `<tr><th>${escape(k)}</th><td>${escape(v)}</td></tr>`).join('')}</table>
 <div class="signatures"><div>${escape(from)}<br>الاسم والتوقيع</div><div>${escape(to)}<br>الاسم والتوقيع</div></div>${footer(printedAt, printedBy)}`);
 }
+
+export type InvoicePrint = { title: string; number: string; date: string; due: string; partner: string; reference: string; caseLabel: string; status: string;
+  lines: { label: string; quantity: string; price: string; discount: string; amount: string }[]; total: string; paid: string; due_amount: string; words: string;
+  schedule: [string, string][]; note: string };
+/** An invoice, bill or credit note: header, service lines, totals with what is paid and still due, instalments and a note. */
+export function invoiceHtml(d: InvoicePrint, printedAt: string, printedBy: string): string {
+  const info: [string, string][] = [['الرقم', d.number], ['التاريخ', dmy(d.date)], ['تاريخ الاستحقاق', dmy(d.due)], ['العميل / المورد', d.partner], ['المرجع', d.reference], ['القضية', d.caseLabel], ['الحالة', d.status]];
+  const lines = `<table class="list"><thead><tr><th>البيان</th><th>الكمية</th><th>السعر</th><th>الخصم</th><th>المبلغ</th></tr></thead><tbody>${d.lines.map(l => `<tr><td>${escape(l.label)}</td><td class="amount">${escape(l.quantity)}</td><td class="amount">${escape(l.price)}</td><td class="amount">${escape(l.discount)}</td><td class="amount">${escape(l.amount)}</td></tr>`).join('')}</tbody></table>`;
+  const totals: [string, string][] = [['الإجمالي (KWD)', d.total], ['المدفوع', d.paid], ['المتبقي', d.due_amount]];
+  return page(d.title + ' ' + d.number, `<header><h1>${escape(d.title)}</h1><p>مواثيق للمحاماة</p></header>
+<table>${info.filter(([, v]) => String(v || '').trim()).map(([k, v]) => `<tr><th>${escape(k)}</th><td>${escape(v)}</td></tr>`).join('')}</table>${lines}
+<table class="totals" style="margin-top:12px;width:auto">${totals.map(([k, v]) => `<tr class="total"><th>${escape(k)}</th><td class="amount">${escape(v)}</td></tr>`).join('')}</table>
+${d.words ? `<p>${escape(d.words)}</p>` : ''}${d.schedule.length > 1 ? `<table class="list" style="margin-top:12px;width:auto"><thead><tr><th>الدفعة المستحقة في</th><th>المبلغ</th></tr></thead><tbody>${d.schedule.map(([a, b]) => `<tr><td>${escape(dmy(a))}</td><td class="amount">${escape(b)}</td></tr>`).join('')}</tbody></table>` : ''}
+${d.note ? `<p>${escape(d.note)}</p>` : ''}<div class="signatures"><div>المحاسب</div><div>الختم</div></div>${footer(printedAt, printedBy)}`);
+}

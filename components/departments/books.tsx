@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState,type ReactNode} from 'react';
 import {BookOpen,Plus,Printer,Download,Scale,RotateCcw,Undo2,Ban,Trash2,Check,History,Landmark,Banknote,Receipt,ShoppingCart,NotebookPen,Lock} from 'lucide-react';
 import {toast} from 'sonner';
 import {booksRequest} from '@/lib/local-auth';
-import {ACCOUNT_TYPES,GROUP_LABELS,JOURNAL_TYPES,MOVE_STATES,PARTNER_KINDS,balanceSheet,balancingLine,fiscalYearStart,money,moveTotals,nextAccountCode,profitAndLoss,runningLedger,toFils,
+import {ACCOUNT_TYPES,DOC_KINDS,GROUP_LABELS,docKindOf,type Doc,type DocKind,JOURNAL_TYPES,MOVE_STATES,PARTNER_KINDS,balanceSheet,balancingLine,fiscalYearStart,money,moveTotals,nextAccountCode,profitAndLoss,runningLedger,toFils,
  type Account,type AccountType,type BooksSetup,type Journal,type JournalType,type LedgerLine,type Move,type MoveLine,type MoveSummary,type Partner,type PartnerKind,type StatementSection,type TrialRow} from '@/lib/books';
 import type {CaseSummary} from '@/lib/departments';
 import type {Permissions} from '@/lib/permissions';
@@ -15,8 +15,9 @@ import FilterSelect,{FilterBox,type FilterOption} from '../filter-select';
 import PageNavigation from '../page-navigation';
 import Needs from '../needs';
 import {EditorDialog,exportCsv} from './shared';
+import {InvoiceEditor,InvoicingPanel,PartnerSide,PaymentEditor,ProductsPanel,TermsPanel,blankDoc,type FullSetup} from './books-invoicing';
 
-type View='dashboard'|'moves'|'reports'|'config';
+type View='dashboard'|'customers'|'vendors'|'moves'|'reports'|'config';
 type Report='trial'|'ledger'|'pl'|'bs';
 type Draft=Omit<Move,'lines'>&{lines:MoveLine[]};
 const JOURNAL_ICONS:Record<JournalType,typeof Landmark>={bank:Landmark,cash:Banknote,sale:Receipt,purchase:ShoppingCart,general:NotebookPen};
@@ -41,34 +42,44 @@ export function useBooksAvailable(){const [ok,setOk]=useState<boolean|null>(null
  */
 export default function Books({cases,access,views}:{cases:CaseSummary[];access:Permissions;views:ReactNode}){
  const [setup,setSetup]=useState<BooksSetup|null>(null),[error,setError]=useState(''),[version,setVersion]=useState(0),[view,setView]=useState<View>('dashboard');
- const [editing,setEditing]=useState<Draft|null>(null),[journalFilter,setJournalFilter]=useState(''),[ledgerAccount,setLedgerAccount]=useState(''),[report,setReport]=useState<Report>('trial');
+ const [editing,setEditing]=useState<Draft|null>(null),[doc,setDoc]=useState<Doc|null>(null),[journalFilter,setJournalFilter]=useState(''),[ledgerAccount,setLedgerAccount]=useState(''),[report,setReport]=useState<Report>('trial');
  useEffect(()=>{let live=true;booksRequest<BooksSetup>('setup').then(s=>{if(live){setSetup(s);setError('')}}).catch(e=>{if(live)setError((e as Error).message)});return()=>{live=false}},[version]);
  const reload=()=>setVersion(v=>v+1);
- async function open(id:string){try{setEditing(await booksRequest<Move>('get_move',{id}))}catch(e){fail(e)}}
- const tabs=<div className="department-tabs view-switch books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
+ // Invoices, bills and payments open in their own editor; other entries in the journal entry editor.
+ async function open(id:string){try{const m=await booksRequest<Doc>('get_move',{id});if(docKindOf(m)){setEditing(null);setDoc(m)}else{setDoc(null);setEditing(m as unknown as Draft)}}catch(e){fail(e)}}
+ const full=setup&&'paymentTerms' in setup?setup as FullSetup:null;
+ const newDoc=(kind:DocKind,partnerId='')=>{if(full){setEditing(null);setDoc(blankDoc(full,kind,partnerId))}};
+ const tabs=<div className="department-tabs view-switch books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','العملاء'],['vendors','الموردون']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
   <button key={k} className={'btn '+(view===k?'primary':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>;
  return <>
   <section className="department-hero"><div><div className="eyebrow">القيد المزدوج</div><h1>المحاسبة</h1><p>دفاتر المكتب بالقيد المزدوج: دليل الحسابات، الدفاتر اليومية، القيود من المسودة إلى الترحيل، وميزان المراجعة ودفتر الأستاذ والأرباح والخسائر والميزانية العمومية.</p></div><BookOpen size={64}/></section>
   {views}{tabs}
   {error&&<p className="notice" role="alert">{error}</p>}{!setup&&!error&&<p role="status">جارٍ تحميل الدفاتر…</p>}
   {setup&&<div className="att-section books">
-   {view==='dashboard'&&<Dashboard setup={setup} onNew={j=>setEditing(blankMove(j))} onList={j=>{setJournalFilter(j);setView('moves')}}/>}
+   {view==='dashboard'&&<Dashboard setup={setup} full={full} onNew={j=>setEditing(blankMove(j))} onNewDoc={newDoc} onList={j=>{setJournalFilter(j);setView('moves')}} onView={setView}/>}
+   {full&&(view==='customers'||view==='vendors')&&<PartnerSide key={view} setup={full} cases={cases} side={view==='customers'?'customer':'vendor'} onOpen={id=>void open(id)} onNew={newDoc} version={version} canExport={access.canExport}/>}
    {view==='moves'&&<Moves setup={setup} cases={cases} journal={journalFilter} onJournal={setJournalFilter} onOpen={id=>void open(id)} onNew={()=>setEditing(blankMove(journalFilter||setup.journals.find(j=>j.type==='general')?.id||setup.journals[0]?.id||''))} version={version} canExport={access.canExport}/>}
    {view==='reports'&&<Reports setup={setup} report={report} onReport={setReport} account={ledgerAccount} onAccount={setLedgerAccount} onOpen={id=>void open(id)} canExport={access.canExport} version={version}/>}
-   {view==='config'&&<Config setup={setup} onChanged={reload}/>}
+   {view==='config'&&<Config setup={setup} full={full} onChanged={reload}/>}
   </div>}
+  {full&&doc&&(doc.paymentType?<PaymentEditor key={doc.id+':'+doc.revision+':'+doc.amountResidual+':'+doc.matches.length} setup={full} cases={cases} initial={doc} onClose={()=>setDoc(null)} onChanged={d=>{reload();setDoc(d)}} onOpen={id=>void open(id)}/>
+   :<InvoiceEditor key={doc.id+':'+doc.revision+':'+doc.state+':'+doc.amountResidual+':'+doc.matches.length} setup={full} cases={cases} initial={doc} onClose={()=>setDoc(null)} onChanged={d=>{reload();setDoc(d)}} onOpen={id=>void open(id)} onSetup={reload}/>)}
   {setup&&editing&&<MoveEditor key={editing.id+':'+editing.revision} setup={setup} cases={cases} initial={editing} onClose={()=>setEditing(null)} onChanged={m=>{reload();if(m)setEditing(m);else setEditing(null)}} onOpen={id=>void open(id)}/>}
  </>;
 }
 
-function Dashboard({setup,onNew,onList}:{setup:BooksSetup;onNew:(journalId:string)=>void;onList:(journalId:string)=>void}){
+function Dashboard({setup,full,onNew,onNewDoc,onList,onView}:{setup:BooksSetup;full:FullSetup|null;onNew:(journalId:string)=>void;onNewDoc:(k:DocKind)=>void;onList:(journalId:string)=>void;onView:(v:View)=>void}){
  const locked=setup.settings.lockDate||setup.settings.fiscalLockDate;
  return <section className="panel"><div className="department-toolbar"><h2>الدفاتر اليومية</h2>{locked&&<span className="tag amber"><Lock size={13}/> مقفل حتى {formatDate(([setup.settings.lockDate,setup.settings.fiscalLockDate].filter(Boolean) as string[]).sort().pop()!)}</span>}</div>
   <div className="books-journals">{setup.journals.filter(j=>j.active).map(j=>{const Icon=JOURNAL_ICONS[j.type],s=setup.journalStats[j.id]||{drafts:0,posted:0,balance:'0'},acc=setup.accounts.find(a=>a.id===j.defaultAccount);
    return <article key={j.id} className="books-journal"><header><Icon size={20}/><div><h3>{j.name}</h3><small>{j.code} · {JOURNAL_TYPES[j.type]}</small></div></header>
     {(j.type==='bank'||j.type==='cash')&&<p className="books-balance"><span>رصيد {acc?.name||'الحساب'}</span><b dir="ltr">{amount(s.balance)}</b></p>}
-    <p className="muted">{s.posted} قيد مرحّل{s.drafts?` · ${s.drafts} مسودة بانتظار الترحيل`:''}</p>
-    <div className="actions">{setup.canEdit&&<button className="btn primary" onClick={()=>onNew(j.id)}><Plus size={15}/> قيد في {j.code}</button>}<button className="btn" onClick={()=>onList(j.id)}>عرض القيود</button></div></article>})}</div>
+    {full&&(j.type==='sale'||j.type==='purchase')?(()=>{const k:DocKind=j.type==='sale'?'out_invoice':'in_invoice',st=full.documentStats[k];return <>
+     <p className="books-balance"><span>{j.type==='sale'?'بانتظار التحصيل':'بانتظار الدفع'}</span><b dir="ltr">{amount(st?.openAmount||'0')}</b></p>
+     <p className="muted">{st?.open??0} مفتوحة{st?.late?` · ${st.late} متأخرة (${amount(st.lateAmount)})`:''}{st?.draft?` · ${st.draft} مسودة`:''}</p>
+     <div className="actions">{setup.canEdit&&<button className="btn primary" onClick={()=>onNewDoc(k)}><Plus size={15}/> {DOC_KINDS[k].one} جديدة</button>}<button className="btn" onClick={()=>onView(j.type==='sale'?'customers':'vendors')}>{j.type==='sale'?'العملاء':'الموردون'}</button></div></>})()
+    :<><p className="muted">{s.posted} قيد مرحّل{s.drafts?` · ${s.drafts} مسودة بانتظار الترحيل`:''}</p>
+    <div className="actions">{setup.canEdit&&<button className="btn primary" onClick={()=>onNew(j.id)}><Plus size={15}/> قيد في {j.code}</button>}{full&&setup.canEdit&&(j.type==='bank'||j.type==='cash')&&<><button className="btn" onClick={()=>onNewDoc('customer_payment')}>سند قبض</button><button className="btn" onClick={()=>onNewDoc('vendor_payment')}>سند صرف</button></>}<button className="btn" onClick={()=>onList(j.id)}>عرض القيود</button></div></>}</article>})}</div>
   {!setup.canEdit&&<p className="muted">صلاحيتك للقراءة فقط: يمكنك عرض القيود والتقارير دون تعديلها.</p>}
  </section>;
 }
@@ -214,12 +225,12 @@ function Statement({rows,kind,onAccount}:{rows:TrialRow[];kind:'pl'|'bs';onAccou
  </div>;
 }
 
-function Config({setup,onChanged}:{setup:BooksSetup;onChanged:()=>void}){
- const [tab,setTab]=useState<'accounts'|'journals'|'partners'|'locks'>('accounts'),[account,setAccount]=useState<Account|null>(null),[journal,setJournal]=useState<Journal|null>(null),[partner,setPartner]=useState<Partner|null>(null),[q,setQ]=useState('');
+function Config({setup,full,onChanged}:{setup:BooksSetup;full:FullSetup|null;onChanged:()=>void}){
+ const [tab,setTab]=useState<'accounts'|'journals'|'partners'|'products'|'terms'|'invoicing'|'locks'>('accounts'),[account,setAccount]=useState<Account|null>(null),[journal,setJournal]=useState<Journal|null>(null),[partner,setPartner]=useState<Partner|null>(null),[q,setQ]=useState('');
  const why=setup.canConfigure?undefined:'يحتاج تعديل دليل الحسابات والدفاتر والإقفال صلاحية الإعدادات';
  const groups=(Object.keys(GROUP_LABELS) as (keyof typeof GROUP_LABELS)[]);
  const shown=setup.accounts.filter(a=>!q||(a.code+' '+a.name).includes(q));
- return <section className="panel"><div className="department-toolbar"><div className="department-tabs" role="group" aria-label="إعدادات الدفاتر">{([['accounts','دليل الحسابات'],['journals','الدفاتر'],['partners','الشركاء'],['locks','الإقفال والسنة المالية']] as const).map(([k,l])=><button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
+ return <section className="panel"><div className="department-toolbar"><div className="department-tabs" role="group" aria-label="إعدادات الدفاتر">{([['accounts','دليل الحسابات'],['journals','الدفاتر'],['partners','الشركاء'],...(full?[['products','الخدمات'],['terms','شروط الدفع'],['invoicing','الفوترة ونقل الدفتر القديم']] as const:[]),['locks','الإقفال والسنة المالية']] as const).map(([k,l])=><button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
    <div className="actions">{tab==='accounts'&&<button className="btn primary" disabled={!setup.canConfigure} title={why} onClick={()=>setAccount({id:'',code:nextAccountCode(setup.accounts,'expense'),name:'',type:'expense',reconcile:false,deprecated:false,note:'',revision:0})}><Plus size={15}/> حساب جديد</button>}
     {tab==='journals'&&<button className="btn primary" disabled={!setup.canConfigure} title={why} onClick={()=>setJournal({id:'',code:'',name:'',type:'general',defaultAccount:'',active:true,revision:0})}><Plus size={15}/> دفتر جديد</button>}
     {tab==='partners'&&<button className="btn primary" disabled={!setup.canEdit} title={setup.canEdit?undefined:'صلاحيتك للقراءة فقط'} onClick={()=>setPartner({id:'',name:'',kind:'customer',clientEntityId:'',phone:'',email:'',reference:'',note:'',active:true,revision:0})}><Plus size={15}/> شريك جديد</button>}</div></div>
@@ -231,6 +242,7 @@ function Config({setup,onChanged}:{setup:BooksSetup;onChanged:()=>void}){
   {tab==='partners'&&<div className="table-wrap"><table className="office-table books-table"><thead><tr><th>الشريك</th><th>النوع</th><th>الهاتف</th><th>المرجع</th><th></th></tr></thead>
    <tbody>{setup.partners.map(p=><tr key={p.id} className={p.active?'':'ledger-void'}><td>{p.name}</td><td>{PARTNER_KINDS[p.kind]}</td><td dir="ltr">{p.phone||'—'}</td><td>{p.reference||'—'}</td><td><button className="btn" onClick={()=>setPartner(p)}>{setup.canEdit?'تعديل':'عرض'}</button></td></tr>)}</tbody></table>{!setup.partners.length&&<Empty title="لا يوجد شركاء بعد" text="أضف العملاء والموردين لربطهم بالقيود والتقارير."/>}</div>}
   {tab==='locks'&&<Locks setup={setup} onChanged={onChanged}/>}
+  {full&&tab==='products'&&<ProductsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='terms'&&<TermsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='invoicing'&&<InvoicingPanel setup={full} onChanged={onChanged}/>}
   {account&&<AccountEditor setup={setup} initial={account} onClose={()=>setAccount(null)} onSaved={()=>{setAccount(null);onChanged()}}/>}
   {journal&&<JournalEditor setup={setup} initial={journal} onClose={()=>setJournal(null)} onSaved={()=>{setJournal(null);onChanged()}}/>}
   {partner&&<PartnerEditor setup={setup} initial={partner} onClose={()=>setPartner(null)} onSaved={()=>{setPartner(null);onChanged()}}/>}

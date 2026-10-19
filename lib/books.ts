@@ -140,3 +140,54 @@ export function nextAccountCode(accounts: Pick<Account, 'code'>[], type: Account
   for (let n = base + 1; n < base + 100000; n++) if (!used.has(n)) return String(n);
   return '';
 }
+
+// Invoicing: invoices, bills, credit notes and payments.
+export type DocKind = 'out_invoice' | 'out_refund' | 'in_invoice' | 'in_refund' | 'customer_payment' | 'vendor_payment';
+export type PaymentState = 'n/a' | 'not_paid' | 'partial' | 'paid' | 'reversed';
+export type PaymentTermLine = { kind: 'balance' | 'percent'; percent?: number; days: number };
+export type PaymentTerm = { id: string; name: string; lines: PaymentTermLine[]; note: string; active: boolean; revision: number };
+export type Product = { id: string; name: string; incomeAccount: string; expenseAccount: string; salePrice: string; purchasePrice: string; description: string; active: boolean; revision: number };
+export type Invoicing = { receivableAccount: string; payableAccount: string; invoiceNote: string; revision: number };
+export type DocStats = { draft: number; open: number; openAmount: string; late: number; lateAmount: string };
+export type InvoicingSetup = { paymentTerms: PaymentTerm[]; products: Product[]; invoicing: Invoicing; documentStats: Record<string, DocStats>; partnerBalances: Record<string, { receivable: string; payable: string }> };
+export type DocLine = MoveLine & { id?: string; kind: 'line' | 'product' | 'term' | 'payment'; productId: string; quantity: string; priceUnit: string; discount: string; residual?: string; reconciled?: boolean };
+export type Match = { partialId: string; amount: string; moveId: string; name: string; date: string; moveType: string; paymentType: string };
+export type Outstanding = { lineId: string; moveId: string; name: string; date: string; amount: string };
+export type Doc = Omit<Move, 'lines'> & { invoiceDateDue: string | null; paymentTermId: string; paymentType: '' | 'inbound' | 'outbound'; partnerType: '' | 'customer' | 'vendor';
+  amountTotal: string; amountResidual: string; paymentState: PaymentState; lines: DocLine[]; matches: Match[]; outstanding: Outstanding[] };
+export type DocSummary = { id: string; journalId: string; name: string; moveType: string; paymentType: string; partnerType: string; state: MoveState; date: string; dueDate: string | null; ref: string;
+  partnerId: string; caseId: string; amountTotal: string; amountResidual: string; paymentState: PaymentState; reversedFrom: string; revision: number };
+
+export const DOC_KINDS: Record<DocKind, { label: string; one: string; side: 'customer' | 'vendor' }> = {
+  out_invoice: { label: 'فواتير العملاء', one: 'فاتورة عميل', side: 'customer' }, out_refund: { label: 'إشعارات دائنة للعملاء', one: 'إشعار دائن', side: 'customer' },
+  in_invoice: { label: 'فواتير الموردين', one: 'فاتورة مورد', side: 'vendor' }, in_refund: { label: 'إشعارات الموردين', one: 'إشعار مورد', side: 'vendor' },
+  customer_payment: { label: 'المقبوضات', one: 'سند قبض', side: 'customer' }, vendor_payment: { label: 'المدفوعات', one: 'سند صرف', side: 'vendor' },
+};
+export const PAYMENT_STATES: Record<PaymentState, string> = { 'n/a': '—', not_paid: 'غير مدفوعة', partial: 'مدفوعة جزئياً', paid: 'مدفوعة', reversed: 'معكوسة' };
+export const PAYMENT_MATCH: Record<PaymentState, string> = { 'n/a': '—', not_paid: 'غير مطابقة', partial: 'رصيد غير مستخدم', paid: 'مطابقة', reversed: 'معكوسة' };
+export const docKindOf = (d: Pick<DocSummary, 'moveType' | 'paymentType' | 'partnerType'>): DocKind | null =>
+  d.paymentType ? (d.partnerType === 'vendor' ? 'vendor_payment' : 'customer_payment') : d.moveType in DOC_KINDS ? d.moveType as DocKind : null;
+
+/** A service line's amount: quantity × price less its discount, rounded to the fils. */
+export function lineSubtotal(quantity: string, price: string, discount: string): number {
+  const q = toFils(quantity || '1'), p = toFils(price), d = Number(discount || 0);
+  if (!(d >= 0 && d <= 100)) throw new Error('الخصم بين 0 و100٪.');
+  return Math.round(q * p / 1000 * (1 - d / 100));
+}
+/** Due dates and amounts of a total split by a payment term (the last instalment takes what is left). */
+export function termSchedule(total: number, lines: PaymentTermLine[] | null, date: string, dueDate = ''): { date: string; amount: number }[] {
+  const plus = (days: number) => { const d = new Date(date + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); };
+  if (!date) return [];
+  if (!lines?.length) return [{ date: dueDate && dueDate > date ? dueDate : date, amount: total }];
+  let rest = total;
+  return lines.map((l, i) => {
+    const amount = l.kind === 'percent' && i < lines.length - 1 ? Math.min(Math.round(total * (l.percent || 0) / 100), rest) : rest;
+    rest -= amount;
+    return { date: plus(l.days || 0), amount };
+  }).filter(x => x.amount > 0);
+}
+/** Days past due, for the overdue tag (0 when not yet due or nothing is open). */
+export function daysLate(due: string | null, today: string, residual: string): number {
+  if (!due || toFils(residual) <= 0 || due >= today) return 0;
+  return Math.round((Date.parse(today + 'T00:00:00Z') - Date.parse(due + 'T00:00:00Z')) / 864e5);
+}

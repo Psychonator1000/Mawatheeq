@@ -113,6 +113,20 @@ try{
  await click('الحسابات والإعدادات');await page.getByRole('cell',{name:'أتعاب المحاماة',exact:true}).waitFor();
  await click('حساب جديد');await page.getByRole('dialog').getByLabel('اسم الحساب',{exact:true}).fill('مصروفات تدريب تجريبية');await page.getByRole('dialog').getByRole('button',{name:'حفظ الحساب',exact:true}).click();await page.getByRole('cell',{name:'مصروفات تدريب تجريبية',exact:true}).waitFor();
  await page.setViewportSize({width:390,height:844});await click('لوحة المحاسبة');await screen('books-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'Books fit a phone');await page.setViewportSize({width:1440,height:1000});
+ // Invoicing: a customer added from the invoice, a service line with quantity and discount, confirmed, then paid in part.
+ await click('العملاء');await click('فاتورة عميل جديدة');const invoice=page.getByRole('dialog');
+ await invoice.getByLabel('عميل جديد',{exact:true}).fill('عميل واجهة تجريبي');await invoice.getByRole('button',{name:'إضافة',exact:true}).click();await invoice.getByLabel('العميل',{exact:true}).and(page.locator('[data-value]:not([data-value=""])')).waitFor();
+ await invoice.getByLabel('خدمة السطر 1',{exact:true}).selectOption({label:'أتعاب محاماة'});await invoice.getByLabel('سعر السطر 1',{exact:true}).fill('120');await invoice.getByLabel('كمية السطر 1',{exact:true}).fill('2');await invoice.getByLabel('خصم السطر 1',{exact:true}).fill('10');
+ await invoice.locator('tfoot').getByText('216.000').waitFor();await screen('invoice-draft');
+ await invoice.getByRole('button',{name:'تأكيد',exact:true}).click();await page.getByRole('dialog',{name:'INV/'+new Date().getFullYear()+'/0001'}).waitFor();
+ await page.getByRole('dialog').getByRole('button',{name:'تسجيل دفعة',exact:true}).click();await page.getByRole('dialog').getByLabel('المبلغ',{exact:true}).fill('100');
+ await page.getByRole('dialog').getByText(/دفعة جزئية: يبقى 116\.000/).waitFor();await page.getByRole('dialog').getByRole('button',{name:'تسجيل الدفعة',exact:true}).click();
+ await page.getByRole('dialog').getByText(/مدفوعة جزئياً/).first().waitFor();await page.getByRole('dialog').locator('.books-totals').getByText('116.000').waitFor();await screen('invoice-partly-paid');
+ await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();
+ await page.getByRole('row').filter({hasText:'عميل واجهة تجريبي'}).getByText('مدفوعة جزئياً').waitFor();
+ await click('المقبوضات');await page.getByRole('cell',{name:'PBNK1/'+new Date().getFullYear()+'/0001'}).waitFor();
+ await click('الموردون');await page.getByRole('button',{name:'فاتورة مورد جديدة',exact:true}).waitFor();
+ await click('الحسابات والإعدادات');await click('شروط الدفع');await page.getByRole('cell',{name:'30 يوماً',exact:true}).waitFor();await click('الخدمات');await page.getByRole('cell',{name:'أتعاب استشارة',exact:true}).waitFor();
  await switchTo('الموارد البشرية');await page.getByText('@ui_owner',{exact:true}).waitFor();await click('موظف جديد');await field('الرقم الوظيفي','EMP-UI-1');await field('اسم الموظف','موظف واجهة تجريبي');await field('المسمى الوظيفي','مساعد');await field('القسم','السكرتارية');await pickToday('تاريخ الانضمام');await click('حفظ سجل الموارد البشرية');await page.getByRole('heading',{name:'موظف واجهة تجريبي',exact:true}).waitFor();
  await screen('hr-desktop');await click('الإجازات');await click('طلب إجازة جديد');
  const people=await dept('hr','records_page');await page.getByLabel('الموظف',{exact:true}).selectOption(people.find(r=>r.kind==='employee').id);await page.getByLabel('قرار الإجازة',{exact:true}).selectOption('approved');await field('ملاحظة القرار / السبب','موافقة تجريبية');await click('حفظ سجل الموارد البشرية');await page.getByRole('cell',{name:'معتمدة',exact:true}).waitFor();
@@ -247,7 +261,7 @@ try{
  await otherTab.evaluate(token=>localStorage.setItem('mawatheeq.local-session.v1',token),login.token);
  await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),7);
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();assert.equal(await staff.getByLabel('كلمة المرور الحالية',{exact:true}).inputValue(),'','Cross-tab session replacement clears old password inputs');
- assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, double-entry books (balanced posting, numbering, trial balance, ledger drill-down, profit and loss, balance sheet, new account), precise ledger/void, employee/leave forms, archive custody/receipt/label/scan/stocktake, import with automatic and manual case links from both sides, civil ID/debtor/phone checks, select-all round-robin distribution with client links, client profile collection files, department-only readonly access, responsive layouts and no runtime errors.');
+ assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, double-entry books (balanced posting, numbering, trial balance, ledger drill-down, profit and loss, balance sheet, new account), invoicing (customer added from the invoice, service line with discount, confirmed, partly paid, receipts, terms and services), precise ledger/void, employee/leave forms, archive custody/receipt/label/scan/stocktake, import with automatic and manual case links from both sides, civil ID/debtor/phone checks, select-all round-robin distribution with client links, client profile collection files, department-only readonly access, responsive layouts and no runtime errors.');
 }catch(e){await screen('failure');console.error(await page.locator('body').innerText());throw e}
 finally{
  await browser.close();await db.close();
