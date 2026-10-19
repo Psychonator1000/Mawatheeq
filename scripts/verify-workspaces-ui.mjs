@@ -87,8 +87,8 @@ try{
  // Follow-up fields: changing the file status keeps the source review.
  await page.getByRole('tab',{name:/^بيانات الملف/}).click();await page.getByRole('combobox',{name:'حالة الملف'}).click();await page.getByRole('option',{name:'تحصيل ودي',exact:true}).click();await click('حفظ ملف التحصيل');
  await page.locator('[data-record-window]').getByText('تمت المراجعة',{exact:true}).first().waitFor();
- await click('إغلاق الملف');await page.getByRole('button',{name:'المتابعات المستحقة (1)'}).click();await page.getByText('لم يرد على الاتصال').waitFor();await click('ملفات التحصيل');
- await screen('collections-desktop');
+ await click('إغلاق الملف');await page.locator('.sec-agenda').getByText('لم يرد على الاتصال').waitFor();await page.getByRole('button',{name:'المتابعات المستحقة (1)'}).click();await page.locator('.work-desk-body').getByText('لم يرد على الاتصال').waitFor();await click('ملفات التحصيل');
+ await screen('collections-desktop');assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+2),true,'Collections desk fits the screen');
  await click('طباعة جماعية');await page.locator('.batch-table').getByText('جاهز',{exact:true}).waitFor();await click('الاثنان معاً');await click('تحديد كل الجاهز');
  {const files=[];const onDownload=d=>files.push(d);page.on('download',onDownload);await click('إنشاء ملف الطباعة (1)');for(let i=0;i<60&&files.length<2;i++)await page.waitForTimeout(250);page.off('download',onDownload);assert.equal(files.length,2,'batch print downloads one file per paper type');assert.deepEqual(files.map(d=>d.suggestedFilename().split('-2')[0]).sort(),['Mawatheeq-bundles','Mawatheeq-claims']);}
  await screen('collections-batch-desktop');await click('ملفات التحصيل');
@@ -215,16 +215,16 @@ try{
   assert.equal(byCode('W-1').caseId,'','A file is not linked to a case by number: the order\'s automatic number is not the case\'s');assert.equal(byCode('W-1').payload.fileAutoNumber,'260000001');assert.equal(byCode('W-1').payload.orderAuto||'','');assert.equal(byCode('W-2').caseId,'');assert.equal(byCode('W-2').payload.customerId,'50000002');assert.equal(byCode('W-2').payload.fileStatus,'تحت الرفع');
   assert.ok(recs.some(r=>r.kind==='payment'&&r.subjectId===byCode('W-1').id&&r.payload.amount==='20'),'Paid total carried over');
   // Data checks: civil IDs failing the check digit, debtors with several files, files without a phone.
-  const cards=async()=>(await page.locator('.collection-card .collection-code').allInnerTexts()).filter(c=>c.startsWith('W-')).sort();
-  const check=page.getByLabel('تدقيق البيانات',{exact:true});
+  const cards=async()=>(await page.locator('.collection-row .collection-code').allInnerTexts()).filter(c=>c.startsWith('W-')).sort();
+  if(!await page.getByLabel('تدقيق البيانات',{exact:true}).count())await page.getByRole('button',{name:/^تصفية إضافية/}).click();const check=page.getByLabel('تدقيق البيانات',{exact:true});
   await check.selectOption('badcivil');await page.waitForTimeout(150);assert.deepEqual(await cards(),['W-2','W-3'],'Civil IDs failing the check digit are flagged');
-  await page.locator('.collection-card').filter({hasText:'W-2'}).getByText('رقم مدني؟').waitFor();
+  await page.locator('.collection-row').filter({hasText:'W-2'}).getByText('رقم مدني؟').waitFor();
   await check.selectOption('shared');await page.waitForTimeout(150);assert.deepEqual(await cards(),['W-2','W-3'],'Files of the same debtor');
-  await page.locator('.collection-card').filter({hasText:'W-2'}).getByText('2 ملفات للخصم').waitFor();
+  await page.locator('.collection-row').filter({hasText:'W-2'}).getByText('2 ملفات للخصم').waitFor();
   await check.selectOption('nophone');await page.waitForTimeout(150);assert.ok((await cards()).includes('W-1'));
   await check.selectOption('');
   // Select every result, share the files in turn between two people and link them to the client profile.
-  await page.getByRole('button',{name:/^تحديد كل النتائج/}).click();
+  await page.getByRole('checkbox',{name:/^تحديد كل النتائج/}).check();
   const pickedCount=Number((await page.locator('.pick-bar b').innerText()).match(/\d+/)[0]);
   await page.getByLabel('توزيع على موظف أو أكثر (افصل بـ ،)',{exact:true}).fill('علي، منى');
   await page.getByLabel('ربط بملف الموكل',{exact:true}).selectOption({label:'شركة تجريبية للاتصالات'});
@@ -235,7 +235,7 @@ try{
   assert.equal(shared.filter(r=>r.payload.assignedTo==='منى').length,Math.floor(pickedCount/2),'Round-robin second person');
   assert.ok(shared.every(r=>r.payload.clientEntityId===uiClient),'Bulk client link');
   // In the file: the other file of the same debtor and the civil ID warning.
-  await page.locator('.collection-card').filter({hasText:'W-3'}).getByRole('button',{name:'فتح الملف'}).click();
+  await page.locator('.collection-row').filter({hasText:'W-3'}).getByRole('button',{name:'فتح الملف'}).click();
   await page.getByRole('tab',{name:/^الأطراف والمطالبة/}).click();await page.getByText('ملفات أخرى لنفس الخصم (1)').waitFor();
   await page.getByText(/لا يطابق رقم التحقق/).waitFor();assert.equal(await page.getByLabel('الموكل في سجل الموكلين',{exact:true}).inputValue(),uiClient);
   await screen('collection-debtor');
@@ -267,7 +267,7 @@ try{
   const mp=made.payload||made;assert.equal(mp.opponent,byCode('W-3').payload.defendant+' وSYNTHETIC THREE','The case names every defendant');assert.equal(mp.clientEntityId,uiClient);assert.equal(mp.workflow||'','','A filed case, not a study');
   await page.keyboard.press('Escape');
   await dept('collections','link_case',{id:byCode('W-3').id,revision:byCode('W-3').revision,caseId:'ui-case-0'}); // the steps below move W-3 to another case from that case
-  await page.locator('.collection-card').filter({hasText:'W-2'}).getByRole('button',{name:'فتح الملف'}).click();
+  await page.locator('.collection-row').filter({hasText:'W-2'}).getByRole('button',{name:'فتح الملف'}).click();
   // The side panel's «ربط بقضية» opens the picker in «الأطراف والمطالبة».
   await page.locator('.case-quick').getByRole('button',{name:'ربط بقضية',exact:true}).click();await page.getByRole('tab',{name:/^الأطراف والمطالبة/,selected:true}).waitFor();
   await page.getByRole('dialog').getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-1');await page.getByRole('button',{name:'ربط الملف بالقضية',exact:true}).click();
@@ -286,7 +286,7 @@ try{
   await page.getByRole('button',{name:/^الموكلون/}).first().click();await page.locator('.client-card').filter({hasText:'شركة تجريبية للاتصالات'}).click();
   await page.getByText(/^ملفات التحصيل \(\d+\)$/).waitFor();await page.locator('.entity-collections').getByText('ملف W-2').waitFor();await screen('client-collections');await page.keyboard.press('Escape');}
  for(const name of ['السكرتارية','التحصيل','المحاسبة','الموارد البشرية','الأرشيف']){
-  await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero, .sec-agenda').first().waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
+  await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero, .sec-agenda, .work-desk').first().waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
  }
  // Department-only read-only account gets exactly its chooser cards and safe case summaries.
  await db.exec('reset role');const staffId=(await db.query("insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values('dept_ui_reader',extensions.crypt('Synthetic-password-123',extensions.gen_salt('bf',4)),false) returning id")).rows[0].id;
