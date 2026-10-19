@@ -68,8 +68,9 @@ export async function syncAccount(deps: Deps, acc: DueAccount): Promise<{ more: 
   const imap = await Imap.open(deps.connect, { host: acc.imapHost, port: acc.imapPort, security: acc.imapSecurity, username: acc.username, password: acc.password });
   let more = false, added = 0, budget = BUDGET, count = BATCH;
   try {
-    // Messages opened (or marked unread) in the app since the last fetch, when the mailbox's switch is on.
-    const pending = await deps.rpc<{ validity: number | null; items: { id: string; uid: number; seen: boolean }[] }>('pending_seen', { accountId: acc.id });
+    // Messages opened (or marked unread) in the app since the last fetch, when the mailbox's switch is on
+    // (skipped on a database without the switch yet).
+    const pending = await deps.rpc<{ validity: number | null; items: { id: string; uid: number; seen: boolean }[] }>('pending_seen', { accountId: acc.id }).catch(() => null);
     if (pending?.items?.length) {
       const box = await imap.examine('INBOX', true);
       if (box.validity === pending.validity) {
