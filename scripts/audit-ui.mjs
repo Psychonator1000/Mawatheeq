@@ -61,6 +61,7 @@ async function audit(name){
   });
   const file=name.replace(/[^\w؀-ۿ-]+/g,'_')+'-'+w+'.png';
   await page.screenshot({path:out+'/'+file,fullPage:w>400?false:true}).catch(()=>{});
+  if(w>400&&r.height>902)await page.screenshot({path:out+'/'+file.replace('.png','-full.png'),fullPage:true}).catch(()=>{});
   const issues=Object.entries(r).filter(([k,v])=>k!=='height'&&(Array.isArray(v)?v.length:k==='overflowX'?v>2:v));
   report.push({page:name,width:w,height:r.height,file,issues:Object.fromEntries(issues)});
  }
@@ -98,4 +99,6 @@ const bad=report.filter(r=>Object.keys(r.issues).length);
 console.log(`Audited ${new Set(report.map(r=>r.page)).size} pages × 2 widths; ${bad.length} with findings; ${runtime.length} runtime errors.`);
 for(const r of bad)console.log('-',r.page,r.width,JSON.stringify(r.issues).slice(0,600));
 for(const e of runtime)console.log('! ',e.where,e.msg);
+// Desktop pages taller than the window (the page itself scrolls).
+const tall=report.filter(r=>r.width>400&&r.height>902);if(tall.length)console.log('Taller than the window at 1440×900: '+tall.map(r=>r.page+' ('+r.height+')').join('، '));
 await browser.close();

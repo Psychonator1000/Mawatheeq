@@ -1,5 +1,5 @@
 'use client';
-import { useId, useMemo } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import type { ClientEntity } from '@/lib/clients';
 import type { CaseRecord } from '@/lib/domain';
@@ -11,6 +11,8 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
   onClear: () => void; hasFilters: boolean; total: number;
 }) {
   const clientList = useId(), opponentList = useId(), codeList = useId();
+  // The detailed fields fold away until asked for, and stay open while one of them is set.
+  const [open, setOpen] = useState(false), set = [filters.year, filters.month, filters.code, filters.clientEntityId, filters.opponent].filter(Boolean).length;
   const options = useMemo(() => {
     const unique = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ar', { numeric: true }));
     return {
@@ -21,7 +23,7 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
     };
   }, [records, filters.year]);
   return <div className="case-filters">
-    <div className="case-filter-grid">
+    {(open || set > 0) && <div className="case-filter-grid">
       <label className="field"><span>سنة الحكم</span><SelectList aria-label="سنة الحكم" value={filters.year} onChange={e => onChange('year', e.target.value)}>
         <option value="">كل السنوات</option>{options.years.map(year => <option key={year} value={year}>{year}</option>)}
       </SelectList></label>
@@ -31,11 +33,12 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
       <label className="field"><span>الكود</span><input value={filters.code} list={codeList} placeholder="الكود أو جزء منه" onChange={e => onChange('code', e.target.value)}/></label>
       <label className="field"><span>الموكل / الجهة</span><SelectList aria-label="الموكل / الجهة" value={filters.clientEntityId} onChange={e => onChange('clientEntityId',e.target.value)}><option value="">كل الموكلين</option>{[...clients].sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c=><option key={c.id} value={c.id}>{c.name}{clients.some(x=>x.id!==c.id&&x.name===c.name)?' · '+c.id.slice(0,8):''}</option>)}</SelectList></label>
       <label className="field"><span>الخصم</span><input value={filters.opponent} list={opponentList} placeholder="اسم الخصم أو جزء منه" onChange={e => onChange('opponent', e.target.value)}/></label>
-    </div>
+    </div>}
     <datalist id={codeList}>{options.codes.map(value => <option key={value} value={value}/>)}</datalist>
     <datalist id={clientList}>{options.clients.map(value => <option key={value} value={value}/>)}</datalist>
     <datalist id={opponentList}>{options.opponents.map(value => <option key={value} value={value}/>)}</datalist>
     <div className="case-filter-summary"><div className="actions">
+      <button type="button" className={'btn more-filters' + (set ? ' on' : '')} aria-expanded={open || set > 0} onClick={() => setOpen(o => !o)}>تصفية متقدمة{set ? ` (${set})` : ''}</button>
       {filters.numberStatus === 'missing' && <button type="button" className="tag amber" onClick={() => onChange('numberStatus', '')}
         aria-label="إلغاء تصفية الأرقام الآلية الناقصة">أرقام آلية تحتاج استكمال <X size={14}/></button>}
       <span aria-live="polite">{hasFilters ? `${total} سجل مطابق للتصفية` : 'يمكن الجمع بين عوامل التصفية'}</span></div>
