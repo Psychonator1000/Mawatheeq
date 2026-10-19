@@ -25,6 +25,7 @@
     "test:roll": "node scripts/verify-roll-import.mjs && node scripts/verify-roll-db.mjs",
     "test:office": "node --experimental-strip-types scripts/verify-office.mjs && node scripts/verify-office-db.mjs",
     "test:chat": "node scripts/verify-chat-db.mjs",
+    "test:mail": "node scripts/verify-mail-db.mjs",
     "test:case-files": "node scripts/verify-case-files-db.mjs",
     "test:permissions": "node scripts/verify-permissions.mjs",
     "test:departments": "node scripts/verify-departments.mjs",

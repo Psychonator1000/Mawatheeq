@@ -1,5 +1,6 @@
 import {Suspense,lazy,useContext,useEffect,useState} from 'react';
 import {OPEN_EVENT,pendingOpen} from '@/lib/open-record';
+import {OPEN_MAIL_EVENT} from '@/lib/mail';
 import {ArrowUpLeft,Scale,CalendarDays,Files,Wallet,UsersRound,Archive,UserCog} from 'lucide-react';
 import {flushSync} from 'react-dom';
 import AccountMenu,{AccountContext} from './account-menu';
@@ -28,6 +29,8 @@ export default function WorkspaceHub({access,owner}:{access:Permissions;owner:bo
  function choose(id:HubId|null){withViewTransition(()=>flushSync(()=>setSelected(id)));if(id)sessionStorage.setItem(workspaceStorageKey,id);else sessionStorage.removeItem(workspaceStorageKey);}
  // A record opened from chat or elsewhere is shown in the case workspace.
  useEffect(()=>{const on=()=>{if(pendingOpen()&&allowed.includes('legal')&&selected!=='legal')choose('legal')};addEventListener(OPEN_EVENT,on);return()=>removeEventListener(OPEN_EVENT,on)});
+ // Mail from another workspace (from the mail icon) opens in that workspace.
+ useEffect(()=>{const on=(e:Event)=>{const w=(e as CustomEvent<{workspace:HubId}>).detail?.workspace;if(w&&allowed.includes(w)&&selected!==w)choose(w)};addEventListener(OPEN_MAIL_EVENT,on);return()=>removeEventListener(OPEN_MAIL_EVENT,on)});
  const account=useContext(AccountContext);
  const current=selected&&allowed.includes(selected)?selected:only;
  if(current)return <AccountContext.Provider value={account&&{...account,onSwitchWorkspace:only?undefined:()=>choose(null)}}><Suspense fallback={<p className="page-loading" role="status">جارٍ تحميل مساحة العمل…</p>}>{current==='legal'?<Workspace access={access} owner={owner}/>:current==='team'?<TeamWorkspace access={access} owner={owner}/>:<DepartmentWorkspace key={current} workspace={current} access={access}/>}</Suspense></AccountContext.Provider>;

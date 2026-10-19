@@ -34,6 +34,9 @@ export const chatRequest = <T = unknown>(action: string, data: Record<string, un
 export const caseFileRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_case_file_request', action, data);
 export const departmentRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_department_request', action, data);
 export const booksRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_books_request', action, data);
+/** The current session token, for edge functions that check it in the database themselves. */
+export const sessionToken = () => token || localStorage.getItem(storageKey) || '';
+export const mailRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_mail_request', action, data);
 export async function restoreSession(): Promise<LocalUser | null> {
   await loadBackend();
   token = localStorage.getItem(storageKey) || '';
