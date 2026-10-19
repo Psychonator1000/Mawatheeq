@@ -10,13 +10,16 @@ import {readRoll,rollPayload,type RollParse,type RollPayload} from '@/lib/roll-i
 type Summary={matched:number;created:number;ambiguous:number;invalid:number;filled:number;sessionsAdded:number;sessionsKnown:number;hearingsAdded:number;hearingsKnown:number;hearingsClosed:number;
  ambiguousRows:{autoNumber:string;client:string}[];createdRows:{autoNumber:string;code:string;client:string;opponent:string;caseNumber:string}[];takenCodes:{code:string;autoNumber:string}[];unknownLawyers:string[];newClients:string[]};
 const NUMBERS=['matched','created','ambiguous','invalid','filled','sessionsAdded','sessionsKnown','hearingsAdded','hearingsKnown','hearingsClosed'] as const;
-const BATCH=100;
+// Each request must finish within the server's few-second limit, so cases go ten at a time (a failed request is tried once more).
+const BATCH=10;
 
 /** Sends the roll in batches; a dry run first shows what would change, then the same cases are applied. */
 async function run(cases:RollPayload[],file:string,dryRun:boolean,onProgress:(done:number)=>void):Promise<Summary>{
  const total:Summary={matched:0,created:0,ambiguous:0,invalid:0,filled:0,sessionsAdded:0,sessionsKnown:0,hearingsAdded:0,hearingsKnown:0,hearingsClosed:0,ambiguousRows:[],createdRows:[],takenCodes:[],unknownLawyers:[],newClients:[]};
  for(let i=0;i<cases.length;i+=BATCH){
-  const s=await localRequest<Summary>('import_roll',{file,dryRun,cases:cases.slice(i,i+BATCH)});
+  const data={file,dryRun,cases:cases.slice(i,i+BATCH)};
+  const s=await localRequest<Summary>('import_roll',data).catch(()=>new Promise(r=>setTimeout(r,1500)).then(()=>localRequest<Summary>('import_roll',data)))
+   .catch(e=>{throw new Error(`توقف ${dryRun?'التحقق':'الحفظ'} عند القضية ${i+1} من ${cases.length}: ${(e as Error).message}. ما حُفظ قبلها يبقى، وإعادة الاستيراد تكمل الباقي دون تكرار.`)});
   for(const k of NUMBERS)total[k]+=s[k];
   total.ambiguousRows.push(...s.ambiguousRows);total.createdRows.push(...s.createdRows);total.takenCodes.push(...s.takenCodes);
   total.unknownLawyers=[...new Set([...total.unknownLawyers,...s.unknownLawyers])];total.newClients=[...new Set([...total.newClients,...s.newClients])];
