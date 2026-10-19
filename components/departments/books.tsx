@@ -18,9 +18,10 @@ import {EditorDialog,exportCsv,exportXlsx} from './shared';
 import {EXTRA_REPORTS,ExtraReports,type ExtraReport} from './books-reports';
 import BankCash,{type BankSetup} from './books-bank';
 import Advanced,{AnalyticPanel,CurrenciesPanel,TaxesPanel,type AdvSetup} from './books-advanced';
+import OutsideView,{CollectionsToBooks,MonthlyChart} from './books-outside';
 import {InvoiceEditor,InvoicingPanel,PartnerSide,PaymentEditor,ProductsPanel,TermsPanel,blankDoc,type FullSetup} from './books-invoicing';
 
-type View='dashboard'|'customers'|'vendors'|'bank'|'advanced'|'moves'|'reports'|'config';
+type View='dashboard'|'customers'|'vendors'|'bank'|'outside'|'advanced'|'moves'|'reports'|'config';
 type Report='trial'|'ledger'|'pl'|'bs'|ExtraReport;
 type Draft=Omit<Move,'lines'>&{lines:MoveLine[]};
 const JOURNAL_ICONS:Record<JournalType,typeof Landmark>={bank:Landmark,cash:Banknote,sale:Receipt,purchase:ShoppingCart,general:NotebookPen};
@@ -30,13 +31,7 @@ const fail=(e:unknown)=>toast.error((e as Error).message);
 const blankLine=():MoveLine=>({accountId:'',partnerId:'',caseId:'',label:'',debit:'',credit:'',dateMaturity:null});
 const blankMove=(journalId:string):Draft=>({id:'',journalId,name:'/',moveType:'entry',state:'draft',date:todayISO(),ref:'',narration:'',partnerId:'',caseId:'',reversedFrom:'',reversedBy:'',source:'',revision:0,createdBy:'',postedBy:'',postedAt:null,debit:'0',credit:'0',lines:[blankLine(),blankLine()]});
 
-let available:Promise<boolean>|null=null;
-/** The books appear once their migration is applied; until then the accounting page keeps its simple ledger. */
-export function booksAvailable():Promise<boolean>{
- available??=booksRequest('setup').then(()=>true,(e:{code?:string})=>{if(e?.code!=='PGRST202'&&e?.code!=='42883'&&e?.code!=='42501')available=null;return false});
- return available;
-}
-export function useBooksAvailable(){const [ok,setOk]=useState<boolean|null>(null);useEffect(()=>{let live=true;void booksAvailable().then(v=>{if(live)setOk(v)});return()=>{live=false}},[]);return ok}
+export {booksAvailable,useBooksAvailable} from '@/lib/books-api';
 
 /**
  * «الدفاتر المحاسبية»: double-entry books for the office. A dashboard of journals, journal entries from draft to
@@ -50,18 +45,19 @@ export default function Books({cases,access,views}:{cases:CaseSummary[];access:P
  const reload=()=>setVersion(v=>v+1);
  // Invoices, bills and payments open in their own editor; other entries in the journal entry editor.
  async function open(id:string){try{const m=await booksRequest<Doc>('get_move',{id});if(docKindOf(m)){setEditing(null);setDoc(m)}else{setDoc(null);setEditing(m as unknown as Draft)}}catch(e){fail(e)}}
- const full=setup&&'paymentTerms' in setup?setup as FullSetup:null,bank=setup&&'bank' in setup?setup as BankSetup:null,adv=setup&&'advanced' in setup?setup as AdvSetup:null;
+ const full=setup&&'paymentTerms' in setup?setup as FullSetup:null,bank=setup&&'bank' in setup?setup as BankSetup:null,adv=setup&&'advanced' in setup?setup as AdvSetup:null,links=!!setup&&'links' in setup;
  const newDoc=(kind:DocKind,partnerId='')=>{if(full){setEditing(null);setDoc(blankDoc(full,kind,partnerId))}};
- const tabs=<div className="department-tabs view-switch books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','العملاء'],['vendors','الموردون']] as const:[]),...(bank?[['bank','البنك والنقد']] as const:[]),...(adv?[['advanced','المحاسبة المتقدمة']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
+ const tabs=<div className="department-tabs view-switch books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','العملاء'],['vendors','الموردون']] as const:[]),...(bank?[['bank','البنك والنقد']] as const:[]),...(links?[['outside','المعاملات الخارجية']] as const:[]),...(adv?[['advanced','المحاسبة المتقدمة']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
   <button key={k} className={'btn '+(view===k?'primary':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>;
  return <>
   <section className="department-hero"><div><div className="eyebrow">القيد المزدوج</div><h1>المحاسبة</h1><p>دفاتر المكتب بالقيد المزدوج: دليل الحسابات، الدفاتر اليومية، القيود من المسودة إلى الترحيل، وميزان المراجعة ودفتر الأستاذ والأرباح والخسائر والميزانية العمومية.</p></div><BookOpen size={64}/></section>
   {views}{tabs}
   {error&&<p className="notice" role="alert">{error}</p>}{!setup&&!error&&<p role="status">جارٍ تحميل الدفاتر…</p>}
   {setup&&<div className="att-section books">
-   {view==='dashboard'&&<Dashboard setup={setup} full={full} onNew={j=>setEditing(blankMove(j))} onNewDoc={newDoc} onList={j=>{setJournalFilter(j);setView('moves')}} onView={setView}/>}
+   {view==='dashboard'&&<><Dashboard setup={setup} full={full} onNew={j=>setEditing(blankMove(j))} onNewDoc={newDoc} onList={j=>{setJournalFilter(j);setView('moves')}} onView={setView}/>{links&&<MonthlyChart key={version}/>}</>}
    {full&&(view==='customers'||view==='vendors')&&<PartnerSide key={view} setup={full} cases={cases} side={view==='customers'?'customer':'vendor'} onOpen={id=>void open(id)} onNew={newDoc} onChanged={reload} version={version} canExport={access.canExport}/>}
    {bank&&view==='bank'&&<BankCash setup={bank} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
+   {links&&setup&&view==='outside'&&<OutsideView setup={setup} cases={cases} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
    {adv&&view==='advanced'&&<Advanced setup={adv} cases={cases} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
    {view==='moves'&&<Moves setup={setup} cases={cases} journal={journalFilter} onJournal={setJournalFilter} onOpen={id=>void open(id)} onNew={()=>setEditing(blankMove(journalFilter||setup.journals.find(j=>j.type==='general')?.id||setup.journals[0]?.id||''))} version={version} canExport={access.canExport}/>}
    {view==='reports'&&<Reports setup={setup} report={report} onReport={setReport} account={ledgerAccount} onAccount={setLedgerAccount} onOpen={id=>void open(id)} canExport={access.canExport} version={version}/>}
@@ -277,7 +273,7 @@ function Config({setup,full,adv,onChanged}:{setup:BooksSetup;full:FullSetup|null
   {tab==='partners'&&<div className="table-wrap"><table className="office-table books-table"><thead><tr><th>الشريك</th><th>النوع</th><th>الهاتف</th><th>المرجع</th><th></th></tr></thead>
    <tbody>{setup.partners.map(p=><tr key={p.id} className={p.active?'':'ledger-void'}><td>{p.name}</td><td>{PARTNER_KINDS[p.kind]}</td><td dir="ltr">{p.phone||'—'}</td><td>{p.reference||'—'}</td><td><button className="btn" onClick={()=>setPartner(p)}>{setup.canEdit?'تعديل':'عرض'}</button></td></tr>)}</tbody></table>{!setup.partners.length&&<Empty title="لا يوجد شركاء بعد" text="أضف العملاء والموردين لربطهم بالقيود والتقارير."/>}</div>}
   {tab==='locks'&&<Locks setup={setup} onChanged={onChanged}/>}
-  {full&&tab==='products'&&<ProductsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='terms'&&<TermsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='invoicing'&&<InvoicingPanel setup={full} onChanged={onChanged}/>}
+  {full&&tab==='products'&&<ProductsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='terms'&&<TermsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='invoicing'&&<><InvoicingPanel setup={full} onChanged={onChanged}/>{'links' in setup&&<CollectionsToBooks setup={setup} onChanged={onChanged}/>}</>}
   {adv&&tab==='taxes'&&<TaxesPanel setup={adv} onChanged={onChanged}/>}{adv&&tab==='currencies'&&<CurrenciesPanel setup={adv} onChanged={onChanged}/>}{adv&&tab==='analytic'&&<AnalyticPanel setup={adv} onChanged={onChanged}/>}
   {account&&<AccountEditor setup={setup} initial={account} onClose={()=>setAccount(null)} onSaved={()=>{setAccount(null);onChanged()}}/>}
   {journal&&<JournalEditor setup={setup} initial={journal} onClose={()=>setJournal(null)} onSaved={()=>{setJournal(null);onChanged()}}/>}

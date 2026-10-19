@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from 'react';
+import {lazy,Suspense,useEffect,useMemo,useState} from 'react';
 import {HOLIDAYS} from '@/lib/choices';
 import {ChevronRight,ChevronLeft,Upload,Printer,Plus,RefreshCw,Trash2,Pencil,Settings2} from 'lucide-react';
 import {toast} from 'sonner';
@@ -13,6 +13,9 @@ import {Field,DateField,Empty} from '../shared';
 import {OfficeSelect} from '../office-shared';
 import {EditorDialog,StatusMessage,exportCsv} from './shared';
 import Needs from '../needs';
+import {useBooksAvailable} from '@/lib/books-api';
+
+const PayrollToBooks=lazy(()=>import('./books-outside').then(m=>({default:m.PayrollToBooks})));
 
 const MONTH_NAMES=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 export const monthLabel=(month:string)=>MONTH_NAMES[Number(month.slice(5,7))-1]+' '+month.slice(0,4);
@@ -139,7 +142,9 @@ export function PayrollPanel({canExport}:{canExport:boolean}){
  const [month,setMonth]=useState(()=>todayISO().slice(0,7)),[detail,setDetail]=useState<MonthSummary|null>(null),[search,setSearch]=useState('');
  const {data,error,loading,reload}=useAttendanceMonth(month);
  const rows=useMemo(()=>data?summaries(data,month).filter(s=>normalizeSearch([s.employee.name,s.employee.employeeNumber].join(' ')).includes(normalizeSearch(search))):[],[data,month,search]);
- const mode=data?.context.settings.deductionMode||'warn';
+ const mode=data?.context.settings.deductionMode||'warn',books=useBooksAvailable();
+ // The books keep Kuwaiti dinars; each employee's estimated net goes in as one line (fils to three decimals).
+ const bookLines=useMemo(()=>data?summaries(data,month).filter(s=>s.employee.currency==='KWD'&&s.netMinor>BigInt(0)).map(s=>({name:s.employee.name,amount:fromMinor(String(s.netMinor),3)})):[],[data,month]);
  const totals=useMemo(()=>{const t:Record<string,{salary:bigint;net:bigint;deduct:bigint;overtime:bigint;n:number}>={};for(const r of rows){const c=r.employee.currency,x=t[c]||={salary:BigInt(0),net:BigInt(0),deduct:BigInt(0),overtime:BigInt(0),n:0};x.salary+=r.salaryMinor;x.net+=r.netMinor;x.deduct+=mode==='deduct'?r.lateDeductionMinor+r.absenceDeductionMinor:r.potentialDeductionMinor;x.overtime+=r.overtimePayMinor;x.n++}return t},[rows,mode]);
  function print(){if(!printHtml(payrollHtml(rows,monthLabel(month),mode,money,formatDate(data?.context.today||''),'')))popupBlocked()}
  function exportRows(){void exportCsv('accounting','Mawatheeq-payroll-'+month,[['الموظف','الرقم الوظيفي','أيام العمل','الحضور','الغياب','الإجازات','دقائق التأخير والخروج المبكر','تجاوز السماحية (د)','الإضافي (د)','العملة','الراتب','الخصم'+(mode==='warn'?' المحتمل':''),'بدل الإضافي','الصافي التقديري','التنبيهات'],...rows.map(r=>[r.employee.name,r.employee.employeeNumber,r.scheduledDays,r.presentDays,r.absentDays,r.leaveDays,r.shortfallMinutes,r.excessMinutes,r.overtimeMinutes,r.employee.currency,fromMinor(r.salaryMinor.toString(),CURRENCIES[r.employee.currency as Currency]??3),fromMinor((mode==='deduct'?r.lateDeductionMinor+r.absenceDeductionMinor:r.potentialDeductionMinor).toString(),CURRENCIES[r.employee.currency as Currency]??3),fromMinor(r.overtimePayMinor.toString(),CURRENCIES[r.employee.currency as Currency]??3),fromMinor(r.netMinor.toString(),CURRENCIES[r.employee.currency as Currency]??3),r.warnings.join('؛ ')])]).catch(fail)}
@@ -149,7 +154,8 @@ export function PayrollPanel({canExport}:{canExport:boolean}){
   <Field label="بحث الرواتب" value={search} onChange={setSearch}/><StatusMessage loading={loading&&!data} error={error}/>
   {data&&<div className="table-wrap"><table className="office-table ledger-table"><thead><tr><th>الموظف</th><th>الحضور</th><th>الغياب</th><th>تأخير وخروج مبكر</th><th>إضافي</th><th>الراتب</th><th>{mode==='warn'?'خصم محتمل':'الخصم'}</th><th>الصافي التقديري</th><th>التفاصيل</th></tr></thead><tbody>{rows.map(r=><tr key={r.employee.id}><td>{r.employee.name}<small>{r.employee.employeeNumber}</small>{r.warnings.length>0&&<small className="office-alert">{r.warnings[0]}{r.warnings.length>1&&` (+${r.warnings.length-1})`}</small>}</td><td>{r.presentDays}/{r.scheduledDays}</td><td>{r.absentDays}</td><td className={r.excessMinutes?'office-alert':''}>{formatMinutes(r.shortfallMinutes)}<small>السماحية {formatMinutes(r.allowanceMinutes)}</small></td><td>{formatMinutes(r.overtimeMinutes)}</td><td dir="ltr" className="ledger-value">{money(r.salaryMinor,r.employee.currency)}</td><td dir="ltr" className="ledger-value">{money(mode==='deduct'?r.lateDeductionMinor+r.absenceDeductionMinor:r.potentialDeductionMinor,r.employee.currency)}</td><td dir="ltr" className="ledger-value"><b>{money(r.netMinor,r.employee.currency)}</b></td><td><button className="btn" onClick={()=>setDetail(r)}>تفاصيل {r.employee.name}</button></td></tr>)}</tbody></table></div>}
   {data&&!rows.length&&<Empty text="لا يوجد موظفون نشطون. أضفهم من الموارد البشرية ثم حدد رواتبهم أدناه."/>}
-  <p className="subtitle">تقدير آلي من البصمات والإجازات المعتمدة وتعديلات الحضور. لا يُنشئ قيوداً في الدفتر، ويُراجع قبل الصرف.</p>
+  {books&&data&&<Suspense fallback={null}><PayrollToBooks month={month} lines={bookLines}/></Suspense>}
+  <p className="subtitle">تقدير آلي من البصمات والإجازات المعتمدة وتعديلات الحضور. يُراجع قبل الصرف{books?'، ثم يُرحّل صافيه إلى الدفاتر من الزر أعلاه':''}.</p>
   {detail&&<PayrollDetail row={detail} month={month} mode={mode} today={data?.context.today||''} onClose={()=>setDetail(null)}/>}
  </section>;
 }

@@ -42,7 +42,7 @@ await local(owner, 'save_case', { case: { id: 'books-case', client: 'موكل ا
 // Setup: the seeded chart and journals.
 const setup = await books(amal, 'setup');
 assert.equal(setup.canEdit, true); assert.equal(setup.canConfigure, false, 'Only the owner (or the settings power) configures the books');
-assert.ok(setup.accounts.length >= 30); assert.deepEqual(setup.journals.map(j => j.code).sort(), ['BILL', 'BNK1', 'CSH1', 'INV', 'MISC']);
+assert.ok(setup.accounts.length >= 30); assert.deepEqual(setup.journals.map(j => j.code).sort(), ['BILL', 'BNK1', 'CSH1', 'CSH2', 'INV', 'MISC']);
 assert.equal((await books(owner, 'setup')).canConfigure, true);
 await denied(() => books(salem, 'setup'));
 const acc = code => setup.accounts.find(a => a.code === code).id, jr = code => setup.journals.find(j => j.code === code).id;

@@ -217,3 +217,13 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .books-budget{border-top:1px solid var(--border);padding-top:12px;margin-top:12px}.books-mini{display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
 .books-checklist{list-style:none;padding:0;margin:0;display:grid;gap:6px}.books-checklist li{border:1px solid var(--border);border-radius:8px;padding:8px 12px}.books-checklist li.todo{border-color:#c98a12}.books-checklist li.ok b{color:#1f7a4d}
 .books-switch{font-weight:600;display:flex;align-items:center;gap:8px;flex-direction:row}.books-chips{display:flex;gap:10px;flex-wrap:wrap}.books-level{border:1px solid var(--border);border-radius:10px;padding:10px;display:grid;gap:8px}
+/* Page actions stay on one line; when they don't fit beside the title they move under it and scroll sideways. */
+.page-head{flex-wrap:wrap}.page-head>.actions{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;max-width:100%;scrollbar-width:thin;padding-bottom:2px}
+.page-head>.actions>*{flex-shrink:0;white-space:nowrap}
+.books-chart svg.books-bars{width:100%;height:auto;max-height:240px;display:block}.books-bars rect.in{fill:var(--dept)}.books-bars rect.out{fill:var(--muted-foreground,#8a948f);opacity:.55}
+.books-bars line.grid{stroke:var(--border);stroke-dasharray:3 4}.books-bars line.axis{stroke:var(--muted-foreground,#8a948f)}.books-bars text{font-size:11px;fill:var(--muted-foreground,#6d7772)}
+.books-legend{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted-foreground,#6d7772)}.books-legend span{width:12px;height:12px;border-radius:3px;display:inline-block;margin-inline-start:8px}.books-legend .in{background:var(--dept)}.books-legend .out{background:var(--muted-foreground,#8a948f);opacity:.55}
+.books-original{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:12px}.books-original h3{margin:0 0 8px;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.books-custody{margin:0 0 10px;padding-inline-start:20px;display:grid;gap:4px;font-size:13px}.books-custody small{color:var(--muted-foreground,#6d7772)}
+.case-books{display:grid;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)}.case-books h3{margin:0;display:flex;gap:6px;align-items:center;font-size:16px}
+.books-payroll{display:flex;flex-wrap:wrap;align-items:end;gap:10px;border:1px dashed var(--border);border-radius:10px;padding:10px 14px;margin:12px 0;font-size:14px}.books-payroll .field{min-width:200px}

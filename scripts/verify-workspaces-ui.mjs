@@ -157,6 +157,17 @@ try{
   await v.getByRole('button',{name:'إغلاق',exact:true}).last().click();}
  await click('إقفال السنة');await page.locator('.books-checklist').waitFor();
  await click('التقارير المالية');await click('تقرير الضريبة');await page.getByRole('cell',{name:'ضريبة مبيعات 5٪',exact:true}).waitFor();await page.locator('.books-totals').getByText('ضريبة المخرجات').waitFor();
+ // Money handled outside the office: a court fee for a case, posted, its original receipt moved to the archive, then billed to the client.
+ await click('لوحة المحاسبة');await page.locator('.books-chart svg.books-bars').waitFor();
+ await click('المعاملات الخارجية');await click('معاملة جديدة');{const v=page.getByRole('dialog');await v.getByLabel('نوع المعاملة',{exact:true}).selectOption({label:'رسوم قيد دعوى'});
+  await v.getByLabel('القضية',{exact:true}).selectOption('ui-case-2');await v.getByLabel('المبلغ',{exact:true}).fill('12.500');await v.getByLabel('المستند',{exact:true}).selectOption({label:'إيصال رسوم'});
+  await v.getByLabel('رقم الإيصال / المرجع',{exact:true}).fill('R-77');await v.getByLabel('أين الأصل الآن',{exact:true}).selectOption('staff');await v.getByLabel('مع من / لدى أي جهة',{exact:true}).fill('مندوب تجريبي');
+  await v.getByRole('button',{name:'حفظ',exact:true}).click();}
+ {const v=page.getByRole('dialog',{name:'رسوم قيد دعوى'});await v.getByRole('button',{name:'ترحيل إلى الدفاتر',exact:true}).click();await v.getByText(/^مرحّلة/).waitFor();
+  await v.getByRole('button',{name:'نقل الأصل',exact:true}).click();await v.getByLabel('إلى',{exact:true}).selectOption('archive');await v.getByLabel('رقم ملف الأرشيف',{exact:true}).fill('ARC-9');await v.getByRole('button',{name:'تسجيل',exact:true}).click();
+  await v.locator('.books-custody li').nth(1).waitFor();await screen('outside-transaction');await v.getByRole('button',{name:'إغلاق',exact:true}).last().click();}
+ await page.locator('.books-table').getByText('ARC-9').waitFor();await page.getByLabel('تحديد رسوم قيد دعوى R-77',{exact:true}).check();await click('مطالبة الموكل (1)');
+ await page.getByRole('dialog').locator('.books-invoice-lines').waitFor();await screen('outside-billed');await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();
  await switchTo('الموارد البشرية');await page.getByText('@ui_owner',{exact:true}).waitFor();await click('موظف جديد');await field('الرقم الوظيفي','EMP-UI-1');await field('اسم الموظف','موظف واجهة تجريبي');await field('المسمى الوظيفي','مساعد');await field('القسم','السكرتارية');await pickToday('تاريخ الانضمام');await click('حفظ سجل الموارد البشرية');await page.getByRole('heading',{name:'موظف واجهة تجريبي',exact:true}).waitFor();
  await screen('hr-desktop');await click('الإجازات');await click('طلب إجازة جديد');
  const people=await dept('hr','records_page');await page.getByLabel('الموظف',{exact:true}).selectOption(people.find(r=>r.kind==='employee').id);await page.getByLabel('قرار الإجازة',{exact:true}).selectOption('approved');await field('ملاحظة القرار / السبب','موافقة تجريبية');await click('حفظ سجل الموارد البشرية');await page.getByRole('cell',{name:'معتمدة',exact:true}).waitFor();

@@ -1,4 +1,4 @@
-import {Fragment,useCallback,useEffect,useMemo,useRef,useState,type ReactElement} from 'react';
+import {Fragment,lazy,Suspense,useCallback,useEffect,useMemo,useRef,useState,type ReactElement} from 'react';
 import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf,suggestions} from '@/lib/choices';
 import {Files,Plus,FileCheck2,Scale,Link2,Trash2,UserPlus,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
 import BatchPrint from './batch-print';
@@ -25,6 +25,9 @@ import {FollowFields,FileStatements,FilePosition,type StatementRecord,type Payme
 import RecordWindow,{useListNav,type WindowNav,type Enter} from '../record-window';
 import CopyChip from '../copy-chip';
 import CircuitField from '../circuit-field';
+import {useBooksAvailable} from '@/lib/books-api';
+
+const QuickInvoice=lazy(()=>import('./books-outside').then(m=>({default:m.QuickInvoice})));
 
 type View='files'|'due'|'payments'|'print';
 /** Files per page: twenty-five, five rows of five on wide screens. */
@@ -133,7 +136,7 @@ function PaymentsList({payments,fileOf,onOpen,canPrint}:{payments:PaymentRecord[
 
 function CollectionEditor({opponents,initial,cases:loadedCases,access,statements,payments,assignees,batches,tags,clients,related,onOpenFile,onClose,onChanged,nav,onNavigate,enter}:{opponents:string[];clients:ClientOption[];related:CollectionRecord[];onOpenFile:(f:CollectionRecord)=>void;initial:CollectionRecord;cases:CaseSummary[];access:Permissions;statements:StatementRecord[];payments:PaymentRecord[];assignees:string[];batches:string[];tags:string[];onClose:()=>void;onChanged:()=>void;nav?:WindowNav;onNavigate?:(dir:'prev'|'next')=>void;enter?:Enter}) {
  const [saved,setSaved]=useState(initial),[draft,setDraft]=useState(initial),[busy,setBusy]=useState(false),[error,setError]=useState(''),[attested,setAttested]=useState(false),[outputs,setOutputs]=useState<{id:string;kind:string;recordRevision:number;templateVersion:string;createdAt:string;actor:string}[]>([]),[outputVersion,setOutputVersion]=useState(0);
- const [tab,setTab]=useState(initial.revision?'file':'parties');
+ const [tab,setTab]=useState(initial.revision?'file':'parties'),[invoicing,setInvoicing]=useState(false),books=useBooksAvailable();
  // Cases made from this window join the list at once, so the link shows without reloading the page.
  const [made,setMade]=useState<CaseSummary[]>([]),[making,setMaking]=useState(false),[linkAsk,setLinkAsk]=useState(0);
  const cases=useMemo(()=>[...loadedCases,...made.filter(m=>!loadedCases.some(c=>c.id===m.id))],[loadedCases,made]);
@@ -172,7 +175,8 @@ function CollectionEditor({opponents,initial,cases:loadedCases,access,statements
   quick={<>{saved.revision&&<><button type="button" className="btn" onClick={()=>setTab('statements')}><ClipboardList size={16}/> إفادات الملف</button><button type="button" className="btn" onClick={()=>setTab('money')}><Wallet size={16}/> الوضع المالي</button><button type="button" className="btn" onClick={()=>setTab('papers')}><FileCheck2 size={16}/> المراجعة والمستندات</button></>}{editable&&<div className="case-actions"><button type="button" className="btn" disabled={linkNeeds.some(Boolean)||busy} title={linkNeeds.filter(Boolean).join(' · ')||undefined} onClick={()=>{setTab('parties');setLinkAsk(n=>n+1)}}><Link2 size={16}/> {saved.caseId?'تغيير القضية':'ربط بقضية'}</button>{!saved.caseId&&<button type="button" className="btn primary make-case" disabled={caseBlocked||busy} onClick={()=>setMaking(true)}><Scale size={16}/> إنشاء قضية من الملف</button>}</div>}{editable&&<Needs items={saved.caseId?linkNeeds:caseNeeds} className="make-case-needs"/>}</>}
   nav={nav} onNavigate={onNavigate} unit="الملف" enter={enter} dirty={dirty&&editable} busy={busy} onSave={editable?save:undefined} onClose={onClose}
   needs={editable?[!draft.caseId&&!allScope&&'اربط الملف بقضية في «الأطراف والمطالبة»؛ حسابك يرى قضايا محددة فقط']:[]}
-  footer={<>{editable&&<button className="btn primary" type="button" onClick={save} disabled={busy||(!draft.caseId&&!allScope)||(!dirty&&!!saved.revision)}>حفظ ملف التحصيل</button>}{!!saved.revision&&access.canEdit&&<button className="btn" title={dirty?'احفظ تعديلات الملف أولاً':undefined} disabled={busy||dirty} onClick={()=>void mutate('archive_record',{archived:!saved.archived})}>{saved.archived?'إعادة فتح الملف':'أرشفة الملف'}</button>}<button type="button" className="btn" disabled={busy} onClick={onClose}>إغلاق الملف</button></>}>
+  footer={<>{editable&&<button className="btn primary" type="button" onClick={save} disabled={busy||(!draft.caseId&&!allScope)||(!dirty&&!!saved.revision)}>حفظ ملف التحصيل</button>}{!!saved.revision&&access.canEdit&&<button className="btn" title={dirty?'احفظ تعديلات الملف أولاً':undefined} disabled={busy||dirty} onClick={()=>void mutate('archive_record',{archived:!saved.archived})}>{saved.archived?'إعادة فتح الملف':'أرشفة الملف'}</button>}{books&&!!saved.revision&&<button type="button" className="btn" disabled={busy||dirty||!saved.payload.company} title={!saved.payload.company?'أدخل اسم الموكل في «الأطراف والمطالبة»':dirty?'احفظ تعديلات الملف أولاً':undefined} onClick={()=>setInvoicing(true)}><FileText size={15}/> فاتورة أتعاب</button>}<button type="button" className="btn" disabled={busy} onClick={onClose}>إغلاق الملف</button></>}>
+  {invoicing&&<Suspense fallback={null}><QuickInvoice caseId={saved.caseId||''} client={String(saved.payload.company||'')} clientEntityId={saved.payload.clientEntityId} reference={'ملف تحصيل '+(saved.payload.code||'')} onClose={()=>setInvoicing(false)} onDone={()=>setInvoicing(false)}/></Suspense>}
  {making&&<MakeCase file={saved} cases={cases} onClose={()=>setMaking(false)} onMade={(r,c)=>{setMade(m=>[...m,c]);setSaved(r);setDraft(r);setMaking(false);onChanged()}}/>}
  {error&&<p role="alert" className="notice">{error}</p>}
  <Tabs value={tab} onValueChange={setTab} dir="rtl"><TabsList className="detail-tabs case-tabs">{tabs.map(([v,l,Icon,n,off])=><TabsTrigger key={v} value={v} disabled={off}><Icon aria-hidden/>{l}{n?<span className="tab-count">{n}</span>:null}</TabsTrigger>)}</TabsList>
