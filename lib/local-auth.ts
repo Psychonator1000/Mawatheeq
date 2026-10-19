@@ -33,6 +33,7 @@ export const commentRequest =<T = unknown>(action: string, data: Record<string, 
 export const chatRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_chat_request', action, data);
 export const caseFileRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_case_file_request', action, data);
 export const departmentRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_department_request', action, data);
+export const booksRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_books_request', action, data);
 export async function restoreSession(): Promise<LocalUser | null> {
   await loadBackend();
   token = localStorage.getItem(storageKey) || '';

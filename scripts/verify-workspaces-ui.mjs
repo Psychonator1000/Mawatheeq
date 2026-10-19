@@ -34,7 +34,7 @@ await page.route('https://office-fixture.supabase.co/**',async route=>{
  const req=route.request();const url=new URL(req.url());
  if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
  const name=url.pathname.split('/').pop();const body=req.postDataJSON();calls.push({name,action:body?.p_action});
- if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
+ if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request','mawatheeq_books_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
  const args=name==='mawatheeq_local_login'?[body.p_username,body.p_password]:[body.p_token,body.p_action,JSON.stringify(body.p_data||{})];
  try{await route.fulfill({json:await rpc(name,args)})}catch(e){await route.fulfill({status:400,json:{message:e.message,code:e.code||'P0001'}})}
 });
@@ -88,10 +88,31 @@ try{
  await click('طباعة جماعية');await page.locator('.batch-table').getByText('جاهز',{exact:true}).waitFor();await click('الاثنان معاً');await click('تحديد كل الجاهز');
  {const files=[];const onDownload=d=>files.push(d);page.on('download',onDownload);await click('إنشاء ملف الطباعة (1)');for(let i=0;i<60&&files.length<2;i++)await page.waitForTimeout(250);page.off('download',onDownload);assert.equal(files.length,2,'batch print downloads one file per paper type');assert.deepEqual(files.map(d=>d.suggestedFilename().split('-2')[0]).sort(),['Mawatheeq-bundles','Mawatheeq-claims']);}
  await screen('collections-batch-desktop');await click('ملفات التحصيل');
- await switchTo('المحاسبة');await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await field('المبلغ','125.125');await field('مرجع القيد / رقم الإيصال','SYN-FEE-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');await page.getByRole('cell',{name:/SYN-FEE-UI/}).waitFor();
+ await switchTo('المحاسبة');await page.getByRole('heading',{name:'الدفاتر اليومية',exact:true}).waitFor();await click('دفتر الحركات');await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await field('المبلغ','125.125');await field('مرجع القيد / رقم الإيصال','SYN-FEE-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');await page.getByRole('cell',{name:/SYN-FEE-UI/}).waitFor();
  await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await page.getByLabel('نوع القيد',{exact:true}).selectOption('receipt');await field('المبلغ','25.025');await field('مرجع القيد / رقم الإيصال','SYN-RECEIPT-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');
  await page.getByText('100.100 KWD',{exact:true}).waitFor();await screen('accounting-desktop');
  await page.getByRole('row').filter({has:page.getByRole('cell',{name:/SYN-RECEIPT-UI/})}).getByRole('button',{name:'فتح القيد',exact:true}).click();assert.equal(await page.getByLabel('المبلغ',{exact:true}).isDisabled(),true);await field('سبب إلغاء القيد','تصحيح تجريبي');await click('تأكيد إلغاء القيد');await page.locator('.ledger-balance').getByText('125.125 KWD',{exact:true}).waitFor();
+
+ // The double-entry books: a fee entry drafted, refused while unbalanced, balanced, posted with its number, then the reports.
+ await click('الدفاتر المحاسبية');await page.getByRole('heading',{name:'الدفاتر اليومية',exact:true}).waitFor();await screen('books-dashboard');
+ await click('قيد في MISC');const entry=page.getByRole('dialog');
+ await entry.getByLabel('المرجع',{exact:true}).fill('SYN-BOOKS-1');await entry.getByLabel('القضية',{exact:true}).selectOption('ui-case-0');
+ await entry.getByLabel('حساب السطر 1',{exact:true}).selectOption({label:'121000'});await entry.getByLabel('بيان السطر 1',{exact:true}).fill('أتعاب تجريبية');await entry.getByLabel('مدين السطر 1',{exact:true}).fill('250.750');
+ await entry.getByLabel('حساب السطر 2',{exact:true}).selectOption({label:'401000'});await entry.getByLabel('دائن السطر 2',{exact:true}).fill('200');
+ await entry.getByText(/القيد غير متوازن: الفرق 50\.750/).waitFor();assert.equal(await entry.getByRole('button',{name:'ترحيل',exact:true}).isDisabled(),true,'An unbalanced entry cannot be posted');
+ await entry.getByLabel('دائن السطر 2',{exact:true}).fill('250.750');await entry.getByRole('button',{name:'ترحيل',exact:true}).click();
+ await page.getByRole('dialog',{name:'MISC/'+new Date().getFullYear()+'/0001'}).waitFor();await screen('books-entry-posted');
+ assert.equal(await page.getByRole('dialog').getByLabel('مدين السطر 1',{exact:true}).count(),0,'A posted entry is read-only');
+ await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();
+ await click('القيود اليومية');await page.getByRole('cell',{name:'SYN-BOOKS-1',exact:true}).waitFor();
+ await click('التقارير المالية');await page.locator('.books-table').getByRole('button',{name:'121000 ذمم العملاء المدينة',exact:true}).waitFor();
+ await page.locator('.books-table tfoot').getByText('250.750').first().waitFor();await screen('books-trial-balance');
+ await page.locator('.books-table').getByRole('button',{name:'121000 ذمم العملاء المدينة',exact:true}).click();await page.locator('.books-group').getByText(/121000/).waitFor();
+ await click('الأرباح والخسائر');await page.locator('.books-totals .net').getByText('250.750').waitFor();
+ await click('الميزانية العمومية');await page.locator('.books-totals').getByText('الميزانية متوازنة',{exact:true}).waitFor();await screen('books-balance-sheet');
+ await click('الحسابات والإعدادات');await page.getByRole('cell',{name:'أتعاب المحاماة',exact:true}).waitFor();
+ await click('حساب جديد');await page.getByRole('dialog').getByLabel('اسم الحساب',{exact:true}).fill('مصروفات تدريب تجريبية');await page.getByRole('dialog').getByRole('button',{name:'حفظ الحساب',exact:true}).click();await page.getByRole('cell',{name:'مصروفات تدريب تجريبية',exact:true}).waitFor();
+ await page.setViewportSize({width:390,height:844});await click('لوحة المحاسبة');await screen('books-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'Books fit a phone');await page.setViewportSize({width:1440,height:1000});
  await switchTo('الموارد البشرية');await page.getByText('@ui_owner',{exact:true}).waitFor();await click('موظف جديد');await field('الرقم الوظيفي','EMP-UI-1');await field('اسم الموظف','موظف واجهة تجريبي');await field('المسمى الوظيفي','مساعد');await field('القسم','السكرتارية');await pickToday('تاريخ الانضمام');await click('حفظ سجل الموارد البشرية');await page.getByRole('heading',{name:'موظف واجهة تجريبي',exact:true}).waitFor();
  await screen('hr-desktop');await click('الإجازات');await click('طلب إجازة جديد');
  const people=await dept('hr','records_page');await page.getByLabel('الموظف',{exact:true}).selectOption(people.find(r=>r.kind==='employee').id);await page.getByLabel('قرار الإجازة',{exact:true}).selectOption('approved');await field('ملاحظة القرار / السبب','موافقة تجريبية');await click('حفظ سجل الموارد البشرية');await page.getByRole('cell',{name:'معتمدة',exact:true}).waitFor();
@@ -226,7 +247,7 @@ try{
  await otherTab.evaluate(token=>localStorage.setItem('mawatheeq.local-session.v1',token),login.token);
  await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),7);
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();assert.equal(await staff.getByLabel('كلمة المرور الحالية',{exact:true}).inputValue(),'','Cross-tab session replacement clears old password inputs');
- assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, precise ledger/void, employee/leave forms, archive custody/receipt/label/scan/stocktake, import with automatic and manual case links from both sides, civil ID/debtor/phone checks, select-all round-robin distribution with client links, client profile collection files, department-only readonly access, responsive layouts and no runtime errors.');
+ assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, double-entry books (balanced posting, numbering, trial balance, ledger drill-down, profit and loss, balance sheet, new account), precise ledger/void, employee/leave forms, archive custody/receipt/label/scan/stocktake, import with automatic and manual case links from both sides, civil ID/debtor/phone checks, select-all round-robin distribution with client links, client profile collection files, department-only readonly access, responsive layouts and no runtime errors.');
 }catch(e){await screen('failure');console.error(await page.locator('body').innerText());throw e}
 finally{
  await browser.close();await db.close();

@@ -492,7 +492,7 @@ for(let round=1;round<=2;round++){
  await motion.getByRole('button',{name:'فتح القضايا'}).click();
  await motion.getByRole('heading',{name:'كل قضاياك، في مكان واحد'}).waitFor();
  await motion.getByRole('button',{name:'حساب tools_owner'}).click();await motion.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
- await motion.getByRole('button',{name:'فتح المحاسبة'}).click();await motion.getByText('RC-1').waitFor();
+ await motion.getByRole('button',{name:'فتح المحاسبة'}).click();await motion.getByRole('heading',{name:'الدفاتر اليومية',exact:true}).waitFor();
  await motion.getByRole('button',{name:'حساب tools_owner'}).click();await motion.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
 }
 await motion.getByRole('button',{name:'فتح القضايا'}).click();

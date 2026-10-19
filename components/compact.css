@@ -174,3 +174,26 @@
 :root .roll-stats dt{font-size:12px;color:var(--muted-foreground)}:root .roll-stats dd{margin:2px 0 0;font-size:22px;font-weight:700;color:var(--brand)}
 :root .roll-summary details summary{cursor:pointer;font-weight:600}
 :root .roll-import .actions{display:flex;gap:8px;margin-top:6px}
+/* Books: journal cards, entry lines, statements. */
+.books-journals{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.books-journal{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--card,#fff);display:grid;gap:10px;align-content:start}
+.books-journal header{display:flex;gap:10px;align-items:center;color:var(--dept)}.books-journal h3{font-size:16px;margin:0}.books-journal small{color:var(--muted-foreground,#6d7772)}
+.books-balance{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0}.books-balance b{font-size:20px;color:var(--dept);font-variant-numeric:tabular-nums}
+.books-journal .actions{display:flex;gap:8px;flex-wrap:wrap}
+.books-table td.mono,.books-table .mono{font-family:ui-monospace,monospace;font-size:12px}
+.books-table tfoot th,.books-lines tfoot th{font-variant-numeric:tabular-nums}
+.books-group th{background:color-mix(in srgb,var(--dept) 7%,transparent);text-align:start}
+.books-editor{display:grid;gap:14px}.books-editor .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.books-lines{min-width:720px}.books-lines td{padding:4px 6px;vertical-align:middle}.books-lines td:first-child{min-width:220px}.books-lines td input{width:100%;min-width:0}
+.books-lines td:nth-child(4) input,.books-lines td:nth-child(5) input{max-width:120px;text-align:left;font-variant-numeric:tabular-nums}
+.books-diff{color:var(--destructive,#b42318);font-weight:600}
+.books-reverse{border:1px dashed var(--border);padding:14px}
+.books-history{margin:0;padding-inline-start:18px;font-size:13px;display:grid;gap:4px}
+.books-statement{display:grid;gap:18px}.books-statement h3{font-size:15px;margin:0 0 6px;color:var(--dept)}.books-statement table{width:100%}.books-statement td:last-child,.books-statement th:last-child{text-align:left;width:160px;font-variant-numeric:tabular-nums}
+.books-totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0}.books-totals>div{border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.books-totals dt{font-size:13px;color:var(--muted-foreground,#6d7772)}.books-totals dd{margin:4px 0 0;font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}
+.books-totals .net{border-color:var(--dept)}.books-totals .net dd{color:var(--dept)}.books-totals .off{border-color:var(--destructive,#b42318)}.books-totals .off dd{color:var(--destructive,#b42318)}
+.books-locks{display:grid;gap:14px}.books-locks .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.books .table-wrap h3{font-size:14px;margin:14px 0 6px;color:var(--dept)}
+button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-decoration:underline;cursor:pointer;font:inherit}
+.books-editor .form-grid .case-picker{grid-column:span 2;min-width:0}.books-editor .form-grid .case-picker .filter-select-box{width:100%}

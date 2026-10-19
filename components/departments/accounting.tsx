@@ -15,15 +15,20 @@ import RecordWindow,{useListNav,type WindowNav,type Enter} from '../record-windo
 import CopyChip from '../copy-chip';
 import {amountInWords} from '@/lib/document-fields';
 import {printHtml,statementHtml,voucherHtml} from '@/lib/print';
+import Books,{useBooksAvailable} from './books';
 import {AttendanceSettingsPanel,AttendanceUnavailable,PayrollPanel,ProfilesPanel,useAttendanceEnabled} from './attendance';
 const caseCode=(cases:CaseSummary[],id:string)=>{const c=cases.find(x=>x.id===id);return c?c.code||c.autoNumber||c.id:'مكتبي'};
 const decimal=(minor:string,places:number)=>{const s=minor.padStart(places+1,'0');return s.slice(0,-places)+'.'+s.slice(-places)};
 const popupBlocked=()=>toast.error('اسمح بالنوافذ المنبثقة في المتصفح للطباعة.');
 export default function Accounting({cases,access}:{cases:CaseSummary[];access:Permissions}) {
- const attendance=useAttendanceEnabled(),[view,setView]=useState<'ledger'|'payroll'|'pay'|'settings'>('ledger');
- const views=<div className="department-tabs view-switch" role="group" aria-label="أقسام المحاسبة">{([['ledger','دفتر الحركات'],['payroll','الرواتب والحضور'],['pay','رواتب الموظفين'],['settings','إعدادات الدوام']] as const).filter(([k])=>k==='ledger'||attendance!==false).map(([k,label])=><button key={k} className={'btn '+(view===k?'primary':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>;
+ const attendance=useAttendanceEnabled(),books=useBooksAvailable(),[chosen,setView]=useState<'books'|'ledger'|'payroll'|'pay'|'settings'|null>(null);
+ // The double-entry books open first once they are available; the simple ledger stays beside them.
+ const view=chosen??(books?'books':'ledger');
+ const tabs=([['books','الدفاتر المحاسبية'],['ledger','دفتر الحركات'],['payroll','الرواتب والحضور'],['pay','رواتب الموظفين'],['settings','إعدادات الدوام']] as const).filter(([k])=>k==='ledger'||(k==='books'?books:attendance!==false));
+ const views=tabs.length>1?<div className="department-tabs view-switch" role="group" aria-label="أقسام المحاسبة">{tabs.map(([k,label])=><button key={k} className={'btn '+(view===k?'primary':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>:null;
+ if(view==='books')return <Books cases={cases} access={access} views={views}/>;
  if(view!=='ledger')return <><section className="department-hero"><div><div className="eyebrow">الرواتب</div><h1>المحاسبة</h1><p>تقدير الرواتب من سجل الحضور والبصمة، مع التنبيهات والخصومات حسب إعدادات الدوام.</p></div><Wallet size={64}/></section>{views}<div className="att-section">{attendance===false?<AttendanceUnavailable/>:view==='payroll'?<PayrollPanel canExport={access.canExport}/>:view==='pay'?<ProfilesPanel/>:<AttendanceSettingsPanel/>}</div></>;
- return <LedgerView cases={cases} access={access} views={attendance?views:null}/>;
+ return <LedgerView cases={cases} access={access} views={views}/>;
 }
 function LedgerView({cases,access,views}:{cases:CaseSummary[];access:Permissions;views:ReactNode}) {
  const {rows,loading,error,reload}=useRecords<LedgerData>('accounting');
