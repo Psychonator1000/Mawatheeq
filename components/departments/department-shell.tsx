@@ -31,13 +31,14 @@ export default function DepartmentWorkspace({workspace,access}:{workspace:Depart
  // «البريد» is a page of every workspace, opened from its tab or from the mail icon.
  const mailOk=useMailAvailable(),counts=useMailCounts(mailOk),[mail,setMail]=useState<{id:string}|null>(()=>takePendingMail(workspace));
  useEffect(()=>{const on=()=>{const p=takePendingMail(workspace);if(p)setMail(p)};addEventListener(OPEN_MAIL_EVENT,on);return()=>removeEventListener(OPEN_MAIL_EVENT,on)},[workspace]);
- const unread=counts?.byWorkspace[workspace]||0;
+ const unread=counts?.byWorkspace[workspace]||0,[print,setPrint]=useState(false);
  return <main className={'department-shell theme-'+workspace} dir="rtl"><header className="department-topbar"><div className="department-brand"><BrandLogo/><span>مواثيق <small>{meta.name}</small></span></div><div className="actions"><button className="btn" onClick={refresh} disabled={loading}><RefreshCw size={16}/> تحديث</button><MailBell workspace={workspace}/><AccountMenu/></div></header>
- <div className="department-content">{mailOk&&<div className="department-tabs view-switch mail-switch" role="group" aria-label="صفحات المساحة"><button className={'btn '+(!mail?'primary':'')} aria-pressed={!mail} onClick={()=>setMail(null)}>{meta.name}</button><button className={'btn '+(mail?'primary':'')} aria-pressed={!!mail} onClick={()=>setMail({id:''})}><Mail size={15}/> البريد{unread>0&&<span className="nav-count">{unread}</span>}</button></div>}
+ <div className={'department-content'+(workspace==='secretary'&&!mail&&!print?' desk-page':'')}>{(mailOk||workspace==='secretary')&&<div className="department-tabs view-switch mail-switch" role="group" aria-label="صفحات المساحة"><button className={'btn '+(!mail&&!print?'primary':'')} aria-pressed={!mail&&!print} onClick={()=>{setMail(null);setPrint(false)}}>{meta.name}</button>
+ {workspace==='secretary'&&<button className={'btn '+(print&&!mail?'primary':'')} aria-pressed={print&&!mail} onClick={()=>{setMail(null);setPrint(true)}}>طباعة مستندات التحصيل</button>}{mailOk&&<button className={'btn '+(mail?'primary':'')} aria-pressed={!!mail} onClick={()=>{setPrint(false);setMail({id:''})}}><Mail size={15}/> البريد{unread>0&&<span className="nav-count">{unread}</span>}</button>}</div>}
  {mail?<Suspense fallback={<StatusMessage loading error=""/>}><MailPage key={mail.id} workspace={workspace} focusId={mail.id}/></Suspense>:<><StatusMessage loading={loading} error={error}/>{!loading&&!error&&<Suspense fallback={<StatusMessage loading error=""/>}>
  {!access.canEdit&&<p className="notice">حسابك للقراءة فقط في هذه المساحة.</p>}
- {workspace==='secretary'&&context&&<Secretary items={work} context={context} records={cases} onChanged={refresh} onOpenCase={setSelected}/>}
- {workspace==='secretary'&&(access.sections.includes('collections')?<BatchPrint canExport={access.canExport}/>:<section className="panel"><h2>طباعة مستندات التحصيل</h2><p className="subtitle">لطباعة الحوافظ والصحف لعدة ملفات دفعة واحدة، يمنح مسؤول المكتب هذا الحساب قسم «التحصيل» وصلاحية التصدير.</p></section>)}
+ {workspace==='secretary'&&context&&!print&&<Secretary items={work} context={context} records={cases} onChanged={refresh} onOpenCase={setSelected}/>}
+ {workspace==='secretary'&&print&&(access.sections.includes('collections')?<BatchPrint canExport={access.canExport}/>:<section className="panel"><h2>طباعة مستندات التحصيل</h2><p className="subtitle">لطباعة الحوافظ والصحف لعدة ملفات دفعة واحدة، يمنح مسؤول المكتب هذا الحساب قسم «التحصيل» وصلاحية التصدير.</p></section>)}
  {workspace==='collections'&&<Collections key={version} cases={cases} access={access}/>}
  {workspace==='accounting'&&<Accounting key={version} cases={cases} access={access}/>}
  {workspace==='hr'&&<HR key={version} access={access}/>}

@@ -59,7 +59,11 @@ try{
  await page.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await page.locator('.workspace-option').count(),7,'Six workspaces and the owner-only «فريق المكتب» page');
  await screen('chooser-desktop');await page.setViewportSize({width:390,height:844});await screen('chooser-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true);await page.setViewportSize({width:1440,height:1000});
  await enter('السكرتارية');await click('إضافة مهمة');await field('عنوان العمل','تنسيق موعد تجريبي');await click('حفظ العمل');await page.getByText('تنسيق موعد تجريبي',{exact:true}).first().waitFor();
- await screen('secretary-desktop');await page.reload();await page.getByRole('heading',{name:'كل موعد في مكانه.',exact:true}).waitFor();
+ await screen('secretary-desktop');
+ // The secretary's desk fits one screen: the page itself does not scroll, the lists scroll inside their panels.
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+2),true,'Secretary desk fits the screen');
+ await page.locator('.sec-agenda').getByRole('button',{name:/تنسيق موعد تجريبي/}).click();await page.getByRole('heading',{name:'تنسيق موعد تجريبي'}).first().waitFor();await page.keyboard.press('Escape');
+ await page.reload();await page.getByRole('heading',{name:'أجندة اليوم',exact:true}).waitFor();
  await switchTo('القضايا');await click('المهام والجلسات');await page.getByText('تنسيق موعد تجريبي',{exact:true}).waitFor();
  await switchTo('التحصيل');await click('ملف تحصيل جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');
  for(const [label,value] of [['المدعي (الموكل)','شركة اختبار التحصيل'],['المدعى عليه','خصم اختبار التحصيل'],['الرقم المدني للمدعى عليه','200000000001'],['الجنسية','كويتي'],['العنوان','عنوان تجريبي'],['الهاتف','50000000'],['الرقم المدني للمدعي','SYN-1'],['السجل التجاري للمدعي','SYN-2'],['رقم العقد / الحساب','SYN-ACCOUNT'],['مبلغ المطالبة (د.ك)','125.125'],['رقم أمر الأداء','1/2026'],['محكمة أمر الأداء','محكمة تجريبية'],['رقم الدعوى','1'],['سنة الدعوى','2026'],['محكمة الجلسة','محكمة تجريبية'],['رقم الدائرة / القاعة','1'],['مرجع المصدر الذي تمت مطابقته','عقد تجريبي 1']])await field(label,value);
@@ -282,7 +286,7 @@ try{
   await page.getByRole('button',{name:/^الموكلون/}).first().click();await page.locator('.client-card').filter({hasText:'شركة تجريبية للاتصالات'}).click();
   await page.getByText(/^ملفات التحصيل \(\d+\)$/).waitFor();await page.locator('.entity-collections').getByText('ملف W-2').waitFor();await screen('client-collections');await page.keyboard.press('Escape');}
  for(const name of ['السكرتارية','التحصيل','المحاسبة','الموارد البشرية','الأرشيف']){
-  await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero').waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
+  await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero, .sec-agenda').first().waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
  }
  // Department-only read-only account gets exactly its chooser cards and safe case summaries.
  await db.exec('reset role');const staffId=(await db.query("insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values('dept_ui_reader',extensions.crypt('Synthetic-password-123',extensions.gen_salt('bf',4)),false) returning id")).rows[0].id;

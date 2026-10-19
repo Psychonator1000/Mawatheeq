@@ -259,3 +259,31 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .mail-boxes td{vertical-align:middle}
 @media(max-width:900px){.mail-split{grid-template-columns:1fr}.mail-split.reading .mail-list{display:none}.mail-frame{height:70vh}.mail-page{padding:14px}}
 .mail-seen{display:flex;gap:8px;align-items:flex-start;margin:14px 0 4px;font-size:13.5px;line-height:1.8}.mail-seen input{margin-top:5px;width:17px;height:17px;accent-color:var(--brand);flex-shrink:0}
+/* The secretary's desk: everything on one screen, the lists scrolling inside their panels. */
+.department-content.desk-page{padding-top:12px;padding-bottom:12px}.department-content.desk-page .mail-switch{margin-bottom:10px}.department-shell:has(.desk-page) .department-footer{display:none}.department-shell:has(.desk-page){padding-bottom:0!important;min-height:0}
+.work-desk-grid{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);gap:14px;height:calc(100dvh - var(--desk-offset,192px));min-height:460px}
+.sec-roll{min-height:38px;padding:6px 12px;font-size:13px}
+.work-desk-aside{min-height:0;display:flex}
+.sec-agenda{display:flex;flex-direction:column;min-height:0;flex:1;padding:14px;gap:10px}
+.sec-agenda-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.sec-agenda-head h2{font-size:17px;line-height:1.6}.sec-agenda-head small{color:var(--muted-foreground);font-size:12.5px}
+.sec-day-nav{display:flex;align-items:flex-end;gap:4px}.sec-day-nav .field{flex:1;min-width:0}.sec-day-nav .field>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.sec-day-nav .icon-btn{flex-shrink:0;border:1px solid var(--border)}.sec-today{min-height:38px;padding:6px 12px}
+.sec-agenda-list{flex:1;min-height:0;overflow:auto;display:grid;align-content:start;gap:8px;padding-inline-end:2px}
+.sec-agenda-list .agenda-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 12px;border:0;border-inline-start:3px solid var(--dept);text-align:start;font:inherit;color:inherit;width:100%;cursor:pointer}
+.sec-agenda-list .agenda-item:hover{filter:brightness(.97)}.sec-agenda-list .agenda-time{min-width:0;font-size:12.5px;gap:4px}
+.agenda-body{display:grid;min-width:0}.agenda-body b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.agenda-body small{font-size:11.5px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sec-empty{padding:30px 6px;text-align:center}
+.work-desk{display:flex;flex-direction:column;min-height:0;padding:14px 16px 8px;gap:10px}
+.work-desk-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.work-desk-head h2{font-size:17px;margin-inline-end:4px}.work-desk-head .actions{margin-inline-start:auto}.work-desk-head .btn{min-height:38px;padding:6px 14px}
+.work-chips{display:flex;gap:6px;flex-wrap:wrap}
+.work-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--card);color:inherit;border-radius:999px;padding:4px 6px 4px 12px;font:inherit;font-size:13px}
+.work-chip b{min-width:22px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--dept) 12%,transparent);font-size:12px;line-height:20px;text-align:center;font-variant-numeric:tabular-nums}
+.work-chip.late b{background:#a32e381f;color:#a32e38}.work-chip.on{background:var(--dept);border-color:var(--dept);color:var(--card)}.work-chip.on b{background:color-mix(in srgb,var(--card) 25%,transparent);color:inherit}
+.work-desk-filters{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.work-desk-filters>.field{flex:1 1 200px;min-width:160px}.work-desk-filters>:is(label,div):not(.layout-toggle):not(.roll-print){flex:0 1 170px}
+.work-desk-filters .field input,.work-desk-filters [data-slot=select-trigger]{min-height:38px!important;height:38px;padding-top:6px;padding-bottom:6px}
+.work-desk-filters .layout-toggle{padding:0;gap:4px}.work-desk-filters .layout-toggle .btn,.work-desk-filters .roll-print .btn{min-height:38px;padding:6px 12px}
+.work-desk-filters .roll-print{margin:0;gap:6px;flex-wrap:nowrap}.work-desk-filters .roll-print .field{width:150px}
+.work-desk-body{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--border);margin:0 -16px;padding:0 16px}
+.work-desk-body .office-table th{position:sticky;top:0;z-index:1;padding:10px 12px}.work-desk-body .office-table td{padding:10px 12px}
+.work-desk-body .office-table .btn{min-height:34px;padding:4px 12px}.work-row.late td:first-child{box-shadow:inset -3px 0 0 #a32e38}
+.work-desk-body .work-calendar{padding:10px 0}
+@media(max-width:1000px){.work-desk-grid{grid-template-columns:1fr;height:auto}.sec-agenda-list{max-height:320px}.work-desk-body{max-height:none}.department-shell:has(.desk-page) .department-footer{display:block}}
