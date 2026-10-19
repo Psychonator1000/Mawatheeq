@@ -56,7 +56,7 @@ async function switchTo(name){await page.getByRole('button',{name:/^حساب /})
 async function toPrevMonth(){await click('الشهر السابق');await page.locator('.month-switcher b').filter({hasNotText:'—'}).waitFor();}
 try{
  await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await click('فتح مساحة العمل');
- await click('فتح الموارد البشرية');await page.locator('.department-hero').waitFor();
+ await click('فتح الموارد البشرية');await page.locator('.work-desk').waitFor();
 
  // Pay and fingerprint profile: link PIN 101 and a salary with exact decimals.
  await click('الرواتب والبصمات');await click('تعديل موظف حضور أول');await field('رقم البصمة','101');await field('الراتب الشهري','600.0001');

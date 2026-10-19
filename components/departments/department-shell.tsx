@@ -21,7 +21,7 @@ const BatchPrint=lazy(()=>import('./batch-print'));
 const MailPage=lazy(()=>import('../mail/mail-page'));
 import BrandLogo from '../brand-logo';
 // Sections laid out to fit one screen, their lists scrolling inside their panels.
-const DESKS:Department[]=['secretary','collections'];
+const DESKS:Department[]=['secretary','collections','hr'];
 export default function DepartmentWorkspace({workspace,access}:{workspace:Department;access:Permissions}) {
  const [cases,setCases]=useState<CaseSummary[]>([]),[context,setContext]=useState<OfficeContext|null>(null),[work,setWork]=useState<WorkItem[]>([]);
  const [version,setVersion]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selected,setSelected]=useState<CaseSummary|null>(null);
