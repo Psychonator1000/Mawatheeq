@@ -77,14 +77,14 @@ try{
  {const d=page.getByRole('dialog',{name:'ربط بريد'});
   await d.getByLabel('لمن هذا البريد',{exact:true}).selectOption({label:'بريد أمل'});await d.getByLabel('مزود البريد',{exact:true}).selectOption('custom');
   await d.getByLabel('عنوان البريد',{exact:true}).fill('amal@example.test');await d.getByLabel('الاسم الظاهر للمستلم',{exact:true}).fill('مكتب مواثيق — السكرتارية');
-  await d.getByLabel('كلمة المرور / كلمة مرور التطبيقات',{exact:true}).fill('wrong-pass');
+  await d.getByLabel('كلمة مرور البريد',{exact:true}).fill('wrong-pass');
   await d.getByLabel('خادم الوارد (IMAP)',{exact:true}).fill('127.0.0.1');await d.getByLabel('منفذ الوارد',{exact:true}).fill(String(fake.IMAP_PORT));
   await d.getByLabel('خادم الإرسال (SMTP)، اتركه فارغاً للعرض فقط',{exact:true}).fill('127.0.0.1');await d.getByLabel('منفذ الإرسال',{exact:true}).fill('587');
   await d.getByText('الإرسال من الخادم يعمل بالمنفذ 465 (SSL) فقط').waitFor();
   await d.getByLabel('منفذ الإرسال',{exact:true}).fill(String(fake.SMTP_PORT));
   assert.equal(await d.getByLabel(/يظهر مقروءاً في البريد الأصلي/).isChecked(),true,'Read in the app shows as read on the server by default');
   await d.getByRole('button',{name:'اختبار الاتصال',exact:true}).click();await page.getByText(/كلمة مرور التطبيقات/).first().waitFor();
-  await d.getByLabel('كلمة المرور / كلمة مرور التطبيقات',{exact:true}).fill('synthetic-app-pass');
+  await d.getByLabel('كلمة مرور البريد',{exact:true}).fill('synthetic-app-pass');
   await d.getByRole('button',{name:'اختبار الاتصال',exact:true}).click();await d.getByText('نجح الاتصال · مجلد الصادر: Sent Items').waitFor();
   await screen(page,'mail-connect');await d.getByRole('button',{name:'حفظ',exact:true}).click();await d.waitFor({state:'detached'});}
  await page.getByRole('dialog',{name:'إعدادات البريد'}).locator('.mail-boxes').getByText('amal@example.test').waitFor();
