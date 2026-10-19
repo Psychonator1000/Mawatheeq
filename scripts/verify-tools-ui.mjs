@@ -412,20 +412,21 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
   row({0:'ا/ محامٍ تجريبي',8:'للاطلاع',21:dmy(date),29:'91'+seq,43:'مطالبة من الرول',61:'مدعى',68:client}),row({0:'6',8:outcome,21:next?dmy(next):'',31:'متداول',46:'تجارى',59:'2026/9'+seq,68:opp})];
  const sheet=[row({34:'رول الجلســـات'}),...block('1','7002','شركة أدوات تجريبية','خصم الأدوات 2',before,'للحكم',soon),...block('2','880000001','موكل من الرول','خصم من الرول',soon,'','')];
  const w=X.utils.book_new();X.utils.book_append_sheet(w,X.utils.aoa_to_sheet(sheet),'Sheet');fs.writeFileSync(artifacts+'/roll.xls',X.write(w,{type:'buffer',bookType:'xls'}));
- await page.evaluate(()=>{location.hash='work'});await page.getByRole('heading',{name:'المهام والجلسات',level:1}).waitFor();
- await page.getByRole('button',{name:'استيراد رول الجلسات'}).click();const dlg=page.getByRole('dialog',{name:'استيراد رول الجلسات'});
+ await page.evaluate(()=>{location.hash='cases'});await page.getByRole('button',{name:'استيراد Excel',exact:true}).waitFor();
+ await page.getByRole('button',{name:'استيراد الجلسات من الرول'}).click();const dlg=page.getByRole('dialog',{name:'استيراد الجلسات من الرول'});
  await dlg.getByLabel('ملف رول الجلسات').setInputFiles(artifacts+'/roll.xls');await dlg.getByText(/2 جلسة لـ 2 قضية/).waitFor();
  const stat=async t=>Number(await dlg.locator('.roll-stats div').filter({hasText:t}).locator('dd').textContent());
  assert.deepEqual([await stat('قضايا موجودة'),await stat('قضايا جديدة'),await stat('جلسات منعقدة'),await stat('جلسات قادمة')],[1,1,1,2],'The preview counts what the roll adds');
  assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).length,3,'The preview writes nothing');
  await page.screenshot({path:artifacts+'/roll-import.png'});
  await dlg.getByRole('button',{name:'تطبيق الاستيراد'}).click();await dlg.getByRole('button',{name:'تم'}).waitFor();await dlg.getByRole('button',{name:'تم'}).click();
+ await page.evaluate(()=>{location.hash='work'});await page.getByRole('heading',{name:'المهام والجلسات',level:1}).waitFor();
  const after=await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}']);const added=after.find(c=>c.payload.autoNumber==='880000001').payload;
  assert.deepEqual([added.code,added.client,added.opponent,added.caseNumber,added.lawyer],['912','موكل من الرول','خصم من الرول','2026/92','ا/ محامٍ تجريبي'],'A new ongoing case is added from the roll');
  const tool2=after.find(c=>c.id==='tools-case-2').payload;assert.ok(tool2.procedures.some(p=>p.date===before&&p.decision==='حجز للحكم'&&p.followup===soon),'The held session is in the case\'s session log');
  await page.locator('.office-table').getByText('النطق بالحكم · أول درجة · 7002').first().waitFor();
  // The same roll again adds nothing.
- await page.getByRole('button',{name:'استيراد رول الجلسات'}).click();await dlg.getByLabel('ملف رول الجلسات').setInputFiles(artifacts+'/roll.xls');await dlg.getByText(/موجود من قبل ولن يتكرر/).waitFor();
+ await page.evaluate(()=>{location.hash='cases'});await page.getByRole('button',{name:'استيراد الجلسات من الرول'}).click();await dlg.getByLabel('ملف رول الجلسات').setInputFiles(artifacts+'/roll.xls');await dlg.getByText(/موجود من قبل ولن يتكرر/).waitFor();
  assert.equal(await dlg.getByRole('button',{name:'تطبيق الاستيراد'}).isDisabled(),true,'Nothing new to apply');await page.keyboard.press('Escape');}
 // The lawyer is picked from the office's lawyers, or typed when new; the case list offers it afterwards.
 await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-0/).click();
