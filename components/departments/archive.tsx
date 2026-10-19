@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Archive,Plus,Printer,ScanLine,MapPin,ArrowLeftRight,History,FileText,ClipboardCheck,Undo2,Inbox,BookCopy,type LucideIcon} from 'lucide-react';
+import {Plus,Printer,ScanLine,MapPin,ArrowLeftRight,History,FileText,ClipboardCheck,Undo2,Inbox,BookCopy,type LucideIcon} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
 import {type CaseSummary,type DepartmentRecord,newDepartmentRecord} from '@/lib/departments';
@@ -20,6 +20,7 @@ import CopyChip from '../copy-chip';
 import Needs from '../needs';
 
 type View='files'|'custody'|'requests'|'locations'|'log';
+const PER_PAGE=25;
 type Person={id:string;username:string;displayName:string};
 type Preset={type:MovementType;holder:string;holderId:string;purpose:string;dueDate:string;requestId:string};
 const stateTone:Record<string,string>={in:'green',staff:'amber',court:'wine',client:''};
@@ -47,7 +48,7 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
   &&(!place||cu(f).locationId===place)&&(!type||f.payload.type===type)
   &&normalizeSearch([f.payload.number,f.payload.title,f.payload.type,caseRef(f),parties(f),cu(f).holder,f.payload.notes].join(' ')).includes(normalizeSearch(search)))
   .sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true}));
- const pages=Math.max(1,Math.ceil(filtered.length/15)),current=Math.min(page,pages);
+ const pages=Math.max(1,Math.ceil(filtered.length/PER_PAGE)),current=Math.min(page,pages);
  const {nav,step,enter,openItem}=useListNav(filtered,editing,setEditingRaw);
  const setEditing=(f:ArchiveFile|null,p:Preset|null=null)=>{setPreset(p);openItem(f)};
  const out=active.filter(f=>cu(f).state!=='in'),overdue=out.filter(f=>isOverdue(cu(f),today)),pending=requests.filter(r=>!r.archived&&(r.payload.status==='pending'||r.payload.status==='ready'));
@@ -65,40 +66,49 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
     taken.add(number.toLowerCase());
     await save({...newDepartmentRecord('archive','file',{...blankFile(number),title:[clientName(c),c.opponent].filter(Boolean).join(' ضد ').slice(0,300)||'ملف قضية '+c.code,intakeDate:'',notes:'أُدرج لكل قضية في السجل'}),caseId:c.id});made++;setMaking(made+1)}
    toast.success(`أُنشئ ${made} ملف ورقي`)}catch(e){toast.error(`أُنشئ ${made} ملف ثم توقف: ${(e as Error).message}`)}finally{setMaking(0);reload()}}
- return <><section className="department-hero"><div><div className="eyebrow">الملفات الورقية</div><h1>الأرشيف</h1><p>أين كل ملف الآن، ومع من، ومتى يعود. كل تسليم واستلام وجرد مسجل باسم من قام به.</p></div><Archive size={64}/></section>
- <div className="archive-scan"><ScanLine size={20} aria-hidden/><label className="field"><span>مسح الباركود أو كتابة رقم الأرشيف</span><input dir="ltr" value={scan} onChange={e=>setScan(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();openScan()}}} placeholder="ARC-00001"/></label><button className="btn" onClick={openScan}>فتح الملف</button></div>
- <div className="department-metrics collection-metrics">
-  <button type="button" onClick={()=>{setView('files');setState('in');setPage(1)}}><span>في الأرشيف</span><b>{active.filter(f=>cu(f).state==='in').length}</b></button>
-  <button type="button" onClick={()=>setView('custody')}><span>خارج الأرشيف</span><b>{out.length}</b></button>
-  <button type="button" onClick={()=>{setView('files');setState('overdue');setPage(1)}}><span>تأخر إعادتها</span><b className={overdue.length?'warn':''}>{overdue.length}</b></button>
-  <button type="button" onClick={()=>setView('requests')}><span>طلبات مفتوحة</span><b>{pending.length}</b></button>
-  <button type="button" onClick={()=>{setView('files');setState('retention');setPage(1)}}><span>انتهت مدة حفظها</span><b>{active.filter(f=>retentionDue(f,today)).length}</b></button>
-  <div><span>المواقع</span><b>{locations.filter(l=>!l.archived).length}</b></div>
- </div>
- <div className="department-tabs view-switch" role="group" aria-label="أقسام الأرشيف">{views.map(([id,l,Icon,n])=><button key={id} className={'btn '+(view===id?'primary':'')} aria-pressed={view===id} onClick={()=>setView(id)}><Icon size={15}/> {l}{n?` (${n})`:''}</button>)}</div>
+ // One screen: the scanner, what is late and what is asked for beside the files.
+ return <><div className="work-desk-grid">
+ <div className="work-desk-aside"><section className="panel sec-agenda" aria-label="اليوم في الأرشيف">
+  <div className="sec-agenda-head"><div><h2>اليوم في الأرشيف</h2><small>{formatDate(today)} · {active.length} ملف</small></div></div>
+  <div className="archive-scan desk-scan"><ScanLine size={18} aria-hidden/><label className="field"><span>مسح الباركود أو كتابة رقم الأرشيف</span><input dir="ltr" value={scan} onChange={e=>setScan(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();openScan()}}} placeholder="ARC-00001"/></label><button className="btn" onClick={openScan}>فتح الملف</button></div>
+  <div className="desk-stats">
+   <button type="button" onClick={()=>{setView('files');setState('in');setPage(1)}}><span>في الأرشيف</span><b>{active.filter(f=>cu(f).state==='in').length}</b></button>
+   <button type="button" onClick={()=>setView('custody')}><span>خارج الأرشيف</span><b>{out.length}</b></button>
+   <button type="button" onClick={()=>{setView('files');setState('retention');setPage(1)}}><span>انتهت مدة حفظها</span><b>{active.filter(f=>retentionDue(f,today)).length}</b></button>
+   <div><span>المواقع</span><b>{locations.filter(l=>!l.archived).length}</b></div>
+  </div>
+  <div className="sec-agenda-list">
+   <h3 className="desk-sub">تأخرت إعادتها ({overdue.length})</h3>{overdue.length?overdue.map(f=>{const c=cu(f);return <button key={f.id} className="agenda-item late" onClick={()=>setEditing(f)}><span className="agenda-time" dir="ltr">{f.payload.number}</span><span className="agenda-body"><b>{f.payload.title}</b><small>{c.holder} · متأخر {daysBetween(c.dueDate,today)} يوم</small></span></button>}):<p className="muted sec-empty">كل الملفات في موعدها.</p>}
+   <h3 className="desk-sub">طلبات مفتوحة ({pending.length})</h3>{pending.length?pending.map(r=>{const f=files.find(x=>x.id===r.subjectId);return <button key={r.id} className="agenda-item" onClick={()=>setRequest(r)}><span className="agenda-time">{r.payload.neededBy?formatDate(r.payload.neededBy):'دون موعد'}</span><span className="agenda-body"><b>{r.payload.requester||'طلب'}</b><small>{f?.payload.number} · {r.payload.purpose||f?.payload.title}</small></span></button>}):<p className="muted sec-empty">لا توجد طلبات مفتوحة.</p>}
+  </div>
+ </section></div>
+ <section className="panel work-desk">
+ <div className="work-desk-head"><h2>الأرشيف</h2><div className="work-chips" role="group" aria-label="أقسام الأرشيف">{views.map(([id,l,Icon,n])=><button key={id} className={'work-chip'+(view===id?' on':'')} aria-pressed={view===id} onClick={()=>setView(id)}><Icon size={14}/> {l}{n?<b>{n}</b>:null}</button>)}</div>
+  {view==='files'&&<div className="actions">{access.canExport&&<button className="btn" onClick={()=>void exportCsv('archive','Mawatheeq-archive',[['رقم الأرشيف','العنوان','النوع','المجلد','القضية','الأطراف','الحالة','الموقع','المستلم','موعد الإعادة','آخر جرد'],...filtered.map(f=>{const c=cu(f);return [f.payload.number,f.payload.title,f.payload.type,f.payload.volume,caseRef(f),parties(f),CUSTODY_STATES[c.state],locationLabel(locOf(c.locationId)),c.holder,c.dueDate,c.lastAudit]})]).catch(e=>toast.error(e.message))}>تصدير القائمة</button>}{access.canEdit&&<button className="btn primary" onClick={newFile}><Plus size={17}/> ملف ورقي جديد</button>}</div>}</div>
  <StatusMessage loading={loading} error={error}/>
  {!loading&&!error&&view==='files'&&access.canEdit&&all&&missing.length>0&&<div className="notice archive-missing" role="status"><span><b>{missing.length}</b> قضية في السجل بلا ملف ورقي في الأرشيف.</span><button className="btn primary" disabled={!!making} onClick={()=>void createMissing()}>{making?`جارٍ الإنشاء ${making-1} من ${missing.length}…`:'إنشاء ملفاتها'}</button></div>}
- {!loading&&!error&&view==='files'&&<section className="panel">
+ {!loading&&!error&&view==='files'&&<>
   <div className="status-chips" role="group" aria-label="مكان الملف">{(['',...Object.keys(CUSTODY_STATES)] as string[]).map(s=><button type="button" key={s||'all'} className={'chip'+(state===s?' on':'')} onClick={()=>{setState(s);setPage(1)}}>{s?CUSTODY_STATES[s as keyof typeof CUSTODY_STATES]:'كل الملفات'} <b>{active.filter(f=>!s||cu(f).state===s).length}</b></button>)}{overdue.length>0&&<button type="button" className={'chip warn'+(state==='overdue'?' on':'')} onClick={()=>{setState('overdue');setPage(1)}}>متأخرة <b>{overdue.length}</b></button>}</div>
-  <div className="department-toolbar"><Field label="بحث الأرشيف" value={search} onChange={v=>{setSearch(v);setPage(1)}} placeholder="رقم الأرشيف، العنوان، الكود، الأطراف أو المستلم"/>
+  <div className="work-desk-filters"><Field label="بحث الأرشيف" value={search} onChange={v=>{setSearch(v);setPage(1)}} placeholder="رقم الأرشيف، العنوان، الكود، الأطراف أو المستلم"/>
    <OfficeSelect label="الموقع" value={place} onChange={v=>{setPlace(v);setPage(1)}} options={[['','كل المواقع'],...locations.map(l=>[l.id,locationLabel(l)] as [string,string])]}/>
    <OfficeSelect label="نوع الملف" value={type} onChange={v=>{setType(v);setPage(1)}} options={[['','كل الأنواع'],...[...new Set([...FILE_TYPES,...files.map(f=>f.payload.type)])].map(t=>[t,t] as [string,string])]}/>
    <OfficeSelect label="عرض" value={show} onChange={v=>{setShow(v);setPage(1)}} options={[['active','الملفات الفعالة'],['archived','المغلقة'],['all','الكل']]}/>
-   <div className="actions">{access.canExport&&<button className="btn" onClick={()=>void exportCsv('archive','Mawatheeq-archive',[['رقم الأرشيف','العنوان','النوع','المجلد','القضية','الأطراف','الحالة','الموقع','المستلم','موعد الإعادة','آخر جرد'],...filtered.map(f=>{const c=cu(f);return [f.payload.number,f.payload.title,f.payload.type,f.payload.volume,caseRef(f),parties(f),CUSTODY_STATES[c.state],locationLabel(locOf(c.locationId)),c.holder,c.dueDate,c.lastAudit]})]).catch(e=>toast.error(e.message))}>تصدير القائمة</button>}{access.canEdit&&<button className="btn primary" onClick={newFile}><Plus size={17}/> ملف ورقي جديد</button>}</div></div>
+   </div>
   {picked.size>0&&<div className="pick-bar" role="status"><b>تم تحديد {picked.size} ملف</b>{access.canExport&&<button className="btn primary" onClick={()=>printLabels(files.filter(f=>picked.has(f.id)))}><Printer size={15}/> طباعة الملصقات</button>}<button className="btn" onClick={()=>setPicked(new Set())}>إلغاء التحديد</button></div>}
-  {!filtered.length?<Empty text={files.length?'جرّب تعديل البحث أو عوامل التصفية.':'سجّل الملفات الورقية الموجودة في المكتب، ثم حدد موقع كل ملف.'}/>:<div className="table-wrap"><table className="office-table archive-table"><thead><tr><th><input type="checkbox" aria-label="تحديد كل الملفات المعروضة" checked={filtered.slice((current-1)*15,current*15).every(f=>picked.has(f.id))} onChange={e=>setPicked(old=>{const n=new Set(old);for(const f of filtered.slice((current-1)*15,current*15)){if(e.target.checked)n.add(f.id);else n.delete(f.id)}return n})}/></th><th>رقم الأرشيف</th><th>الملف</th><th>القضية</th><th>مكانه الآن</th><th>آخر جرد</th></tr></thead>
-   <tbody>{filtered.slice((current-1)*15,current*15).map(f=>{const c=cu(f),late=isOverdue(c,today);return <tr key={f.id} className={'clickable'+(late?' late':'')} onClick={e=>{if(!(e.target as HTMLElement).closest('input,button'))setEditing(f)}}>
+  <div className="work-desk-body">{!filtered.length?<Empty text={files.length?'جرّب تعديل البحث أو عوامل التصفية.':'سجّل الملفات الورقية الموجودة في المكتب، ثم حدد موقع كل ملف.'}/>:<table className="office-table archive-table"><thead><tr><th><input type="checkbox" aria-label="تحديد كل الملفات المعروضة" checked={filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).every(f=>picked.has(f.id))} onChange={e=>setPicked(old=>{const n=new Set(old);for(const f of filtered.slice((current-1)*PER_PAGE,current*PER_PAGE)){if(e.target.checked)n.add(f.id);else n.delete(f.id)}return n})}/></th><th>رقم الأرشيف</th><th>الملف</th><th>القضية</th><th>مكانه الآن</th><th>آخر جرد</th></tr></thead>
+   <tbody>{filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).map(f=>{const c=cu(f),late=isOverdue(c,today);return <tr key={f.id} className={'clickable'+(late?' late':'')} onClick={e=>{if(!(e.target as HTMLElement).closest('input,button'))setEditing(f)}}>
     <td><input type="checkbox" aria-label={'تحديد '+f.payload.number} checked={picked.has(f.id)} onChange={e=>setPicked(old=>{const n=new Set(old);if(e.target.checked)n.add(f.id);else n.delete(f.id);return n})}/></td>
     <td className="nowrap"><b dir="ltr">{f.payload.number}</b>{f.archived&&<small>مغلق</small>}</td>
     <td><b>{f.payload.title}</b><small>{[f.payload.type,f.payload.volume&&'مجلد '+f.payload.volume,f.payload.originals==='yes'&&'أصول',f.payload.confidential==='yes'&&'سري'].filter(Boolean).join(' · ')}</small></td>
     <td><span className="nowrap">{caseRef(f)}</span><small>{parties(f)}</small></td>
     <td><span className={'tag '+stateTone[c.state]}>{CUSTODY_STATES[c.state]}</span><small>{c.state==='in'?locationLabel(locOf(c.locationId))||'بلا موقع محدد':[c.holder,c.dueDate&&(late?`متأخر ${daysBetween(c.dueDate,today)} يوم`:'حتى '+formatDate(c.dueDate))].filter(Boolean).join(' · ')}</small></td>
-    <td className="nowrap">{c.lastAudit?formatDate(c.lastAudit):<span className="muted">—</span>}</td></tr>})}</tbody></table></div>}
-  <PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></section>}
- {!loading&&!error&&view==='custody'&&<CustodyList files={out} custody={custody} today={today} caseRef={caseRef} canPrint={access.canExport} onOpen={f=>setEditing(f)}/>}
- {!loading&&!error&&view==='requests'&&<RequestsList onAdd={access.canEdit?()=>setRequest(newDepartmentRecord('archive','request',{requester:'',requesterId:'',neededBy:'',purpose:'',status:'pending',notes:'',decisionNote:''}) as unknown as ArchiveRequest):undefined} requests={requests} files={files} custody={custody} canEdit={access.canEdit} onOpen={setRequest} onDeliver={r=>{const f=files.find(x=>x.id===r.subjectId);if(f)setEditing(f,{type:'checkout',holder:r.payload.requester,holderId:r.payload.requesterId,purpose:r.payload.purpose,dueDate:'',requestId:r.id})}}/>}
- {!loading&&!error&&view==='locations'&&<LocationsList onAdd={access.canEdit&&all?()=>setLocation(newDepartmentRecord('archive','location',{...blankLocation}) as unknown as ArchiveLocation):undefined} locations={locations} files={active} custody={custody} canEdit={access.canEdit&&all} canPrint={access.canExport} caseRef={caseRef} onEdit={setLocation} onStocktake={setStocktake}/>}
- {!loading&&!error&&view==='log'&&<MovementLog movements={movements} files={files} locOf={locOf} canPrint={access.canExport} onOpen={f=>setEditing(f)}/>}
+    <td className="nowrap">{c.lastAudit?formatDate(c.lastAudit):<span className="muted">—</span>}</td></tr>})}</tbody></table>}
+  <PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></div></>}
+ {!loading&&!error&&view==='custody'&&<div className="work-desk-body"><CustodyList files={out} custody={custody} today={today} caseRef={caseRef} canPrint={access.canExport} onOpen={f=>setEditing(f)}/></div>}
+ {!loading&&!error&&view==='requests'&&<div className="work-desk-body"><RequestsList onAdd={access.canEdit?()=>setRequest(newDepartmentRecord('archive','request',{requester:'',requesterId:'',neededBy:'',purpose:'',status:'pending',notes:'',decisionNote:''}) as unknown as ArchiveRequest):undefined} requests={requests} files={files} custody={custody} canEdit={access.canEdit} onOpen={setRequest} onDeliver={r=>{const f=files.find(x=>x.id===r.subjectId);if(f)setEditing(f,{type:'checkout',holder:r.payload.requester,holderId:r.payload.requesterId,purpose:r.payload.purpose,dueDate:'',requestId:r.id})}}/></div>}
+ {!loading&&!error&&view==='locations'&&<div className="work-desk-body"><LocationsList onAdd={access.canEdit&&all?()=>setLocation(newDepartmentRecord('archive','location',{...blankLocation}) as unknown as ArchiveLocation):undefined} locations={locations} files={active} custody={custody} canEdit={access.canEdit&&all} canPrint={access.canExport} caseRef={caseRef} onEdit={setLocation} onStocktake={setStocktake}/></div>}
+ {!loading&&!error&&view==='log'&&<div className="work-desk-body"><MovementLog movements={movements} files={files} locOf={locOf} canPrint={access.canExport} onOpen={f=>setEditing(f)}/></div>}
+ </section></div>
  {editing&&<FileEditor key={editing.id+(preset?.requestId||'')} nav={nav} onNavigate={step} enter={enter} initial={editing} preset={preset} cases={cases} locations={locations} movements={fileMovements(editing.id,movements)} requests={requests.filter(r=>r.subjectId===editing.id)} people={people} access={access}
   label={label} onClose={()=>setEditing(null)} onChanged={reload} onRequest={f=>setRequest({...newDepartmentRecord('archive','request',{requester:'',requesterId:'',neededBy:'',purpose:'',status:'pending',notes:'',decisionNote:''}) as unknown as ArchiveRequest,caseId:f.caseId,subjectId:f.id})}/>}
  {location&&<LocationEditor initial={location} onClose={()=>setLocation(null)} onSaved={()=>{setLocation(null);reload()}}/>}

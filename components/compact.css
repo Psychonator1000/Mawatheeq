@@ -310,3 +310,7 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .person-line .person-avatar{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;font-size:14px;margin:0}
 .sec-agenda-list .desk-sub{margin:6px 0 0}.sec-agenda-list .sec-empty{padding:10px 6px}.desk-note{margin:10px 0 4px;font-size:12px}
 .work-chip:not(:has(b)){padding:4px 12px}
+.desk-stats>button{display:grid;gap:1px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;min-width:0;background:none;font:inherit;color:inherit;text-align:start;cursor:pointer}.desk-stats>button:hover{border-color:var(--dept)}
+.desk-scan{display:flex;align-items:flex-end;gap:6px;padding:0;margin:0;border:0;background:none}.desk-scan>svg{display:none}.desk-scan .field{flex:1;min-width:0}.desk-scan input{min-height:38px;height:38px}.desk-scan .btn{min-height:38px;padding:6px 12px}
+.sec-agenda-list .agenda-item.late{border-inline-start-color:#a32e38}.work-desk .archive-missing{margin:0;padding:8px 12px}.work-desk .archive-missing .btn{min-height:36px}
+.sec-agenda .archive-scan.desk-scan{border:0;padding:0;background:none;box-shadow:none;margin:0}.sec-agenda .desk-scan .field>span{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
