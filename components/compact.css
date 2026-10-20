@@ -351,3 +351,11 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .list-desk .case-categories{margin-bottom:12px;gap:10px}.list-desk .case-categories>*{padding-top:8px;padding-bottom:8px;min-height:0}.list-desk .case-filter-summary{margin-top:0;min-height:0}.list-desk .case-filters{padding-top:8px;padding-bottom:8px}
 /* The workspace chooser on one screen: a smaller header and four cards to a row. */
 @media(min-width:1001px){:root .workspace-chooser{padding:28px 36px 40px;min-height:0}:root .workspace-chooser header{margin-bottom:20px}:root .workspace-chooser header .brand-logo.full{zoom:.7}:root .workspace-chooser h1{font-size:32px}:root .workspace-chooser header p{margin-top:4px}:root .workspace-options{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}:root .workspace-option{min-height:0;padding:18px 20px}:root .workspace-option-top{margin-bottom:12px}:root .workspace-option h2{font-size:20px}:root .workspace-option p{margin:6px 0 14px;line-height:1.7}:root .workspace-footnote{margin-top:16px}}
+
+/* Overview charts: the monthly chart takes the room left, the months sit in one row and the results stay beside their ring. */
+@media(min-width:1001px){.ov-charts{overflow:hidden}
+.ov-charts>.panel:first-child{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}.ov-charts>.panel:first-child>.panel-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.ov-charts>.panel{padding:14px 16px}.ov-charts .panel-head{margin-bottom:6px}.ov-charts .panel-note{font-size:12px}
+.ov-charts .chart-box.monthly-chart{flex:1 1 auto;min-height:100px;height:auto}
+.ov-charts .month-links{grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;margin-top:8px}.ov-charts .month-link{padding:3px 0;gap:0;font-size:10px}.ov-charts .month-link b{font-size:12px}
+.ov-charts .doughnut-area{padding:4px 6px;gap:10px}.ov-charts .doughnut{width:104px;height:104px}.ov-charts .doughnut:after{inset:11px}}
