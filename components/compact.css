@@ -435,3 +435,22 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
  .roll-dialog .desk-bare .table-wrap [data-slot=table-container]{overflow:visible}
  .roll-dialog>.desk-bare>.table-wrap thead th{position:sticky;top:0;z-index:2;background:var(--card)}
 }
+/* Office team: one compact line of account actions per person, and only the list scrolls. */
+.office-staff .panel-head{padding-bottom:10px}
+.office-staff .panel-body>.subtitle{margin:0 0 8px;font-size:12.5px}
+.office-staff .staff-search{margin-bottom:10px;flex:none}
+.office-staff .office-table td{padding-top:7px;padding-bottom:7px;vertical-align:middle}
+.office-staff .office-table td small{display:block;font-size:11.5px;line-height:1.5}
+.office-staff .office-table td .role-chip{margin-inline-end:6px}
+.office-staff .office-table td .actions{gap:4px;flex-wrap:wrap;justify-content:flex-start}
+.office-staff .office-table td:last-child{max-width:none}
+@media(min-width:1600px){.office-staff .office-table td .actions{flex-wrap:nowrap}.office-staff .office-table :is(th,td):last-child{width:1%;white-space:nowrap}}
+.office-staff .office-table td .actions .btn{min-height:28px;padding:3px 9px;font-size:12px;border-radius:8px;white-space:nowrap}
+@media(min-width:1001px){
+ .department-shell:has(.desk-page)>.department-content.desk-page>.office-staff{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin:0}
+ .department-content.desk-page>.office-staff>*{flex-shrink:0}
+ .department-content.desk-page>.office-staff>.panel-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+ .department-content.desk-page>.office-staff>.panel-body>*{flex-shrink:0}
+ .department-content.desk-page>.office-staff>.panel-body>.table-wrap{flex:1 1 auto;min-height:140px;overflow:auto;overscroll-behavior:contain}
+ .department-content.desk-page>.office-staff .table-wrap thead th{position:sticky;top:0;z-index:2;background:var(--card)}
+}
