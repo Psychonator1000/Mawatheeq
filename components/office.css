@@ -126,7 +126,7 @@
 @media(max-width:640px){.case-facts{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 10px;padding:6px 10px}.case-facts dd{font-size:12px}}
 /* Case window: opens centred, growing out of the row it was opened from. A fixed side column holds who, against
    whom, which case, its facts, progress and quick actions; the tabs and fields scroll beside it. */
-.detail-sheet.case-window{inset:2vh max(1.5vw,calc((100vw - 1640px)/2))!important;width:auto!important;max-width:none!important;height:auto!important;padding:0;gap:0;display:grid;grid-template-columns:minmax(300px,370px) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;overflow:hidden;border:1px solid var(--border);border-radius:22px;box-shadow:0 30px 80px -30px #0008,0 0 0 1px #ffffff10;animation:case-zoom .5s cubic-bezier(.2,.9,.25,1) both!important}
+.detail-sheet.case-window{inset:2vh max(1.5vw,calc((100vw - 1800px)/2))!important;width:auto!important;max-width:none!important;height:auto!important;padding:0;gap:0;display:grid;grid-template-columns:minmax(300px,370px) minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;overflow:hidden;border:1px solid var(--border);border-radius:22px;box-shadow:0 30px 80px -30px #0008,0 0 0 1px #ffffff10;animation:case-zoom .5s cubic-bezier(.2,.9,.25,1) both!important}
 .case-window[data-enter=next]{animation:case-step-next .38s cubic-bezier(.2,.9,.25,1) both!important}
 .case-window[data-enter=prev]{animation:case-step-prev .38s cubic-bezier(.2,.9,.25,1) both!important}
 @keyframes case-zoom{0%{opacity:0;translate:var(--dx,0) var(--dy,0);scale:.18;filter:blur(8px)}55%{opacity:1;filter:none}100%{translate:none;scale:none}}

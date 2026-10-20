@@ -94,9 +94,9 @@ function Roll(p:Props){
  return <Panel title="مواعيد الجلسات (رول)" note="الجلسات القادمة حسب آخر ترحيل لكل قضية، مجمعة باليوم ثم المحكمة."
   actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,'رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to)}`,['التاريخ','الساعة','المحكمة','القضية','الأطراف','آخر قرار','المطلوب','المحامي'],rows.map(r=>[formatDate(r.date),r.time,r.court,ref(r.c),parties(r.c),String(r.last?.decision||''),r.required,String(r.c.lawyer||'')]),p.printedBy,[8,5,12,8,22,14,15,10])}><Printer size={15}/> طباعة الرول</button>}>
   <div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/>{law.select}<span className="tag">{rows.length} جلسة</span></div>
-  {!rows.length?<Empty title="لا جلسات في هذه الفترة"/>:days.map(d=><div key={d} className="desk-day"><h3 className="desk-sub">{formatDate(d)} <small>{rows.filter(r=>r.date===d).length} جلسة</small></h3>
-   <div className="table-wrap"><table className="office-table"><thead><tr><th>الساعة</th><th>المحكمة</th><th>القضية</th><th>آخر قرار</th><th>المطلوب</th><th>المحامي</th></tr></thead><tbody>{rows.filter(r=>r.date===d).map(r=><tr key={r.c.id}><td className="nowrap">{r.time||'—'}</td><td>{r.court||'—'}{r.venue!=='المحكمة'&&<small>{r.venue}</small>}</td><td><CaseCell c={r.c} onOpen={p.onOpen}/></td><td>{String(r.last?.decision||'—')}</td><td>{r.required}</td><td>{String(r.c.lawyer||'—')}</td></tr>)}</tbody></table></div></div>)}
- </Panel>;
+  {!rows.length?<Empty title="لا جلسات في هذه الفترة"/>:<div className="desk-days">{days.map(d=><div key={d} className="desk-day"><h3 className="desk-sub">{formatDate(d)} <small>{rows.filter(r=>r.date===d).length} جلسة</small></h3>
+   <div className="table-wrap"><table className="office-table"><thead><tr><th>الساعة</th><th>المحكمة</th><th>القضية</th><th>آخر قرار</th><th>المطلوب</th><th>المحامي</th></tr></thead><tbody>{rows.filter(r=>r.date===d).map(r=><tr key={r.c.id}><td className="nowrap">{r.time||'—'}</td><td>{r.court||'—'}{r.venue!=='المحكمة'&&<small>{r.venue}</small>}</td><td><CaseCell c={r.c} onOpen={p.onOpen}/></td><td>{String(r.last?.decision||'—')}</td><td>{r.required}</td><td>{String(r.c.lawyer||'—')}</td></tr>)}</tbody></table></div></div>)}</div>}
+</Panel>;
 }
 function Followup(p:Props){
  const today=todayISO(),[span,setSpan]=useState('14'),law=useLawyerFilter(p.records);

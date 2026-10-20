@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react';
 import {Plus,Upload,Trash2,Check,Unlink,ArrowRightLeft,Landmark,Banknote,FileSpreadsheet,Printer} from 'lucide-react';
 import {toast} from 'sonner';
 import {booksRequest} from '@/lib/local-auth';
+import {EXCEL_ACCEPT} from '@/lib/excel-files';
 import {money,toFils,PAYMENT_METHODS,CHEQUE_STATES,type BankStats,type Batch,type Cheque,type Statement,type StatementSummary,type Suggestions} from '@/lib/books';
 import {readStatement,type StatementParse} from '@/lib/bank-import';
 import {todayISO,formatDate} from '@/lib/domain';
@@ -92,7 +93,7 @@ function StatementImport({setup,journalId,onClose,onSaved}:{setup:BankSetup;jour
  const inSum=parsed?parsed.lines.filter(l=>!l.amount.startsWith('-')).reduce((t,l)=>t+toFils(l.amount),0):0,outSum=parsed?parsed.lines.filter(l=>l.amount.startsWith('-')).reduce((t,l)=>t+toFils(l.amount),0):0;
  const dates=parsed?parsed.lines.map(l=>l.date).sort():[];
  return <EditorDialog title="استيراد كشف من ملف" description={`كشف ${journal?.name||''} كما يُصدر من البنك (Excel أو CSV). يُعرف عمود التاريخ والمبلغ (أو السحب والإيداع) من عناوين الأعمدة، والحركات المستوردة من قبل لا تتكرر.`} busy={busy} onClose={onClose}>
-  <label className="field"><span>ملف الكشف</span><input type="file" accept=".xlsx,.xls,.csv" aria-label="ملف كشف البنك" onChange={e=>{const f=e.target.files?.[0];if(f)void choose(f)}}/></label>
+  <label className="field"><span>ملف الكشف</span><input type="file" accept={EXCEL_ACCEPT} aria-label="ملف كشف البنك" onChange={e=>{const f=e.target.files?.[0];if(f)void choose(f)}}/></label>
   {error&&<p className="notice" role="alert">{error}</p>}
   {parsed&&<><p><FileSpreadsheet size={15}/> <b>{file}</b>: {parsed.lines.length} حركة من {formatDate(dates[0])} إلى {formatDate(dates[dates.length-1])}{parsed.skipped?` (تُرك ${parsed.skipped} سطراً بلا تاريخ أو مبلغ)`:''}.</p>
    <p className="muted">الأعمدة: {Object.entries(parsed.columns).map(([k,v])=>`${({date:'التاريخ',label:'البيان',ref:'المرجع',partner:'الطرف',amount:'المبلغ',debit:'السحب',credit:'الإيداع',balance:'الرصيد'} as Record<string,string>)[k]}: «${v}»`).join('، ')}</p>

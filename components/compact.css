@@ -414,3 +414,24 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 }
 @media(min-width:1001px){.books-body .books-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.books-body .books-cols>*{margin:0}}
 details.books-reverse>summary{cursor:pointer;list-style:none}details.books-reverse>summary::-webkit-details-marker{display:none}details.books-reverse>summary h3{display:inline-flex;align-items:center;gap:6px;margin:0}details.books-reverse>summary::after{content:'▾';margin-inline-start:8px;color:var(--muted-foreground)}details.books-reverse[open]>summary{margin-bottom:10px}
+/* Clients: the cards scroll inside the panel; the search and page numbers stay put. */
+@media(min-width:1001px){.list-desk-panel>.client-grid{flex:1 1 auto;min-height:160px;overflow:auto;align-content:start;padding:4px 2px;overscroll-behavior:contain}}
+/* Case window: the tabs shrink to fit its width (icons go first) instead of running off the edge. */
+@media(min-width:901px){
+ .case-window>.case-main{container-type:inline-size}
+ @container (max-width:1400px){.case-window>.case-main .detail-tabs>[role=tab]{padding:7px 8px;gap:5px}.case-window>.case-main .detail-tabs>[role=tab] svg{display:none}}
+ @container (max-width:1120px){.case-window>.case-main .detail-tabs>[role=tab]{flex-shrink:1;min-width:0;padding:7px 5px;font-size:12.5px}}
+}
+/* Report windows (judgment roll, sessions roll, judgments issued, case statements): the case window's size, and only
+   the list or preview scrolls inside. */
+@media(min-width:901px){
+ :root .roll-dialog{inset:2vh max(1.5vw,calc((100vw - 1800px)/2))!important;width:auto!important;max-width:none!important;max-height:none!important;height:auto!important;translate:none!important;transform:none!important;display:flex!important;flex-direction:column;overflow:hidden!important;border-radius:22px}
+ :root .roll-dialog>*{flex-shrink:0}
+ .roll-dialog>.roll-preview{flex:1 1 auto;height:auto!important;min-height:180px}
+ .roll-dialog>.desk-bare{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+ .roll-dialog>.desk-bare>*{flex-shrink:0}
+ .roll-dialog>.desk-bare>:is(.table-wrap,.desk-days){flex:1 1 auto!important;min-height:120px;overflow:auto;overscroll-behavior:contain}
+ .roll-dialog .desk-days{display:flex;flex-direction:column;gap:14px}.roll-dialog .desk-days>*{flex-shrink:0;margin:0}
+ .roll-dialog .desk-bare .table-wrap [data-slot=table-container]{overflow:visible}
+ .roll-dialog>.desk-bare>.table-wrap thead th{position:sticky;top:0;z-index:2;background:var(--card)}
+}

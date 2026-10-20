@@ -40,5 +40,18 @@ try {
  assert.equal(lenient.length,2,'Lenient mode reads new rows and stops at the pasted helper table');
  assert.equal(lenient[1].date,'2026-10-05','Day-month-year with dashes');assert.equal(lenient[1]._row,3);
  assert.equal(lenient[0].executionProcedureDate,'');assert.match(lenient[0]._issues[0],/26\/3\/202/);
- console.log('Passed: legacy workbook helper exclusion, text IDs, single-digit dates, calendar dates across timezones, type spelling normalization, execution dates, invalid-date rejection, and lenient supplement reading (new rows, helper-table stop, per-row date issues).');
+ // Every kind of spreadsheet file opens the same way: all Excel formats, OpenDocument, and CSV/TSV in UTF-8 or Arabic Windows text.
+ const plain=[['الموكل','الرقم الآلي','تاريخ الحكم'],['موكل الصيغ','00077','27/9/2026']];
+ const book=()=>{const w=X.utils.book_new();X.utils.book_append_sheet(w,X.utils.aoa_to_sheet(plain),'الأحكام');return w};
+ for(const [type,name] of [['xlsx','a.xlsx'],['xlsm','a.xlsm'],['xlsb','a.xlsb'],['biff8','a.xls'],['xlml','a.xml'],['ods','a.ods'],['fods','a.fods']]){
+  const got=await readWorkbook(new File([X.write(book(),{type:'array',bookType:type})],name));
+  assert.deepEqual(got.map(r=>[r.client,r.autoNumber,r.date]),[['موكل الصيغ','00077','2026-09-27']],type);
+ }
+ const csv=plain.map(r=>r.join(',')).join('\r\n'),cp1256=new Map([...new TextDecoder('windows-1256').decode(Uint8Array.from({length:128},(_,i)=>128+i))].map((c,i)=>[c,128+i]));
+ for(const [bytes,name] of [[new TextEncoder().encode('﻿'+csv),'a.csv'],[new TextEncoder().encode(csv),'a.csv'],[Uint8Array.from([...csv].map(c=>c.charCodeAt(0)<128?c.charCodeAt(0):cp1256.get(c))),'a.csv'],[new TextEncoder().encode(csv.replace(/,/g,'\t')),'a.tsv']]){
+  const got=await readWorkbook(new File([bytes],name));
+  assert.deepEqual(got.map(r=>[r.client,r.autoNumber]),[['موكل الصيغ','00077']],name);
+ }
+ await assert.rejects(()=>readWorkbook(new File([],'empty.xlsx')),/فارغ/);
+ console.log('Passed: legacy workbook helper exclusion, text IDs, single-digit dates, calendar dates across timezones, type spelling normalization, execution dates, invalid-date rejection, every Excel, OpenDocument and CSV/TSV format, and lenient supplement reading (new rows, helper-table stop, per-row date issues).');
 } finally {fs.rmSync(temp,{recursive:true,force:true});}

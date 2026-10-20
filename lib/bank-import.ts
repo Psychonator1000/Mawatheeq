@@ -75,8 +75,8 @@ export function parseStatementRows(rows: unknown[][]): StatementParse {
 }
 
 export async function readStatement(file: File): Promise<StatementParse> {
-  const xlsx = await import('xlsx'); const X = (xlsx as unknown as { default?: typeof xlsx }).default || xlsx;
-  const book = X.read(await file.arrayBuffer(), { type: 'array', cellDates: false, raw: false });
+  const { openWorkbook } = await import('./excel-files');
+  const { X, book } = await openWorkbook(file, { cellDates: false, raw: false });
   const sheet = book.Sheets[book.SheetNames[0]];
   return parseStatementRows(X.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: false, defval: '' }));
 }

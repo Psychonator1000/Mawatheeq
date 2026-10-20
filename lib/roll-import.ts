@@ -3,6 +3,7 @@
 // previous one, this one (its date and purpose) and, once it was held, the next one (its date and what it was
 // adjourned for). The database import (local request «import_roll») matches cases by automatic number only.
 import { emptyCase, type CaseRecord, type Procedure } from './domain';
+import { openWorkbook } from './excel-files';
 import type { Level } from './case-stages';
 import { decisionOf } from './sessions';
 import { joinCircuit } from './circuits';
@@ -85,8 +86,7 @@ export function parseRollRows(raw: unknown[][]): RollParse {
 }
 
 export async function readRoll(file: File): Promise<RollParse> {
-  const xlsx = await import('xlsx'); const X = (xlsx as unknown as { default?: typeof xlsx }).default || xlsx;
-  const book = X.read(await file.arrayBuffer(), { type: 'array', cellDates: false });
+  const { X, book } = await openWorkbook(file, { cellDates: false });
   const sheet = book.Sheets[book.SheetNames[0]];
   return parseRollRows(X.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: false, defval: '' }));
 }

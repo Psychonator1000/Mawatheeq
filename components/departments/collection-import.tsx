@@ -2,6 +2,7 @@ import {useState} from 'react';
 import {Check,LoaderCircle,Upload} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
+import {EXCEL_ACCEPT,openWorkbook} from '@/lib/excel-files';
 import {type CollectionRecord,newDepartmentRecord} from '@/lib/departments';
 import {blankDocument,amountInWords} from '@/lib/document-fields';
 import {mapCollectionSheet,type ImportedFile} from '@/lib/collections';
@@ -24,7 +25,7 @@ export default function CollectionImport({files,onDone}:{files:CollectionRecord[
  const [plan,setPlan]=useState<Plan|null>(null),[name,setName]=useState(''),[skipped,setSkipped]=useState(0),[busy,setBusy]=useState(false),[done,setDone]=useState(0),[errors,setErrors]=useState<string[]>([]);
  async function read(f:File){
   try{
-   const xlsx=await import('xlsx');const X=xlsx.default||xlsx;const w=X.read(await f.arrayBuffer(),{type:'array',cellDates:true});
+   const {X,book:w}=await openWorkbook(f,{cellDates:true});
    const rows=X.utils.sheet_to_json<unknown[]>(w.Sheets[w.SheetNames.includes('Files')?'Files':w.SheetNames[0]],{header:1,defval:''});
    const all=mapCollectionSheet(rows[0]||[],rows.slice(1),iso);if(!all.length)throw new Error('لا توجد ملفات في الملف.');
    const have=new Set(files.map(r=>String(r.payload.code||'').toLowerCase()));
@@ -51,7 +52,7 @@ export default function CollectionImport({files,onDone}:{files:CollectionRecord[
  }
  const withMoney=plan?.filter(p=>p.file.paid||p.file.expenses).length||0;
  return <>
-  <label className="btn"><Upload size={16}/> استيراد Excel<input type="file" accept=".xlsx,.xls" className="upload-input" aria-label="ملف Excel للتحصيل" onChange={e=>{const f=e.target.files?.[0];if(f)void read(f);e.target.value=''}}/></label>
+  <label className="btn"><Upload size={16}/> استيراد Excel<input type="file" accept={EXCEL_ACCEPT} className="upload-input" aria-label="ملف Excel للتحصيل" onChange={e=>{const f=e.target.files?.[0];if(f)void read(f);e.target.value=''}}/></label>
   {plan&&<EditorDialog title="استيراد ملفات من Excel" description={`${name} · تُضاف الملفات الجديدة فقط؛ الملفات الموجودة بالرقم نفسه لا تتغير.`} busy={busy} onClose={()=>{setPlan(null);if(done)onDone()}}>
    <div className="import-summary" role="status">
     <div><b>{plan.length}</b><span>ملف جديد</span></div><div><b>{skipped}</b><span>موجود مسبقاً (يُتجاوز)</span></div>
