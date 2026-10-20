@@ -215,7 +215,7 @@ export type InvoicePrint = { title: string; number: string; date: string; due: s
   schedule: [string, string][]; note: string };
 /** An invoice, bill or credit note: header, service lines, totals with what is paid and still due, instalments and a note. */
 export function invoiceHtml(d: InvoicePrint, printedAt: string, printedBy: string): string {
-  const info: [string, string][] = [['الرقم', d.number], ['التاريخ', dmy(d.date)], ['تاريخ الاستحقاق', dmy(d.due)], ['العميل / المورد', d.partner], ['المرجع', d.reference], ['القضية', d.caseLabel], ['الحالة', d.status]];
+  const info: [string, string][] = [['الرقم', d.number], ['التاريخ', dmy(d.date)], ['تاريخ الاستحقاق', dmy(d.due)], ['الموكل / المورد', d.partner], ['المرجع', d.reference], ['القضية', d.caseLabel], ['الحالة', d.status]];
   const lines = `<table class="list"><thead><tr><th>البيان</th><th>الكمية</th><th>السعر</th><th>الخصم</th><th>المبلغ</th></tr></thead><tbody>${d.lines.map(l => `<tr><td>${escape(l.label)}</td><td class="amount">${escape(l.quantity)}</td><td class="amount">${escape(l.price)}</td><td class="amount">${escape(l.discount)}</td><td class="amount">${escape(l.amount)}</td></tr>`).join('')}</tbody></table>`;
   const totals: [string, string][] = [['الإجمالي (KWD)', d.total], ['المدفوع', d.paid], ['المتبقي', d.due_amount]];
   return page(d.title + ' ' + d.number, `<header><h1>${escape(d.title)}</h1><p>مواثيق للمحاماة</p></header>

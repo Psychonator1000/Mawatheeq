@@ -133,7 +133,7 @@ function LineMatcher({setup,line,onDone}:{setup:BankSetup;line:Statement['lines'
  const needs=(mode==='items'?[picked.length?'':'اختر فاتورة واحدة على الأقل',partners.size>1?'اختر فواتير شريك واحد':'']:mode==='payment'?[payment?'':'اختر الدفعة']:[account?'':'اختر الحساب المقابل']);
  function go(){setBusy(true);booksRequest<Statement>('reconcile_line',{lineId:line.id,mode,itemLineIds:picked,paymentId:payment,accountId:account,label,writeoffAccountId:rest>0?writeoff:'',writeoffLabel:label}).then(r=>{toast.success('طوبقت الحركة');onDone(r)},fail).finally(()=>setBusy(false))}
  return <section className="books-reverse panel"><h3>مطابقة: {line.label||line.ref} · <span dir="ltr">{amount(line.amount)}</span></h3>
-  <div className="department-tabs" role="group" aria-label="طريقة المطابقة">{([['items',line.amount.startsWith('-')?'فواتير موردين مفتوحة':'فواتير عملاء مفتوحة'],['payment','دفعة مسجلة'],['account','حساب مباشر']] as const).map(([k,l])=>
+  <div className="department-tabs" role="group" aria-label="طريقة المطابقة">{([['items',line.amount.startsWith('-')?'فواتير موردين مفتوحة':'فواتير موكلين مفتوحة'],['payment','دفعة مسجلة'],['account','حساب مباشر']] as const).map(([k,l])=>
    <button key={k} type="button" className={'btn '+(mode===k?'primary':'')} aria-pressed={mode===k} onClick={()=>setMode(k)}>{l}</button>)}</div>
   {!sug&&<p role="status">جارٍ البحث عن المطابقات…</p>}
   {sug&&mode==='items'&&(sug.items.length?<><ul className="books-suggest">{sug.items.map(x=><li key={x.lineId}><label className="check"><input type="checkbox" checked={picked.includes(x.lineId)} onChange={e=>setPicked(p=>e.target.checked?[...p,x.lineId]:p.filter(y=>y!==x.lineId))}/>

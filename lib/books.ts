@@ -32,7 +32,7 @@ export const ACCOUNT_TYPES: Record<AccountType, { label: string; group: AccountG
 export const GROUP_LABELS: Record<AccountGroup, string> = { asset: 'الأصول', liability: 'الالتزامات', equity: 'حقوق الملكية', income: 'الإيرادات', expense: 'المصروفات', off: 'خارج الميزانية' };
 export const JOURNAL_TYPES: Record<JournalType, string> = { sale: 'المبيعات', purchase: 'المشتريات', bank: 'البنك', cash: 'النقد', general: 'متنوع' };
 export const MOVE_STATES: Record<MoveState, string> = { draft: 'مسودة', posted: 'مرحّل', cancel: 'ملغى' };
-export const PARTNER_KINDS: Record<PartnerKind, string> = { customer: 'عميل', vendor: 'مورد', both: 'عميل ومورد', other: 'آخر' };
+export const PARTNER_KINDS: Record<PartnerKind, string> = { customer: 'موكل', vendor: 'مورد', both: 'موكل ومورد', other: 'آخر' };
 
 /** An amount as whole fils; blank is zero. Throws on anything but a plain amount with up to three decimals. */
 export function toFils(v: string | number | null | undefined): number {
@@ -159,7 +159,7 @@ export type DocSummary = { id: string; journalId: string; name: string; moveType
   partnerId: string; caseId: string; amountTotal: string; amountResidual: string; paymentState: PaymentState; reversedFrom: string; revision: number };
 
 export const DOC_KINDS: Record<DocKind, { label: string; one: string; side: 'customer' | 'vendor' }> = {
-  out_invoice: { label: 'فواتير العملاء', one: 'فاتورة عميل', side: 'customer' }, out_refund: { label: 'إشعارات دائنة للعملاء', one: 'إشعار دائن', side: 'customer' },
+  out_invoice: { label: 'فواتير الموكلين', one: 'فاتورة موكل', side: 'customer' }, out_refund: { label: 'إشعارات دائنة للموكلين', one: 'إشعار دائن', side: 'customer' },
   in_invoice: { label: 'فواتير الموردين', one: 'فاتورة مورد', side: 'vendor' }, in_refund: { label: 'إشعارات الموردين', one: 'إشعار مورد', side: 'vendor' },
   customer_payment: { label: 'المقبوضات', one: 'سند قبض', side: 'customer' }, vendor_payment: { label: 'المدفوعات', one: 'سند صرف', side: 'vendor' },
 };

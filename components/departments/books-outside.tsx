@@ -121,7 +121,7 @@ export function QuickInvoice({caseId,client,clientEntityId,reference='',onClose,
   const journal=setup.journals.find(j=>j.active&&j.type==='sale');if(!journal)throw new Error('لا يوجد دفتر مبيعات فعال.');
   const d=await booksRequest<Doc>('save_invoice',{invoice:{moveType:'out_invoice',journalId:journal.id,date,dueDate:due,partnerId:partner.id,caseId,ref:reference,lines:[{productId:product,label:label||products.find(p=>p.id===product)?.name||'أتعاب',priceUnit:price,quantity:'1'}]}});
   return post?booksRequest<Doc>('post',{id:d.id,revision:d.revision}):d})().then(d=>{toast.success(post?'أُكدت فاتورة الأتعاب '+d.name:'حُفظت فاتورة الأتعاب مسودة');onDone(d)},fail).finally(()=>setBusy(false))};
- return <EditorDialog title="فاتورة أتعاب" description={`للموكل ${client||'—'}${caseId?'، مرتبطة بهذه القضية':''}${reference?' · '+reference:''}. تُراجع وتُدفع من «المحاسبة» › «العملاء».`} busy={busy} onClose={onClose}>
+ return <EditorDialog title="فاتورة أتعاب" description={`للموكل ${client||'—'}${caseId?'، مرتبطة بهذه القضية':''}${reference?' · '+reference:''}. تُراجع وتُدفع من «المحاسبة» › «الموكلون».`} busy={busy} onClose={onClose}>
   {!setup?<p role="status">جارٍ التحميل…</p>:<><div className="form-grid">
    <FilterSelect label="الخدمة" value={product} onChange={v=>{setProduct(v);const p=products.find(x=>x.id===v);if(p&&toFils(p.salePrice)&&!price)setPrice(filsText(toFils(p.salePrice)))}} options={products.map(p=>({value:p.id,label:p.name}))}/>
    <Field label="البيان" value={label} onChange={setLabel} placeholder="مثل أتعاب الدرجة الأولى"/>

@@ -49,13 +49,13 @@ export function Documents({setup,cases,kind,partner,onPartner,onOpen,onNew,onCha
  return <section className="panel"><div className="department-toolbar"><h2>{DOC_KINDS[kind].label}</h2><div className="actions">{canExport&&<button className="btn" onClick={csv}><Download size={15}/> تصدير</button>}
    {picked.length>0&&<button className="btn primary" onClick={()=>setPaying(true)}>دفع المحدد ({picked.length})</button>}
    {setup.canEdit&&<button className="btn primary" onClick={onNew}><Plus size={15}/> {DOC_KINDS[kind].one} جديد{kind.endsWith('invoice')?'ة':''}</button>}</div></div>
-  <div className="department-filters"><FilterSelect label={sideOf(kind)==='customer'?'العميل':'المورد'} value={partner} onChange={onPartner} empty="الكل" options={partnerOptions(setup,sideOf(kind),partner)}/>
+  <div className="department-filters"><FilterSelect label={sideOf(kind)==='customer'?'الموكل':'المورد'} value={partner} onChange={onPartner} empty="الكل" options={partnerOptions(setup,sideOf(kind),partner)}/>
    <OfficeSelect label="الحالة" value={state} onChange={setState} empty="كل الحالات" options={Object.entries(MOVE_STATES) as [string,string][]}/>
    <OfficeSelect label={pay?'المطابقة':'الدفع'} value={paymentState} onChange={setPaymentState} empty="الكل" options={(pay?[['not_paid',PAYMENT_MATCH.not_paid],['partial',PAYMENT_MATCH.partial],['paid',PAYMENT_MATCH.paid]]:[['not_paid',PAYMENT_STATES.not_paid],['partial',PAYMENT_STATES.partial],['paid',PAYMENT_STATES.paid],['reversed',PAYMENT_STATES.reversed]]) as [string,string][]}/>
    <Field label="بحث" value={q} onChange={setQ} placeholder="الرقم أو المرجع أو الاسم"/></div>
   {!pay&&<label className="check"><input type="checkbox" checked={overdue} onChange={e=>setOverdue(e.target.checked)}/> المتأخرة عن الاستحقاق فقط</label>}
   {error&&<p className="notice" role="alert">{error}</p>}{!rows&&!error&&<p role="status">جارٍ التحميل…</p>}
-  {rows&&<><div className="table-wrap"><table className="office-table books-table"><thead><tr>{!pay&&setup.canEdit&&<th aria-label="تحديد"></th>}<th>الرقم</th><th>{sideOf(kind)==='customer'?'العميل':'المورد'}</th><th>التاريخ</th>{!pay&&<th>الاستحقاق</th>}<th>المرجع</th><th>القضية</th><th>الإجمالي</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead>
+  {rows&&<><div className="table-wrap"><table className="office-table books-table"><thead><tr>{!pay&&setup.canEdit&&<th aria-label="تحديد"></th>}<th>الرقم</th><th>{sideOf(kind)==='customer'?'الموكل':'المورد'}</th><th>التاريخ</th>{!pay&&<th>الاستحقاق</th>}<th>المرجع</th><th>القضية</th><th>الإجمالي</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead>
    <tbody>{list.slice((current-1)*25,current*25).map(d=>{const late=pay?0:daysLate(d.dueDate,today,d.state==='posted'?d.amountResidual:'0');
     return <tr key={d.id} className={d.state==='cancel'?'ledger-void':''}>{!pay&&setup.canEdit&&<td>{payable(d)&&<input type="checkbox" aria-label={'تحديد '+d.name} checked={picked.includes(d.id)} onChange={e=>setPicked(p=>e.target.checked?[...p,d.id]:p.filter(x=>x!==d.id))}/>}</td>}<td className="mono">{d.name==='/'?'مسودة':d.name}</td><td>{pName(d.partnerId)||'—'}</td><td>{formatDate(d.date)}</td>
      {!pay&&<td>{d.dueDate?formatDate(d.dueDate):'—'}{late>0&&<small className="books-late"> متأخرة {late} يوماً</small>}</td>}<td>{d.ref||'—'}</td><td>{cCode(d.caseId)||'—'}</td>
@@ -86,7 +86,7 @@ export function InvoiceEditor({setup,cases,initial,onClose,onChanged,onOpen,onSe
  const pickProduct=(i:number,id:string)=>{const p=setup.products.find(x=>x.id===id);line(i,{productId:id,...(p&&taxesOn?{taxIds:adv?.productTaxes[p.id]?.[typeUse]||[]}:{}),...(p?{label:d.lines[i].label||p.name,accountId:(side==='customer'?p.incomeAccount:p.expenseAccount)||'',priceUnit:d.lines[i].priceUnit||filsText(toFils(side==='customer'?p.salePrice:p.purchasePrice))}:{})})};
  const needs=editable?[!d.journalId&&'اختر الدفتر',!d.date&&'اختر التاريخ',d.date&&lock&&d.date<=lock&&`التاريخ ضمن فترة مقفلة (حتى ${formatDate(lock)})`,subs.some(isNaN)&&'راجع الكميات والأسعار والخصم',
   d.lines.some((l,i)=>subs[i]>0&&!l.accountId)&&'اختر الحساب أو الخدمة في كل سطر',cur!=='KWD'&&rate&&!(Number(rate)>0)?'سعر الصرف غير صالح':'',total<=0&&'أضف بنداً بمبلغ',!!d.invoiceDateDue&&d.invoiceDateDue<d.date&&'تاريخ الاستحقاق قبل تاريخ الفاتورة']:[];
- const postNeeds=[...needs,editable&&!d.partnerId?`اختر ${side==='customer'?'العميل':'المورد'}`:''].map(x=>typeof x==='string'?x:'');
+ const postNeeds=[...needs,editable&&!d.partnerId?`اختر ${side==='customer'?'الموكل':'المورد'}`:''].map(x=>typeof x==='string'?x:'');
  async function act(fn:()=>Promise<Doc|null>,done:string){setBusy(true);try{const r=await fn();toast.success(done);onChanged(r)}catch(e){fail(e)}finally{setBusy(false)}}
  const save=()=>booksRequest<Doc>('save_invoice',{invoice:{id:d.id||undefined,revision:d.revision,moveType:kind,journalId:d.journalId,date:d.date,dueDate:d.paymentTermId?'':d.invoiceDateDue||'',paymentTermId:d.paymentTermId,
   partnerId:d.partnerId,caseId:d.caseId,ref:d.ref,narration:d.narration,currency:cur,rate:cur==='KWD'?'':rate,lines:d.lines.map(l=>({productId:l.productId,label:l.label,accountId:l.accountId,quantity:l.quantity,priceUnit:l.priceUnit,discount:l.discount,caseId:l.caseId,taxIds:l.taxIds||[],analyticId:l.analyticId||''}))}});
@@ -100,8 +100,8 @@ export function InvoiceEditor({setup,cases,initial,onClose,onChanged,onOpen,onSe
   <div className="books-editor">
    {d.reversedFrom&&<p className="muted">إشعار دائن لـ <button type="button" className="link" onClick={()=>onOpen(d.reversedFrom)}>الفاتورة الأصلية</button></p>}
    <div className="form-grid">
-    <FilterSelect label={side==='customer'?'العميل':'المورد'} value={d.partnerId} onChange={v=>set({partnerId:v})} disabled={!editable} empty={`اختر ${side==='customer'?'العميل':'المورد'}`} options={partnerOptions(setup,side,d.partnerId)}/>
-    {editable&&<div className="books-quick"><label className="field"><span>{side==='customer'?'عميل جديد':'مورد جديد'}</span><input value={newPartner} onChange={e=>setNewPartner(e.target.value)} placeholder="الاسم"/></label>
+    <FilterSelect label={side==='customer'?'الموكل':'المورد'} value={d.partnerId} onChange={v=>set({partnerId:v})} disabled={!editable} empty={`اختر ${side==='customer'?'الموكل':'المورد'}`} options={partnerOptions(setup,side,d.partnerId)}/>
+    {editable&&<div className="books-quick"><label className="field"><span>{side==='customer'?'موكل جديد':'مورد جديد'}</span><input value={newPartner} onChange={e=>setNewPartner(e.target.value)} placeholder="الاسم"/></label>
      <button type="button" className="btn" disabled={busy||!newPartner.trim()} onClick={()=>void addPartner()}><UserPlus size={15}/> إضافة</button></div>}
     {editable?<DateField label="تاريخ الفاتورة" value={d.date} onChange={v=>set({date:v})}/>:<label className="field"><span>تاريخ الفاتورة</span><input readOnly value={formatDate(d.date)}/></label>}
     {currencies.length>1&&<FilterSelect label="العملة" value={cur} onChange={v=>{set({currency:v});setRate(v==='KWD'?'':currencies.find(c=>c.code===v)?.rate||'')}} disabled={!editable} options={currencies.map(c=>({value:c.code,label:c.code+' · '+c.name}))}/>}
@@ -134,7 +134,7 @@ export function InvoiceEditor({setup,cases,initial,onClose,onChanged,onOpen,onSe
     <dl className="books-totals"><div><dt>الإجمالي</dt><dd dir="ltr">{amount(d.amountTotal)}</dd></div><div><dt>المدفوع</dt><dd dir="ltr">{money(toFils(d.amountTotal)-toFils(d.amountResidual))}</dd></div><div className={toFils(d.amountResidual)?'':'net'}><dt>المتبقي</dt><dd dir="ltr">{amount(d.amountResidual)}</dd></div></dl>
     {d.matches.length>0&&<ul className="books-matches">{d.matches.map(m=><li key={m.partialId}><button type="button" className="link mono" onClick={()=>onOpen(m.moveId)}>{m.name}</button> · {formatDate(m.date)} · <b dir="ltr">{amount(m.amount)}</b>
      {setup.canEdit&&<button type="button" className="btn icon" aria-label={'فك مطابقة '+m.name} title="فك المطابقة" disabled={busy} onClick={()=>void act(()=>booksRequest<Doc>('remove_partial',{id:d.id,partialId:m.partialId}),'فُكت المطابقة')}><Unlink size={14}/></button>}</li>)}</ul>}
-    {setup.canEdit&&d.outstanding.length>0&&<div className="books-outstanding"><b>أرصدة مفتوحة لهذا {side==='customer'?'العميل':'المورد'} يمكن استخدامها:</b>
+    {setup.canEdit&&d.outstanding.length>0&&<div className="books-outstanding"><b>أرصدة مفتوحة لهذا {side==='customer'?'الموكل':'المورد'} يمكن استخدامها:</b>
      <ul>{d.outstanding.map(o=><li key={o.lineId}>{o.name} · {formatDate(o.date)} · <b dir="ltr">{amount(o.amount)}</b> <button type="button" className="btn" disabled={busy} onClick={()=>void act(()=>booksRequest<Doc>('add_outstanding',{id:d.id,lineId:o.lineId}),'طُبق الرصيد')}><Link2 size={14}/> استخدام</button></li>)}</ul></div>}
    </div>}
    <label className="field wide"><span>ملاحظات داخلية</span><textarea value={d.narration} readOnly={!editable} onChange={e=>set({narration:e.target.value})} maxLength={4000}/></label>
@@ -200,7 +200,7 @@ export function PaymentEditor({setup,cases,initial,onClose,onChanged,onOpen}:{se
  const lock=[setup.settings.fiscalLockDate,...(setup.canConfigure?[]:[setup.settings.lockDate])].filter(Boolean).sort().pop()||'';
  let bad=false;try{if(toFils(value)<=0)bad=true}catch{bad=true}
  const needs=editable?[!d.journalId&&'اختر دفتر البنك أو الصندوق',!d.date&&'اختر التاريخ',d.date&&lock&&d.date<=lock&&`التاريخ ضمن فترة مقفلة (حتى ${formatDate(lock)})`,bad&&'اكتب مبلغاً صحيحاً',m.method==='cheque'&&!m.chequeNumber.trim()&&'اكتب رقم الشيك']:[];
- const postNeeds=[...needs,editable&&!d.partnerId?`اختر ${side==='customer'?'العميل':'المورد'}`:''].map(x=>typeof x==='string'?x:'');
+ const postNeeds=[...needs,editable&&!d.partnerId?`اختر ${side==='customer'?'الموكل':'المورد'}`:''].map(x=>typeof x==='string'?x:'');
  async function act(fn:()=>Promise<Doc|null>,done:string){setBusy(true);try{const r=await fn();toast.success(done);onChanged(r)}catch(e){fail(e)}finally{setBusy(false)}}
  const save=()=>booksRequest<Doc>('save_payment',{payment:{id:d.id||undefined,revision:d.revision,paymentType:d.paymentType,partnerType:side,partnerId:d.partnerId,journalId:d.journalId,date:d.date,amount:value,ref:d.ref,narration:d.narration,caseId:d.caseId,...m}});
  const pName=setup.partners.find(p=>p.id===d.partnerId)?.name||'';
@@ -208,8 +208,8 @@ export function PaymentEditor({setup,cases,initial,onClose,onChanged,onOpen}:{se
   lines:[{label:d.ref||(d.paymentType==='inbound'?'مقبوضات':'مدفوعات'),quantity:'1',price:amount(value||'0'),discount:'',amount:amount(value||'0')}],total:amount(value||'0'),paid:amount(value||'0'),due_amount:money(0),words:amountInWords(value),schedule:[],note:''},formatDate(todayISO()),'')))popupBlocked()}
  return <EditorDialog title={d.name==='/'?(d.paymentType==='inbound'?'سند قبض':'سند صرف')+(d.id?' (مسودة)':' جديد'):d.name} description={`${pName||'—'} · ${d.state==='posted'?PAYMENT_MATCH[d.paymentState]:MOVE_STATES[d.state]}`} busy={busy} onClose={onClose}>
   <div className="books-editor"><div className="form-grid">
-   <OfficeSelect label="النوع" value={d.paymentType} onChange={v=>editable&&set({paymentType:v as 'inbound'|'outbound'})} options={side==='customer'?[['inbound','قبض من العميل'],['outbound','رد مبلغ للعميل']]:[['outbound','دفع للمورد'],['inbound','استرداد من المورد']]}/>
-   <FilterSelect label={side==='customer'?'العميل':'المورد'} value={d.partnerId} onChange={v=>set({partnerId:v})} disabled={!editable} empty="اختر" options={partnerOptions(setup,side,d.partnerId)}/>
+   <OfficeSelect label="النوع" value={d.paymentType} onChange={v=>editable&&set({paymentType:v as 'inbound'|'outbound'})} options={side==='customer'?[['inbound','قبض من الموكل'],['outbound','رد مبلغ للموكل']]:[['outbound','دفع للمورد'],['inbound','استرداد من المورد']]}/>
+   <FilterSelect label={side==='customer'?'الموكل':'المورد'} value={d.partnerId} onChange={v=>set({partnerId:v})} disabled={!editable} empty="اختر" options={partnerOptions(setup,side,d.partnerId)}/>
    <FilterSelect label="عبر" value={d.journalId} onChange={v=>set({journalId:v})} disabled={!editable||d.name!=='/'} options={setup.journals.filter(j=>(j.type==='bank'||j.type==='cash')&&(j.active||j.id===d.journalId)).map(j=>({value:j.id,label:`${j.code} · ${j.name}`}))}/>
    {editable?<DateField label="التاريخ" value={d.date} onChange={v=>set({date:v})}/>:<label className="field"><span>التاريخ</span><input readOnly value={formatDate(d.date)}/></label>}
    <label className="field"><span>المبلغ</span><input dir="ltr" inputMode="decimal" value={value} readOnly={!editable} onChange={e=>setValue(e.target.value)}/></label>
@@ -244,10 +244,10 @@ export function PartnerSide({setup,cases,side,onOpen,onNew,onChanged,version,can
  const partners=setup.partners.filter(p=>p.kind===side||p.kind==='both'||toFils(setup.partnerBalances[p.id]?.[key]||'0')!==0);
  return <>
   <div className="department-metrics books-metrics"><div><span>مسودات</span><b>{s?.draft??0}</b></div><div><span>{side==='customer'?'بانتظار التحصيل':'بانتظار الدفع'}</span><b dir="ltr">{amount(s?.openAmount||'0')}</b></div><div><span>متأخرة ({s?.late??0})</span><b dir="ltr">{amount(s?.lateAmount||'0')}</b></div></div>
-  <div className="department-tabs view-switch" role="group" aria-label={side==='customer'?'الموكلون':'الموردون'}>{[...kinds.map(k=>[k,DOC_KINDS[k].label] as const),['partners',side==='customer'?'أرصدة العملاء':'أرصدة الموردين'] as const].map(([k,l])=>
+  <div className="department-tabs view-switch" role="group" aria-label={side==='customer'?'الموكلون':'الموردون'}>{[...kinds.map(k=>[k,DOC_KINDS[k].label] as const),['partners',side==='customer'?'أرصدة الموكلين':'أرصدة الموردين'] as const].map(([k,l])=>
    <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
   {tab!=='partners'?<Documents setup={setup} cases={cases} kind={tab} partner={partner} onPartner={setPartner} onOpen={onOpen} onNew={()=>onNew(tab,partner)} onChanged={onChanged} version={version} canExport={canExport}/>
-   :<section className="panel"><div className="table-wrap"><table className="office-table books-table"><thead><tr><th>{side==='customer'?'العميل':'المورد'}</th><th>الهاتف</th><th>{side==='customer'?'مستحق لنا':'مستحق علينا'}</th><th></th></tr></thead>
+   :<section className="panel"><div className="table-wrap"><table className="office-table books-table"><thead><tr><th>{side==='customer'?'الموكل':'المورد'}</th><th>الهاتف</th><th>{side==='customer'?'مستحق لنا':'مستحق علينا'}</th><th></th></tr></thead>
     <tbody>{partners.map(p=>{const b=toFils(setup.partnerBalances[p.id]?.[key]||'0');return <tr key={p.id}><td>{p.name}</td><td dir="ltr">{p.phone||'—'}</td><td className="ledger-value" dir="ltr">{money(b)}</td>
      <td><div className="actions"><button className="btn" onClick={()=>{setPartner(p.id);setTab(kinds[0])}}>المستندات</button>{setup.canEdit&&<button className="btn" onClick={()=>onNew(kinds[0],p.id)}><Plus size={14}/> {DOC_KINDS[kinds[0]].one}</button>}{side==='customer'&&'links' in setup&&<button className="btn" title="من أول السنة حتى اليوم" onClick={()=>void import('./books-outside').then(m=>m.printStatement(p,todayISO().slice(0,4)+'-01-01',todayISO())).catch(e=>toast.error((e as Error).message))}><Printer size={14}/> كشف حساب</button>}</div></td></tr>})}</tbody></table>
     {!partners.length&&<Empty title="لا يوجد شركاء بعد" text="أضفهم من الحسابات والإعدادات أو من داخل الفاتورة."/>}</div></section>}
@@ -264,7 +264,7 @@ export function ProductsPanel({setup,onChanged}:{setup:FullSetup;onChanged:()=>v
     <td><button className="btn" onClick={()=>setP(x)}>{setup.canEdit?'تعديل':'عرض'}</button></td></tr>)}</tbody></table></div>
   {p&&<EditorDialog title={p.id?p.name:'خدمة جديدة'} description="تظهر الخدمة في بنود الفواتير، ويذهب مبلغها إلى حسابها." busy={busy} onClose={()=>setP(null)}><div className="form-grid">
    <Field label="اسم الخدمة" value={p.name} onChange={v=>setP({...p,name:v})}/>
-   <FilterSelect label="حساب الإيراد (للعملاء)" value={p.incomeAccount} onChange={v=>setP({...p,incomeAccount:v})} empty="لا تُباع" options={accounts}/>
+   <FilterSelect label="حساب الإيراد (للموكلين)" value={p.incomeAccount} onChange={v=>setP({...p,incomeAccount:v})} empty="لا تُباع" options={accounts}/>
    <label className="field"><span>سعر البيع</span><input dir="ltr" inputMode="decimal" value={p.salePrice} onChange={e=>setP({...p,salePrice:e.target.value})}/></label>
    <FilterSelect label="حساب المصروف (للموردين)" value={p.expenseAccount} onChange={v=>setP({...p,expenseAccount:v})} empty="لا تُشترى" options={accounts}/>
    <label className="field"><span>سعر الشراء</span><input dir="ltr" inputMode="decimal" value={p.purchasePrice} onChange={e=>setP({...p,purchasePrice:e.target.value})}/></label>
@@ -305,16 +305,17 @@ export function InvoicingPanel({setup,onChanged}:{setup:FullSetup;onChanged:()=>
  const n=(k:string)=>Number(preview?.[k]||0);
  return <div className="books-locks">
   <div className="form-grid">
-   <FilterSelect label="حساب ذمم العملاء" value={rec} onChange={setRec} disabled={ro} options={setup.accounts.filter(a=>a.type==='asset_receivable'&&a.reconcile).map(a=>({value:a.id,label:a.code+' '+a.name}))}/>
+   <FilterSelect label="حساب ذمم الموكلين" value={rec} onChange={setRec} disabled={ro} options={setup.accounts.filter(a=>a.type==='asset_receivable'&&a.reconcile).map(a=>({value:a.id,label:a.code+' '+a.name}))}/>
    <FilterSelect label="حساب ذمم الموردين" value={pay} onChange={setPay} disabled={ro} options={setup.accounts.filter(a=>a.type==='liability_payable'&&a.reconcile).map(a=>({value:a.id,label:a.code+' '+a.name}))}/>
    <label className="field wide"><span>ملاحظة تُطبع أسفل الفواتير</span><textarea value={note} readOnly={ro} onChange={e=>setNote(e.target.value)} maxLength={2000}/></label></div>
   {!ro&&<div className="actions"><button className="btn primary" disabled={busy} onClick={()=>{setBusy(true);booksRequest('save_invoicing',{receivableAccount:rec,payableAccount:pay,invoiceNote:note,revision:i.revision}).then(()=>{toast.success('حُفظت إعدادات الفوترة');onChanged()},fail).finally(()=>setBusy(false))}}>حفظ</button></div>}
-  {!ro&&<section className="books-reverse panel"><h3><ArrowRightLeft size={16}/> نقل «دفتر الحركات» القديم إلى الدفاتر</h3>
-   <p className="muted">مرة واحدة: الأتعاب المستحقة تصبح فواتير عملاء، والمقبوضات دفعات تُطبق على أقدم فواتير الطرف نفسه، والمصروفات فواتير موردين مدفوعة. القيود الملغاة والعملات غير الدينار لا تُنقل. النقل مرة ثانية لا يكرر شيئاً.</p>
+  {/* A one-time step, so it stays folded until opened. */}
+  {!ro&&<details className="books-reverse panel"><summary><h3><ArrowRightLeft size={16}/> نقل «دفتر الحركات» القديم إلى الدفاتر</h3></summary>
+   <p className="muted">مرة واحدة: الأتعاب المستحقة تصبح فواتير موكلين، والمقبوضات دفعات تُطبق على أقدم فواتير الطرف نفسه، والمصروفات فواتير موردين مدفوعة. القيود الملغاة والعملات غير الدينار لا تُنقل. النقل مرة ثانية لا يكرر شيئاً.</p>
    <div className="form-grid"><FilterSelect label="المقبوضات والمصروفات عبر" value={journal} onChange={setJournal} options={journals.map(j=>({value:j.id,label:`${j.code} · ${j.name}`}))}/></div>
    {preview&&<dl className="roll-stats"><div><dt>أتعاب → فواتير</dt><dd>{n('fees')}</dd></div><div><dt>مقبوضات → دفعات</dt><dd>{n('receipts')}</dd></div><div><dt>مصروفات → فواتير مدفوعة</dt><dd>{n('expenses')}</dd></div>
     <div><dt>شركاء جدد</dt><dd>{n('partners')}</dd></div><div><dt>نُقلت من قبل</dt><dd>{n('already')}</dd></div><div><dt>لا تُنقل (ملغاة / عملة أخرى / فترة مقفلة)</dt><dd>{n('skippedVoid')+n('skippedCurrency')+n('skippedLocked')}</dd></div></dl>}
    <div className="actions"><button className="btn" disabled={busy||!journal} onClick={()=>run(true)}>معاينة</button>
-    <button className="btn primary" disabled={busy||!preview||!preview.dryRun||!(n('fees')+n('receipts')+n('expenses'))} title={!preview?'اعرض المعاينة أولاً':undefined} onClick={()=>run(false)}>نقل إلى الدفاتر</button></div></section>}
+    <button className="btn primary" disabled={busy||!preview||!preview.dryRun||!(n('fees')+n('receipts')+n('expenses'))} title={!preview?'اعرض المعاينة أولاً':undefined} onClick={()=>run(false)}>نقل إلى الدفاتر</button></div></details>}
  </div>;
 }

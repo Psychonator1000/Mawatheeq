@@ -51,7 +51,7 @@ export default function Books({cases,access,views}:{cases:CaseSummary[];access:P
   <button key={k} className={'work-chip'+(view===k?' on':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>;
  return <>
   {/* One screen: the section's header and the books' pages scrolling inside one panel. */}
-  <section className="panel work-desk desk-full"><div className="work-desk-head">{views}</div>{tabs}<div className="work-desk-body">
+  <section className="panel work-desk desk-full"><div className="work-desk-head">{views}</div>{tabs}<div className="work-desk-body books-body">
   {error&&<p className="notice" role="alert">{error}</p>}{!setup&&!error&&<p role="status">جارٍ تحميل الدفاتر…</p>}
   {setup&&<div className="att-section books">
    {view==='dashboard'&&<><Dashboard setup={setup} full={full} onNew={j=>setEditing(blankMove(j))} onNewDoc={newDoc} onList={j=>{setJournalFilter(j);setView('moves')}} onView={setView}/>{links&&<MonthlyChart key={version}/>}</>}
@@ -79,7 +79,7 @@ function Dashboard({setup,full,onNew,onNewDoc,onList,onView}:{setup:BooksSetup;f
     {full&&(j.type==='sale'||j.type==='purchase')?(()=>{const k:DocKind=j.type==='sale'?'out_invoice':'in_invoice',st=full.documentStats[k];return <>
      <p className="books-balance"><span>{j.type==='sale'?'بانتظار التحصيل':'بانتظار الدفع'}</span><b dir="ltr">{amount(st?.openAmount||'0')}</b></p>
      <p className="muted">{st?.open??0} مفتوحة{st?.late?` · ${st.late} متأخرة (${amount(st.lateAmount)})`:''}{st?.draft?` · ${st.draft} مسودة`:''}</p>
-     <div className="actions">{setup.canEdit&&<button className="btn primary" onClick={()=>onNewDoc(k)}><Plus size={15}/> {DOC_KINDS[k].one} جديدة</button>}<button className="btn" onClick={()=>onView(j.type==='sale'?'customers':'vendors')}>{j.type==='sale'?'العملاء':'الموردون'}</button></div></>})()
+     <div className="actions">{setup.canEdit&&<button className="btn primary" onClick={()=>onNewDoc(k)}><Plus size={15}/> {DOC_KINDS[k].one} جديدة</button>}<button className="btn" onClick={()=>onView(j.type==='sale'?'customers':'vendors')}>{j.type==='sale'?'الموكلون':'الموردون'}</button></div></>})()
     :<><p className="muted">{s.posted} قيد مرحّل{s.drafts?` · ${s.drafts} مسودة بانتظار الترحيل`:''}</p>
     <div className="actions">{setup.canEdit&&<button className="btn primary" onClick={()=>onNew(j.id)}><Plus size={15}/> قيد في {j.code}</button>}{full&&setup.canEdit&&(j.type==='bank'||j.type==='cash')&&<><button className="btn" onClick={()=>onNewDoc('customer_payment')}>سند قبض</button><button className="btn" onClick={()=>onNewDoc('vendor_payment')}>سند صرف</button></>}<button className="btn" onClick={()=>onList(j.id)}>عرض القيود</button></div></>}</article>})}</div>
   {!setup.canEdit&&<p className="muted">صلاحيتك للقراءة فقط: يمكنك عرض القيود والتقارير دون تعديلها.</p>}
@@ -267,14 +267,14 @@ function Config({setup,full,adv,onChanged}:{setup:BooksSetup;full:FullSetup|null
     {tab==='journals'&&<button className="btn primary" disabled={!setup.canConfigure} title={why} onClick={()=>setJournal({id:'',code:'',name:'',type:'general',defaultAccount:'',active:true,revision:0})}><Plus size={15}/> دفتر جديد</button>}
     {tab==='partners'&&<button className="btn primary" disabled={!setup.canEdit} title={setup.canEdit?undefined:'صلاحيتك للقراءة فقط'} onClick={()=>setPartner({id:'',name:'',kind:'customer',clientEntityId:'',phone:'',email:'',reference:'',note:'',active:true,revision:0})}><Plus size={15}/> شريك جديد</button>}</div></div>
   {tab==='accounts'&&<><Field label="بحث في الحسابات" value={q} onChange={setQ} placeholder="الرمز أو الاسم"/>
-   {groups.map(g=>{const list=shown.filter(a=>ACCOUNT_TYPES[a.type].group===g);return list.length?<div key={g} className="table-wrap"><h3>{GROUP_LABELS[g]}</h3><table className="office-table books-table"><thead><tr><th>الرمز</th><th>الحساب</th><th>النوع</th><th>للمطابقة</th><th></th></tr></thead>
-    <tbody>{list.map(a=><tr key={a.id} className={a.deprecated?'ledger-void':''}><td className="mono">{a.code}</td><td>{a.name}{a.deprecated&&<small> · موقوف</small>}</td><td>{ACCOUNT_TYPES[a.type].label}</td><td>{a.reconcile?'نعم':'—'}</td><td><button className="btn" onClick={()=>setAccount(a)}>{setup.canConfigure?'تعديل':'عرض'}</button></td></tr>)}</tbody></table></div>:null})}</>}
+   <div className="books-scroll">{groups.map(g=>{const list=shown.filter(a=>ACCOUNT_TYPES[a.type].group===g);return list.length?<div key={g} className="table-wrap"><h3>{GROUP_LABELS[g]}</h3><table className="office-table books-table"><thead><tr><th>الرمز</th><th>الحساب</th><th>النوع</th><th>للمطابقة</th><th></th></tr></thead>
+    <tbody>{list.map(a=><tr key={a.id} className={a.deprecated?'ledger-void':''}><td className="mono">{a.code}</td><td>{a.name}{a.deprecated&&<small> · موقوف</small>}</td><td>{ACCOUNT_TYPES[a.type].label}</td><td>{a.reconcile?'نعم':'—'}</td><td><button className="btn" onClick={()=>setAccount(a)}>{setup.canConfigure?'تعديل':'عرض'}</button></td></tr>)}</tbody></table></div>:null})}</div></>}
   {tab==='journals'&&<div className="table-wrap"><table className="office-table books-table"><thead><tr><th>الرمز</th><th>الدفتر</th><th>النوع</th><th>الحساب الافتراضي</th><th>الحالة</th><th></th></tr></thead>
    <tbody>{setup.journals.map(j=><tr key={j.id}><td className="mono">{j.code}</td><td>{j.name}</td><td>{JOURNAL_TYPES[j.type]}</td><td>{setup.accounts.find(a=>a.id===j.defaultAccount)?.name||'—'}</td><td>{j.active?'فعّال':'موقوف'}</td><td><button className="btn" onClick={()=>setJournal(j)}>{setup.canConfigure?'تعديل':'عرض'}</button></td></tr>)}</tbody></table></div>}
   {tab==='partners'&&<div className="table-wrap"><table className="office-table books-table"><thead><tr><th>الشريك</th><th>النوع</th><th>الهاتف</th><th>المرجع</th><th></th></tr></thead>
-   <tbody>{setup.partners.map(p=><tr key={p.id} className={p.active?'':'ledger-void'}><td>{p.name}</td><td>{PARTNER_KINDS[p.kind]}</td><td dir="ltr">{p.phone||'—'}</td><td>{p.reference||'—'}</td><td><button className="btn" onClick={()=>setPartner(p)}>{setup.canEdit?'تعديل':'عرض'}</button></td></tr>)}</tbody></table>{!setup.partners.length&&<Empty title="لا يوجد شركاء بعد" text="أضف العملاء والموردين لربطهم بالقيود والتقارير."/>}</div>}
+   <tbody>{setup.partners.map(p=><tr key={p.id} className={p.active?'':'ledger-void'}><td>{p.name}</td><td>{PARTNER_KINDS[p.kind]}</td><td dir="ltr">{p.phone||'—'}</td><td>{p.reference||'—'}</td><td><button className="btn" onClick={()=>setPartner(p)}>{setup.canEdit?'تعديل':'عرض'}</button></td></tr>)}</tbody></table>{!setup.partners.length&&<Empty title="لا يوجد شركاء بعد" text="أضف الموكلين والموردين لربطهم بالقيود والتقارير."/>}</div>}
   {tab==='locks'&&<Locks setup={setup} onChanged={onChanged}/>}
-  {full&&tab==='products'&&<ProductsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='terms'&&<TermsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='invoicing'&&<><InvoicingPanel setup={full} onChanged={onChanged}/>{'links' in setup&&<CollectionsToBooks setup={setup} onChanged={onChanged}/>}</>}
+  {full&&tab==='products'&&<ProductsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='terms'&&<TermsPanel setup={full} onChanged={onChanged}/>}{full&&tab==='invoicing'&&<div className="books-cols"><InvoicingPanel setup={full} onChanged={onChanged}/>{'links' in setup&&<CollectionsToBooks setup={setup} onChanged={onChanged}/>}</div>}
   {adv&&tab==='taxes'&&<TaxesPanel setup={adv} onChanged={onChanged}/>}{adv&&tab==='currencies'&&<CurrenciesPanel setup={adv} onChanged={onChanged}/>}{adv&&tab==='analytic'&&<AnalyticPanel setup={adv} onChanged={onChanged}/>}
   {account&&<AccountEditor setup={setup} initial={account} onClose={()=>setAccount(null)} onSaved={()=>{setAccount(null);onChanged()}}/>}
   {journal&&<JournalEditor setup={setup} initial={journal} onClose={()=>setJournal(null)} onSaved={()=>{setJournal(null);onChanged()}}/>}
@@ -288,7 +288,7 @@ function AccountEditor({setup,initial,onClose,onSaved}:{setup:BooksSetup;initial
  return <EditorDialog title={a.id?'الحساب '+initial.code:'حساب جديد'} description="نوع الحساب يحدد مكانه في الميزانية العمومية أو قائمة الأرباح والخسائر." busy={busy} onClose={onClose}><div className="form-grid">
   <label className="field"><span>رمز الحساب</span><input dir="ltr" value={a.code} readOnly={ro} onChange={e=>setA({...a,code:e.target.value})}/></label><Field label="اسم الحساب" value={a.name} onChange={v=>ro||setA({...a,name:v})}/>
   <FilterSelect label="نوع الحساب" value={a.type} disabled={ro} onChange={v=>setA({...a,type:v as AccountType,code:a.id?a.code:nextAccountCode(setup.accounts,v as AccountType)})} options={(Object.entries(ACCOUNT_TYPES) as [AccountType,{label:string;group:keyof typeof GROUP_LABELS}][]).map(([k,v])=>({value:k,label:v.label,hint:GROUP_LABELS[v.group]}))}/>
-  <label className="check"><input type="checkbox" checked={a.reconcile} disabled={ro} onChange={e=>setA({...a,reconcile:e.target.checked})}/> يسمح بالمطابقة (ذمم العملاء والموردين والحسابات الوسيطة)</label>
+  <label className="check"><input type="checkbox" checked={a.reconcile} disabled={ro} onChange={e=>setA({...a,reconcile:e.target.checked})}/> يسمح بالمطابقة (ذمم الموكلين والموردين والحسابات الوسيطة)</label>
   {a.id&&<label className="check"><input type="checkbox" checked={a.deprecated} disabled={ro} onChange={e=>setA({...a,deprecated:e.target.checked})}/> موقوف: لا يُختار في القيود الجديدة</label>}
   <Field label="ملاحظات" value={a.note} onChange={v=>ro||setA({...a,note:v})} wide multiline/></div>
   {!ro&&<Needs items={needs}/>}
@@ -309,7 +309,7 @@ function JournalEditor({setup,initial,onClose,onSaved}:{setup:BooksSetup;initial
 }
 function PartnerEditor({setup,initial,onClose,onSaved}:{setup:BooksSetup;initial:Partner;onClose:()=>void;onSaved:()=>void}){
  const [p,setP]=useState(initial),{busy,run}=useSave(onSaved),ro=!setup.canEdit,set=(x:Partial<Partner>)=>ro||setP({...p,...x});
- return <EditorDialog title={p.id?initial.name:'شريك جديد'} description="العملاء والموردون ومن تتعامل معهم الدفاتر؛ يظهر الشريك في القيود والتقارير." busy={busy} onClose={onClose}><div className="form-grid">
+ return <EditorDialog title={p.id?initial.name:'شريك جديد'} description="الموكلون والموردون ومن تتعامل معهم الدفاتر؛ يظهر الشريك في القيود والتقارير." busy={busy} onClose={onClose}><div className="form-grid">
   <Field label="اسم الشريك" value={p.name} onChange={v=>set({name:v})}/><OfficeSelect label="النوع" value={p.kind} onChange={v=>set({kind:v as PartnerKind})} options={Object.entries(PARTNER_KINDS) as [string,string][]}/>
   <Field label="الهاتف" value={p.phone} onChange={v=>set({phone:v})} type="tel"/><Field label="البريد الإلكتروني" value={p.email} onChange={v=>set({email:v})} type="email"/>
   <Field label="المرجع" value={p.reference} onChange={v=>set({reference:v})}/>{p.id&&<label className="check"><input type="checkbox" checked={p.active} disabled={ro} onChange={e=>set({active:e.target.checked})}/> فعّال</label>}

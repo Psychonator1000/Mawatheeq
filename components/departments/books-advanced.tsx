@@ -27,7 +27,7 @@ export default function Advanced({setup,cases,onOpen,onChanged,version}:{setup:A
  const [tab,setTab]=useState<Tab>('asset');
  const due=setup.due;
  return <>
-  {(due.schedules>0||due.recurring>0||due.followups>0)&&<div className="books-due">{due.schedules>0&&<span className="tag amber">{due.schedules} قسط إهلاك أو تأجيل مستحق الترحيل</span>}{due.recurring>0&&<span className="tag amber">{due.recurring} قيد متكرر حان موعده</span>}{due.followups>0&&<span className="tag amber">{due.followups} عميل متأخر للمتابعة</span>}</div>}
+  {(due.schedules>0||due.recurring>0||due.followups>0)&&<div className="books-due">{due.schedules>0&&<span className="tag amber">{due.schedules} قسط إهلاك أو تأجيل مستحق الترحيل</span>}{due.recurring>0&&<span className="tag amber">{due.recurring} قيد متكرر حان موعده</span>}{due.followups>0&&<span className="tag amber">{due.followups} موكل متأخر للمتابعة</span>}</div>}
   <div className="department-tabs view-switch" role="group" aria-label="المحاسبة المتقدمة">{([['asset','الأصول الثابتة'],['deferred_revenue','الإيرادات المؤجلة'],['deferred_expense','المصروفات المؤجلة'],['recurring','القيود المتكررة'],['budgets','الموازنات'],['followups','متابعة التحصيل'],['yearend','إقفال السنة']] as const).map(([k,l])=>
    <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
   {(tab==='asset'||tab==='deferred_revenue'||tab==='deferred_expense')&&<Schedules key={tab} setup={setup} cases={cases} kind={tab} onOpen={onOpen} onChanged={onChanged} version={version}/>}
@@ -103,7 +103,7 @@ function RecurringPanel({setup,onOpen,onChanged,version}:{setup:AdvSetup;onOpen:
  const [rows,setRows]=useState<Recurring[]|null>(null),[v,setV]=useState(0),[editing,setEditing]=useState<Recurring|null>(null),[busy,setBusy]=useState(false);
  useEffect(()=>{let live=true;booksRequest<Recurring[]>('list_recurring').then(r=>{if(live)setRows(r)},fail);return()=>{live=false}},[version,v]);
  const run=()=>{setBusy(true);booksRequest<{created:{id:string;name:string}[]}>('run_recurring',{date:todayISO()}).then(r=>{toast.success(r.created.length?`أُنشئ ${r.created.length} مستند`:'لا شيء مستحق اليوم');setV(x=>x+1);onChanged();if(r.created.length===1)onOpen(r.created[0].id)},fail).finally(()=>setBusy(false))};
- const kinds={entry:'قيد يومية',out_invoice:'فاتورة عميل',in_invoice:'فاتورة مورد'};
+ const kinds={entry:'قيد يومية',out_invoice:'فاتورة موكل',in_invoice:'فاتورة مورد'};
  return <section className="panel"><div className="department-toolbar"><h2>القيود والفواتير المتكررة</h2><div className="actions">{setup.canEdit&&<><button className="btn" disabled={busy} onClick={run}><Play size={15}/> إنشاء المستحق حتى اليوم</button>
    <button className="btn primary" onClick={()=>setEditing({id:'',name:'',kind:'entry',template:{journalId:setup.journals.find(j=>j.type==='general')?.id||'',lines:[]},interval:1,nextDate:todayISO(),endDate:null,autoPost:false,active:true,lastRun:null,revision:0})}><Plus size={15}/> جديد</button></>}</div></div>
   <p className="muted">مثل الإيجار الشهري أو أتعاب الاستشارة الشهرية لموكل: يُنشأ المستند في موعده، مسودة أو مرحّلاً مباشرة.</p>
@@ -125,7 +125,7 @@ function RecurringEditor({setup,initial,onClose,onSaved}:{setup:AdvSetup;initial
  const template=inv?{journalId:journal,partnerId:partner,ref,lines:lines.filter(l=>l.accountId||l.productId).map(l=>({productId:l.productId,accountId:l.accountId,label:l.label,quantity:'1',priceUnit:l.priceUnit}))}
   :{journalId:journal,ref,lines:lines.filter(l=>l.accountId).map(l=>({accountId:l.accountId,label:l.label,debit:l.debit,credit:l.credit}))};
  return <EditorDialog title={r.id?r.name:'قيد متكرر جديد'} description="يُنشأ المستند بهذا المحتوى في كل موعد." busy={busy} onClose={onClose}><div className="books-editor">
-  <div className="form-grid"><Field label="الاسم" value={r.name} onChange={v=>setR({...r,name:v})}/><OfficeSelect label="النوع" value={r.kind} onChange={v=>{setR({...r,kind:v as Recurring['kind']});setJournal('')}} options={[['entry','قيد يومية'],['out_invoice','فاتورة عميل'],['in_invoice','فاتورة مورد']]}/>
+  <div className="form-grid"><Field label="الاسم" value={r.name} onChange={v=>setR({...r,name:v})}/><OfficeSelect label="النوع" value={r.kind} onChange={v=>{setR({...r,kind:v as Recurring['kind']});setJournal('')}} options={[['entry','قيد يومية'],['out_invoice','فاتورة موكل'],['in_invoice','فاتورة مورد']]}/>
    <FilterSelect label="الدفتر" value={journal} onChange={setJournal} options={journals.map(j=>({value:j.id,label:`${j.code} · ${j.name}`}))}/>{inv&&<FilterSelect label="الشريك" value={partner} onChange={setPartner} options={setup.partners.map(p=>({value:p.id,label:p.name}))}/>}
    <Field label="المرجع" value={ref} onChange={setRef}/><DateField label="الموعد القادم" value={r.nextDate} onChange={v=>setR({...r,nextDate:v})}/><DateField label="ينتهي في (اختياري)" value={r.endDate||''} onChange={v=>setR({...r,endDate:v||null})}/>
    <label className="field"><span>كل (أشهر)</span><input dir="ltr" inputMode="numeric" value={r.interval} onChange={e=>setR({...r,interval:Math.max(1,Math.min(24,Math.floor(Number(e.target.value)||1)))})}/></label>
@@ -182,19 +182,19 @@ function Followups({setup,onOpen,version}:{setup:AdvSetup;onOpen:(id:string)=>vo
   p.invoices.map(i=>[i.name,formatDate(i.date),formatDate(i.due),String(i.days),amount(i.amount)]),formatDate(todayISO()),'',[['الإجمالي المتأخر',amount(p.overdue)]])))popupBlocked()};
  const done=(p:FollowupPartner)=>{setBusy(true);booksRequest('followup_done',{partnerId:p.partnerId,levelId:p.level?.id||''}).then(()=>{toast.success('سُجلت المتابعة');setV(x=>x+1)},fail).finally(()=>setBusy(false))};
  return <section className="panel"><div className="department-toolbar"><h2>متابعة التحصيل</h2>{setup.canConfigure&&<button className="btn" onClick={()=>setLevels(true)}>مستويات التذكير</button>}</div>
-  <p className="muted">العملاء الذين تأخرت فواتيرهم، والمستوى المناسب لكل منهم حسب أيام التأخير. اطبع الخطاب ثم سجّل أنه أُرسل.</p>
-  {data&&<div className="table-wrap"><table className="office-table books-table"><thead><tr><th>العميل</th><th>المتأخر</th><th>أقصى تأخير</th><th>المستوى المستحق</th><th>آخر متابعة</th><th></th></tr></thead>
+  <p className="muted">الموكلون الذين تأخرت فواتيرهم، والمستوى المناسب لكل منهم حسب أيام التأخير. اطبع الخطاب ثم سجّل أنه أُرسل.</p>
+  {data&&<div className="table-wrap"><table className="office-table books-table"><thead><tr><th>الموكل</th><th>المتأخر</th><th>أقصى تأخير</th><th>المستوى المستحق</th><th>آخر متابعة</th><th></th></tr></thead>
    <tbody>{data.partners.map(p=>{const due=p.level&&(!p.last||p.last.levelDays<p.level.days);return <tr key={p.partnerId}><td>{p.name}{p.phone&&<small dir="ltr"> · {p.phone}</small>}<div className="books-mini">{p.invoices.map(i=><button key={i.moveId} type="button" className="link mono" onClick={()=>onOpen(i.moveId)}>{i.name}</button>)}</div></td>
     <td dir="ltr">{amount(p.overdue)}</td><td>{p.maxDays} يوماً</td><td>{p.level?<span className={'tag '+(due?'amber':'')}>{p.level.name}</span>:'—'}</td><td>{p.last?`${p.last.level||'متابعة'} · ${formatDate(p.last.date)}`:'لم يُتابع'}</td>
     <td><div className="actions"><button className="btn" onClick={()=>letter(p)}><Printer size={14}/> الخطاب</button>{setup.canEdit&&<button className={'btn '+(due?'primary':'')} disabled={busy} onClick={()=>done(p)}><Send size={14}/> سُجّل الإرسال</button>}</div></td></tr>})}</tbody></table>
-   {!data.partners.length&&<Empty title="لا يوجد عملاء متأخرون" text="كل الفواتير في مواعيدها."/>}</div>}
+   {!data.partners.length&&<Empty title="لا يوجد موكلون متأخرون" text="كل الفواتير في مواعيدها."/>}</div>}
   {levels&&data&&<LevelsEditor levels={data.levels} onClose={()=>setLevels(false)} onSaved={()=>setV(x=>x+1)}/>}
  </section>;
 }
 function LevelsEditor({levels,onClose,onSaved}:{levels:FollowupLevel[];onClose:()=>void;onSaved:()=>void}){
  const [rows,setRows]=useState<FollowupLevel[]>(levels),[busy,setBusy]=useState(false);
  const save=(l:FollowupLevel,del=false)=>{setBusy(true);booksRequest('save_followup_level',{level:{...l,id:l.id||undefined,delete:del}}).then(()=>{toast.success(del?'حُذف المستوى':'حُفظ المستوى');onSaved()},fail).finally(()=>setBusy(false))};
- return <EditorDialog title="مستويات التذكير" description="يُختار لكل عميل أعلى مستوى بلغته أيام تأخيره." busy={busy} onClose={onClose}><div className="books-editor">
+ return <EditorDialog title="مستويات التذكير" description="يُختار لكل موكل أعلى مستوى بلغته أيام تأخيره." busy={busy} onClose={onClose}><div className="books-editor">
   {rows.map((l,i)=><div key={l.id||i} className="books-level"><div className="form-grid"><label className="field"><span>بعد (أيام)</span><input dir="ltr" value={l.days} onChange={e=>setRows(x=>x.map((y,k)=>k===i?{...y,days:Math.floor(Number(e.target.value)||0)}:y))}/></label>
    <Field label="الاسم" value={l.name} onChange={v=>setRows(x=>x.map((y,k)=>k===i?{...y,name:v}:y))}/><Field label="نص الخطاب" value={l.message} onChange={v=>setRows(x=>x.map((y,k)=>k===i?{...y,message:v}:y))} wide multiline/></div>
    <div className="actions"><button className="btn" disabled={busy||!l.name.trim()} onClick={()=>save(l)}>حفظ</button>{l.id&&<button className="btn danger" disabled={busy} onClick={()=>save(l,true)}><Trash2 size={14}/></button>}</div></div>)}
@@ -211,7 +211,7 @@ function YearEndPanel({setup,onChanged}:{setup:AdvSetup;onChanged:()=>void}){
   <p className="muted">قبل الإقفال: راجع القائمة أدناه. الإقفال يمنع أي قيد أو تعديل حتى نهاية السنة لكل المستخدمين، ونتيجة السنة تظهر تلقائياً في الميزانية العمومية ضمن «نتائج سنوات سابقة».</p>
   <div className="form-grid"><DateField label="نهاية السنة المالية" value={end} onChange={setEnd}/></div>
   {check&&<><ul className="books-checklist">{items.map(([label,n,hint])=><li key={label} className={n?'todo':'ok'}><b>{n?n:'✓'}</b> {label}{n?<small> — {hint}</small>:null}</li>)}</ul>
-   <dl className="books-totals"><div><dt>نتيجة السنة</dt><dd dir="ltr">{amount(check.profit)}</dd></div><div><dt>ذمم عملاء مفتوحة</dt><dd dir="ltr">{amount(check.openReceivable)}</dd></div><div><dt>مقفل حالياً حتى</dt><dd>{check.fiscalLockDate?formatDate(check.fiscalLockDate):'—'}</dd></div></dl>
+   <dl className="books-totals"><div><dt>نتيجة السنة</dt><dd dir="ltr">{amount(check.profit)}</dd></div><div><dt>ذمم موكلين مفتوحة</dt><dd dir="ltr">{amount(check.openReceivable)}</dd></div><div><dt>مقفل حالياً حتى</dt><dd>{check.fiscalLockDate?formatDate(check.fiscalLockDate):'—'}</dd></div></dl>
    {setup.canConfigure?<div className="actions"><button className="btn danger" disabled={busy||check.drafts>0||!!(check.fiscalLockDate&&check.fiscalLockDate>=end)} title={check.drafts>0?'توجد مسودات':undefined}
     onClick={()=>{if(!confirm(`إقفال السنة حتى ${formatDate(end)}؟ لا يمكن الرجوع عنه.`))return;setBusy(true);booksRequest<YearEnd>('close_year',{yearEnd:end}).then(r=>{setCheck(r);toast.success('أُقفلت السنة');onChanged()},fail).finally(()=>setBusy(false))}}><Lock size={15}/> إقفال السنة</button></div>
     :<p className="muted">إقفال السنة لصاحب صلاحية الإعدادات.</p>}</>}

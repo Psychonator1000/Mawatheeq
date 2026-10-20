@@ -79,7 +79,7 @@ const invoiceLines = [{ productId: product('أتعاب محاماة'), label: '�
 let inv = await books(amal, 'save_invoice', { invoice: { moveType: 'out_invoice', journalId: jr('INV'), date: d(3, 1), paymentTermId: half, caseId: 'inv-case', ref: 'SYN-INV', lines: invoiceLines } });
 assert.deepEqual([inv.state, inv.amountTotal, inv.lines.filter(l => l.kind === 'term').map(l => [l.debit, l.dateMaturity])], ['draft', '300.000', [['150.000', d(3, 1)], ['150.000', d(3, 31)]]]);
 assert.deepEqual(inv.lines.filter(l => l.kind === 'product').map(l => [l.accountId, l.credit, l.caseId]), [[acc('401000'), '270.000', 'inv-case'], [acc('403000'), '30.000', 'inv-case']]);
-await refused(() => books(amal, 'post', { id: inv.id, revision: inv.revision }), 'العميل');
+await refused(() => books(amal, 'post', { id: inv.id, revision: inv.revision }), 'الموكل');
 await refused(() => books(amal, 'save_invoice', { invoice: { moveType: 'out_invoice', journalId: jr('BILL'), date: d(3, 1), lines: invoiceLines } }), 'المبيعات');
 await refused(() => books(amal, 'save_invoice', { invoice: { moveType: 'out_invoice', journalId: jr('INV'), date: d(3, 1), lines: [{ label: 'فارغ', accountId: acc('401000'), priceUnit: '0' }] } }), 'بمبلغ');
 inv = await books(amal, 'save_invoice', { invoice: { ...inv, partnerId: client.id, dueDate: '', lines: invoiceLines } });

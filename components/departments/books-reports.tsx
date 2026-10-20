@@ -10,7 +10,7 @@ import FilterSelect from '../filter-select';
 import {exportCsv,exportXlsx} from './shared';
 
 export type ExtraReport='partners'|'aged_in'|'aged_out'|'cash'|'summary'|'cases'|'journal'|'taxes'|'analytic';
-export const EXTRA_REPORTS:[ExtraReport,string][]=[['summary','الملخص التنفيذي'],['partners','دفتر الشركاء'],['aged_in','أعمار ديون العملاء'],['aged_out','أعمار ديون الموردين'],['cash','التدفقات النقدية'],['cases','ربحية القضايا'],['journal','تقرير الدفتر'],['taxes','تقرير الضريبة'],['analytic','مراكز التكلفة']];
+export const EXTRA_REPORTS:[ExtraReport,string][]=[['summary','الملخص التنفيذي'],['partners','دفتر الشركاء'],['aged_in','أعمار ديون الموكلين'],['aged_out','أعمار ديون الموردين'],['cash','التدفقات النقدية'],['cases','ربحية القضايا'],['journal','تقرير الدفتر'],['taxes','تقرير الضريبة'],['analytic','مراكز التكلفة']];
 const amount=(v:string)=>money(toFils(v));
 const fail=(e:unknown)=>toast.error((e as Error).message);
 type Table={headers:string[];body:string[][];totals:[string,string][]};
@@ -75,13 +75,13 @@ export function ExtraReports({setup,report,onOpen,canExport,version}:{setup:Book
 function summaryRows(s:Summary):string[][]{
  const net=toFils(s.income)-toFils(s.expenses);
  return [['الإيرادات',amount(s.income)],['المصروفات',amount(s.expenses)],['صافي الربح',money(net)],['هامش الربح',toFils(s.income)?Math.round(net*1000/toFils(s.income))/10+'٪':'—'],['النقد في البنك والصندوق',amount(s.cash)],
-  ['مستحق من العملاء',amount(s.receivable)],['منه متأخر',amount(s.overdueReceivable)],['مستحق للموردين',amount(s.payable)],['منه متأخر',amount(s.overduePayable)],['المفوتر للعملاء',`${amount(s.invoiced)} (${s.invoices} فاتورة)`],
-  ['المحصل من العملاء',amount(s.collected)],['فواتير الموردين',amount(s.bills)],['قيود ومستندات بانتظار الترحيل',String(s.drafts)]];
+  ['مستحق من الموكلين',amount(s.receivable)],['منه متأخر',amount(s.overdueReceivable)],['مستحق للموردين',amount(s.payable)],['منه متأخر',amount(s.overduePayable)],['المفوتر للموكلين',`${amount(s.invoiced)} (${s.invoices} فاتورة)`],
+  ['المحصل من الموكلين',amount(s.collected)],['فواتير الموردين',amount(s.bills)],['قيود ومستندات بانتظار الترحيل',String(s.drafts)]];
 }
 function SummaryCards({s}:{s:Summary}){
  const net=toFils(s.income)-toFils(s.expenses);
  return <><dl className="books-totals books-kpis"><div><dt>الإيرادات</dt><dd dir="ltr">{amount(s.income)}</dd></div><div><dt>المصروفات</dt><dd dir="ltr">{amount(s.expenses)}</dd></div><div className={net>=0?'net':'off'}><dt>صافي الربح</dt><dd dir="ltr">{money(net)}</dd></div>
-  <div><dt>النقد</dt><dd dir="ltr">{amount(s.cash)}</dd></div><div><dt>مستحق من العملاء</dt><dd dir="ltr">{amount(s.receivable)}</dd></div><div className={toFils(s.overdueReceivable)?'off':''}><dt>متأخر التحصيل</dt><dd dir="ltr">{amount(s.overdueReceivable)}</dd></div>
+  <div><dt>النقد</dt><dd dir="ltr">{amount(s.cash)}</dd></div><div><dt>مستحق من الموكلين</dt><dd dir="ltr">{amount(s.receivable)}</dd></div><div className={toFils(s.overdueReceivable)?'off':''}><dt>متأخر التحصيل</dt><dd dir="ltr">{amount(s.overdueReceivable)}</dd></div>
   <div><dt>مستحق للموردين</dt><dd dir="ltr">{amount(s.payable)}</dd></div><div><dt>المحصل في الفترة</dt><dd dir="ltr">{amount(s.collected)}</dd></div></dl>
   <div className="table-wrap"><table className="office-table books-table"><tbody>{summaryRows(s).map(([k,v],i)=><tr key={i}><th>{k}</th><td dir="ltr">{v}</td></tr>)}</tbody></table></div></>;
 }
