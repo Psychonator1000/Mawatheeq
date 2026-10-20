@@ -26,7 +26,7 @@ export default function MonthlyCases({ records, onSelectMonth }: { records: Case
           <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--brand)" stopOpacity={.22}/><stop offset="100%" stopColor="var(--brand)" stopOpacity={0}/></linearGradient></defs>
           <CartesianGrid strokeDasharray="4 6" vertical={false} stroke="#e8dfd3"/>
           <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#8a7563' }}/>
-          <Tooltip contentStyle={{ border: '1px solid #e3d6c5', borderRadius: 10, fontSize: 13, textAlign: 'right' }} formatter={value => [value, 'سجل حكم']}/>
+          <Tooltip contentStyle={{ border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, textAlign: 'right', background: 'var(--popover)', color: 'var(--popover-foreground)' }} formatter={value => [value, 'سجل حكم']}/>
           <Area dataKey="count" type="monotone" stroke="var(--brand)" strokeWidth={2.5} fill={`url(#${gradientId})`} dot={{ r: 3 }} activeDot={{ r: 6 }} animationDuration={500}/>
         </AreaChart>
       </ResponsiveContainer></div>

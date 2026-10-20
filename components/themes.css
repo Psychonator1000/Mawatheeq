@@ -12,15 +12,15 @@
 :root[data-theme=noir] [data-sonner-toast]{background:#1a1813!important;color:#ded9d0!important;border-color:#2e2b25!important}
 :root[data-theme=noir] :is(.field input,.field textarea,.field select,select,input,textarea){color-scheme:dark}
 :root[data-theme=noir] .panel:hover{box-shadow:0 18px 40px -26px #d4af3755}
-/* White and gold */
-:root[data-theme=ivory]{--sidebar:#ffffff;--sidebar-foreground:#5c4a1e;--sidebar-primary:#9a7413;--sidebar-primary-foreground:#ffffff;--sidebar-accent:#f7efd9;--sidebar-accent-foreground:#7d5d0e;--sidebar-border:#ece4cf;--sidebar-ring:#c9a338}
-:root[data-theme=ivory] .brand-en{color:#7d5d0e}
-:root[data-theme=ivory] :is(.brand-ar,.nav-section,.sidebar-foot){color:#a08a5a}
-:root[data-theme=ivory] .brand-mark{color:#9a7413;border-color:#d9c27f}
-:root[data-theme=ivory] .nav-count{border-color:#0000001a}
-:root[data-theme=ivory] .nav-button[data-active=true]{background:linear-gradient(135deg,#fbf1d4,#f3e2ad)!important;color:#5a430a!important}
-:root[data-theme=ivory] [data-slot=sidebar-container]{border-inline-start:1px solid #ece4cf;box-shadow:-10px 0 30px -24px #9a741355}
-:root[data-theme=ivory] .sidebar-rail{background:#9a74131a}
+/* White and gold (the gold theme in light mode): a black-and-gold sidebar beside light pages, like every other theme. */
+:root[data-theme=ivory]{--sidebar:#12100c;--sidebar-foreground:#e6d9b6;--sidebar-primary:#d4af37;--sidebar-primary-foreground:#0d0c0a;--sidebar-accent:#221e15;--sidebar-accent-foreground:#f3e2ad;--sidebar-border:#d4af3726;--sidebar-ring:#c9a338}
+:root[data-theme=ivory] .brand-en{color:#f3e2ad}
+:root[data-theme=ivory] :is(.brand-ar,.nav-section,.sidebar-foot){color:#a8946a}
+:root[data-theme=ivory] .brand-mark{color:#d4af37;border-color:#d4af3780}
+:root[data-theme=ivory] .nav-count{border-color:#d4af3740}
+:root[data-theme=ivory] .nav-button[data-active=true]{background:linear-gradient(135deg,#e3c35a,#b8902a)!important;color:#0d0c0a!important;box-shadow:0 6px 20px -8px #d4af3780}
+:root[data-theme=ivory] [data-slot=sidebar-container]{background:linear-gradient(180deg,#16130e,#0d0b08);border-inline-start:1px solid #d4af3733}
+:root[data-theme=ivory] .sidebar-rail{background:#d4af371f}
 :root[data-theme=ivory] .btn.primary,:root[data-theme=ivory] .stat.featured,:root[data-theme=ivory] .back-to-top{background:linear-gradient(135deg,#c99d2e,#9a7413);border-color:#a88020}
 /* Light, sunny yellow */
 :root[data-theme=sunflower]{--sidebar:#ffd640;--sidebar-foreground:#4a3600;--sidebar-primary:#4a3600;--sidebar-primary-foreground:#ffe680;--sidebar-accent:#ffe27a;--sidebar-accent-foreground:#3a2a00;--sidebar-border:#00000014;--sidebar-ring:#a57400;--primary-foreground:#3d2e00}

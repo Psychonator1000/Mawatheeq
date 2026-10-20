@@ -85,8 +85,8 @@
 
 /* Type-to-filter dropdowns (case picker, circuits). */
 :root .filter-select-box{position:relative;display:block}
-:root .filter-select-box input{width:100%;min-height:var(--control-h);padding:8px 11px 8px 32px;border:1px solid #dfd3c3;border-radius:8px;background:#fffdf8;font:inherit;font-size:14px;color:inherit}
-:root .filter-select-box input:focus{outline:none;border-color:var(--brand-ring,var(--brand));box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 14%,transparent);background:#fff}
+:root .filter-select-box input{width:100%;min-height:var(--control-h);padding:8px 11px 8px 32px;border:1px solid var(--input,#dfd3c3);border-radius:8px;background:color-mix(in srgb,var(--card,#fffdf8) 92%,var(--background,#fff));font:inherit;font-size:14px;color:inherit}
+:root .filter-select-box input:focus{outline:none;border-color:var(--brand-ring,var(--brand));box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 14%,transparent);background:var(--card,#fff)}
 :root .filter-select-box input:disabled{opacity:.6}
 :root .filter-select-chevron{position:absolute;inset-inline-end:10px;top:50%;translate:0 -50%;opacity:.55;pointer-events:none}
 :root .filter-select-list{position:absolute;z-index:60;inset-inline:0;top:calc(100% + 4px);margin:0;padding:4px;list-style:none;max-height:260px;overflow-y:auto;background:var(--card,#fff);border:1px solid var(--border);border-radius:10px;box-shadow:0 16px 36px -18px #0008}
@@ -100,7 +100,7 @@
 /* Admin edit and delete buttons on recorded sessions. */
 :root .session-table .row-actions{width:1%;white-space:nowrap;text-align:end}
 :root .session-table .row-actions .icon-btn{display:inline-grid;width:30px;height:30px;margin:0}
-:root .icon-btn.danger:hover{background:#f6dcd6;color:#9b2c1f}
+:root .icon-btn.danger:hover{background:color-mix(in srgb,#b42318 14%,var(--card,#fff));color:#c23a2b}
 :root .session-table tr.editing td{background:color-mix(in srgb,var(--brand) 9%,transparent)}
 :root .session-form .form-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 /* The account button: a filled initial with the user name, set apart from the page background in every theme. */

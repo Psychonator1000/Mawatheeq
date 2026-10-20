@@ -2327,7 +2327,7 @@
 :root[data-mode=dark] .month-link b{color:var(--brand)}
 :root[data-mode=dark] .month-link:hover,:root[data-mode=dark] .month-link:focus-visible{background:#231b1c;border-color:#5a4247}
 :root[data-mode=dark] .case-category{border:1px solid var(--border);background:#131313;color:#d4c6c2}
-:root[data-mode=dark] .case-category.active{background:var(--brand);color:#131313;border-color:var(--brand)}
+:root[data-mode=dark] .case-category.active{background:var(--brand)!important;color:#131313;border-color:var(--brand)!important}
 :root[data-mode=dark] .client-card{border:1px solid #282420;background:#131313}
 :root[data-mode=dark] .client-card:hover{border-color:#72585f;background:#191713}
 :root[data-mode=dark] .client-card p,:root[data-mode=dark] .client-card-people{color:#c0b8b3}
