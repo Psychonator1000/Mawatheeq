@@ -118,7 +118,7 @@ try{
  await click('حساب جديد');await page.getByRole('dialog').getByLabel('اسم الحساب',{exact:true}).fill('مصروفات تدريب تجريبية');await page.getByRole('dialog').getByRole('button',{name:'حفظ الحساب',exact:true}).click();await page.getByRole('cell',{name:'مصروفات تدريب تجريبية',exact:true}).waitFor();
  await page.setViewportSize({width:390,height:844});await click('لوحة المحاسبة');await screen('books-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'Books fit a phone');await page.setViewportSize({width:1440,height:1000});
  // Invoicing: a customer added from the invoice, a service line with quantity and discount, confirmed, then paid in part.
- await click('العملاء');await click('فاتورة عميل جديدة');const invoice=page.getByRole('dialog');
+ await page.locator('.books-tabs').getByRole('button',{name:'الموكلون',exact:true}).click();await click('فاتورة عميل جديدة');const invoice=page.getByRole('dialog');
  await invoice.getByLabel('عميل جديد',{exact:true}).fill('عميل واجهة تجريبي');await invoice.getByRole('button',{name:'إضافة',exact:true}).click();await invoice.getByLabel('العميل',{exact:true}).and(page.locator('[data-value]:not([data-value=""])')).waitFor();
  await invoice.getByLabel('خدمة السطر 1',{exact:true}).selectOption({label:'أتعاب محاماة'});await invoice.getByLabel('سعر السطر 1',{exact:true}).fill('120');await invoice.getByLabel('كمية السطر 1',{exact:true}).fill('2');await invoice.getByLabel('خصم السطر 1',{exact:true}).fill('10');
  await invoice.locator('tfoot').getByText('216.000').waitFor();await screen('invoice-draft');
@@ -141,7 +141,7 @@ try{
  await stmt.getByRole('button',{name:'حساب مباشر',exact:true}).click();await stmt.getByLabel('الحساب المقابل',{exact:true}).selectOption({label:'509000'});await stmt.getByRole('button',{name:'تأكيد المطابقة',exact:true}).click();
  await stmt.getByRole('button',{name:/^فك مطابقة عمولة/}).waitFor();await screen('bank-reconciled');await stmt.getByRole('button',{name:'إغلاق',exact:true}).last().click();
  await page.locator('.books-pick').first().getByText(/حركة للمطابقة/).waitFor({state:'detached'});
- await click('العملاء');await page.getByRole('row').filter({hasText:'عميل واجهة تجريبي'}).getByText('مدفوعة',{exact:true}).waitFor();
+ await page.locator('.books-tabs').getByRole('button',{name:'الموكلون',exact:true}).click();await page.getByRole('row').filter({hasText:'عميل واجهة تجريبي'}).getByText('مدفوعة',{exact:true}).waitFor();
  // Reports: summary, partner ledger, aged balances, cash flow, a comparison with last year and an Excel export.
  await click('التقارير المالية');await click('الملخص التنفيذي');await page.locator('.books-kpis').getByText('صافي الربح',{exact:true}).waitFor();await screen('books-summary');
  await click('دفتر الشركاء');await page.getByRole('button',{name:'عميل واجهة تجريبي',exact:true}).click();await page.locator('.books-table').getByRole('button',{name:'INV/'+new Date().getFullYear()+'/0001'}).waitFor();
@@ -151,7 +151,7 @@ try{
  {const dl=page.waitForEvent('download');await click('Excel');assert.match((await dl).suggestedFilename(),/^Mawatheeq-pl\.xlsx$/);}
  // Advanced: taxes switched on and used on an invoice, a fixed asset depreciated, the tax report and the year-end checklist.
  await click('الحسابات والإعدادات');await click('الضرائب');await page.getByRole('checkbox',{name:/تفعيل الضرائب/}).click();await page.getByText(/فُعّلت الضرائب/).first().waitFor();await page.getByText('(مفعّلة)',{exact:false}).waitFor();
- await click('العملاء');await click('فاتورة عميل جديدة');{const v=page.getByRole('dialog');await v.getByLabel('العميل',{exact:true}).selectOption({label:'عميل واجهة تجريبي'});
+ await page.locator('.books-tabs').getByRole('button',{name:'الموكلون',exact:true}).click();await click('فاتورة عميل جديدة');{const v=page.getByRole('dialog');await v.getByLabel('العميل',{exact:true}).selectOption({label:'عميل واجهة تجريبي'});
   await v.getByLabel('خدمة السطر 1',{exact:true}).selectOption({label:'أتعاب استشارة'});await v.getByLabel('سعر السطر 1',{exact:true}).fill('100');await v.getByLabel('ضريبة السطر 1',{exact:true}).selectOption({label:'ضريبة مبيعات 5٪'});
   await v.locator('tfoot').getByText('105.000').waitFor();await screen('invoice-tax');await v.getByRole('button',{name:'تأكيد',exact:true}).click();
   await page.getByRole('dialog',{name:'INV/'+new Date().getFullYear()+'/0002'}).waitFor();await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();}

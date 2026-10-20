@@ -236,7 +236,7 @@ export function PaymentEditor({setup,cases,initial,onClose,onChanged,onOpen}:{se
  </EditorDialog>;
 }
 
-/** «العملاء» or «الموردون»: their invoices, credit notes and payments, and who owes what. */
+/** «الموكلون» or «الموردون»: their invoices, credit notes and payments, and who owes what. */
 export function PartnerSide({setup,cases,side,onOpen,onNew,onChanged,version,canExport}:{setup:FullSetup;cases:CaseSummary[];side:'customer'|'vendor';onOpen:(id:string)=>void;onNew:(kind:DocKind,partnerId:string)=>void;onChanged:()=>void;version:number;canExport:boolean}){
  const kinds:DocKind[]=side==='customer'?['out_invoice','out_refund','customer_payment']:['in_invoice','in_refund','vendor_payment'];
  const [tab,setTab]=useState<DocKind|'partners'>(kinds[0]),[partner,setPartner]=useState('');
@@ -244,7 +244,7 @@ export function PartnerSide({setup,cases,side,onOpen,onNew,onChanged,version,can
  const partners=setup.partners.filter(p=>p.kind===side||p.kind==='both'||toFils(setup.partnerBalances[p.id]?.[key]||'0')!==0);
  return <>
   <div className="department-metrics books-metrics"><div><span>مسودات</span><b>{s?.draft??0}</b></div><div><span>{side==='customer'?'بانتظار التحصيل':'بانتظار الدفع'}</span><b dir="ltr">{amount(s?.openAmount||'0')}</b></div><div><span>متأخرة ({s?.late??0})</span><b dir="ltr">{amount(s?.lateAmount||'0')}</b></div></div>
-  <div className="department-tabs view-switch" role="group" aria-label={side==='customer'?'العملاء':'الموردون'}>{[...kinds.map(k=>[k,DOC_KINDS[k].label] as const),['partners',side==='customer'?'أرصدة العملاء':'أرصدة الموردين'] as const].map(([k,l])=>
+  <div className="department-tabs view-switch" role="group" aria-label={side==='customer'?'الموكلون':'الموردون'}>{[...kinds.map(k=>[k,DOC_KINDS[k].label] as const),['partners',side==='customer'?'أرصدة العملاء':'أرصدة الموردين'] as const].map(([k,l])=>
    <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
   {tab!=='partners'?<Documents setup={setup} cases={cases} kind={tab} partner={partner} onPartner={setPartner} onOpen={onOpen} onNew={()=>onNew(tab,partner)} onChanged={onChanged} version={version} canExport={canExport}/>
    :<section className="panel"><div className="table-wrap"><table className="office-table books-table"><thead><tr><th>{side==='customer'?'العميل':'المورد'}</th><th>الهاتف</th><th>{side==='customer'?'مستحق لنا':'مستحق علينا'}</th><th></th></tr></thead>
