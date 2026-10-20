@@ -23,6 +23,13 @@ assert.equal(day('2026-10-15', []).kind, 'holiday');
 assert.equal(day('2026-10-17', ['09:00', '12:00']).overtimeMinutes, 180, 'Rest-day work is overtime');
 assert.equal(day('2026-10-11', ['08:00', '16:20']).overtimeMinutes, 0, 'Overtime below the minimum is ignored');
 assert.equal(day('2026-10-11', ['08:00', '17:00']).overtimeMinutes, 60);
+// Hours for single weekdays: a short Thursday (2026-10-22) and a working Saturday morning (2026-10-24).
+{const own = { ...sched, workDays: [0, 1, 2, 3, 4, 6], days: { 4: { start: '08:00', end: '13:00' }, 6: { start: '09:00', end: '12:00' } } };
+ const at = (date, times) => dayRecord(date, own, settings, times.map(t => `${date}T${t}:00`), undefined, [], later);
+ assert.deepEqual([at('2026-10-22', ['08:00', '13:00']).kind, at('2026-10-22', ['08:00', '13:00']).earlyMinutes], ['present', 0], 'Leaving at the short Thursday end is not early');
+ assert.equal(at('2026-10-22', ['08:00', '14:00']).overtimeMinutes, 60, 'Overtime counts from that day\'s own end');
+ assert.deepEqual([at('2026-10-24', ['09:30', '12:00']).kind, at('2026-10-24', ['09:30', '12:00']).lateMinutes], ['late', 30], 'Lateness counts from that day\'s own start');
+ assert.equal(at('2026-10-21', ['08:00', '13:00']).earlyMinutes, 180, 'Other days keep the usual hours');}
 assert.equal(day('2026-10-11', [], { leave: { employeeId: 'e', from: '2026-10-11', to: '2026-10-12', type: 'سنوية' } }).kind, 'leave');
 assert.equal(day('2026-10-11', ['09:00', '16:00'], { adjustments: [{ kind: 'excuse', note: 'مهمة' }] }).kind, 'excused', 'Excused days carry no lateness');
 const manual = day('2026-10-11', ['08:00'], { adjustments: [{ kind: 'manual_out', time: '16:00', note: 'نسي' }] });

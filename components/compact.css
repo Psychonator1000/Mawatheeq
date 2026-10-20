@@ -362,3 +362,31 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 /* Page numbers stay put at the foot of every list that scrolls inside its panel, as on the judgments register. */
 .work-desk-body .pagination,.list-desk .desk-panel>.panel-body .pagination{position:sticky;bottom:0;z-index:3;background:var(--card);margin:0 -16px;padding:8px 16px;border-top:1px solid var(--border)}
 .list-desk .desk-panel>.panel-body .pagination{margin:0 -20px;padding:8px 20px}
+.day-hours{border:0;padding:0;margin:14px 0 0}.day-hours legend{font-weight:650;margin-bottom:8px}
+.day-hours-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.day-hours-card{border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:grid;gap:6px;align-content:start}.day-hours-card.on{border-color:var(--dept,var(--brand))}
+.day-hours-card .checkbox-line{margin:0;font-size:13.5px}.day-hours-card small{font-size:12px;text-align:end}
+.day-hours-times{display:flex;align-items:center;gap:4px}.day-hours-times input{min-width:0;flex:1;height:34px;padding:2px 6px;border:1px solid var(--border);border-radius:8px;background:var(--card);font-size:13px}
+/* One screen for real: on pages built as desks the window never scrolls. The area under the top bar takes the height
+   that is left and the list inside it takes whatever the notices and headings above it leave, so an extra line above
+   (a scope note, a read-only notice, the mail tabs) shortens the list instead of pushing the page past the screen. */
+@media(min-width:1001px){
+ .main:has(.list-desk,.overview-desk,.work-desk-grid){height:100dvh;display:flex;flex-direction:column}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid)>*{flex-shrink:0}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;overflow:auto;padding-bottom:16px}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace>*{flex-shrink:0}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace>.fade-in{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace>.fade-in>*{flex-shrink:0}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid) .footer-note{display:none}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace>.fade-in>:is(.list-desk,.overview-desk,.work-desk-grid){flex:1 1 auto;min-height:0;height:auto}
+ .department-shell:has(.desk-page){height:100dvh;min-height:0;display:flex;flex-direction:column}
+ .department-shell:has(.desk-page)>*{flex-shrink:0}
+ .department-shell:has(.desk-page)>.department-content{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;overflow:auto}
+ .department-content.desk-page>*{flex-shrink:0}
+ .department-shell:has(.desk-page)>.department-content.desk-page>:is(.work-desk-grid,.work-desk.desk-full){flex:1 1 auto;min-height:0;height:auto}
+}
+@media(min-width:1001px){
+ .department-shell:has(.desk-page)>.department-content.desk-page>.batch-print{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin:0}
+ .department-content.desk-page>.batch-print>*{flex-shrink:0}.department-content.desk-page>.batch-print>.table-wrap{flex:1 1 auto;min-height:140px;overflow:auto}
+ .department-content.desk-page>.batch-print>.table-wrap thead th{position:sticky;top:0;z-index:2;background:var(--card)}
+}

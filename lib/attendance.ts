@@ -1,7 +1,9 @@
 // Attendance and payroll estimates from fingerprint punches. Pure functions: no I/O, no timezone shifts.
 // Punch times arrive as office wall-clock strings (YYYY-MM-DDTHH:MM:SS) converted by the server.
 
-export type Schedule = { start: string; end: string; workDays: number[] };
+/** `days` holds hours that differ from `start`–`end` on some weekdays (0 = Sunday … 6 = Saturday), e.g. a short Thursday. */
+export type DayHours = { start: string; end: string };
+export type Schedule = { start: string; end: string; workDays: number[]; days?: Partial<Record<string, DayHours>> };
 export type AttendanceSettings = Schedule & {
   timezone: string; graceMinutes: number; monthlyLateAllowanceMinutes: number;
   deductionMode: 'warn' | 'deduct'; dayRateBasis: '30' | 'workdays'; absenceDeduction: boolean;
@@ -22,7 +24,9 @@ const minutes = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); 
 const clock = (at: string) => at.slice(11, 16);
 const weekday = (date: string) => new Date(date + 'T00:00:00Z').getUTCDay();
 export const monthDays = (month: string) => { const [y, m] = month.split('-').map(Number); const n = new Date(Date.UTC(y, m, 0)).getUTCDate(); return Array.from({ length: n }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`); };
-export const scheduleOf = (e: Pick<AttEmployee, 'schedule'>, s: AttendanceSettings): Schedule => e.schedule || { start: s.start, end: s.end, workDays: s.workDays };
+export const scheduleOf = (e: Pick<AttEmployee, 'schedule'>, s: AttendanceSettings): Schedule => e.schedule || { start: s.start, end: s.end, workDays: s.workDays, days: s.days };
+/** The hours of one date: its weekday's own hours when set, otherwise the usual ones. */
+export const hoursOn = (sched: Schedule, date: string): DayHours => sched.days?.[String(weekday(date))] || { start: sched.start, end: sched.end };
 export const formatMinutes = (n: number) => n <= 0 ? '0' : n < 60 ? `${n} د` : `${Math.floor(n / 60)} س ${n % 60 ? (n % 60) + ' د' : ''}`.trim();
 
 /** One employee's day. `now` is the office wall clock (YYYY-MM-DDTHH:MM) so today's late arrivals are not counted absent too early. */
@@ -32,7 +36,7 @@ export function dayRecord(date: string, sched: Schedule, s: AttendanceSettings, 
   const excuse = adjustments.find(a => a.kind === 'excuse');
   const holiday = s.holidays.find(h => h.date === date);
   const base: DayRecord = { date, kind: 'present', first: times[0] ? clock(times[0]) : null, last: times.length > 1 ? clock(times[times.length - 1]) : null, punches: times.map(clock), lateMinutes: 0, earlyMinutes: 0, workedMinutes: 0, overtimeMinutes: 0, note: excuse?.note || holiday?.name || leave?.type || '' };
-  const start = minutes(sched.start), end = minutes(sched.end);
+  const hours = hoursOn(sched, date), start = minutes(hours.start), end = minutes(hours.end);
   const worked = times.length > 1 ? minutes(clock(times[times.length - 1])) - minutes(clock(times[0])) : 0;
   const offDay = holiday || !sched.workDays.includes(weekday(date));
   if (offDay) {

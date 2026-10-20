@@ -64,6 +64,8 @@ assert.equal(saved.settings.graceMinutes, 15);
 await assert.rejects(() => att(hr.token, 'save_settings', { settings, revision: ctx.revision }), e => e.code === '40001', 'Stale settings are rejected');
 await assert.rejects(() => att(hr.token, 'save_settings', { settings: { ...settings, timezone: 'Mars/Base' }, revision: saved.revision }), /غير صالحة/);
 await assert.rejects(() => att(hr.token, 'save_settings', { settings: { ...settings, start: '17:00', end: '08:00' }, revision: saved.revision }), /غير صالحة/);
+await assert.rejects(() => att(hr.token, 'save_settings', { settings: { ...settings, days: { 4: { start: '14:00', end: '13:00' } } }, revision: saved.revision }), /غير صالحة/, 'A day that ends before it starts is refused');
+await assert.rejects(() => att(hr.token, 'save_settings', { settings: { ...settings, days: { 9: { start: '08:00', end: '13:00' } } }, revision: saved.revision }), /غير صالحة/, 'Only weekdays 0–6');
 await denied(() => att(hrReader.token, 'save_settings', { settings, revision: saved.revision }));
 
 // Pay profiles: fingerprint PIN mapping and salary in minor units.
@@ -165,6 +167,13 @@ const after = await att(accountant.token, 'punches', { from: '2026-10-01', to: '
 assert.equal(after.length, before, 'Punches from a removed device are kept'); assert.ok(after.every(p => p.deviceId === null || p.deviceId !== uuid(30)));
 await assert.rejects(() => att(hr.token, 'delete_device', { id: uuid(30), revision: 1 }), /غير موجود/);
 
+// Hours for single weekdays are kept with the settings and on an employee's own schedule.
+{const now = await att(hr.token, 'context');
+ const withDays = await att(hr.token, 'save_settings', { settings: { ...now.settings, days: { 4: { start: '08:00', end: '13:00' } } }, revision: now.revision });
+ assert.equal(withDays.settings.days['4'].end, '13:00', 'A short Thursday is saved');
+ const prof = await att(hr.token, 'save_profile', { employeeId: uuid(1), revision: (await att(hr.token, 'employees')).find(e => e.id === uuid(1)).profileRevision,
+   profile: { pin: '101', salaryMinor: '900000', currency: 'KWD', schedule: { start: '08:00', end: '16:00', workDays: [0, 1, 2, 3, 4, 6], days: { 6: { start: '09:00', end: '12:00' } } } } });
+ assert.equal(prof.schedule.days['6'].start, '09:00', 'An employee\'s own Saturday hours are saved');}
 // Existing APIs keep working after the migration.
 assert.ok((await dept(hr.token, 'hr', 'records_page', { offset: 0 })).length >= 3);
 console.log('Passed attendance: door devices with fixed unlock times, remote opening limited to HR editors and door devices, device-user cards and admin roles, device removal with revision checks that keeps punches, HR/accounting-only access, device management limited to HR editors, validated settings and revisions, unique fingerprint PINs, timezone-correct imports with duplicate skipping, leave and adjustment projections, hashed one-time bridge keys, command claiming, bridge punches/users/status/results, revocation and existing API compatibility.');

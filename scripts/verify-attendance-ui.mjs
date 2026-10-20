@@ -83,8 +83,10 @@ try{
  // Work schedule settings are revision-checked and audited.
  await click('إعدادات الدوام');await page.getByLabel('فترة السماح اليومية (دقائق)',{exact:true}).fill('15');await page.getByLabel('سماحية التأخير الشهرية (دقائق)',{exact:true}).fill('30');
  await page.getByLabel('اسم العطلة',{exact:true}).fill('عطلة تجريبية');assert.equal(await page.getByRole('button',{name:'إضافة العطلة'}).isDisabled(),true,'A holiday needs a date');
+ await page.locator('.day-hours-card').filter({hasText:'الخميس'}).getByRole('checkbox').check();await page.getByLabel('نهاية الخميس',{exact:true}).fill('13:00');
  await click('حفظ إعدادات الدوام');await toast('حُفظت إعدادات الدوام');
  assert.equal((await att('context')).settings.graceMinutes,15);
+ assert.deepEqual((await att('context')).settings.days,{4:{start:'08:00',end:'13:00'}},'A short Thursday is saved with the settings');
 
  // Devices: add, rename, queue commands and create a bridge key shown once.
  await click('الأجهزة');await click('إضافة جهاز');await field('اسم الجهاز','جهاز تجريبي');await field('عنوان IP','192.168.50.10');await click('حفظ الجهاز');await toast('حُفظ الجهاز');

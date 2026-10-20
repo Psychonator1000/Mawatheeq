@@ -142,6 +142,10 @@ export default function MotionLayer() {
     if(scrolling){row.style.setProperty('--sr-delay',Math.min(n++,6)*80+'ms');row.classList.toggle('row-up',scrollDir==='up');row.classList.add('row-reveal')}
    }
   });
+  // Lists that scroll inside their panel (the one-screen pages) reveal rows the same way the page used to.
+  const innerTops=new WeakMap<Element,number>();
+  const onInnerScroll=(e:Event)=>{const el=e.target;if(!(el instanceof HTMLElement))return;const top=el.scrollTop,prev=innerTops.get(el)??top;innerTops.set(el,top);
+   if(top!==prev){scrollDir=top>prev?'down':'up';lastScrollAt=performance.now();if(!spotFrame)spotFrame=requestAnimationFrame(spot)}};
   const onRowRevealEnd=(e:AnimationEvent)=>{const el=e.target as HTMLElement;const row=e.animationName==='row-glow'?el:e.animationName==='sr-fade'&&el===el.parentElement?.lastElementChild?el.parentElement:null;if(row?.classList.contains('row-reveal'))row.classList.remove('row-reveal','row-up')};
   document.addEventListener('animationend',onRowRevealEnd);
   const watchedRows=new WeakSet<Element>();
@@ -194,10 +198,10 @@ export default function MotionLayer() {
   for(const c of canvases)c.addEventListener('contextlost',onContextLost);
   onScrollFrame();scheduleMeasure();
   addEventListener('pointermove',onMove,{passive:true});addEventListener('pointerdown',onDown,{passive:true});addEventListener('pointerup',onUp,{passive:true});addEventListener('pointercancel',onUp,{passive:true});document.addEventListener('pointerleave',onLeave);
-  addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',scheduleMeasure,{passive:true});addEventListener('mawatheeq-appearance',onAppearance);reducedQuery.addEventListener('change',onAppearance);
+  addEventListener('scroll',onScroll,{passive:true});document.addEventListener('scroll',onInnerScroll,{capture:true,passive:true});addEventListener('resize',scheduleMeasure,{passive:true});addEventListener('mawatheeq-appearance',onAppearance);reducedQuery.addEventListener('change',onAppearance);
   return()=>{for(const c of canvases)c.removeEventListener('contextlost',onContextLost);cancelAnimationFrame(perfFrame);clearTimeout(perfStop);cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);cancelAnimationFrame(scrollFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
    removeEventListener('pointermove',onMove);removeEventListener('pointerdown',onDown);removeEventListener('pointerup',onUp);removeEventListener('pointercancel',onUp);document.removeEventListener('pointerleave',onLeave);
-   removeEventListener('keydown',onKey);clearTimeout(splashTimer);removeEventListener('scroll',onScroll);removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
+   removeEventListener('keydown',onKey);clearTimeout(splashTimer);removeEventListener('scroll',onScroll);document.removeEventListener('scroll',onInnerScroll,{capture:true});removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
    for(const a of ['data-scrolled','data-scrolling','data-pointer'])root.removeAttribute(a)};
  },[]);
  const jump=(m:Mark)=>{const top=m.el.getBoundingClientRect().top+scrollY-96;scrollTo({top,behavior:motionAllowed()?'smooth':'auto'})};

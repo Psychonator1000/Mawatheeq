@@ -57,13 +57,17 @@ async function audit(name){
    const ids={};for(const e of document.querySelectorAll('[id]'))ids[e.id]=(ids[e.id]||0)+1;
    const dup=Object.entries(ids).filter(([,n])=>n>1).map(([k])=>k).slice(0,5);
    const imgs=[...document.querySelectorAll('img')].filter(i=>vis(i)&&!i.hasAttribute('alt')).length;
-   return {overflowX:document.documentElement.scrollWidth-innerWidth,sticking,unnamed,unlabeled,cut,dup,imgs,height:document.documentElement.scrollHeight};
+   return {overflowX:document.documentElement.scrollWidth-innerWidth,sticking,unnamed,unlabeled,cut,dup,imgs,height:document.documentElement.scrollHeight,inner:[...document.querySelectorAll('.workspace,.department-content')].reduce((n,e)=>Math.max(n,e.scrollHeight-e.clientHeight),0),
+    // A desk page must still fit when a notice appears above its list (a scope note, a read-only notice).
+    pushed:(()=>{const host=document.querySelector('.desk-page')||(document.querySelector('.workspace .list-desk,.workspace .overview-desk,.workspace .work-desk-grid')&&document.querySelector('.workspace>.fade-in'));
+     if(!host||innerWidth<1001)return 0;const n=document.createElement('p');n.className='notice';n.style.cssText='height:60px;margin:0';host.prepend(n);
+     const over=document.documentElement.scrollHeight-innerHeight;n.remove();return over>2?over:0})()};
   });
   const file=name.replace(/[^\w؀-ۿ-]+/g,'_')+'-'+w+'.png';
   await page.screenshot({path:out+'/'+file,fullPage:w>400?false:true}).catch(()=>{});
   if(w>400&&r.height>902)await page.screenshot({path:out+'/'+file.replace('.png','-full.png'),fullPage:true}).catch(()=>{});
-  const issues=Object.entries(r).filter(([k,v])=>k!=='height'&&(Array.isArray(v)?v.length:k==='overflowX'?v>2:v));
-  report.push({page:name,width:w,height:r.height,file,issues:Object.fromEntries(issues)});
+  const issues=Object.entries(r).filter(([k,v])=>k!=='height'&&k!=='inner'&&(Array.isArray(v)?v.length:k==='overflowX'?v>2:v));
+  report.push({page:name,width:w,height:r.height,inner:r.inner,file,issues:Object.fromEntries(issues)});
  }
  await page.setViewportSize({width:1440,height:900});
 }
@@ -100,5 +104,5 @@ console.log(`Audited ${new Set(report.map(r=>r.page)).size} pages × 2 widths; $
 for(const r of bad)console.log('-',r.page,r.width,JSON.stringify(r.issues).slice(0,600));
 for(const e of runtime)console.log('! ',e.where,e.msg);
 // Desktop pages taller than the window (the page itself scrolls).
-const tall=report.filter(r=>r.width>400&&r.height>902);if(tall.length)console.log('Taller than the window at 1440×900: '+tall.map(r=>r.page+' ('+r.height+')').join('، '));
+const tall=report.filter(r=>r.width>400&&(r.height>902||r.inner>2));if(tall.length)console.log('Taller than the window at 1440×900: '+tall.map(r=>r.page+' ('+r.height+(r.inner>2?', +'+r.inner+' inside':'')+')').join('، '));
 await browser.close();
