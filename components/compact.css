@@ -359,3 +359,6 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .ov-charts .chart-box.monthly-chart{flex:1 1 auto;min-height:100px;height:auto}
 .ov-charts .month-links{grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;margin-top:8px}.ov-charts .month-link{padding:3px 0;gap:0;font-size:10px}.ov-charts .month-link b{font-size:12px}
 .ov-charts .doughnut-area{padding:4px 6px;gap:10px}.ov-charts .doughnut{width:104px;height:104px}.ov-charts .doughnut:after{inset:11px}}
+/* Page numbers stay put at the foot of every list that scrolls inside its panel, as on the judgments register. */
+.work-desk-body .pagination,.list-desk .desk-panel>.panel-body .pagination{position:sticky;bottom:0;z-index:3;background:var(--card);margin:0 -16px;padding:8px 16px;border-top:1px solid var(--border)}
+.list-desk .desk-panel>.panel-body .pagination{margin:0 -20px;padding:8px 20px}
