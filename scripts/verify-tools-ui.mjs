@@ -86,17 +86,16 @@ await page.getByLabel('اسم المستخدم',{exact:true}).fill('tools_owner'
 await page.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
 await page.getByRole('button',{name:'فتح القضايا'}).click();
 
-// Personal work on the overview.
-const mine=page.getByRole('region',{name:'عملي'});
-await mine.getByText('مهمة متأخرة تجريبية').waitFor();
-assert.ok(await mine.getByText('جلسة اليوم التجريبية').isVisible());
-assert.ok(await mine.getByText('مهمة الأسبوع القادم').isVisible());
+// The overview is statistics only: personal work lives on «المهام والجلسات» and in the notifications.
+const latest=page.locator('.ov-col .panel').filter({has:page.getByRole('heading',{name:'أحدث الأحكام'})});
+await latest.getByText('TOOL-0').first().waitFor();
+assert.equal(await page.getByRole('region',{name:'عملي'}).count(),0,'No personal work list on the overview');
 
 // A refresh opens instantly from the last visit even when the server is slow, then the server's copy takes over.
 await page.waitForFunction(()=>!!localStorage.getItem('mawatheeq.boot.v1'));await page.waitForTimeout(300);
 // Each server answer takes 8 s, so anything shown sooner came from the last visit, not the server.
 slowServer=8000;const reloadStart=Date.now();await page.reload();
-await mine.getByText('مهمة متأخرة تجريبية').waitFor({timeout:7000});
+await latest.getByText('TOOL-0').first().waitFor({timeout:7000});
 assert.ok(Date.now()-reloadStart<7500,'Workspace and work appear before the slow server answers');
 assert.equal(await page.getByText('جارٍ تحميل سجلاتك',{exact:false}).count(),0,'No loading placeholder on a refresh');
 await page.screenshot({path:artifacts+'/instant-reload.png'});
@@ -215,7 +214,7 @@ await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('combobox').fi
 await page.keyboard.press('Enter');
 await page.getByRole('heading',{name:'الإعدادات والبيانات',level:1}).waitFor();
 await page.setViewportSize({width:390,height:844});
-await page.goto(base+'#overview');await page.reload();await mine.getByText('مهمة متأخرة تجريبية').waitFor();
+await page.goto(base+'#overview');await page.reload();await latest.getByText('TOOL-0').first().waitFor();
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'No horizontal viewport overflow on mobile');
 await page.screenshot({path:artifacts+'/mobile-overview.png',fullPage:true});
 assert.equal(await page.locator('.account-bar,.legal-workspace-switch').count(),0,'No floating account controls over page content');

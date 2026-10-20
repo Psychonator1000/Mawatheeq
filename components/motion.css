@@ -68,8 +68,10 @@ body{transition:background-color .6s}
 .my-work-item:hover,.calendar-item:hover{transform:translateY(-1px)}
 
 /* Cards lean toward the pointer (full motion only). */
-/* Tilting cards stay on their own layer, so some graphics cards don't leave stray edge lines at the corners while they turn. */
-:root[data-motion=full] [data-tilt]{transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s;will-change:transform;backface-visibility:hidden}
+/* Only the card under the pointer gets its own layer while it turns (no stray edge lines on some graphics cards);
+   keeping every card on a layer all the time slowed the animated background. */
+:root[data-motion=full] [data-tilt]{transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s}
+:root[data-motion=full] [data-tilt]:hover{will-change:transform;backface-visibility:hidden}
 :root[data-motion=full] [data-tilt]:hover{transform:perspective(900px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) translateY(-3px);box-shadow:0 18px 40px -24px #35101c55}
 :root[data-motion=full] .stat[data-tilt]::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(260px circle at var(--glare-x,50%) var(--glare-y,50%),#ffffff40,transparent 60%);opacity:0;transition:opacity .3s}
 :root[data-motion=full] .stat[data-tilt]:hover::after{opacity:1}
