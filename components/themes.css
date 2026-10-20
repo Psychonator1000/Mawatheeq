@@ -12,16 +12,29 @@
 :root[data-theme=noir] [data-sonner-toast]{background:#1a1813!important;color:#ded9d0!important;border-color:#2e2b25!important}
 :root[data-theme=noir] :is(.field input,.field textarea,.field select,select,input,textarea){color-scheme:dark}
 :root[data-theme=noir] .panel:hover{box-shadow:0 18px 40px -26px #d4af3755}
-/* White and gold (the gold theme in light mode): a black-and-gold sidebar beside light pages, like every other theme. */
-:root[data-theme=ivory]{--sidebar:#12100c;--sidebar-foreground:#e6d9b6;--sidebar-primary:#d4af37;--sidebar-primary-foreground:#0d0c0a;--sidebar-accent:#221e15;--sidebar-accent-foreground:#f3e2ad;--sidebar-border:#d4af3726;--sidebar-ring:#c9a338}
-:root[data-theme=ivory] .brand-en{color:#f3e2ad}
-:root[data-theme=ivory] :is(.brand-ar,.nav-section,.sidebar-foot){color:#a8946a}
-:root[data-theme=ivory] .brand-mark{color:#d4af37;border-color:#d4af3780}
-:root[data-theme=ivory] .nav-count{border-color:#d4af3740}
-:root[data-theme=ivory] .nav-button[data-active=true]{background:linear-gradient(135deg,#e3c35a,#b8902a)!important;color:#0d0c0a!important;box-shadow:0 6px 20px -8px #d4af3780}
-:root[data-theme=ivory] [data-slot=sidebar-container]{background:linear-gradient(180deg,#16130e,#0d0b08);border-inline-start:1px solid #d4af3733}
-:root[data-theme=ivory] .sidebar-rail{background:#d4af371f}
+/* White and gold (the gold theme in light mode): a gold sidebar beside white pages, as the default theme pairs a burgundy sidebar with light pages. */
+:root[data-theme=ivory]{--sidebar:#a8821f;--sidebar-foreground:#fffaf0;--sidebar-primary:#fff8e6;--sidebar-primary-foreground:#6b4f0a;--sidebar-accent:#b8932f;--sidebar-accent-foreground:#ffffff;--sidebar-border:#ffffff26;--sidebar-ring:#fff3cf}
+:root[data-theme=ivory] .brand-en{color:#ffffff}
+:root[data-theme=ivory] :is(.brand-ar,.nav-section,.sidebar-foot){color:#fbecc4}
+:root[data-theme=ivory] .brand-mark{color:#ffffff;border-color:#ffffff80}
+:root[data-theme=ivory] .nav-count{border-color:#ffffff4d}
+:root[data-theme=ivory] .nav-button[data-active=true]{background:#fff8e6!important;color:#6b4f0a!important;box-shadow:0 6px 18px -10px #4a360066}
+:root[data-theme=ivory] [data-slot=sidebar-container]{background:linear-gradient(180deg,#b8922c,#9a7413)}
+:root[data-theme=ivory] .sidebar-rail{background:#ffffff1f}
 :root[data-theme=ivory] .btn.primary,:root[data-theme=ivory] .stat.featured,:root[data-theme=ivory] .back-to-top{background:linear-gradient(135deg,#c99d2e,#9a7413);border-color:#a88020}
+/* Gold theme: alerts and overdue marks in bronze, so no burgundy-red is left over from the default theme. */
+:root[data-theme=ivory] :is(.nav-count.alert,.notice-count.urgent){background:#8f4a12;border-color:#8f4a12;color:#fff8e6}
+:root[data-theme=ivory] .notice-count.urgent::after{border-color:#8f4a12}
+:root[data-theme=ivory] .avatar-dot{background:#c9741c}
+:root[data-theme=ivory] .tag.red{color:#8f4a12;background:#f8ead6}
+:root[data-theme=ivory] .work-chip.late b{background:#8f4a121f;color:#8f4a12}
+:root[data-theme=ivory] :is(.office-alert,.my-work-col.overdue h3){color:#8f4a12!important}
+:root[data-theme=noir] :is(.nav-count.alert,.notice-count.urgent){background:#c9741c;border-color:#c9741c;color:#120d05}
+:root[data-theme=noir] .notice-count.urgent::after{border-color:#c9741c}
+:root[data-theme=noir] .avatar-dot{background:#e08a2c}
+:root[data-theme=noir] .tag.red{color:#f0a860;background:#3a2410}
+:root[data-theme=noir] .work-chip.late b{background:#e08a2c26;color:#f0a860}
+:root[data-theme=noir] :is(.office-alert,.my-work-col.overdue h3){color:#f0a860!important}
 /* Light, sunny yellow */
 :root[data-theme=sunflower]{--sidebar:#ffd640;--sidebar-foreground:#4a3600;--sidebar-primary:#4a3600;--sidebar-primary-foreground:#ffe680;--sidebar-accent:#ffe27a;--sidebar-accent-foreground:#3a2a00;--sidebar-border:#00000014;--sidebar-ring:#a57400;--primary-foreground:#3d2e00}
 :root[data-theme=sunflower] [data-slot=sidebar-container]{background:linear-gradient(180deg,#ffdc55,#ffcf2e)}

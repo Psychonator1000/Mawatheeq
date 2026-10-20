@@ -425,7 +425,7 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 /* Report windows (judgment roll, sessions roll, judgments issued, case statements): the case window's size, and only
    the list or preview scrolls inside. */
 @media(min-width:901px){
- :root .roll-dialog{inset:2vh max(1.5vw,calc((100vw - 1800px)/2))!important;width:auto!important;max-width:none!important;max-height:none!important;height:auto!important;translate:none!important;transform:none!important;display:flex!important;flex-direction:column;overflow:hidden!important;border-radius:22px}
+ :root .roll-dialog{inset:2vh max(1.5vw,calc((100vw - 1800px)/2))!important;width:auto!important;max-width:none!important;max-height:none!important;height:auto!important;--tw-translate-x:0!important;--tw-translate-y:0!important;translate:0 0!important;transform:none!important;display:flex!important;flex-direction:column;overflow:hidden!important;border-radius:22px}
  :root .roll-dialog>*{flex-shrink:0}
  .roll-dialog>.roll-preview{flex:1 1 auto;height:auto!important;min-height:180px}
  .roll-dialog>.desk-bare{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
