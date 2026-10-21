@@ -205,12 +205,12 @@ export function createBackdrop(canvas: HTMLCanvasElement, state: () => FxState) 
       if (near) { ctx.fillStyle = rgba(palette.brand, .5); ctx.beginPath(); ctx.arc(px, py, 2.2, 0, Math.PI * 2); ctx.fill(); }
     }
   };
-  let lastDraw = 0;
+  // Drawn on every frame at the screen's own rate: a 30-frame cap made the motion visibly choppy. Devices that cannot
+  // keep up are switched to light mode by the frame check in the motion layer instead.
   const loop = (now: number) => {
     frame = 0; const s = state(); if (document.hidden || s.motion === 'off' || s.reduced) return;
     // One bad frame must never stop the backdrop: skip it and carry on.
-    // About 30 frames a second is smooth for a slow backdrop and halves its cost (and battery use) against 60.
-    if (now - lastDraw >= 31) { lastDraw = now; try { draw(now, true); } catch { /* drawn again next frame */ } }
+    try { draw(now, true); } catch { /* drawn again next frame */ }
     frame = requestAnimationFrame(loop);
   };
   const sync = () => {
