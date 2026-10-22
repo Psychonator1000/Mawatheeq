@@ -6,12 +6,17 @@ import {toast} from 'sonner';
 import {chatRequest,fileRequest} from '@/lib/local-auth';
 import {backend} from '@/lib/supabase-client';
 import {requestOpen} from '@/lib/open-record';
+import {useChatSlot} from './chat-slot';
 import {CHAT_WITH_EVENT,FILE_TYPES,MAX_FILE,bodyParts,chatTime,conversationName,fileSize,refToken,triggerRefs,typedTrigger,type ChatConversation,type ChatMessage,type ChatPerson,type ChatRef,type ChatSummary} from '@/lib/chat';
 
 const FAST=5000,SLOW=30000,HIDDEN=60000;
 const missing=(e:unknown)=>/Could not find the function|PGRST202|404/.test(String((e as Error)?.message||e));
 
-/** Staff chat: a bubble on every page with one-to-one and group conversations that can point at cases, clients, tasks and people. */
+/**
+ * Staff chat: one-to-one and group conversations that can point at cases, clients, tasks and people. Its button sits
+ * in the page header beside the mail and notification icons; inside an open case or record window, which covers the
+ * header, it stays a round button in the window's corner.
+ */
 export default function Chat({userId}:{userId:string}){
  const [available,setAvailable]=useState(true),[open,setOpen]=useState(false),[summary,setSummary]=useState<ChatSummary|null>(null);
  const [active,setActive]=useState<string|null>(null),[view,setView]=useState<'list'|'new'|'group'|'info'>('list');
@@ -30,18 +35,22 @@ export default function Chat({userId}:{userId:string}){
   try{const r=await chatRequest<{id:string}>('start_direct',{userId:id});reopenChat(userId,r.id);await refresh();setView('list');setActive(r.id);setOpen(true)}
   catch(err){toast.error(missing(err)?'المحادثات غير مفعّلة بعد.':(err as Error).message)}};
   addEventListener(CHAT_WITH_EVENT,go);return()=>removeEventListener(CHAT_WITH_EVENT,go)},[userId,refresh]);
- const host=useWindowHost();
+ const host=useWindowHost(),slot=useChatSlot(),docked=!host&&!!slot;
  if(!available)return null;
  const conv=summary?.conversations.find(c=>c.id===active)||null;
- return createPortal(<>
-  <button type="button" className={'chat-bubble'+(open?' open':'')} aria-label={unread?`المحادثات، ${unread} غير مقروءة`:'المحادثات'} aria-expanded={open} onClick={()=>setOpen(o=>!o)}><MessageCircle size={24}/>{unread>0&&<span className="chat-badge">{unread>99?'99+':unread}</span>}</button>
-  {open&&<section className="chat-panel" role="dialog" aria-label="المحادثات" dir="rtl" ref={panel}>
+ const label=unread?`المحادثات، ${unread} غير مقروءة`:'المحادثات',count=unread>99?'99+':unread;
+ return <>
+  {docked&&createPortal(<button type="button" className={'icon-btn notice-trigger chat-trigger'+(open?' open':'')} aria-label={label} aria-expanded={open} onClick={()=>setOpen(o=>!o)}><MessageCircle/>{unread>0&&<span key={'chat-'+unread} className="notice-count chat-count" aria-hidden="true">{count}</span>}</button>,slot!)}
+  {createPortal(<>
+  {!docked&&<button type="button" className={'chat-bubble'+(open?' open':'')} aria-label={label} aria-expanded={open} onClick={()=>setOpen(o=>!o)}><MessageCircle size={24}/>{unread>0&&<span className="chat-badge">{count}</span>}</button>}
+  {open&&<section className={'chat-panel'+(docked?' docked':'')} role="dialog" aria-label="المحادثات" dir="rtl" ref={panel}>
    {conv&&view==='list'?<Conversation key={conv.id} conv={conv} me={userId} onLeave={()=>setOpen(false)} onBack={()=>setActive(null)} onInfo={()=>setView('info')} onChanged={refresh} onDirect={async id=>{const r=await chatRequest<{id:string}>('start_direct',{userId:id});reopenChat(userId,r.id);await refresh();setActive(r.id)}}/>
    :view==='new'||view==='group'?<NewChat group={view==='group'} onCancel={()=>setView('list')} onCreated={async id=>{reopenChat(userId,id);await refresh();setView('list');setActive(id)}}/>
    :view==='info'&&conv?<GroupInfo conv={conv} me={userId} onBack={()=>setView('list')} onChanged={async left=>{await refresh();setView('list');if(left)setActive(null)}}/>
    :<ConversationList key={userId} summary={summary} me={userId} onOpen={id=>{reopenChat(userId,id);setActive(id);setView('list')}} onNew={()=>setView('new')} onGroup={()=>setView('group')} onClose={()=>setOpen(false)}/>}
   </section>}
- </>,host??document.body);
+  </>,host??document.body)}
+ </>;
 }
 
 /** An open record window traps focus and clicks, so the chat lives inside the topmost one while it is open. */

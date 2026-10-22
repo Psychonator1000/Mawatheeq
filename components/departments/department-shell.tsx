@@ -1,5 +1,6 @@
 import {Suspense,lazy,useEffect,useState} from 'react';
 import AccountMenu from '../account-menu';
+import {ChatSlot} from '../chat-slot';
 import {RefreshCw,Mail} from 'lucide-react';
 import MailBell from '../mail/mail-bell';
 import {OPEN_MAIL_EVENT,takePendingMail,useMailAvailable,useMailCounts} from '@/lib/mail';
@@ -34,7 +35,7 @@ export default function DepartmentWorkspace({workspace,access}:{workspace:Depart
  const mailOk=useMailAvailable(),counts=useMailCounts(mailOk),[mail,setMail]=useState<{id:string}|null>(()=>takePendingMail(workspace));
  useEffect(()=>{const on=()=>{const p=takePendingMail(workspace);if(p)setMail(p)};addEventListener(OPEN_MAIL_EVENT,on);return()=>removeEventListener(OPEN_MAIL_EVENT,on)},[workspace]);
  const unread=counts?.byWorkspace[workspace]||0,[print,setPrint]=useState(false);
- return <main className={'department-shell theme-'+workspace} dir="rtl"><header className="department-topbar"><div className="department-brand"><BrandLogo/><span>مواثيق <small>{meta.name}</small></span></div><div className="actions"><button className="btn" onClick={refresh} disabled={loading}><RefreshCw size={16}/> تحديث</button><MailBell workspace={workspace}/><AccountMenu/></div></header>
+ return <main className={'department-shell theme-'+workspace} dir="rtl"><header className="department-topbar"><div className="department-brand"><BrandLogo/><span>مواثيق <small>{meta.name}</small></span></div><div className="actions"><button className="btn" onClick={refresh} disabled={loading}><RefreshCw size={16}/> تحديث</button><MailBell workspace={workspace}/><ChatSlot/><AccountMenu/></div></header>
  <div className={'department-content'+(DESKS.includes(workspace)&&!mail?' desk-page':'')}>{(mailOk||workspace==='secretary')&&<div className="department-tabs view-switch mail-switch" role="group" aria-label="صفحات المساحة"><button className={'btn '+(!mail&&!print?'primary':'')} aria-pressed={!mail&&!print} onClick={()=>{setMail(null);setPrint(false)}}>{meta.name}</button>
  {workspace==='secretary'&&<button className={'btn '+(print&&!mail?'primary':'')} aria-pressed={print&&!mail} onClick={()=>{setMail(null);setPrint(true)}}>طباعة مستندات التحصيل</button>}{mailOk&&<button className={'btn '+(mail?'primary':'')} aria-pressed={!!mail} onClick={()=>{setPrint(false);setMail({id:''})}}><Mail size={15}/> البريد{unread>0&&<span className="nav-count">{unread}</span>}</button>}</div>}
  {mail?<Suspense fallback={<StatusMessage loading error=""/>}><MailPage key={mail.id} workspace={workspace} focusId={mail.id}/></Suspense>:<><StatusMessage loading={loading} error={error}/>{!loading&&!error&&<Suspense fallback={<StatusMessage loading error=""/>}>

@@ -466,3 +466,8 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 .legend-bar>s{display:block;flex:none;height:100%;border-radius:inherit;transition:width .6s cubic-bezier(.2,.8,.2,1)}
 :root .ov-charts .doughnut-area{gap:18px}
 :root .ov-charts .doughnut-area .legend-row{padding:6px 8px;gap:8px}
+/* Chat button in the header beside mail and notifications; its panel opens beneath it. */
+.chat-slot{display:contents}
+.chooser-account{gap:8px;align-items:center}
+.chat-trigger.open{background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)}
+@media(min-width:641px){.chat-panel.docked{top:72px;bottom:auto;height:min(600px,calc(100dvh - 92px))}}
