@@ -61,13 +61,26 @@ export function takePendingMail(workspace: MailWorkspace): { id: string } | null
   } catch { return null; }
 }
 
-let available: Promise<boolean> | null = null;
+let available: Promise<boolean> | null = null, notInstalled = false;
 /** Mail appears once its migration is applied; until then nothing about it shows. */
 export function mailAvailable(): Promise<boolean> {
-  available ??= mailRequest('counts').then(() => true, (e: { code?: string }) => { if (e?.code !== 'PGRST202' && e?.code !== '42883') available = null; return false; });
+  available ??= mailRequest('counts').then(() => true, (e: { code?: string }) => { notInstalled = e?.code === 'PGRST202' || e?.code === '42883'; if (!notInstalled) available = null; return false; });
   return available;
 }
-export function useMailAvailable() { const [ok, setOk] = useState(false); useEffect(() => { let live = true; void mailAvailable().then(v => { if (live) setOk(v); }); return () => { live = false; }; }, []); return ok; }
+// The last answer is remembered on this device, so the mail icon is in place at once after a refresh instead of
+// popping in when the server replies; the server's answer still decides.
+const availableKey = 'mawatheeq.mail-available.v1';
+const rememberedAvailable = () => { try { return localStorage.getItem(availableKey) === '1'; } catch { return false; } };
+export function useMailAvailable() {
+  const [ok, setOk] = useState(rememberedAvailable);
+  useEffect(() => { let live = true; void mailAvailable().then(v => {
+    // A passing network error keeps what this device last knew; only a server without mail hides the icon.
+    if (!v && !notInstalled) return;
+    try { if (v) localStorage.setItem(availableKey, '1'); else localStorage.removeItem(availableKey); } catch { /* this visit only */ }
+    if (live) setOk(v);
+  }); return () => { live = false; }; }, []);
+  return ok;
+}
 
 /** Calls the «mail» edge function, which reaches the mail servers; the session token is checked in the database. */
 export async function mailFunction<T = unknown>(action: 'sync' | 'test' | 'save' | 'send' | 'upload' | 'attachment', data: Record<string, unknown> = {}): Promise<T> {
