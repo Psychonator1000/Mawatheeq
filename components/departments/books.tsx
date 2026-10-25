@@ -1,5 +1,5 @@
-import {useEffect,useMemo,useState,type ReactNode} from 'react';
-import {Plus,Printer,Download,FileSpreadsheet,Scale,RotateCcw,Undo2,Ban,Trash2,Check,History,Landmark,Banknote,Receipt,ShoppingCart,NotebookPen,Lock} from 'lucide-react';
+import {useCallback,useEffect,useMemo,useState,type ReactNode} from 'react';
+import {Plus,Printer,Download,FileSpreadsheet,Scale,RotateCcw,Undo2,Ban,Trash2,Check,History,Landmark,Banknote,Receipt,ShoppingCart,NotebookPen,Lock,LayoutDashboard,BarChart3,ShieldCheck,Settings} from 'lucide-react';
 import {toast} from 'sonner';
 import {BOOKS_NOTICE,booksRequest,type BooksNotice} from '@/lib/local-auth';
 import {ACCOUNT_TYPES,DOC_KINDS,GROUP_LABELS,docKindOf,type Doc,type DocKind,JOURNAL_TYPES,MOVE_STATES,PARTNER_KINDS,balanceSheet,balancingLine,fiscalYearStart,money,moveTotals,nextAccountCode,profitAndLoss,runningLedger,toFils,
@@ -16,10 +16,11 @@ import PageNavigation from '../page-navigation';
 import Needs from '../needs';
 import {EditorDialog,exportCsv,exportXlsx} from './shared';
 import {EXTRA_REPORTS,ExtraReports,type ExtraReport} from './books-reports';
-import BankCash,{type BankSetup} from './books-bank';
-import Advanced,{AnalyticPanel,CurrenciesPanel,TaxesPanel,type AdvSetup} from './books-advanced';
+import BankCash,{type BankSetup,type BankTab} from './books-bank';
+import Advanced,{AnalyticPanel,CurrenciesPanel,TaxesPanel,type AdvSetup,type AdvancedTab} from './books-advanced';
 import OutsideView,{CollectionsToBooks,MonthlyChart} from './books-outside';
-import Controls,{type CtlSetup} from './books-controls';
+import Controls,{type CtlSetup,type ControlsTab} from './books-controls';
+import {AttentionList,BooksNav,PageHeader,type Attention,type NavAction,type NavGroup,type NavItem} from './books-nav';
 import {InvoiceEditor,InvoicingPanel,PartnerSide,PaymentEditor,ProductsPanel,TermsPanel,blankDoc,type FullSetup} from './books-invoicing';
 
 type View='dashboard'|'customers'|'vendors'|'bank'|'outside'|'advanced'|'controls'|'moves'|'reports'|'config';
@@ -41,46 +42,141 @@ export {booksAvailable,useBooksAvailable} from '@/lib/books-api';
  * ledger, the profit and loss and the balance sheet, and the chart of accounts, journals, partners and lock dates.
  */
 export default function Books({cases,access,views}:{cases:CaseSummary[];access:Permissions;views:ReactNode}){
- const [setup,setSetup]=useState<BooksSetup|null>(null),[error,setError]=useState(''),[version,setVersion]=useState(0),[view,setView]=useState<View>('dashboard');
- const [editing,setEditing]=useState<Draft|null>(null),[doc,setDoc]=useState<Doc|null>(null),[journalFilter,setJournalFilter]=useState(''),[ledgerAccount,setLedgerAccount]=useState(''),[report,setReport]=useState<Report>('trial');
+ const [setup,setSetup]=useState<BooksSetup|null>(null),[error,setError]=useState(''),[version,setVersion]=useState(0),[page,setPage]=useState<string>(initialPage);
+ const [editing,setEditing]=useState<Draft|null>(null),[doc,setDoc]=useState<Doc|null>(null),[journalFilter,setJournalFilter]=useState(''),[ledgerAccount,setLedgerAccount]=useState('');
  useEffect(()=>{let live=true;booksRequest<BooksSetup>('setup').then(s=>{if(live){setSetup(s);setError('')}}).catch(e=>{if(live)setError((e as Error).message)});return()=>{live=false}},[version]);
  const reload=()=>setVersion(v=>v+1);
+ // Each page is a step in the browser's history, so «back» returns to the previous page; the last one is remembered.
+ const go=useCallback((p:string)=>{setPage(p);try{localStorage.setItem(PAGE_KEY,p);if(history.state?.booksPage!==p)history.pushState({...(history.state||{}),booksPage:p},'')}catch{/* this visit only */}},[]);
+ useEffect(()=>{try{history.replaceState({...(history.state||{}),booksPage:initialPage()},'')}catch{/* no history */}
+  const pop=(e:PopStateEvent)=>{const p=e.state?.booksPage;if(typeof p==='string')setPage(p)};addEventListener('popstate',pop);return()=>removeEventListener('popstate',pop)},[]);
  // Sent for approval instead of posted, or a client over their credit limit: said once, wherever it happened.
  useEffect(()=>{const on=(e:Event)=>{const n=(e as CustomEvent<BooksNotice>).detail;
-   if(n.kind==='pending'){toast.message('أُرسل للاعتماد',{description:n.message,action:{label:'طلبات الاعتماد',onClick:()=>setView('controls')}});setVersion(v=>v+1)}else toast.warning(n.message)};
-  addEventListener(BOOKS_NOTICE,on);return()=>removeEventListener(BOOKS_NOTICE,on)},[]);
+   if(n.kind==='pending'){toast.message('أُرسل للاعتماد',{description:n.message,action:{label:'طلبات الاعتماد',onClick:()=>go('close:approvals')}});setVersion(v=>v+1)}else toast.warning(n.message)};
+  addEventListener(BOOKS_NOTICE,on);return()=>removeEventListener(BOOKS_NOTICE,on)},[go]);
+ // In an open entry or document: Ctrl+S presses its «حفظ…» button and Ctrl+Enter its «ترحيل» or «تأكيد», only when that button is enabled.
+ useEffect(()=>{const key=(e:KeyboardEvent)=>{if(!(e.ctrlKey||e.metaKey)||e.altKey)return;const save=e.code==='KeyS',post=e.key==='Enter';if(!save&&!post)return;
+   const dialogs=document.querySelectorAll<HTMLElement>('[role=dialog]'),top=dialogs[dialogs.length-1];if(!top)return;
+   const button=[...top.querySelectorAll<HTMLButtonElement>('button')].find(b=>!b.disabled&&(save?/^حفظ/:/^(ترحيل|تأكيد)/).test((b.textContent||'').trim()));
+   if(button){e.preventDefault();button.click()}};
+  addEventListener('keydown',key);return()=>removeEventListener('keydown',key)},[]);
  // Invoices, bills and payments open in their own editor; other entries in the journal entry editor.
- async function open(id:string){try{const m=await booksRequest<Doc>('get_move',{id});if(docKindOf(m)){setEditing(null);setDoc(m)}else{setDoc(null);setEditing(m as unknown as Draft)}}catch(e){fail(e)}}
+ const open=useCallback(async(id:string)=>{try{const m=await booksRequest<Doc>('get_move',{id});if(docKindOf(m)){setEditing(null);setDoc(m)}else{setDoc(null);setEditing(m as unknown as Draft)}}catch(e){fail(e)}},[]);
  const full=setup&&'paymentTerms' in setup?setup as FullSetup:null,bank=setup&&'bank' in setup?setup as BankSetup:null,adv=setup&&'advanced' in setup?setup as AdvSetup:null,links=!!setup&&'links' in setup,ctl=setup&&'controls' in setup?setup as CtlSetup:null;
- const newDoc=(kind:DocKind,partnerId='')=>{if(full){setEditing(null);setDoc(blankDoc(full,kind,partnerId))}};
- const tabs=<div className="work-chips books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','الموكلون'],['vendors','الموردون']] as const:[]),...(bank?[['bank','البنك والنقد']] as const:[]),...(links?[['outside','المعاملات الخارجية']] as const:[]),...(adv?[['advanced','المحاسبة المتقدمة']] as const:[]),...(ctl?[['controls',ctl.controls.pending&&ctl.controls.canApprove?`الرقابة والاعتماد (${ctl.controls.pending})`:'الرقابة والاعتماد']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
-  <button key={k} className={'work-chip'+(view===k?' on':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>;
+ const newDoc=useCallback((kind:DocKind,partnerId='')=>{if(full){setEditing(null);setDoc(blankDoc(full,kind,partnerId))}},[full]);
+ const newMove=useCallback((journalId='')=>{if(setup)setEditing(blankMove(journalId||setup.journals.find(j=>j.type==='general')?.id||setup.journals[0]?.id||''))},[setup]);
+ const groups=useMemo(()=>setup?navGroups(setup,full,bank,adv,ctl,links):[],[setup,full,bank,adv,ctl,links]);
+ const actions=useMemo<NavAction[]>(()=>!setup?.canEdit?[]:[
+   ...(full?[{id:'out_invoice',label:'فاتورة موكل جديدة',words:'فاتورة بيع أتعاب',run:()=>newDoc('out_invoice')},{id:'customer_payment',label:'سند قبض جديد',words:'مقبوضات تحصيل دفعة',run:()=>newDoc('customer_payment')},
+    {id:'in_invoice',label:'فاتورة مورد جديدة',words:'فاتورة شراء مصروف',run:()=>newDoc('in_invoice')},{id:'vendor_payment',label:'سند صرف جديد',words:'مدفوعات دفع',run:()=>newDoc('vendor_payment')},
+    {id:'out_refund',label:'إشعار دائن لموكل',words:'مرتجع تخفيض',run:()=>newDoc('out_refund')}]:[]),
+   {id:'move',label:'قيد يومية جديد',words:'قيد تسوية',run:()=>newMove()}],[setup,full,newDoc,newMove]);
+ const all=groups.flatMap(g=>g.items.map(i=>({g,i}))),here=all.find(x=>x.i.id===page)||all[0],current=here?.i.id||'dashboard';
+ const partnerName=useCallback((id:string)=>setup?.partners.find(p=>p.id===id)?.name||'',[setup]);
+ const attention=setup?attentionItems(setup,full,bank,adv,ctl,links):[];
+ const [section,tab]=current.split(':');
+ const openId=(id:string)=>void open(id);
  return <>
-  {/* One screen: the section's header and the books' pages scrolling inside one panel. */}
-  <section className="panel work-desk desk-full"><div className="work-desk-head">{views}</div>{tabs}<div className="work-desk-body books-body">
+  {/* One screen: the menu beside the page, each scrolling on its own. */}
+  <section className="panel work-desk desk-full"><div className="work-desk-head">{views}</div><div className="work-desk-body books-body">
   {error&&<p className="notice" role="alert">{error}</p>}{!setup&&!error&&<p role="status">جارٍ تحميل الدفاتر…</p>}
-  {setup&&<div className="att-section books">
-   {view==='dashboard'&&<><Dashboard setup={setup} full={full} onNew={j=>setEditing(blankMove(j))} onNewDoc={newDoc} onList={j=>{setJournalFilter(j);setView('moves')}} onView={setView}/>{links&&<MonthlyChart key={version}/>}</>}
-   {full&&(view==='customers'||view==='vendors')&&<PartnerSide key={view} setup={full} cases={cases} side={view==='customers'?'customer':'vendor'} onOpen={id=>void open(id)} onNew={newDoc} onChanged={reload} version={version} canExport={access.canExport}/>}
-   {bank&&view==='bank'&&<BankCash setup={bank} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
-   {links&&setup&&view==='outside'&&<OutsideView setup={setup} cases={cases} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
-   {adv&&view==='advanced'&&<Advanced setup={adv} cases={cases} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
-   {ctl&&view==='controls'&&<Controls setup={ctl} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
-   {view==='moves'&&<Moves setup={setup} cases={cases} journal={journalFilter} onJournal={setJournalFilter} onOpen={id=>void open(id)} onNew={()=>setEditing(blankMove(journalFilter||setup.journals.find(j=>j.type==='general')?.id||setup.journals[0]?.id||''))} version={version} canExport={access.canExport}/>}
-   {view==='reports'&&<Reports setup={setup} report={report} onReport={setReport} account={ledgerAccount} onAccount={setLedgerAccount} onOpen={id=>void open(id)} canExport={access.canExport} version={version}/>}
-   {view==='config'&&<Config setup={setup} full={full} adv={adv} onChanged={reload}/>}
+  {setup&&<div className="books-shell">
+   <BooksNav groups={groups} page={current} onPage={go} actions={actions} partnerName={partnerName} onOpenDoc={openId}/>
+   <div className="books-main"><PageHeader group={here?.g} item={here?.i}/>
+   <div className="att-section books">
+   {current==='dashboard'&&<><AttentionList items={attention} onPage={go}/><Dashboard setup={setup} full={full} onNew={j=>newMove(j)} onNewDoc={newDoc} onList={j=>{setJournalFilter(j);go('entries:moves')}} onView={v=>go(v==='vendors'?'purchases:in_invoice':'sales:out_invoice')}/>{links&&<MonthlyChart key={version}/>}</>}
+   {full&&(section==='sales'||section==='purchases')&&['out_invoice','out_refund','customer_payment','in_invoice','in_refund','vendor_payment','partners'].includes(tab)&&<PartnerSide key={section} setup={full} cases={cases} side={section==='sales'?'customer':'vendor'} tab={tab as DocKind|'partners'} onTab={t=>go(section+':'+t)} onOpen={openId} onNew={newDoc} onChanged={reload} version={version} canExport={access.canExport}/>}
+   {adv&&(current==='sales:followups'||current==='close:yearend'||current==='setup:budgets'||(section==='entries'&&tab!=='moves'))&&<Advanced setup={adv} cases={cases} tab={tab as AdvancedTab} onOpen={openId} onChanged={reload} version={version}/>}
+   {ctl&&(current==='sales:credit'||current==='purchases:run'||current==='setup:rules'||(section==='close'&&['approvals','periods','changes'].includes(tab)))&&<Controls setup={ctl} tab={tab as ControlsTab} onOpen={openId} onChanged={reload} version={version}/>}
+   {bank&&section==='bank'&&tab!=='outside'&&<BankCash setup={bank} tab={tab as BankTab} onOpen={openId} onChanged={reload} version={version}/>}
+   {links&&current==='bank:outside'&&<OutsideView setup={setup} cases={cases} onOpen={openId} onChanged={reload} version={version}/>}
+   {current==='entries:moves'&&<Moves setup={setup} cases={cases} journal={journalFilter} onJournal={setJournalFilter} onOpen={openId} onNew={()=>newMove(journalFilter)} version={version} canExport={access.canExport}/>}
+   {section==='reports'&&<Reports bare setup={setup} report={tab as Report} onReport={r=>go('reports:'+r)} account={ledgerAccount} onAccount={setLedgerAccount} onOpen={openId} canExport={access.canExport} version={version}/>}
+   {(section==='setup'&&!['budgets','rules'].includes(tab)||current==='close:locks')&&<Config setup={setup} full={full} adv={adv} tab={(current==='close:locks'?'locks':tab) as ConfigTab} onChanged={reload}/>}
+   </div></div>
   </div>}
   </div></section>
-  {full&&doc&&(doc.paymentType?<PaymentEditor key={doc.id+':'+doc.revision+':'+doc.amountResidual+':'+doc.matches.length} setup={full} cases={cases} initial={doc} onClose={()=>setDoc(null)} onChanged={d=>{reload();setDoc(d)}} onOpen={id=>void open(id)}/>
-   :<InvoiceEditor key={doc.id+':'+doc.revision+':'+doc.state+':'+doc.amountResidual+':'+doc.matches.length} setup={full} cases={cases} initial={doc} onClose={()=>setDoc(null)} onChanged={d=>{reload();setDoc(d)}} onOpen={id=>void open(id)} onSetup={reload}/>)}
-  {setup&&editing&&<MoveEditor key={editing.id+':'+editing.revision} setup={setup} cases={cases} initial={editing} onClose={()=>setEditing(null)} onChanged={m=>{reload();if(m)setEditing(m);else setEditing(null)}} onOpen={id=>void open(id)}/>}
+  {full&&doc&&(doc.paymentType?<PaymentEditor key={doc.id+':'+doc.revision+':'+doc.amountResidual+':'+doc.matches.length} setup={full} cases={cases} initial={doc} onClose={()=>setDoc(null)} onChanged={d=>{reload();setDoc(d)}} onOpen={openId}/>
+   :<InvoiceEditor key={doc.id+':'+doc.revision+':'+doc.state+':'+doc.amountResidual+':'+doc.matches.length} setup={full} cases={cases} initial={doc} onClose={()=>setDoc(null)} onChanged={d=>{reload();setDoc(d)}} onOpen={openId} onSetup={reload}/>)}
+  {setup&&editing&&<MoveEditor key={editing.id+':'+editing.revision} setup={setup} cases={cases} initial={editing} onClose={()=>setEditing(null)} onChanged={m=>{reload();if(m)setEditing(m);else setEditing(null)}} onOpen={openId}/>}
  </>;
+}
+
+const PAGE_KEY='mawatheeq.books-page.v1';
+function initialPage(){try{return (history.state?.booksPage as string)||localStorage.getItem(PAGE_KEY)||'dashboard'}catch{return 'dashboard'}}
+const REPORT_HINTS:Record<string,string>={trial:'أرصدة كل الحسابات في فترة، مدين ودائن، مع الرصيد الافتتاحي.',ledger:'حركات حساب واحد أو كل الحسابات قيداً قيداً.',pl:'الإيرادات ناقص المصروفات في فترة، مع مقارنة.',
+ bs:'الأصول والخصوم وحقوق الملكية في تاريخ.',summary:'أهم الأرقام في صفحة واحدة لمسؤول المكتب.',partners:'كشف حساب كل شريك برصيد افتتاحي وجارٍ.',aged_in:'ما يستحق على الموكلين حسب أيام التأخير.',
+ aged_out:'ما يستحق للموردين حسب أيام التأخير.',cash:'من أين جاء النقد وأين ذهب في الفترة.',cases:'إيرادات كل قضية ومصروفاتها وربحها.',journal:'كل قيود دفتر معيّن في فترة.',taxes:'الضريبة المحصلة والمدفوعة لكل ضريبة.',analytic:'المصروفات والإيرادات لكل مركز تكلفة.'};
+/** Every accounting page in the groups an accountant works in; only what this office has switched on. */
+function navGroups(setup:BooksSetup,full:FullSetup|null,bank:BankSetup|null,adv:AdvSetup|null,ctl:CtlSetup|null,links:boolean):NavGroup[]{
+ const st=(k:string)=>full?.documentStats[k],item=(id:string,label:string,hint:string,extra:Partial<NavItem>={}):NavItem=>({id,label,hint,...extra});
+ const drafts=Object.values(setup.journalStats).reduce((n,j)=>n+(j.drafts||0),0),toReconcile=bank?Object.values(bank.bank).reduce((n,b)=>n+(b.toReconcile||0),0):0,cheques=bank?Object.values(bank.bank).reduce((n,b)=>n+(b.chequesHeld||0),0):0;
+ const unbilled=(setup as BooksSetup&{outsideOpen?:{unbilled:number}}).outsideOpen?.unbilled||0;
+ const reports=[...REPORTS,...('reports' in setup?EXTRA_REPORTS:[]).filter(([k])=>(k!=='taxes'||!!adv?.taxesEnabled)&&(k!=='analytic'||!!adv))];
+ const groups:NavGroup[]=[{id:'home',title:'الرئيسية',icon:LayoutDashboard,items:[item('dashboard','لوحة المحاسبة','ما ينتظرك اليوم، وأرصدة الدفاتر، والإيرادات والمصروفات شهرياً.',{words:'الرئيسية البداية'})]}];
+ if(full)groups.push({id:'sales',title:'المبيعات والتحصيل',icon:Receipt,items:[
+  item('sales:out_invoice','فواتير الموكلين','إنشاء فواتير الأتعاب وتأكيدها ومتابعة ما لم يُحصّل.',{badge:st('out_invoice')?.late,alert:true,words:'فاتورة بيع أتعاب'}),
+  item('sales:customer_payment','المقبوضات','سندات القبض من الموكلين وربطها بفواتيرهم.',{words:'سند قبض تحصيل دفعات'}),
+  item('sales:out_refund','إشعارات دائنة للموكلين','تخفيض فاتورة موكل أو ردّ مبلغ له.',{words:'مرتجع'}),
+  item('sales:partners','أرصدة الموكلين','ما يستحق على كل موكل، وكشف حسابه.',{words:'كشف حساب ذمم مدينة'}),
+  ...(adv?[item('sales:followups','متابعة التحصيل','تذكير الموكلين المتأخرين حسب درجة التأخير.',{badge:adv.due.followups,words:'تذكير مطالبة'})]:[]),
+  ...(ctl?[item('sales:credit','حدود الائتمان','أقصى ما يُسمح أن يستحق على كل موكل.',{words:'حد سقف'})]:[])]});
+ if(full)groups.push({id:'purchases',title:'المشتريات والدفع',icon:ShoppingCart,items:[
+  item('purchases:in_invoice','فواتير الموردين','تسجيل فواتير الإيجار والخدمات والمشتريات.',{badge:st('in_invoice')?.late,alert:true,words:'فاتورة شراء مصروف'}),
+  item('purchases:vendor_payment','المدفوعات','سندات الصرف للموردين.',{words:'سند صرف دفع'}),
+  item('purchases:in_refund','إشعارات الموردين','ما يخفّضه المورد من فاتورته.'),
+  item('purchases:partners','أرصدة الموردين','ما يستحق لكل مورد، وكشف حسابه.',{words:'ذمم دائنة'}),
+  ...(ctl?[item('purchases:run','دفعة الموردين','دفع كل ما يستحق حتى تاريخ في دفعة واحدة.',{words:'دفع جماعي'})]:[])]});
+ if(bank||links)groups.push({id:'bank',title:'البنك والنقد',icon:Landmark,items:[
+  ...(bank?[item('bank:reconcile','المطابقة','مطابقة حركات كشف البنك مع الفواتير والقيود.',{badge:toReconcile,alert:true,words:'تسوية بنكية'}),
+   item('bank:statements','كشوف الحساب','إدخال كشف البنك أو استيراده من Excel.',{words:'كشف بنك استيراد'}),
+   item('bank:cheques','الشيكات','الشيكات قيد التحصيل والمودعة والمرتجعة.',{badge:cheques}),
+   item('bank:transfer','التحويل بين الحسابات','نقل مبلغ بين البنك والصندوق.',{words:'تحويل'}),
+   item('bank:batches','الدفعات المجمعة','الدفعات المجمعة السابقة وإجماليها.')]:[]),
+  ...(links?[item('bank:outside','المعاملات الخارجية','رسوم المحاكم والتنفيذ المدفوعة خارج المكتب، وأين أصل الإيصال.',{badge:unbilled,words:'رسوم محكمة إيصال عهدة'})]:[])]});
+ groups.push({id:'entries',title:'القيود',icon:NotebookPen,items:[
+  item('entries:moves','القيود اليومية','كل القيود والمستندات، المسودة والمرحّلة.',{badge:drafts,words:'قيد يومية مسودة'}),
+  ...(adv?[item('entries:recurring','القيود المتكررة','قيود وفواتير تُنشأ تلقائياً كل فترة.',{badge:adv.due.recurring,alert:true,words:'متكرر شهري'}),
+   item('entries:asset','الأصول الثابتة','الأصول وإهلاكها الشهري.',{badge:adv.due.schedules,words:'إهلاك أصل'}),
+   item('entries:deferred_revenue','الإيرادات المؤجلة','إيراد مقبوض يُوزّع على أشهر.'),item('entries:deferred_expense','المصروفات المؤجلة','مصروف مدفوع يُوزّع على أشهر.',{words:'مقدماً'})]:[])]});
+ groups.push({id:'reports',title:'التقارير',icon:BarChart3,items:reports.map(([k,l])=>item('reports:'+k,l,REPORT_HINTS[k]||'',{words:'تقرير'}))});
+ groups.push({id:'close',title:'الإقفال والرقابة',icon:ShieldCheck,items:[
+  ...(ctl?[item('close:approvals','طلبات الاعتماد','ما يتجاوز حدود الموظفين بانتظار الاعتماد.',{badge:ctl.controls.pending,alert:ctl.controls.canApprove,words:'اعتماد موافقة'}),
+   item('close:periods','الفترات الشهرية','إقفال كل شهر وإعادة فتحه.',{words:'إقفال شهر'})]:[]),
+  item('close:locks','تواريخ الإقفال','إقفال الفترة والسنة المالية حتى تاريخ.',{words:'قفل'}),
+  ...(adv?[item('close:yearend','إقفال السنة','قائمة ما بقي مفتوحاً ثم إقفال السنة.',{words:'نهاية السنة'})]:[]),
+  ...(ctl?[item('close:changes','سجل التغييرات','من غيّر ماذا ومتى، مع القيم قبل وبعد.',{words:'تدقيق سجل'})]:[])]});
+ groups.push({id:'setup',title:'الإعداد',icon:Settings,items:[
+  item('setup:accounts','دليل الحسابات','الحسابات ورموزها وأنواعها.',{words:'شجرة حسابات'}),item('setup:journals','الدفاتر','دفاتر المبيعات والمشتريات والبنك والقيود.'),
+  item('setup:partners','الشركاء','الموكلون والموردون ومن تتعامل معهم.',{words:'موكل مورد'}),
+  ...(full?[item('setup:products','الخدمات','الخدمات وأسعارها وحساباتها.',{words:'منتجات أتعاب'}),item('setup:terms','شروط الدفع','مهل الاستحقاق والأقساط.'),
+   item('setup:invoicing','الفوترة ونقل الدفتر القديم','حسابات الفوترة الافتراضية ونقل الدفتر السابق.')]:[]),
+  ...(adv?[item('setup:taxes','الضرائب','الضرائب ونسبها وحساباتها.'),item('setup:currencies','العملات','العملات وأسعار صرفها.',{words:'صرف دولار'}),
+   item('setup:analytic','مراكز التكلفة','مراكز التكلفة لتوزيع الإيرادات والمصروفات.'),item('setup:budgets','الموازنات','الموازنة لكل حساب مقابل الفعلي.',{words:'ميزانية تقديرية'})]:[]),
+  ...(ctl&&setup.canConfigure?[item('setup:rules','صلاحيات الاعتماد','من يرحّل دون اعتماد ومن يعتمد وبكم.',{words:'حدود'})]:[])]});
+ return groups.filter(g=>g.items.length);
+}
+/** What waits today, most pressing first; each opens the page where it is dealt with. */
+function attentionItems(setup:BooksSetup,full:FullSetup|null,bank:BankSetup|null,adv:AdvSetup|null,ctl:CtlSetup|null,links:boolean):Attention[]{
+ const st=(k:string)=>full?.documentStats[k],drafts=Object.values(setup.journalStats).reduce((n,j)=>n+(j.drafts||0),0);
+ const unbilled=(setup as BooksSetup&{outsideOpen?:{unbilled:number}}).outsideOpen?.unbilled||0;
+ return [
+  ...(ctl&&ctl.controls.canApprove?[{id:'approvals',label:'طلب بانتظار اعتمادك',count:ctl.controls.pending,page:'close:approvals',alert:true}]:[]),
+  ...(full?[{id:'late-in',label:'فاتورة موكل متأخرة عن الاستحقاق',count:st('out_invoice')?.late||0,amount:st('out_invoice')?.lateAmount,page:'sales:out_invoice',alert:true},
+   {id:'late-out',label:'فاتورة مورد متأخرة عن الدفع',count:st('in_invoice')?.late||0,amount:st('in_invoice')?.lateAmount,page:'purchases:in_invoice',alert:true}]:[]),
+  ...(bank?[{id:'reconcile',label:'حركة بنك بانتظار المطابقة',count:Object.values(bank.bank).reduce((n,b)=>n+(b.toReconcile||0),0),page:'bank:reconcile'}]:[]),
+  ...(adv?[{id:'recurring',label:'قيد متكرر حان موعده',count:adv.due.recurring,page:'entries:recurring'},{id:'schedules',label:'قسط إهلاك أو تأجيل مستحق الترحيل',count:adv.due.schedules,page:'entries:asset'},
+   {id:'followups',label:'موكل متأخر للمتابعة',count:adv.due.followups,page:'sales:followups'}]:[]),
+  {id:'drafts',label:'مستند مسودة لم يُرحّل',count:drafts,page:'entries:moves'},
+  ...(links?[{id:'unbilled',label:'رسوم خارجية لم تُطالب بها الموكلين',count:unbilled,page:'bank:outside'}]:[]),
+  ...(ctl&&ctl.controls.myPending?[{id:'mine',label:'من طلباتك بانتظار الاعتماد',count:ctl.controls.myPending,page:'close:approvals'}]:[]),
+ ];
 }
 
 function Dashboard({setup,full,onNew,onNewDoc,onList,onView}:{setup:BooksSetup;full:FullSetup|null;onNew:(journalId:string)=>void;onNewDoc:(k:DocKind)=>void;onList:(journalId:string)=>void;onView:(v:View)=>void}){
  const locked=setup.settings.lockDate||setup.settings.fiscalLockDate;
  return <section className="panel"><div className="department-toolbar"><h2>الدفاتر اليومية</h2>{locked&&<span className="tag amber"><Lock size={13}/> مقفل حتى {formatDate(([setup.settings.lockDate,setup.settings.fiscalLockDate].filter(Boolean) as string[]).sort().pop()!)}</span>}</div>
-  <div className="books-journals">{setup.journals.filter(j=>j.active).map(j=>{const Icon=JOURNAL_ICONS[j.type],s=setup.journalStats[j.id]||{drafts:0,posted:0,balance:'0'},acc=setup.accounts.find(a=>a.id===j.defaultAccount);
+  <div className="books-journals books-scroll">{setup.journals.filter(j=>j.active).map(j=>{const Icon=JOURNAL_ICONS[j.type],s=setup.journalStats[j.id]||{drafts:0,posted:0,balance:'0'},acc=setup.accounts.find(a=>a.id===j.defaultAccount);
    return <article key={j.id} className="books-journal"><header><Icon size={20}/><div><h3>{j.name}</h3><small>{j.code} · {JOURNAL_TYPES[j.type]}</small></div></header>
     {(j.type==='bank'||j.type==='cash')&&<p className="books-balance"><span>رصيد {acc?.name||'الحساب'}</span><b dir="ltr">{amount(s.balance)}</b></p>}
     {full&&(j.type==='sale'||j.type==='purchase')?(()=>{const k:DocKind=j.type==='sale'?'out_invoice':'in_invoice',st=full.documentStats[k];return <>
@@ -181,9 +277,9 @@ function shiftPeriod(from:string,to:string,how:'year'|'previous'):{from:string;t
  if(how==='year'){const a=d(from),b=d(to);a.setUTCFullYear(a.getUTCFullYear()-1);b.setUTCFullYear(b.getUTCFullYear()-1);return{from:iso(a),to:iso(b)}}
  const days=Math.round((d(to).getTime()-d(from).getTime())/864e5),end=d(from);end.setUTCDate(end.getUTCDate()-1);const start=new Date(end);start.setUTCDate(start.getUTCDate()-days);return{from:iso(start),to:iso(end)};
 }
-function Reports({setup,report,onReport,account,onAccount,onOpen,canExport,version}:{setup:BooksSetup;report:Report;onReport:(r:Report)=>void;account:string;onAccount:(a:string)=>void;onOpen:(id:string)=>void;canExport:boolean;version:number}){
+function Reports({setup,report,onReport,account,onAccount,onOpen,canExport,version,bare=false}:{setup:BooksSetup;report:Report;onReport:(r:Report)=>void;account:string;onAccount:(a:string)=>void;onOpen:(id:string)=>void;canExport:boolean;version:number;bare?:boolean}){
  const extras=('reports' in setup?EXTRA_REPORTS:[]).filter(([k])=>(k!=='taxes'||('taxesEnabled' in setup&&setup.taxesEnabled))&&(k!=='analytic'||'advanced' in setup));
- const tabs=<div className="department-tabs books-report-tabs" role="group" aria-label="التقارير المالية">{[...REPORTS,...extras].map(([k,label])=><button key={k} className={'btn '+(report===k?'primary':'')} aria-pressed={report===k} onClick={()=>onReport(k)}>{label}</button>)}</div>;
+ const tabs=bare?null:<div className="department-tabs books-report-tabs" role="group" aria-label="التقارير المالية">{[...REPORTS,...extras].map(([k,label])=><button key={k} className={'btn '+(report===k?'primary':'')} aria-pressed={report===k} onClick={()=>onReport(k)}>{label}</button>)}</div>;
  if(EXTRA_REPORTS.some(r=>r[0]===report))return <section className="panel">{tabs}<ExtraReports key={report} setup={setup} report={report as ExtraReport} onOpen={onOpen} canExport={canExport} version={version}/></section>;
  return <StatementReports setup={setup} report={report} onReport={onReport} account={account} onAccount={onAccount} onOpen={onOpen} canExport={canExport} version={version} tabs={tabs}/>;
 }
@@ -264,12 +360,13 @@ function Statement({rows,prior,kind,onAccount}:{rows:TrialRow[];prior:TrialRow[]
  </div>;
 }
 
-function Config({setup,full,adv,onChanged}:{setup:BooksSetup;full:FullSetup|null;adv:AdvSetup|null;onChanged:()=>void}){
- const [tab,setTab]=useState<'accounts'|'journals'|'partners'|'products'|'terms'|'invoicing'|'taxes'|'currencies'|'analytic'|'locks'>('accounts'),[account,setAccount]=useState<Account|null>(null),[journal,setJournal]=useState<Journal|null>(null),[partner,setPartner]=useState<Partner|null>(null),[q,setQ]=useState('');
+type ConfigTab='accounts'|'journals'|'partners'|'products'|'terms'|'invoicing'|'taxes'|'currencies'|'analytic'|'locks';
+function Config({setup,full,adv,onChanged,tab:tabProp}:{setup:BooksSetup;full:FullSetup|null;adv:AdvSetup|null;onChanged:()=>void;tab?:ConfigTab}){
+ const [ownTab,setTab]=useState<ConfigTab>('accounts'),tab=tabProp??ownTab,[account,setAccount]=useState<Account|null>(null),[journal,setJournal]=useState<Journal|null>(null),[partner,setPartner]=useState<Partner|null>(null),[q,setQ]=useState('');
  const why=setup.canConfigure?undefined:'يحتاج تعديل دليل الحسابات والدفاتر والإقفال صلاحية الإعدادات';
  const groups=(Object.keys(GROUP_LABELS) as (keyof typeof GROUP_LABELS)[]);
  const shown=setup.accounts.filter(a=>!q||(a.code+' '+a.name).includes(q));
- return <section className="panel"><div className="department-toolbar"><div className="department-tabs" role="group" aria-label="إعدادات الدفاتر">{([['accounts','دليل الحسابات'],['journals','الدفاتر'],['partners','الشركاء'],...(full?[['products','الخدمات'],['terms','شروط الدفع'],['invoicing','الفوترة ونقل الدفتر القديم']] as const:[]),...(adv?[['taxes','الضرائب'],['currencies','العملات'],['analytic','مراكز التكلفة']] as const:[]),['locks','الإقفال والسنة المالية']] as const).map(([k,l])=><button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
+ return <section className="panel"><div className="department-toolbar">{!tabProp&&<div className="department-tabs" role="group" aria-label="إعدادات الدفاتر">{([['accounts','دليل الحسابات'],['journals','الدفاتر'],['partners','الشركاء'],...(full?[['products','الخدمات'],['terms','شروط الدفع'],['invoicing','الفوترة ونقل الدفتر القديم']] as const:[]),...(adv?[['taxes','الضرائب'],['currencies','العملات'],['analytic','مراكز التكلفة']] as const:[]),['locks','الإقفال والسنة المالية']] as const).map(([k,l])=><button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>}
    <div className="actions">{tab==='accounts'&&<button className="btn primary" disabled={!setup.canConfigure} title={why} onClick={()=>setAccount({id:'',code:nextAccountCode(setup.accounts,'expense'),name:'',type:'expense',reconcile:false,deprecated:false,note:'',revision:0})}><Plus size={15}/> حساب جديد</button>}
     {tab==='journals'&&<button className="btn primary" disabled={!setup.canConfigure} title={why} onClick={()=>setJournal({id:'',code:'',name:'',type:'general',defaultAccount:'',active:true,revision:0})}><Plus size={15}/> دفتر جديد</button>}
     {tab==='partners'&&<button className="btn primary" disabled={!setup.canEdit} title={setup.canEdit?undefined:'صلاحيتك للقراءة فقط'} onClick={()=>setPartner({id:'',name:'',kind:'customer',clientEntityId:'',phone:'',email:'',reference:'',note:'',active:true,revision:0})}><Plus size={15}/> شريك جديد</button>}</div></div>

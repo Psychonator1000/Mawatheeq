@@ -25,9 +25,10 @@ type Tab='statements'|'reconcile'|'cheques'|'transfer'|'batches';
  * entered or imported from the bank's file; matching each statement line to invoices, a recorded payment or an
  * account; cheques; transfers between accounts; and batch payments.
  */
-export default function BankCash({setup,onOpen,onChanged,version}:{setup:BankSetup;onOpen:(id:string)=>void;onChanged:()=>void;version:number}){
+export type BankTab=Tab;
+export default function BankCash({setup,onOpen,onChanged,version,tab:tabProp}:{setup:BankSetup;onOpen:(id:string)=>void;onChanged:()=>void;version:number;tab?:Tab}){
  const journals=setup.journals.filter(j=>j.active&&(j.type==='bank'||j.type==='cash'));
- const [journal,setJournal]=useState(journals[0]?.id||''),[tab,setTab]=useState<Tab>('statements');
+ const [journal,setJournal]=useState(journals[0]?.id||''),[ownTab,setTab]=useState<Tab>('statements'),tab=tabProp??ownTab;
  return <>
   <div className="books-journals">{journals.map(j=>{const b=setup.bank[j.id],Icon=j.type==='bank'?Landmark:Banknote,diff=b?.statementBalance?toFils(b.statementBalance)-toFils(b.booksBalance):0;
    return <button key={j.id} type="button" className={'books-journal books-pick'+(journal===j.id?' active':'')} aria-pressed={journal===j.id} onClick={()=>setJournal(j.id)}>
@@ -36,8 +37,8 @@ export default function BankCash({setup,onOpen,onChanged,version}:{setup:BankSet
     {b?.statementBalance?<p className="muted">آخر كشف ({b.lastStatementDate?formatDate(b.lastStatementDate):''}): <b dir="ltr">{amount(b.statementBalance)}</b>{diff!==0&&<small className="books-late"> فرق {money(diff)}</small>}</p>:<p className="muted">لا يوجد كشف بعد</p>}
     {(b?.toReconcile||0)>0&&<span className="tag amber">{b.toReconcile} حركة للمطابقة</span>}{(b?.chequesHeld||0)>0&&<span className="tag">{b.chequesHeld} شيك قيد التحصيل</span>}
    </button>})}</div>
-  <div className="department-tabs view-switch" role="group" aria-label="البنك والنقد">{([['statements','كشوف الحساب'],['reconcile','المطابقة'],['cheques','الشيكات'],['transfer','التحويل بين الحسابات'],['batches','الدفعات المجمعة']] as const).map(([k,l])=>
-   <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
+  {!tabProp&&<div className="department-tabs view-switch" role="group" aria-label="البنك والنقد">{([['statements','كشوف الحساب'],['reconcile','المطابقة'],['cheques','الشيكات'],['transfer','التحويل بين الحسابات'],['batches','الدفعات المجمعة']] as const).map(([k,l])=>
+   <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>}
   {journal&&tab==='statements'&&<Statements key={journal} setup={setup} journalId={journal} onOpen={onOpen} onChanged={onChanged} version={version}/>}
   {journal&&tab==='reconcile'&&<ReconcileAll key={journal} setup={setup} journalId={journal} onChanged={onChanged} version={version}/>}
   {tab==='cheques'&&<Cheques setup={setup} onOpen={onOpen} onChanged={onChanged} version={version}/>}

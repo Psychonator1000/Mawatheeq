@@ -109,16 +109,16 @@ try{
  assert.equal(await page.getByRole('dialog').getByLabel('مدين السطر 1',{exact:true}).count(),0,'A posted entry is read-only');
  await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();
  await click('القيود اليومية');await page.getByRole('cell',{name:'SYN-BOOKS-1',exact:true}).waitFor();
- await click('التقارير المالية');await page.locator('.books-table').getByRole('button',{name:'121000 ذمم الموكلين المدينة',exact:true}).waitFor();
+ await click('ميزان المراجعة');await page.locator('.books-table').getByRole('button',{name:'121000 ذمم الموكلين المدينة',exact:true}).waitFor();
  await page.locator('.books-table tfoot').getByText('250.750').first().waitFor();await screen('books-trial-balance');
  await page.locator('.books-table').getByRole('button',{name:'121000 ذمم الموكلين المدينة',exact:true}).click();await page.locator('.books-group').getByText(/121000/).waitFor();
  await click('الأرباح والخسائر');await page.locator('.books-totals .net').getByText('250.750').waitFor();
  await click('الميزانية العمومية');await page.locator('.books-totals').getByText('الميزانية متوازنة',{exact:true}).waitFor();await screen('books-balance-sheet');
- await click('الحسابات والإعدادات');await page.getByRole('cell',{name:'أتعاب المحاماة',exact:true}).waitFor();
+ await click('دليل الحسابات');await page.getByRole('cell',{name:'أتعاب المحاماة',exact:true}).waitFor();
  await click('حساب جديد');await page.getByRole('dialog').getByLabel('اسم الحساب',{exact:true}).fill('مصروفات تدريب تجريبية');await page.getByRole('dialog').getByRole('button',{name:'حفظ الحساب',exact:true}).click();await page.getByRole('cell',{name:'مصروفات تدريب تجريبية',exact:true}).waitFor();
- await page.setViewportSize({width:390,height:844});await click('لوحة المحاسبة');await screen('books-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'Books fit a phone');await page.setViewportSize({width:1440,height:1000});
+ await page.setViewportSize({width:390,height:844});await page.getByLabel('صفحة المحاسبة',{exact:true}).selectOption('dashboard');await screen('books-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'Books fit a phone');await page.setViewportSize({width:1440,height:1000});
  // Invoicing: a customer added from the invoice, a service line with quantity and discount, confirmed, then paid in part.
- await page.locator('.books-tabs').getByRole('button',{name:'الموكلون',exact:true}).click();await click('فاتورة موكل جديدة');const invoice=page.getByRole('dialog');
+ await click('فواتير الموكلين');await click('فاتورة موكل جديدة');const invoice=page.getByRole('dialog');
  await invoice.getByLabel('موكل جديد',{exact:true}).fill('عميل واجهة تجريبي');await invoice.getByRole('button',{name:'إضافة',exact:true}).click();await invoice.getByLabel('الموكل',{exact:true}).and(page.locator('[data-value]:not([data-value=""])')).waitFor();
  await invoice.getByLabel('خدمة السطر 1',{exact:true}).selectOption({label:'أتعاب محاماة'});await invoice.getByLabel('سعر السطر 1',{exact:true}).fill('120');await invoice.getByLabel('كمية السطر 1',{exact:true}).fill('2');await invoice.getByLabel('خصم السطر 1',{exact:true}).fill('10');
  await invoice.locator('tfoot').getByText('216.000').waitFor();await screen('invoice-draft');
@@ -129,38 +129,38 @@ try{
  await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();
  await page.getByRole('row').filter({hasText:'عميل واجهة تجريبي'}).getByText('مدفوعة جزئياً').waitFor();
  await click('المقبوضات');await page.getByRole('cell',{name:'PBNK1/'+new Date().getFullYear()+'/0001'}).waitFor();
- await click('الموردون');await page.getByRole('button',{name:'فاتورة مورد جديدة',exact:true}).waitFor();
- await click('الحسابات والإعدادات');await click('شروط الدفع');await page.getByRole('cell',{name:'30 يوماً',exact:true}).waitFor();await click('الخدمات');await page.getByRole('cell',{name:'أتعاب استشارة',exact:true}).waitFor();
+ await click('فواتير الموردين');await page.getByRole('button',{name:'فاتورة مورد جديدة',exact:true}).waitFor();
+ await click('شروط الدفع');await page.getByRole('cell',{name:'30 يوماً',exact:true}).waitFor();await click('الخدمات');await page.getByRole('cell',{name:'أتعاب استشارة',exact:true}).waitFor();
  // Bank: a statement imported from the bank's file; the transfer pays what is left on the invoice, the charge goes to its account.
  {const t=new Date(),dmy=`${String(t.getDate()).padStart(2,'0')}/${String(t.getMonth()+1).padStart(2,'0')}/${t.getFullYear()}`;
   fs.writeFileSync(artifacts+'/statement.csv','﻿التاريخ,البيان,سحب,إيداع,الرصيد\n'+`${dmy},تحويل INV/${t.getFullYear()}/0001,,116,616\n${dmy},عمولة بنكية,1.5,,614.5\n`);}
- await click('البنك والنقد');await click('استيراد كشف من ملف');await page.getByLabel('ملف كشف البنك').setInputFiles(artifacts+'/statement.csv');
+ await click('كشوف الحساب');await click('استيراد كشف من ملف');await page.getByLabel('ملف كشف البنك').setInputFiles(artifacts+'/statement.csv');
  await page.getByRole('dialog').getByText(/2 حركة/).waitFor();await screen('bank-import');await page.getByRole('dialog').getByRole('button',{name:'استيراد',exact:true}).click();
  const stmt=page.getByRole('dialog');await stmt.getByText(/مطابقة: تحويل INV/).waitFor();await stmt.locator('.books-suggest input:checked').waitFor();
  await stmt.getByRole('button',{name:'تأكيد المطابقة',exact:true}).click();await stmt.getByText(/مطابقة: عمولة بنكية/).waitFor();
  await stmt.getByRole('button',{name:'حساب مباشر',exact:true}).click();await stmt.getByLabel('الحساب المقابل',{exact:true}).selectOption({label:'509000'});await stmt.getByRole('button',{name:'تأكيد المطابقة',exact:true}).click();
  await stmt.getByRole('button',{name:/^فك مطابقة عمولة/}).waitFor();await screen('bank-reconciled');await stmt.getByRole('button',{name:'إغلاق',exact:true}).last().click();
  await page.locator('.books-pick').first().getByText(/حركة للمطابقة/).waitFor({state:'detached'});
- await page.locator('.books-tabs').getByRole('button',{name:'الموكلون',exact:true}).click();await page.getByRole('row').filter({hasText:'عميل واجهة تجريبي'}).getByText('مدفوعة',{exact:true}).waitFor();
+ await click('فواتير الموكلين');await page.getByRole('row').filter({hasText:'عميل واجهة تجريبي'}).getByText('مدفوعة',{exact:true}).waitFor();
  // Reports: summary, partner ledger, aged balances, cash flow, a comparison with last year and an Excel export.
- await click('التقارير المالية');await click('الملخص التنفيذي');await page.locator('.books-kpis').getByText('صافي الربح',{exact:true}).waitFor();await screen('books-summary');
+ await click('الملخص التنفيذي');await page.locator('.books-kpis').getByText('صافي الربح',{exact:true}).waitFor();await screen('books-summary');
  await click('دفتر الشركاء');await page.getByRole('button',{name:'عميل واجهة تجريبي',exact:true}).click();await page.locator('.books-table').getByRole('button',{name:'INV/'+new Date().getFullYear()+'/0001'}).waitFor();
  await click('أعمار ديون الموكلين');await page.getByRole('row').filter({hasText:'بلا شريك'}).getByText('250.750').first().waitFor();
  await click('التدفقات النقدية');await page.locator('.books-totals').getByText('النقد آخر الفترة',{exact:true}).waitFor();
  await click('الأرباح والخسائر');await page.getByLabel('مقارنة',{exact:true}).selectOption({label:'الفترة نفسها من العام السابق'});await page.locator('.books-statement thead').getByText('المقارنة',{exact:true}).first().waitFor();await screen('books-pl-compare');
  {const dl=page.waitForEvent('download');await click('Excel');assert.match((await dl).suggestedFilename(),/^Mawatheeq-pl\.xlsx$/);}
  // Advanced: taxes switched on and used on an invoice, a fixed asset depreciated, the tax report and the year-end checklist.
- await click('الحسابات والإعدادات');await click('الضرائب');await page.getByRole('checkbox',{name:/تفعيل الضرائب/}).click();await page.getByText(/فُعّلت الضرائب/).first().waitFor();await page.getByText('(مفعّلة)',{exact:false}).waitFor();
- await page.locator('.books-tabs').getByRole('button',{name:'الموكلون',exact:true}).click();await click('فاتورة موكل جديدة');{const v=page.getByRole('dialog');await v.getByLabel('الموكل',{exact:true}).selectOption({label:'عميل واجهة تجريبي'});
+ await click('الضرائب');await page.getByRole('checkbox',{name:/تفعيل الضرائب/}).click();await page.getByText(/فُعّلت الضرائب/).first().waitFor();await page.getByText('(مفعّلة)',{exact:false}).waitFor();
+ await click('فواتير الموكلين');await click('فاتورة موكل جديدة');{const v=page.getByRole('dialog');await v.getByLabel('الموكل',{exact:true}).selectOption({label:'عميل واجهة تجريبي'});
   await v.getByLabel('خدمة السطر 1',{exact:true}).selectOption({label:'أتعاب استشارة'});await v.getByLabel('سعر السطر 1',{exact:true}).fill('100');await v.getByLabel('ضريبة السطر 1',{exact:true}).selectOption({label:'ضريبة مبيعات 5٪'});
   await v.locator('tfoot').getByText('105.000').waitFor();await screen('invoice-tax');await v.getByRole('button',{name:'تأكيد',exact:true}).click();
   await page.getByRole('dialog',{name:'INV/'+new Date().getFullYear()+'/0002'}).waitFor();await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();}
- await click('المحاسبة المتقدمة');await click('أصل جديد');{const v=page.getByRole('dialog');await v.getByLabel('الاسم',{exact:true}).fill('حاسوب تجريبي');await v.getByLabel('قيمة الشراء',{exact:true}).fill('1200');
+ await click('الأصول الثابتة');await click('أصل جديد');{const v=page.getByRole('dialog');await v.getByLabel('الاسم',{exact:true}).fill('حاسوب تجريبي');await v.getByLabel('قيمة الشراء',{exact:true}).fill('1200');
   await v.getByLabel('عدد الأشهر',{exact:true}).fill('12');await v.getByText(/قسط شهري تقريباً/).waitFor();await v.getByRole('button',{name:'حفظ الجدول',exact:true}).click();}
  {const v=page.getByRole('dialog',{name:'حاسوب تجريبي'});await v.getByRole('button',{name:'تأكيد وبدء',exact:true}).click();await v.getByRole('button',{name:'ترحيل المستحق',exact:true}).click();await v.getByRole('button',{name:/^MISC\//}).first().waitFor();await screen('asset');
   await v.getByRole('button',{name:'إغلاق',exact:true}).last().click();}
  await click('إقفال السنة');await page.locator('.books-checklist').waitFor();
- await click('التقارير المالية');await click('تقرير الضريبة');await page.getByRole('cell',{name:'ضريبة مبيعات 5٪',exact:true}).waitFor();await page.locator('.books-totals').getByText('ضريبة المخرجات').waitFor();
+ await click('تقرير الضريبة');await page.getByRole('cell',{name:'ضريبة مبيعات 5٪',exact:true}).waitFor();await page.locator('.books-totals').getByText('ضريبة المخرجات').waitFor();
  // Money handled outside the office: a court fee for a case, posted, its original receipt moved to the archive, then billed to the client.
  await click('لوحة المحاسبة');await page.locator('.books-chart svg.books-bars').waitFor();
  await click('المعاملات الخارجية');await click('معاملة جديدة');{const v=page.getByRole('dialog');await v.getByLabel('نوع المعاملة',{exact:true}).selectOption({label:'رسوم قيد دعوى'});
@@ -173,7 +173,7 @@ try{
  await page.locator('.books-table').getByText('ARC-9').waitFor();await page.getByLabel('تحديد رسوم قيد دعوى R-77',{exact:true}).check();await click('مطالبة الموكل (1)');
  await page.getByRole('dialog').locator('.books-invoice-lines').waitFor();await screen('outside-billed');await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();
  // Controls: approval requests, a client credit limit, the payment run, closing and reopening a month, the change log and the approval rules.
- await page.locator('.books-tabs').getByRole('button',{name:/^الرقابة والاعتماد/}).click();await page.getByText('لا طلبات بانتظار الاعتماد').waitFor();
+ await click('طلبات الاعتماد');await page.getByText('لا طلبات بانتظار الاعتماد').waitFor();
  await click('حدود الائتمان');await click('إضافة حد ائتمان');{const v=page.getByRole('dialog');await v.getByLabel('الموكل',{exact:true}).selectOption({label:'عميل واجهة تجريبي'});
   await v.getByLabel('الحد (د.ك)',{exact:true}).fill('50');await v.getByRole('checkbox',{name:/منع الفواتير/}).check();await v.getByRole('button',{name:'حفظ',exact:true}).click();}
  await page.getByText('حُفظ حد الائتمان').first().waitFor();await page.getByRole('row').filter({hasText:'عميل واجهة تجريبي'}).getByText('موقوف عند التجاوز').waitFor();

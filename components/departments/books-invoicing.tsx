@@ -238,19 +238,19 @@ export function PaymentEditor({setup,cases,initial,onClose,onChanged,onOpen}:{se
 }
 
 /** «الموكلون» or «الموردون»: their invoices, credit notes and payments, and who owes what. */
-export function PartnerSide({setup,cases,side,onOpen,onNew,onChanged,version,canExport}:{setup:FullSetup;cases:CaseSummary[];side:'customer'|'vendor';onOpen:(id:string)=>void;onNew:(kind:DocKind,partnerId:string)=>void;onChanged:()=>void;version:number;canExport:boolean}){
+export function PartnerSide({setup,cases,side,onOpen,onNew,onChanged,version,canExport,tab:tabProp,onTab}:{setup:FullSetup;cases:CaseSummary[];side:'customer'|'vendor';tab?:DocKind|'partners';onTab?:(t:DocKind|'partners')=>void;onOpen:(id:string)=>void;onNew:(kind:DocKind,partnerId:string)=>void;onChanged:()=>void;version:number;canExport:boolean}){
  const kinds:DocKind[]=side==='customer'?['out_invoice','out_refund','customer_payment']:['in_invoice','in_refund','vendor_payment'];
- const [tab,setTab]=useState<DocKind|'partners'>(kinds[0]),[partner,setPartner]=useState('');
+ const [ownTab,setTab]=useState<DocKind|'partners'>(kinds[0]),[partner,setPartner]=useState(''),tab=tabProp??ownTab;
  const s=setup.documentStats[kinds[0]],key=side==='customer'?'receivable':'payable';
  const partners=setup.partners.filter(p=>p.kind===side||p.kind==='both'||toFils(setup.partnerBalances[p.id]?.[key]||'0')!==0);
  return <>
   <div className="department-metrics books-metrics"><div><span>مسودات</span><b>{s?.draft??0}</b></div><div><span>{side==='customer'?'بانتظار التحصيل':'بانتظار الدفع'}</span><b dir="ltr">{amount(s?.openAmount||'0')}</b></div><div><span>متأخرة ({s?.late??0})</span><b dir="ltr">{amount(s?.lateAmount||'0')}</b></div></div>
-  <div className="department-tabs view-switch" role="group" aria-label={side==='customer'?'الموكلون':'الموردون'}>{[...kinds.map(k=>[k,DOC_KINDS[k].label] as const),['partners',side==='customer'?'أرصدة الموكلين':'أرصدة الموردين'] as const].map(([k,l])=>
-   <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
+  {!tabProp&&<div className="department-tabs view-switch" role="group" aria-label={side==='customer'?'الموكلون':'الموردون'}>{[...kinds.map(k=>[k,DOC_KINDS[k].label] as const),['partners',side==='customer'?'أرصدة الموكلين':'أرصدة الموردين'] as const].map(([k,l])=>
+   <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>}
   {tab!=='partners'?<Documents setup={setup} cases={cases} kind={tab} partner={partner} onPartner={setPartner} onOpen={onOpen} onNew={()=>onNew(tab,partner)} onChanged={onChanged} version={version} canExport={canExport}/>
    :<section className="panel"><div className="table-wrap"><table className="office-table books-table"><thead><tr><th>{side==='customer'?'الموكل':'المورد'}</th><th>الهاتف</th><th>{side==='customer'?'مستحق لنا':'مستحق علينا'}</th><th></th></tr></thead>
     <tbody>{partners.map(p=>{const b=toFils(setup.partnerBalances[p.id]?.[key]||'0');return <tr key={p.id}><td>{p.name}</td><td dir="ltr">{p.phone||'—'}</td><td className="ledger-value" dir="ltr">{money(b)}</td>
-     <td><div className="actions"><button className="btn" onClick={()=>{setPartner(p.id);setTab(kinds[0])}}>المستندات</button>{setup.canEdit&&<button className="btn" onClick={()=>onNew(kinds[0],p.id)}><Plus size={14}/> {DOC_KINDS[kinds[0]].one}</button>}{side==='customer'&&'links' in setup&&<button className="btn" title="من أول السنة حتى اليوم" onClick={()=>void import('./books-outside').then(m=>m.printStatement(p,todayISO().slice(0,4)+'-01-01',todayISO())).catch(e=>toast.error((e as Error).message))}><Printer size={14}/> كشف حساب</button>}</div></td></tr>})}</tbody></table>
+     <td><div className="actions"><button className="btn" onClick={()=>{setPartner(p.id);setTab(kinds[0]);onTab?.(kinds[0])}}>المستندات</button>{setup.canEdit&&<button className="btn" onClick={()=>onNew(kinds[0],p.id)}><Plus size={14}/> {DOC_KINDS[kinds[0]].one}</button>}{side==='customer'&&'links' in setup&&<button className="btn" title="من أول السنة حتى اليوم" onClick={()=>void import('./books-outside').then(m=>m.printStatement(p,todayISO().slice(0,4)+'-01-01',todayISO())).catch(e=>toast.error((e as Error).message))}><Printer size={14}/> كشف حساب</button>}</div></td></tr>})}</tbody></table>
     {!partners.length&&<Empty title="لا يوجد شركاء بعد" text="أضفهم من الحسابات والإعدادات أو من داخل الفاتورة."/>}</div></section>}
  </>;
 }

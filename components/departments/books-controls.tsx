@@ -23,13 +23,14 @@ const MONTHS=['يناير','فبراير','مارس','أبريل','مايو','ي
  * «الرقابة والاعتماد»: approval requests and who may post or approve how much, the payment run for what is due,
  * client credit limits, closing months one at a time, and the log of every change in the books.
  */
-export default function Controls({setup,onOpen,onChanged,version}:{setup:CtlSetup;onOpen:(id:string)=>void;onChanged:()=>void;version:number}){
- const c=setup.controls,[tab,setTab]=useState<Tab>('approvals');
+export type ControlsTab=Tab;
+export default function Controls({setup,onOpen,onChanged,version,tab:tabProp}:{setup:CtlSetup;onOpen:(id:string)=>void;onChanged:()=>void;version:number;tab?:Tab}){
+ const c=setup.controls,[ownTab,setTab]=useState<Tab>('approvals'),tab=tabProp??ownTab;
  const tabs:[Tab,string][]=[['approvals',c.pending?`طلبات الاعتماد (${c.pending})`:'طلبات الاعتماد'],['run','دفعة الموردين'],['credit','حدود الائتمان'],['periods','الفترات الشهرية'],['changes','سجل التغييرات'],...(setup.canConfigure?[['rules','صلاحيات الاعتماد']] as [Tab,string][]:[])];
  return <>
   <div className="books-due">{c.approvalsEnabled?<span className="tag">{c.myLimit===null?'تُرحّل دون حد':`حدّك للترحيل دون اعتماد: ${amount(c.myLimit)}`}</span>:<span className="tag">الاعتماد غير مفعّل: كل من يملك التعديل يرحّل مباشرة</span>}
    {c.myPending>0&&<span className="tag amber">{c.myPending} من طلباتك بانتظار الاعتماد</span>}{c.closedMonths.length>0&&<span className="tag">أشهر مقفلة: {c.closedMonths.length}</span>}</div>
-  <div className="department-tabs view-switch" role="group" aria-label="الرقابة والاعتماد">{tabs.map(([k,l])=><button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
+  {!tabProp&&<div className="department-tabs view-switch" role="group" aria-label="الرقابة والاعتماد">{tabs.map(([k,l])=><button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>}
   {tab==='approvals'&&<Approvals setup={setup} onOpen={onOpen} onChanged={onChanged} version={version}/>}
   {tab==='run'&&<PaymentRun setup={setup} onOpen={onOpen} onChanged={onChanged}/>}
   {tab==='credit'&&<Credit setup={setup} onChanged={onChanged} version={version}/>}

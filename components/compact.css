@@ -394,9 +394,9 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
    under its fixed header. The dashboard's chart takes whatever height the journals leave. */
 @media(min-width:1001px){
  .books-body{display:flex;flex-direction:column}
- .books-body>.att-section{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:12px;padding:12px 0 0}
- .books-body>.att-section>*{margin:0!important}
- .books-body :is(section,div):not(.form-grid,.info-grid,.dash-grid,.books-journals,.table-wrap,.books-statement,.books-scroll,.department-toolbar,.actions):has(:is(.table-wrap,.books-statement,.books-scroll)){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+ .books-main>.att-section{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:12px;padding:12px 0 0}
+ .books-main>.att-section>*{margin:0!important}
+ .books-body :is(section,div):not(.books-shell,.form-grid,.info-grid,.dash-grid,.books-journals,.table-wrap,.books-statement,.books-scroll,.department-toolbar,.actions):has(:is(.table-wrap,.books-statement,.books-scroll)){display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
  .books-body :is(section,div):has(:is(.table-wrap,.books-statement,.books-scroll))>:not(.table-wrap,.books-statement,.books-scroll):not(:has(:is(.table-wrap,.books-statement,.books-scroll))){flex-shrink:0}
  .books-body :is(.table-wrap,.books-statement,.books-scroll){flex:1 1 auto;min-height:96px;overflow:auto}
  .books-body .books-scroll .table-wrap,.books-body details .table-wrap{flex:none!important;min-height:0!important;overflow:visible!important}
@@ -475,3 +475,63 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 .credit-bar{width:90px;display:inline-flex;vertical-align:middle;margin-inline-end:6px}
 .books-limit{width:120px;min-height:32px;padding:4px 8px;border:1px solid var(--input,#dfd3c3);border-radius:8px;background:var(--card);font:inherit}
 .books-limit:disabled{opacity:.5}
+/* Accounting: one grouped menu beside the page, a box to jump anywhere, and a header saying where you are. */
+.books-shell{display:grid;grid-template-columns:238px minmax(0,1fr);gap:18px}
+.books-nav{display:flex;flex-direction:column;gap:10px;min-width:0;border-inline-end:1px solid var(--border);padding-inline-end:12px}
+.books-go{display:flex;align-items:center;gap:6px;border:1px solid var(--input,#dfd3c3);border-radius:10px;padding:0 10px;background:var(--card);min-height:38px;color:var(--muted-foreground)}
+.books-go input{border:0;outline:0;background:transparent;flex:1;min-width:0;font:inherit;font-size:13.5px;color:var(--foreground)}
+.books-go:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 14%,transparent)}
+.books-go kbd{font:inherit;font-size:11px;line-height:17px;border:1px solid var(--border);border-radius:5px;padding:0 6px}
+.books-nav-select{display:none}
+.books-nav-groups{display:flex;flex-direction:column;gap:4px;overflow:auto;overscroll-behavior:contain}
+.books-nav-title{display:flex;align-items:center;gap:7px;width:100%;border:0;background:none;padding:7px 6px 3px;font:inherit;font-size:12px;font-weight:700;color:var(--muted-foreground);cursor:pointer;text-align:start}
+.books-nav-title>span{flex:1}
+.books-nav-group ul{list-style:none;margin:0;padding:0;display:grid;gap:1px}
+.books-nav-item{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;border:0;background:none;border-radius:8px;padding:6px 10px;font:inherit;font-size:13.5px;color:var(--foreground);cursor:pointer;text-align:start}
+.books-nav-item:hover{background:color-mix(in srgb,var(--brand) 7%,transparent)}
+.books-nav-item[aria-current=page]{background:color-mix(in srgb,var(--brand) 13%,transparent);color:var(--brand);font-weight:650;box-shadow:inset -3px 0 0 var(--brand)}
+.books-badge{font-style:normal;min-width:20px;height:19px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--muted-foreground) 16%,transparent);color:var(--foreground);font-size:11px;font-weight:700;display:inline-grid;place-items:center;font-variant-numeric:tabular-nums}
+.books-badge.alert{background:#a32e38;color:#fff}
+.books-go-results{list-style:none;margin:0;padding:0;display:grid;gap:2px;overflow:auto}
+.books-go-results button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;border-radius:8px;padding:7px 9px;font:inherit;color:var(--foreground);cursor:pointer;text-align:start}
+.books-go-results button span{display:grid;min-width:0}.books-go-results button small{color:var(--muted-foreground);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.books-go-results button.active{background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)}
+.books-go-none{padding:8px;font-size:13px}
+.books-main{min-width:0;display:flex;flex-direction:column}
+.books-page-head{display:grid;gap:1px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.books-crumb{display:flex;align-items:center;gap:3px;margin:0;font-size:12px;color:var(--muted-foreground)}
+.books-page-head h2{margin:0;font-size:19px}.books-page-head .muted{margin:0;font-size:12.5px}
+.books-attention ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.books-attention-item{display:flex;align-items:center;gap:10px;width:100%;border:1px solid var(--border);background:var(--card);border-radius:10px;padding:9px 12px;font:inherit;color:var(--foreground);cursor:pointer;text-align:start}
+.books-attention-item:hover{border-color:var(--brand)}.books-attention-item>span{flex:1}
+.books-attention-item>b{font-size:18px;color:var(--brand)}.books-attention-item.alert>b{color:#a32e38}
+.books-attention-item small{color:var(--muted-foreground)}
+.books-all-clear{display:flex;align-items:center;gap:8px;margin:0;color:var(--muted-foreground)}
+@media(min-width:1001px){
+ .books-body>.books-shell{flex:1 1 auto;min-height:0;grid-template-rows:minmax(0,1fr)}
+ .books-nav{min-height:0;overflow:hidden}
+ .books-nav-groups,.books-go-results{flex:1 1 auto;min-height:0}
+ .books-main{min-height:0}
+ .books-page-head{flex-shrink:0}
+}
+@media(max-width:1000px){
+ .books-shell{grid-template-columns:1fr;gap:10px}
+ .books-nav{border:0;padding:0}
+ .books-nav-groups{display:none}
+ .books-nav-select{display:block}
+ .books-nav-select select{width:100%;min-height:40px;border:1px solid var(--input,#dfd3c3);border-radius:10px;background:var(--card);padding:0 10px;font:inherit}
+}
+.books-keys{margin:0;font-size:11px;color:var(--muted-foreground);line-height:1.9;flex-shrink:0}.books-keys kbd{font:inherit;font-size:10.5px;border:1px solid var(--border);border-radius:4px;padding:0 4px}
+@media(max-width:1000px){.books-keys{display:none}}
+.books-go-results{align-content:start}
+@media(max-width:1000px){.books-go kbd{display:none}}
+/* The dashboard's to-do list stays one compact band, so the dashboard still fits one screen. */
+@media(min-width:1001px){
+ .books-body .books-attention{padding:10px 14px!important;flex-shrink:0!important}
+ .books-attention .department-toolbar{margin:0 0 6px;padding:0;min-height:0}.books-attention h2{font-size:14px}
+ .books-attention ul{display:flex;flex-wrap:wrap;gap:6px}
+ .books-attention-item{width:auto;padding:5px 10px;gap:7px;font-size:13px}.books-attention-item>b{font-size:15px}
+ .books-all-clear{font-size:13px}
+ .books-body .books-chart{min-height:120px}
+}
+@media(min-width:1001px){.books-body .books-journals.books-scroll{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));align-content:start}}

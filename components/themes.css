@@ -23,13 +23,13 @@
 :root[data-theme=ivory] .sidebar-rail{background:#ffffff1f}
 :root[data-theme=ivory] .btn.primary,:root[data-theme=ivory] .stat.featured,:root[data-theme=ivory] .back-to-top{background:linear-gradient(135deg,#c99d2e,#9a7413);border-color:#a88020}
 /* Gold theme: alerts and overdue marks in bronze, so no burgundy-red is left over from the default theme. */
-:root[data-theme=ivory] :is(.nav-count.alert,.notice-count.urgent){background:#8f4a12;border-color:#8f4a12;color:#fff8e6}
+:root[data-theme=ivory] :is(.nav-count.alert,.notice-count.urgent,.books-badge.alert){background:#8f4a12;border-color:#8f4a12;color:#fff8e6}
 :root[data-theme=ivory] .notice-count.urgent::after{border-color:#8f4a12}
 :root[data-theme=ivory] .avatar-dot{background:#c9741c}
 :root[data-theme=ivory] .tag.red{color:#8f4a12;background:#f8ead6}
 :root[data-theme=ivory] .work-chip.late b{background:#8f4a121f;color:#8f4a12}
 :root[data-theme=ivory] :is(.office-alert,.my-work-col.overdue h3){color:#8f4a12!important}
-:root[data-theme=noir] :is(.nav-count.alert,.notice-count.urgent){background:#c9741c;border-color:#c9741c;color:#120d05}
+:root[data-theme=noir] :is(.nav-count.alert,.notice-count.urgent,.books-badge.alert){background:#c9741c;border-color:#c9741c;color:#120d05}
 :root[data-theme=noir] .notice-count.urgent::after{border-color:#c9741c}
 :root[data-theme=noir] .avatar-dot{background:#e08a2c}
 :root[data-theme=noir] .tag.red{color:#f0a860;background:#3a2410}

@@ -24,13 +24,14 @@ const valid=(v:string)=>{try{return toFils(v)>=0}catch{return false}};
 type Tab=ScheduleKind|'recurring'|'budgets'|'followups'|'yearend';
 
 /** «المحاسبة المتقدمة»: assets and deferrals, recurring entries, budgets, payment follow-up and closing the year. */
-export default function Advanced({setup,cases,onOpen,onChanged,version}:{setup:AdvSetup;cases:CaseSummary[];onOpen:(id:string)=>void;onChanged:()=>void;version:number}){
- const [tab,setTab]=useState<Tab>('asset');
+export type AdvancedTab=Tab;
+export default function Advanced({setup,cases,onOpen,onChanged,version,tab:tabProp}:{setup:AdvSetup;cases:CaseSummary[];onOpen:(id:string)=>void;onChanged:()=>void;version:number;tab?:Tab}){
+ const [ownTab,setTab]=useState<Tab>('asset'),tab=tabProp??ownTab;
  const due=setup.due;
  return <>
   {(due.schedules>0||due.recurring>0||due.followups>0)&&<div className="books-due">{due.schedules>0&&<span className="tag amber">{due.schedules} قسط إهلاك أو تأجيل مستحق الترحيل</span>}{due.recurring>0&&<span className="tag amber">{due.recurring} قيد متكرر حان موعده</span>}{due.followups>0&&<span className="tag amber">{due.followups} موكل متأخر للمتابعة</span>}</div>}
-  <div className="department-tabs view-switch" role="group" aria-label="المحاسبة المتقدمة">{([['asset','الأصول الثابتة'],['deferred_revenue','الإيرادات المؤجلة'],['deferred_expense','المصروفات المؤجلة'],['recurring','القيود المتكررة'],['budgets','الموازنات'],['followups','متابعة التحصيل'],['yearend','إقفال السنة']] as const).map(([k,l])=>
-   <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>
+  {!tabProp&&<div className="department-tabs view-switch" role="group" aria-label="المحاسبة المتقدمة">{([['asset','الأصول الثابتة'],['deferred_revenue','الإيرادات المؤجلة'],['deferred_expense','المصروفات المؤجلة'],['recurring','القيود المتكررة'],['budgets','الموازنات'],['followups','متابعة التحصيل'],['yearend','إقفال السنة']] as const).map(([k,l])=>
+   <button key={k} className={'btn '+(tab===k?'primary':'')} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}</div>}
   {(tab==='asset'||tab==='deferred_revenue'||tab==='deferred_expense')&&<Schedules key={tab} setup={setup} cases={cases} kind={tab} onOpen={onOpen} onChanged={onChanged} version={version}/>}
   {tab==='recurring'&&<RecurringPanel setup={setup} onOpen={onOpen} onChanged={onChanged} version={version}/>}
   {tab==='budgets'&&<Budgets setup={setup} version={version}/>}
