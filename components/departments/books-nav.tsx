@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {Search,ChevronLeft,Plus,FileText,CheckCircle2,type LucideIcon} from 'lucide-react';
+import {Search,ChevronLeft,ChevronDown,Plus,FileText,CheckCircle2,type LucideIcon} from 'lucide-react';
 import {booksRequest} from '@/lib/local-auth';
 import {normalize,formatDate} from '@/lib/domain';
 import {money,toFils} from '@/lib/books';
@@ -20,12 +20,21 @@ const matches=(q:string,text:string)=>{const words=normalize(q).toLowerCase().sp
  * («/» from anywhere) to jump to a page, start a document or open one by its number, reference or partner.
  */
 export function BooksNav({groups,page,onPage,actions,partnerName,onOpenDoc}:{groups:NavGroup[];page:string;onPage:(id:string)=>void;actions:NavAction[];partnerName:(id:string)=>string;onOpenDoc:(id:string)=>void}){
- const [q,setQ]=useState(''),[active,setActive]=useState(0),[docs,setDocs]=useState<{q:string;rows:DocHit[]}>({q:'',rows:[]}),[closed,setClosed]=useState<string[]>(readClosed),input=useRef<HTMLInputElement>(null);
+ const [q,setQ]=useState(''),[active,setActive]=useState(0),[docs,setDocs]=useState<{q:string;rows:DocHit[]}>({q:'',rows:[]}),[closed,setClosed]=useState<string[]>(readClosed),input=useRef<HTMLInputElement>(null),scroller=useRef<HTMLDivElement>(null),rail=useRef<HTMLSpanElement>(null);
  // «/» puts the cursor in the box from anywhere on the page, except while typing or with a window open.
  useEffect(()=>{const key=(e:KeyboardEvent)=>{const t=e.target as HTMLElement|null;
   if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!t?.closest('input,textarea,select,[contenteditable=true]')&&!document.querySelector('[role=dialog]')){e.preventDefault();input.current?.focus();input.current?.select()}};
   addEventListener('keydown',key);return()=>removeEventListener('keydown',key)},[]);
  const term=q.trim();
+ // The menu's own scroll bar: a thumb that follows the list and stretches with the scrolling speed, like the page rail.
+ useEffect(()=>{const el=scroller.current,bar=rail.current;if(!el||!bar)return;let last=el.scrollTop,idle=0;
+  const paint=()=>{const {scrollTop:t,scrollHeight:h,clientHeight:c}=el,can=h>c+2;bar.toggleAttribute('data-on',can);if(!can)return;
+   const size=Math.max(c/h,.12);bar.style.setProperty('--thumb-size',(size*100).toFixed(2)+'%');bar.style.setProperty('--thumb-top',(t/(h-c)*(1-size)*100).toFixed(2)+'%')};
+  const onScroll=()=>{const d=Math.abs(el.scrollTop-last);last=el.scrollTop;bar.style.setProperty('--rail-speed',Math.min(1,d/28).toFixed(2));bar.setAttribute('data-moving','');
+   clearTimeout(idle);idle=window.setTimeout(()=>{bar.style.setProperty('--rail-speed','0');bar.removeAttribute('data-moving')},180);paint()};
+  const size=new ResizeObserver(paint);size.observe(el);if(el.firstElementChild)size.observe(el.firstElementChild);
+  el.addEventListener('scroll',onScroll,{passive:true});paint();
+  return()=>{el.removeEventListener('scroll',onScroll);size.disconnect();clearTimeout(idle)}},[term]);
  useEffect(()=>{if(term.length<2)return;let live=true;const t=setTimeout(()=>{booksRequest<{moves:DocHit[]}>('list_moves',{q:term}).then(r=>{if(live)setDocs({q:term,rows:r.moves.slice(0,6)})}).catch(()=>{if(live)setDocs({q:term,rows:[]})})},220);return()=>{live=false;clearTimeout(t)}},[term]);
  const hits=useMemo<Hit[]>(()=>{if(!term)return [];
   const pages=groups.flatMap(g=>g.items.filter(i=>matches(term,i.label+' '+g.title+' '+i.hint+' '+(i.words||''))).map(i=>({key:'p:'+i.id,kind:'page' as const,label:i.label,sub:g.title,run:()=>onPage(i.id)}))).slice(0,7);
@@ -47,13 +56,17 @@ export function BooksNav({groups,page,onPage,actions,partnerName,onOpenDoc}:{gro
   {/* Phones: the same pages as one list. */}
   <label className="books-nav-select"><span className="sr-only">الصفحة</span><select value={page} onChange={e=>onPage(e.target.value)} aria-label="صفحة المحاسبة">
    {groups.map(g=><optgroup key={g.id} label={g.title}>{g.items.map(i=><option key={i.id} value={i.id}>{i.label}{i.badge?` (${i.badge})`:''}</option>)}</optgroup>)}</select></label>
+  <div className="books-nav-scroll-wrap"><div className="books-nav-scroll" ref={scroller}>
   {term?<ul className="books-go-results" id="books-go-results" role="listbox" aria-label="النتائج">{hits.length?hits.map((h,i)=>{const Icon=icon[h.kind];return <li key={h.key} role="option" aria-selected={i===active}>
    <button type="button" className={i===active?'active':''} onMouseEnter={()=>setActive(i)} onClick={()=>pick(h)}><Icon size={14} aria-hidden/><span><b>{h.label}</b><small>{h.sub}</small></span></button></li>})
    :<li className="muted books-go-none">{term.length<2?'اكتب حرفين على الأقل':'لا توجد نتيجة'}</li>}</ul>
   :<div className="books-nav-groups">{groups.map(g=>{const open=!closed.includes(g.id)||g.items.some(i=>i.id===page),Icon=g.icon,count=g.items.reduce((n,i)=>n+(i.badge||0),0);
-   return <section key={g.id} className="books-nav-group"><button type="button" className="books-nav-title" aria-expanded={open} onClick={()=>toggle(g.id)}><Icon size={15} aria-hidden/><span>{g.title}</span>{!open&&count>0&&<i aria-hidden className="books-badge">{count}</i>}</button>
-    {open&&<ul>{g.items.map(i=><li key={i.id}><button type="button" className="books-nav-item" aria-current={i.id===page?'page':undefined} title={i.badge?`${i.hint} (${i.badge})`:i.hint} onClick={()=>onPage(i.id)}>
-     <span>{i.label}</span>{!!i.badge&&<i aria-hidden className={'books-badge'+(i.alert?' alert':'')}>{i.badge>99?'99+':i.badge}</i>}</button></li>)}</ul>}</section>})}</div>}
+   // A section is a heading with an arrow that turns as it folds; its pages sit indented under a guide line.
+   return <section key={g.id} className="books-nav-group" data-open={open||undefined}><button type="button" className="books-nav-title" aria-expanded={open} aria-controls={'books-nav-'+g.id} title={open?'طي القسم':'فتح القسم'} onClick={()=>toggle(g.id)}>
+     <Icon size={15} aria-hidden/><span>{g.title}</span>{!open&&<small className="books-nav-count">{g.items.length}</small>}{!open&&count>0&&<i aria-hidden className="books-badge">{count}</i>}<ChevronDown size={15} aria-hidden className="books-nav-chev"/></button>
+    <div className="books-nav-drawer" id={'books-nav-'+g.id} inert={!open}><ul>{g.items.map(i=><li key={i.id}><button type="button" className="books-nav-item" aria-current={i.id===page?'page':undefined} title={i.badge?`${i.hint} (${i.badge})`:i.hint} onClick={()=>onPage(i.id)}>
+     <span>{i.label}</span>{!!i.badge&&<i aria-hidden className={'books-badge'+(i.alert?' alert':'')}>{i.badge>99?'99+':i.badge}</i>}</button></li>)}</ul></div></section>})}</div>}
+  </div><span className="books-nav-rail" ref={rail} aria-hidden><i/></span></div>
   <p className="books-keys"><kbd>/</kbd> بحث · <kbd>Ctrl</kbd>+<kbd>S</kbd> حفظ · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> ترحيل</p>
  </nav>;
 }
