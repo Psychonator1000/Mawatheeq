@@ -535,3 +535,22 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
  .books-body .books-chart{min-height:120px}
 }
 @media(min-width:1001px){.books-body .books-journals.books-scroll{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));align-content:start}}
+/* Dashboard: the journal cards always show whole; the chart takes what is left. The header is one tight block. */
+@media(min-width:1001px){
+ .books-body .books-journals-dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;flex:none!important}
+ .books-body .books-journals-dash .books-journal .actions{gap:5px}.books-body .books-journals-dash .books-journal .btn{min-height:30px;padding:4px 9px;font-size:12px}
+ .books-body .books-chart{min-height:110px}
+ .books-page-head{padding-bottom:6px;gap:0}.books-page-head h2{font-size:17px;line-height:1.3}.books-page-head .muted{font-size:12px}
+ .books-body .books-all-clear{padding:4px 2px;flex-shrink:0}
+}
+@media(min-width:1001px){
+ .books-body .books-journals-dash{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+ .books-body .books-journals-dash .books-journal{padding:8px 9px}
+ .books-body .books-journals-dash .books-journal .actions{flex-wrap:wrap;gap:4px}
+ .books-body .books-journals-dash .books-journal .btn{min-height:27px;padding:2px 7px;font-size:11.5px;border-radius:7px}
+ .books-body .books-journals-dash .books-balance b{font-size:17px}
+ /* The section switch (books / mail) sits close under the top bar. */
+ .department-content.desk-page{padding-top:8px}
+ .department-content.desk-page .mail-switch{margin-bottom:8px}
+ .department-content.desk-page .mail-switch .btn{min-height:34px;padding:5px 14px}
+}

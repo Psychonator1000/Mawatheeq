@@ -176,7 +176,7 @@ function attentionItems(setup:BooksSetup,full:FullSetup|null,bank:BankSetup|null
 function Dashboard({setup,full,onNew,onNewDoc,onList,onView}:{setup:BooksSetup;full:FullSetup|null;onNew:(journalId:string)=>void;onNewDoc:(k:DocKind)=>void;onList:(journalId:string)=>void;onView:(v:View)=>void}){
  const locked=setup.settings.lockDate||setup.settings.fiscalLockDate;
  return <section className="panel"><div className="department-toolbar"><h2>الدفاتر اليومية</h2>{locked&&<span className="tag amber"><Lock size={13}/> مقفل حتى {formatDate(([setup.settings.lockDate,setup.settings.fiscalLockDate].filter(Boolean) as string[]).sort().pop()!)}</span>}</div>
-  <div className="books-journals books-scroll">{setup.journals.filter(j=>j.active).map(j=>{const Icon=JOURNAL_ICONS[j.type],s=setup.journalStats[j.id]||{drafts:0,posted:0,balance:'0'},acc=setup.accounts.find(a=>a.id===j.defaultAccount);
+  <div className="books-journals books-journals-dash">{setup.journals.filter(j=>j.active).map(j=>{const Icon=JOURNAL_ICONS[j.type],s=setup.journalStats[j.id]||{drafts:0,posted:0,balance:'0'},acc=setup.accounts.find(a=>a.id===j.defaultAccount);
    return <article key={j.id} className="books-journal"><header><Icon size={20}/><div><h3>{j.name}</h3><small>{j.code} · {JOURNAL_TYPES[j.type]}</small></div></header>
     {(j.type==='bank'||j.type==='cash')&&<p className="books-balance"><span>رصيد {acc?.name||'الحساب'}</span><b dir="ltr">{amount(s.balance)}</b></p>}
     {full&&(j.type==='sale'||j.type==='purchase')?(()=>{const k:DocKind=j.type==='sale'?'out_invoice':'in_invoice',st=full.documentStats[k];return <>

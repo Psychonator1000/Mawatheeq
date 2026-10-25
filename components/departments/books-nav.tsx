@@ -67,9 +67,10 @@ export function PageHeader({group,item}:{group?:NavGroup;item?:NavItem}){
 /** What waits for the accountant today, each line opening the page where it is done. */
 export function AttentionList({items,onPage}:{items:Attention[];onPage:(id:string)=>void}){
  const open=items.filter(i=>i.count>0);
+ // Nothing waiting takes one quiet line, leaving the room to the journals.
+ if(!open.length)return <p className="books-all-clear"><CheckCircle2 size={16} aria-hidden/> ما يحتاج انتباهك: لا شيء ينتظرك الآن.</p>;
  return <section className="panel books-attention"><div className="department-toolbar"><h2>ما يحتاج انتباهك</h2></div>
-  {!open.length?<p className="books-all-clear"><CheckCircle2 size={18} aria-hidden/> لا شيء ينتظرك الآن.</p>
-  :<ul>{open.map(i=><li key={i.id}><button type="button" className={'books-attention-item'+(i.alert?' alert':'')} onClick={()=>onPage(i.page)}>
-   <b className="mono">{i.count}</b><span>{i.label}</span>{i.amount&&<small className="mono" dir="ltr">{money(toFils(i.amount))}</small>}<ChevronLeft size={15} aria-hidden/></button></li>)}</ul>}
+  <ul>{open.map(i=><li key={i.id}><button type="button" className={'books-attention-item'+(i.alert?' alert':'')} onClick={()=>onPage(i.page)}>
+   <b className="mono">{i.count}</b><span>{i.label}</span>{i.amount&&<small className="mono" dir="ltr">{money(toFils(i.amount))}</small>}<ChevronLeft size={15} aria-hidden/></button></li>)}</ul>
  </section>;
 }
