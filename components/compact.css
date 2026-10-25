@@ -276,8 +276,8 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .work-desk-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.work-desk-head h2{font-size:17px;margin-inline-end:4px}.work-desk-head .actions{margin-inline-start:auto}.work-desk-head .btn{min-height:38px;padding:6px 14px}
 .work-chips{display:flex;gap:6px;flex-wrap:wrap}
 .work-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--card);color:inherit;border-radius:999px;padding:4px 6px 4px 12px;font:inherit;font-size:13px}
-.work-chip b{min-width:22px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--dept) 12%,transparent);font-size:12px;line-height:20px;text-align:center;font-variant-numeric:tabular-nums}
-.work-chip.late b{background:#a32e381f;color:#a32e38}.work-chip.on{background:var(--dept);border-color:var(--dept);color:var(--card)}.work-chip.on b{background:color-mix(in srgb,var(--card) 25%,transparent);color:inherit}
+.work-chip b{min-width:22px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--dept,var(--brand)) 12%,transparent);font-size:12px;line-height:20px;text-align:center;font-variant-numeric:tabular-nums}
+.work-chip.late b{background:#a32e381f;color:#a32e38}.work-chip.on{background:var(--dept,var(--brand));border-color:var(--dept,var(--brand));color:var(--card)}.work-chip.on b{background:color-mix(in srgb,var(--card) 25%,transparent);color:inherit}
 .work-desk-filters{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.work-desk-filters>.field{flex:1 1 200px;min-width:160px}.work-desk-filters>:is(label,div):not(.layout-toggle):not(.roll-print){flex:0 1 170px}
 .work-desk-filters>label.field:first-child:not(.filter-select){flex:2 1 280px;min-width:220px}
 .work-desk-filters .field input,.work-desk-filters [data-slot=select-trigger]{min-height:38px!important;height:38px;padding-top:6px;padding-bottom:6px}
@@ -597,3 +597,5 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 /* The custody card says what its line is: a shelf, or who holds the file. */
 .custody-what{font-size:11.5px;color:var(--muted-foreground)}
 .movement-filters>.field:first-child{flex:2 1 260px;min-width:220px}
+/* Pages outside a department (the legal workspace) take the app's own colour wherever a department colour is used. */
+:root{--dept:var(--brand);--dept-soft:color-mix(in srgb,var(--brand) 9%,transparent)}
