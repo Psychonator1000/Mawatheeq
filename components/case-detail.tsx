@@ -1,4 +1,5 @@
 'use client';
+import CasePaperFileStrip from './case-paper-file';
 import {useEffect,useRef,useState} from 'react';
 import CaseCollections from './departments/case-collections';
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '@/components/ui/sheet';
@@ -81,6 +82,7 @@ export default function CaseDetail({caseLabel,canManageSessions=false,canCollect
   <dl className="case-facts">{([['صفة الموكل',c.role],['نوع الحكم',c.type],['تاريخ الحكم',c.date?formatDate(c.date):''],['النتيجة',st.outcome],['المحامي',c.lawyer]] as const).map(([label,value])=><div key={label}><dt>{label}</dt><dd className={value&&value!=='غير محدد'?'':'muted'}>{value||'غير مسجل'}</dd></div>)}</dl>
   <CaseProgress c={c} rules={rules} asOf={asOf} onStage={id=>{setStageFocus(id);setTab('stages')}}/>
   {nextHearing&&<p className="next-hearing"><CalendarClock size={15}/> الجلسة القادمة: <b className="mono">{formatDate(nextHearing.dueDate)}{nextHearing.dueTime?' '+nextHearing.dueTime:''}</b>{nextHearing.location?' · '+nextHearing.location:''}</p>}
+  {sharedBackend&&!!record.revision&&<CasePaperFileStrip caseId={record.id}/>}
   <div className="case-quick" role="group" aria-label="إجراءات سريعة">{canEdit&&!!record.revision&&<button type="button" className="btn" onClick={()=>setTab('sessions')}><Gavel/> تسجيل جلسة</button>}{canEdit&&<button type="button" className="btn" onClick={()=>setTab('history')}><ListPlus/> إجراء جديد</button>}<button type="button" className="btn" onClick={()=>setTab('execution')}><Gavel/> الطعن والتنفيذ</button><button type="button" className="btn" onClick={printSheet}><Printer/> طباعة</button>{canEdit&&next&&!!record.revision&&<button type="button" className="btn" onClick={()=>setMoving(true)}><ArrowUpFromLine/> نقل إلى {LEVEL_TITLE[next]}</button>}</div>
   {nav&&nav.total>1&&<div className="case-nav"><button type="button" className="btn" disabled={!nav.prev} onClick={()=>go('prev')} aria-keyshortcuts="Alt+ArrowRight"><ChevronRight/> السابقة</button><span>{nav.index+1} / {nav.total}</span><button type="button" className="btn" disabled={!nav.next} onClick={()=>go('next')} aria-keyshortcuts="Alt+ArrowLeft">التالية <ChevronLeft/></button></div>}
   <p className="case-keys"><kbd>Ctrl S</kbd> حفظ · <kbd>Alt ←→</kbd> القضية السابقة/التالية · <kbd>Esc</kbd> إغلاق</p>

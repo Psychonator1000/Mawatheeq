@@ -2627,6 +2627,16 @@
 :root[data-mode=dark] .comment-list li:has(>.comment-meta .comment-private){background:#1a1814;border-color:#4e3f26}
 :root[data-mode=dark] .comment-audience legend{color:var(--muted-foreground)}
 :root[data-mode=dark] .comment-audience-note{color:#ead2b5}
+:root[data-mode=dark] .paper-group{border-bottom:1px solid var(--border)}
+:root[data-mode=dark] .paper-group.alert{background:color-mix(in srgb,var(--brand) 6%,transparent)}
+:root[data-mode=dark] .paper-group.alert h3{color:var(--brand)}
+:root[data-mode=dark] .paper-hint{color:var(--muted-foreground)}
+:root[data-mode=dark] .paper-item+.paper-item{border-top:1px dashed var(--border)}
+:root[data-mode=dark] .paper-item-main small{color:var(--muted-foreground)}
+:root[data-mode=dark] .case-paper-row{border:1px solid var(--border);background:color-mix(in srgb,var(--card) 80%,transparent)}
+:root[data-mode=dark] .case-paper-line svg{color:var(--brand)}
+:root[data-mode=dark] .agenda-action .agenda-open{color:inherit}
+:root[data-mode=dark] .handover-log{color:var(--brand)!important}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

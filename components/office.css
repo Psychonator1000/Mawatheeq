@@ -418,3 +418,36 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .comment-audience{display:flex;flex-wrap:wrap;gap:6px 16px;border:0;padding:0;margin:0;font-size:12.5px}.comment-audience legend{font-size:12px;color:var(--muted-foreground);margin-bottom:4px;width:100%}
 .comment-audience label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}.comment-audience input{accent-color:var(--brand)}
 .comment-audience-note{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#7a4b12;margin:0}
+/* «ملفاتي الورقية»: files the archive sent, files held, and requests, each with its one action. */
+.paper-panel{width:min(420px,calc(100vw - 32px))!important}
+.paper-group{padding:8px 10px;border-bottom:1px solid var(--border)}.paper-group:last-child{border-bottom:0}
+.paper-group.alert{background:color-mix(in srgb,var(--brand) 6%,transparent)}
+.paper-group-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 4px}
+.paper-group h3{margin:0;font-size:13px;font-weight:700}.paper-group.alert h3{color:var(--brand)}
+.paper-hint{margin:2px 4px 4px;font-size:11.5px;color:var(--muted-foreground)}
+.paper-group ul{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.paper-item{display:flex;align-items:center;gap:8px;padding:8px 4px;border-radius:10px}
+.paper-item+.paper-item{border-top:1px dashed var(--border)}
+.paper-item-main{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.paper-item-main b{font-size:13px;font-weight:600;overflow-wrap:anywhere}.paper-item-main small{font-size:11.5px;color:var(--muted-foreground)}
+.paper-item .btn{min-height:32px;padding:4px 10px;font-size:12.5px;white-space:nowrap}
+/* The case's paper file in the case window: where it is, and the one action that fits. */
+.case-paper{display:grid;gap:6px}
+.case-paper-row{border:1px solid var(--border);border-radius:12px;padding:6px 10px;background:color-mix(in srgb,var(--card) 80%,transparent)}
+.case-paper-line{display:flex;align-items:center;gap:8px;margin:0;font-size:12.5px;flex-wrap:wrap}.case-paper-line>span:not(.tag){flex:1;min-width:150px}
+.case-paper-line svg{color:var(--brand);flex:none}.case-paper-line .btn{min-height:30px;padding:3px 10px;font-size:12.5px}
+.case-paper-ask{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px;align-items:end}.case-paper-ask .actions{display:flex;gap:6px}
+/* Archive handover: the sheet of files going out, and the files waiting on their holder or on the archive. */
+.sec-agenda-list .agenda-item.agenda-action{grid-template-columns:minmax(0,1fr) auto;cursor:default}
+.agenda-action .agenda-open{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;border:0;background:none;padding:0;font:inherit;color:inherit;text-align:start;cursor:pointer;min-width:0}
+.agenda-action .btn{min-height:30px;padding:3px 9px;font-size:12px;white-space:nowrap}
+.handover-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.handover-note>span{flex:1}
+.handover-log{color:var(--brand)!important}
+.archive-table .btn,.office-table td>.btn{min-height:28px;padding:2px 8px;font-size:12px;margin-top:4px}
+.dispatch-add{display:grid;grid-template-columns:minmax(260px,1.4fr) minmax(180px,1fr) minmax(160px,1fr);gap:10px;align-items:end;margin-bottom:12px}
+.dispatch-add .archive-scan{margin:0}
+.dispatch-table .field>span:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.dispatch-table td{vertical-align:middle}.dispatch-table select,.dispatch-table input{min-width:140px}
+.dispatch-foot{display:grid;gap:10px;margin-top:12px}.dispatch-foot .actions{display:flex;gap:8px;flex-wrap:wrap}
+.dispatch-done{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.dispatch-done>span{flex:1}
+@media(max-width:900px){.dispatch-add{grid-template-columns:1fr}}

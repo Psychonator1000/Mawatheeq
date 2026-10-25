@@ -1,10 +1,10 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Plus,Printer,ScanLine,MapPin,ArrowLeftRight,History,FileText,ClipboardCheck,Undo2,Inbox,BookCopy,type LucideIcon} from 'lucide-react';
+import {Plus,Printer,ScanLine,MapPin,ArrowLeftRight,History,FileText,ClipboardCheck,ClipboardList,Undo2,Inbox,BookCopy,CheckCircle2,type LucideIcon} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
 import {type CaseSummary,type DepartmentRecord,newDepartmentRecord} from '@/lib/departments';
 import type {Permissions} from '@/lib/permissions';
-import {CUSTODY_STATES,MOVEMENTS,FILE_TYPES,OUTSIDE_BODIES,PURPOSES,REQUEST_STATUSES,custodyOf,fileMovements,recordedAt,isOverdue,daysBetween,nextNumber,locationLabel,retentionDue,needsHolder,code39Ready,code39Svg,
+import {CUSTODY_STATES,MOVEMENTS,FILE_TYPES,OUTSIDE_BODIES,PURPOSES,REQUEST_STATUSES,custodyOf,fileMovements,recordedAt,isOverdue,daysBetween,nextNumber,locationLabel,retentionDue,needsHolder,code39Ready,code39Svg,handoverOf,HANDOVER_LABELS,PAPER_FILES_EVENT,
  type ArchiveFile,type ArchiveLocation,type ArchiveMovement,type ArchiveRequest,type Custody,type FileData,type LocationData,type MovementData,type MovementType,type RequestData} from '@/lib/archive';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -18,8 +18,9 @@ import {CasePicker,DepartmentHistory,EditorDialog,StatusMessage,useRecords,expor
 import RecordWindow,{useListNav,type WindowNav,type Enter} from '../record-window';
 import CopyChip from '../copy-chip';
 import Needs from '../needs';
+import DispatchSheet from './archive-dispatch';
 
-type View='files'|'custody'|'requests'|'locations'|'log';
+type View='files'|'dispatch'|'custody'|'requests'|'locations'|'log';
 const PER_PAGE=25;
 type Person={id:string;username:string;displayName:string};
 type Preset={type:MovementType;holder:string;holderId:string;purpose:string;dueDate:string;requestId:string};
@@ -27,10 +28,15 @@ const stateTone:Record<string,string>={in:'green',staff:'amber',court:'wine',cli
 const blankFile=(number:string):FileData=>({number,title:'',type:'ملف قضية',volume:'',pages:'',locationId:'',originals:'no',confidential:'no',intakeDate:todayISO(),retentionUntil:'',notes:''});
 const blankLocation:LocationData={code:'',name:'',cabinet:'',shelf:'',box:'',capacity:'',notes:''};
 const save=<T,>(record:DepartmentRecord<T>)=>departmentRequest<DepartmentRecord<T>>('save_record',{workspace:'archive',record});
+// The archive confirms a file is back on the shelf: the holder reported it, or it came back at the desk.
+const approveReturn=(f:ArchiveFile)=>departmentRequest<ArchiveMovement>('approve_return',{workspace:'archive',fileId:f.id});
 const personName=(p:Person)=>p.displayName||p.username;
 
 export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:Permissions}) {
- const {rows,loading,error,reload}=useRecords<Record<string,string>>('archive');
+ const {rows,loading,error,reload,refresh}=useRecords<Record<string,string>>('archive');
+ // Receipts, reported returns and new requests arrive from colleagues: look again every minute, on focus and after any paper-file action.
+ useEffect(()=>{const t=window.setInterval(()=>{if(!document.hidden)void refresh()},60000);addEventListener('focus',refresh);addEventListener(PAPER_FILES_EVENT,refresh);
+  return()=>{clearInterval(t);removeEventListener('focus',refresh);removeEventListener(PAPER_FILES_EVENT,refresh)}},[refresh]);
  const {files,locations,movements,requests}=useMemo(()=>({files:rows.filter(r=>r.kind==='file') as unknown as ArchiveFile[],locations:rows.filter(r=>r.kind==='location') as unknown as ArchiveLocation[],
   movements:rows.filter(r=>r.kind==='movement') as unknown as ArchiveMovement[],requests:rows.filter(r=>r.kind==='request') as unknown as ArchiveRequest[]}),[rows]);
  const custody=useMemo(()=>new Map(files.map(f=>[f.id,custodyOf(f,movements)])),[files,movements]);
@@ -55,7 +61,9 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
  const label=(f:ArchiveFile)=>({number:f.payload.number,barcode:code39Ready(f.payload.number)?code39Svg(f.payload.number):'',title:f.payload.title,caseRef:caseRef(f),parties:parties(f),type:[f.payload.type,f.payload.volume&&'مجلد '+f.payload.volume].filter(Boolean).join(' · '),location:locationLabel(locOf(cu(f).locationId))});
  const printLabels=(list:ArchiveFile[])=>{if(!printHtml(archiveLabelsHtml(list.map(label),formatDate(today),'')))toast.error('تعذر فتح نافذة الطباعة.')};
  const openScan=()=>{const v=scan.trim().toUpperCase();if(!v){toast.error('امسح الباركود أو اكتب رقم الأرشيف أولاً.');return}const f=files.find(f=>f.payload.number.toUpperCase()===v);if(f){setScan('');setView('files');setEditing(f)}else toast.error('لا يوجد ملف بهذا الرقم: '+v)};
- const views:[View,string,LucideIcon,number?][]=[['files','الملفات',BookCopy],['custody','العهدة',ArrowLeftRight,out.length],['requests','الطلبات',Inbox,pending.length],['locations','المواقع',MapPin],['log','سجل الحركة',History]];
+ const reported=out.filter(f=>handoverOf(cu(f))==='return-reported'),unconfirmed=out.filter(f=>handoverOf(cu(f))==='awaiting-receipt');
+ const approve=async(f:ArchiveFile)=>{try{await approveReturn(f);toast.success('عاد الملف '+f.payload.number+' إلى الأرشيف');reload();dispatchEvent(new Event(PAPER_FILES_EVENT))}catch(e){toast.error((e as Error).message)}};
+ const views:[View,string,LucideIcon,number?][]=[['files','الملفات',BookCopy],...(access.canEdit?[['dispatch','كشف التسليم',ClipboardList] as [View,string,LucideIcon]]:[]),['custody','العهدة',ArrowLeftRight,out.length],['requests','الطلبات',Inbox,pending.length],['locations','المواقع',MapPin],['log','سجل الحركة',History]];
  const newFile=()=>setEditing(newDepartmentRecord('archive','file',blankFile(nextNumber(files))) as unknown as ArchiveFile);
  // Every case has a paper file in the archive: one per office code, whichever of its judgments it is linked to.
  const missing=useMemo(()=>{const covered=new Set(files.map(f=>caseOf(f.caseId)?.code).filter(Boolean));const seen=new Set<string>();
@@ -78,6 +86,8 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
    <button type="button" onClick={()=>{setView('files');setShow('archived');setState('');setPage(1)}} title="الملفات المغلقة (أُتلفت أو انتهى حفظها)"><span>مغلقة</span><b>{files.length-active.length}</b></button>
   </div>
   <div className="sec-agenda-list">
+   {reported.length>0&&<><h3 className="desk-sub">أُبلغ بإرجاعها · أكّد الاستلام ({reported.length})</h3>{reported.map(f=>{const c=cu(f);return <div key={f.id} className="agenda-item agenda-action"><button type="button" className="agenda-open" onClick={()=>setEditing(f)}><span className="agenda-time" dir="ltr">{f.payload.number}</span><span className="agenda-body"><b>{f.payload.title}</b><small>{c.holder} · أبلغ بالإرجاع</small></span></button>{access.canEdit&&<button type="button" className="btn primary" onClick={()=>void approve(f)}><CheckCircle2 size={14}/> عاد الملف</button>}</div>})}</>}
+   {unconfirmed.length>0&&<><h3 className="desk-sub">لم يؤكد المستلم استلامها ({unconfirmed.length})</h3>{unconfirmed.map(f=>{const c=cu(f);return <button key={f.id} className="agenda-item" onClick={()=>setEditing(f)}><span className="agenda-time" dir="ltr">{f.payload.number}</span><span className="agenda-body"><b>{f.payload.title}</b><small>{c.holder} · أُرسل {formatDate(c.since)}</small></span></button>})}</>}
    <h3 className="desk-sub">تأخرت إعادتها ({overdue.length})</h3>{overdue.length?overdue.map(f=>{const c=cu(f);return <button key={f.id} className="agenda-item late" onClick={()=>setEditing(f)}><span className="agenda-time" dir="ltr">{f.payload.number}</span><span className="agenda-body"><b>{f.payload.title}</b><small>{c.holder} · متأخر {daysBetween(c.dueDate,today)} يوم</small></span></button>}):<p className="muted sec-empty">كل الملفات في موعدها.</p>}
    <h3 className="desk-sub">طلبات مفتوحة ({pending.length})</h3>{pending.length?pending.map(r=>{const f=files.find(x=>x.id===r.subjectId);return <button key={r.id} className="agenda-item" onClick={()=>setRequest(r)}><span className="agenda-time">{r.payload.neededBy?formatDate(r.payload.neededBy):'دون موعد'}</span><span className="agenda-body"><b>{r.payload.requester||'طلب'}</b><small>{f?.payload.number} · {r.payload.purpose||f?.payload.title}</small></span></button>}):<p className="muted sec-empty">لا توجد طلبات مفتوحة.</p>}
   </div>
@@ -104,7 +114,9 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
     <td><span className={'tag '+stateTone[c.state]}>{CUSTODY_STATES[c.state]}</span><small>{c.state==='in'?locationLabel(locOf(c.locationId))||'بلا موقع محدد':[c.holder,c.dueDate&&(late?`متأخر ${daysBetween(c.dueDate,today)} يوم`:'حتى '+formatDate(c.dueDate))].filter(Boolean).join(' · ')}</small></td>
     <td className="nowrap">{c.lastAudit?formatDate(c.lastAudit):<span className="muted">—</span>}</td></tr>})}</tbody></table>}
   <PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></div></>}
- {!loading&&!error&&view==='custody'&&<div className="work-desk-body"><CustodyList files={out} custody={custody} today={today} caseRef={caseRef} canPrint={access.canExport} onOpen={f=>setEditing(f)}/></div>}
+ {/* The sheet stays through the reload that follows sending, so its print button stays too. */}
+ {!error&&view==='dispatch'&&access.canEdit&&(!loading||files.length>0)&&<div className="work-desk-body"><DispatchSheet files={active} custody={custody} cases={cases} people={people} requests={requests} canPrint={access.canExport} printedBy="" onDone={reload}/></div>}
+ {!loading&&!error&&view==='custody'&&<div className="work-desk-body"><CustodyList files={out} custody={custody} today={today} caseRef={caseRef} canPrint={access.canExport} onOpen={f=>setEditing(f)} onApprove={access.canEdit?f=>void approve(f):undefined}/></div>}
  {!loading&&!error&&view==='requests'&&<div className="work-desk-body"><RequestsList onAdd={access.canEdit?()=>setRequest(newDepartmentRecord('archive','request',{requester:'',requesterId:'',neededBy:'',purpose:'',status:'pending',notes:'',decisionNote:''}) as unknown as ArchiveRequest):undefined} requests={requests} files={files} custody={custody} canEdit={access.canEdit} onOpen={setRequest} onDeliver={r=>{const f=files.find(x=>x.id===r.subjectId);if(f)setEditing(f,{type:'checkout',holder:r.payload.requester,holderId:r.payload.requesterId,purpose:r.payload.purpose,dueDate:'',requestId:r.id})}}/></div>}
  {!loading&&!error&&view==='locations'&&<div className="work-desk-body"><LocationsList onAdd={access.canEdit&&all?()=>setLocation(newDepartmentRecord('archive','location',{...blankLocation}) as unknown as ArchiveLocation):undefined} locations={locations} files={active} custody={custody} canEdit={access.canEdit&&all} canPrint={access.canExport} caseRef={caseRef} onEdit={setLocation} onStocktake={setStocktake}/></div>}
  {!loading&&!error&&view==='log'&&<div className="work-desk-body"><MovementLog movements={movements} files={files} locOf={locOf} canPrint={access.canExport} onOpen={f=>setEditing(f)}/></div>}
@@ -152,7 +164,8 @@ function FileEditor({initial,preset,cases,locations,movements,requests,people,ac
   {!saved.revision&&<p className="subtitle">يُعد الملف عند حفظه موجوداً في الأرشيف في الموقع المحدد. سجّل بعدها أي تسليم من تبويب «العهدة والحركة».</p>}
  </fieldset></TabsContent>
  {!!saved.revision&&<><TabsContent value="custody"><CustodyPanel file={saved} custody={c} log={log} locations={locations} people={people} preset={preset} editable={editable} canPrint={access.canExport} caseText={caseRow?`${caseRow.code||caseRow.autoNumber||''} · ${clientName(caseRow)} / ${caseRow.opponent}`:''}
-   onPosted={(m,requestId)=>{setPosted(l=>[...l.filter(x=>x.id!==m.id),m]);onChanged();if(requestId){const r=requests.find(x=>x.id===requestId);if(r)void save({...r,payload:{...r.payload,status:'done'}}).then(onChanged).catch(e=>toast.error(e.message))}}}/></TabsContent>
+   onPosted={(m,requestId)=>{setPosted(l=>[...l.filter(x=>x.id!==m.id),m]);onChanged();if(requestId){const r=requests.find(x=>x.id===requestId);// The server already closed a request handed to its own requester.
+    if(r&&(!m.payload.holderId||r.payload.requesterId!==m.payload.holderId))void save({...r,payload:{...r.payload,status:'done'}}).then(onChanged).catch(e=>toast.error(e.message))}}}/></TabsContent>
  <TabsContent value="requests"><div className="table-wrap">{requests.length?<table className="office-table"><thead><tr><th>طالب الملف</th><th>مطلوب بتاريخ</th><th>الغرض</th><th>الحالة</th></tr></thead><tbody>{requests.map(r=><tr key={r.id}><td>{r.payload.requester}</td><td>{r.payload.neededBy?formatDate(r.payload.neededBy):'—'}</td><td>{r.payload.purpose}</td><td><span className="tag">{REQUEST_STATUSES[r.payload.status]}</span></td></tr>)}</tbody></table>:<Empty title="لا توجد طلبات" text="سجّل طلب الزميل للملف ليُجهَّز ويُسلَّم في موعده."/>}</div></TabsContent>
  <TabsContent value="history"><DepartmentHistory workspace="archive" id={saved.id} revision={saved.revision}/></TabsContent></>}
  </Tabs></RecordWindow>;
@@ -169,6 +182,7 @@ function CustodyPanel({file,custody:c,log,locations,people,preset,editable,canPr
   if(!printHtml(custodyReceiptHtml(back?'إيصال استلام ملف إلى الأرشيف':'إيصال تسليم ملف من الأرشيف',[['رقم الأرشيف',file.payload.number],['الملف',file.payload.title],['القضية',caseText],['نوع الملف',[file.payload.type,file.payload.volume&&'مجلد '+file.payload.volume,file.payload.pages&&file.payload.pages+' ورقة'].filter(Boolean).join(' · ')],['الأصول',file.payload.originals==='yes'?'يحتوي على مستندات أصلية':''],['الحركة',MOVEMENTS[p.type].label],['التاريخ',formatDate(p.date)],['المستلم',back?'الأرشيف':p.holder],['الغرض',p.purpose],['موعد الإعادة',p.dueDate?formatDate(p.dueDate):''],['الموقع',loc(p.locationId)],['ملاحظات',p.notes]],back?'المُسلِّم':'موظف الأرشيف',back?'موظف الأرشيف':'المستلم',formatDate(today),m.createdBy)))toast.error('تعذر فتح نافذة الطباعة.')};
  async function post(){if(!form)return;setBusy(true);setError('');
   try{const m=await save<MovementData>({...newDepartmentRecord('archive','movement',form),caseId:file.caseId,subjectId:file.id} as ArchiveMovement) as ArchiveMovement;onPosted(m,requestId);setRequestId('');setForm(null);setLast(m);toast.success(MOVEMENTS[m.payload.type].verb)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
+ async function confirmBack(){setBusy(true);setError('');try{const m=await approveReturn(file);onPosted(m,'');setLast(m);toast.success('عاد الملف إلى الأرشيف');dispatchEvent(new Event(PAPER_FILES_EVENT))}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  async function cancel(m:ArchiveMovement){setBusy(true);setError('');try{const r=await departmentRequest<ArchiveMovement>('void_record',{workspace:'archive',id:m.id,revision:m.revision,reason});onPosted(r,'');setVoiding('');setReason('');toast.success('أُلغيت الحركة')}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  const posted=log.filter(m=>m.payload.status==='posted'),lastPosted=posted[posted.length-1];
  const late=isOverdue(c,today);
@@ -176,6 +190,8 @@ function CustodyPanel({file,custody:c,log,locations,people,preset,editable,canPr
   <div className={'custody-now '+c.state+(late?' late':'')}><span className={'tag '+stateTone[c.state]}>{CUSTODY_STATES[c.state]}</span>
    <b>{c.state==='in'?loc(c.locationId)||'في الأرشيف، بلا موقع محدد':c.holder}</b>
    <small>{c.state==='in'?(c.lastAudit?'آخر جرد '+formatDate(c.lastAudit):'لم يُجرد بعد'):[c.purpose,c.since&&'منذ '+formatDate(c.since),c.dueDate&&(late?`متأخر ${daysBetween(c.dueDate,today)} يوم عن ${formatDate(c.dueDate)}`:'يعود في '+formatDate(c.dueDate))].filter(Boolean).join(' · ')}</small></div>
+  {handoverOf(c)==='awaiting-receipt'&&<p className="notice handover-note">أُرسل إلى {c.holder} وينتظر تأكيده. لا تسلّم الأوراق قبل أن يضغط «استلمت» في إشعاره.</p>}
+  {handoverOf(c)==='return-reported'&&<div className="notice handover-note"><span>أبلغ {c.holder} بإرجاع الملف. تأكد من وصول الأوراق ثم أكّد.</span>{editable&&<button type="button" className="btn primary" disabled={busy} onClick={()=>void confirmBack()}><CheckCircle2 size={15}/> تأكيد عودة الملف</button>}</div>}
   {file.payload.confidential==='yes'&&c.state==='in'&&<p className="notice">ملف سري: يُسلّم للمحامي المسؤول عن القضية أو بإذن مسؤول المكتب.</p>}
   {editable&&!form&&<div className="actions">{allowed.map(t=><button key={t} type="button" className={'btn'+(t==='return'||t==='checkout'?' primary':'')} onClick={()=>setForm(blank(t))}>{t==='return'?<Undo2 size={15}/>:t==='audit'?<ClipboardCheck size={15}/>:t==='move'?<MapPin size={15}/>:<ArrowLeftRight size={15}/>} {MOVEMENTS[t].label}</button>)}</div>}
   {form&&<section className="department-form-section"><h3>{MOVEMENTS[form.type].label}</h3><fieldset disabled={busy}><div className="form-grid">
@@ -191,19 +207,20 @@ function CustodyPanel({file,custody:c,log,locations,people,preset,editable,canPr
   {error&&<p className="notice" role="alert">{error}</p>}
   <h3 className="archive-subhead">سجل حركة الملف</h3>
   {!log.length?<p className="subtitle">لم تُسجل حركة بعد. الملف في الأرشيف منذ استلامه.</p>:<ol className="custody-log">{[...log].reverse().map(m=>{const p=m.payload,v=p.status==='void';return <li key={m.id} className={v?'void':''}>
-   <div><b>{MOVEMENTS[p.type].label}</b>{p.holder&&<span> · {p.holder}</span>}{p.locationId&&<span> · {loc(p.locationId)}</span>}<small>{formatDate(p.date)}{p.purpose&&' · '+p.purpose}{p.dueDate&&' · يعود '+formatDate(p.dueDate)} · سجّلها {m.createdBy} {officeTime(m.createdAt)}</small>{p.notes&&<small>{p.notes}</small>}{v&&<small className="void-note">ملغاة: {p.voidReason}</small>}</div>
+   <div><b>{MOVEMENTS[p.type].label}</b>{p.holder&&<span> · {p.holder}</span>}{p.locationId&&<span> · {loc(p.locationId)}</span>}<small>{formatDate(p.date)}{p.purpose&&' · '+p.purpose}{p.dueDate&&' · يعود '+formatDate(p.dueDate)} · سجّلها {m.createdBy} {officeTime(m.createdAt)}</small>{p.receipt==='pending'&&!v&&<small className="handover-log">بانتظار تأكيد الاستلام</small>}{p.receivedAt&&<small className="handover-log">أكّد الاستلام {officeTime(p.receivedAt)}</small>}{p.returnClaimedAt&&<small className="handover-log">أبلغ بالإرجاع {officeTime(p.returnClaimedAt)}</small>}{p.notes&&<small>{p.notes}</small>}{v&&<small className="void-note">ملغاة: {p.voidReason}</small>}</div>
    <div className="actions">{canPrint&&!v&&p.type!=='audit'&&p.type!=='move'&&<button type="button" className="btn" onClick={()=>receipt(m)}><Printer size={14}/> إيصال</button>}{editable&&!v&&m.id===lastPosted?.id&&(voiding===m.id?<><Field label="سبب الإلغاء" value={reason} onChange={setReason}/><button type="button" className="btn" disabled={busy||!reason.trim()} onClick={()=>void cancel(m)}>تأكيد الإلغاء</button></>:<button type="button" className="btn" onClick={()=>{setVoiding(m.id);setReason('')}}>إلغاء الحركة</button>)}</div></li>})}</ol>}
  </div>;
 }
 
-function CustodyList({files,custody,today,caseRef,canPrint,onOpen}:{files:ArchiveFile[];custody:Map<string,Custody>;today:string;caseRef:(f:ArchiveFile)=>string;canPrint:boolean;onOpen:(f:ArchiveFile)=>void}) {
- const list=[...files].sort((a,b)=>{const x=custody.get(a.id)!,y=custody.get(b.id)!;return Number(isOverdue(y,today))-Number(isOverdue(x,today))||(x.dueDate||'9').localeCompare(y.dueDate||'9')});
+function CustodyList({files,custody,today,caseRef,canPrint,onOpen,onApprove}:{files:ArchiveFile[];custody:Map<string,Custody>;today:string;caseRef:(f:ArchiveFile)=>string;canPrint:boolean;onOpen:(f:ArchiveFile)=>void;onApprove?:(f:ArchiveFile)=>void}) {
+ const rank=(c:Custody)=>handoverOf(c)==='return-reported'?0:handoverOf(c)==='awaiting-receipt'?1:2;
+ const list=[...files].sort((a,b)=>{const x=custody.get(a.id)!,y=custody.get(b.id)!;return rank(x)-rank(y)||Number(isOverdue(y,today))-Number(isOverdue(x,today))||(x.dueDate||'9').localeCompare(y.dueDate||'9')});
  const holders=[...new Set(list.map(f=>custody.get(f.id)!.holder))];
- return <section className="panel"><div className="panel-head"><div><h2>العهدة: الملفات خارج الأرشيف</h2><p className="panel-note">المتأخر أولاً، ثم الأقرب موعداً للإعادة. افتح الملف لتسجيل استلامه.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('عهدة ملفات الأرشيف',formatDate(today),['رقم الأرشيف','الملف','القضية','الحالة','مع','الغرض','منذ','موعد الإعادة','التأخير'],list.map(f=>{const c=custody.get(f.id)!;return [f.payload.number,f.payload.title,caseRef(f),CUSTODY_STATES[c.state],c.holder,c.purpose,formatDate(c.since),c.dueDate?formatDate(c.dueDate):'—',isOverdue(c,today)?daysBetween(c.dueDate,today)+' يوم':'']}),formatDate(today),''))}><Printer size={15}/> طباعة العهدة</button>}</div>
+ return <section className="panel"><div className="panel-head"><div><h2>العهدة: الملفات خارج الأرشيف</h2><p className="panel-note">ما أُبلغ بإرجاعه أولاً، ثم ما لم يؤكد مستلمه استلامه، ثم المتأخر. افتح الملف لتسجيل استلامه.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('عهدة ملفات الأرشيف',formatDate(today),['رقم الأرشيف','الملف','القضية','الحالة','مع','الغرض','منذ','موعد الإعادة','التأخير'],list.map(f=>{const c=custody.get(f.id)!;return [f.payload.number,f.payload.title,caseRef(f),CUSTODY_STATES[c.state],c.holder,c.purpose,formatDate(c.since),c.dueDate?formatDate(c.dueDate):'—',isOverdue(c,today)?daysBetween(c.dueDate,today)+' يوم':'']}),formatDate(today),''))}><Printer size={15}/> طباعة العهدة</button>}</div>
   {!list.length?<Empty title="كل الملفات في الأرشيف" text="لا يوجد ملف مسلّم لموظف أو جهة خارجية الآن."/>:<>
   <div className="holder-chips">{holders.map(h=><span key={h} className="chip">{h} <b>{list.filter(f=>custody.get(f.id)!.holder===h).length}</b></span>)}</div>
   <div className="table-wrap"><table className="office-table"><thead><tr><th>رقم الأرشيف</th><th>الملف</th><th>مع</th><th>منذ</th><th>موعد الإعادة</th></tr></thead><tbody>{list.map(f=>{const c=custody.get(f.id)!,late=isOverdue(c,today);return <tr key={f.id} className={'clickable'+(late?' late':'')} onClick={()=>onOpen(f)}>
-   <td className="nowrap"><b dir="ltr">{f.payload.number}</b></td><td><b>{f.payload.title}</b><small>{caseRef(f)}</small></td><td><span className={'tag '+stateTone[c.state]}>{CUSTODY_STATES[c.state]}</span><small>{c.holder}{c.purpose&&' · '+c.purpose}</small></td>
+   <td className="nowrap"><b dir="ltr">{f.payload.number}</b></td><td><b>{f.payload.title}</b><small>{caseRef(f)}</small></td><td><span className={'tag '+stateTone[c.state]}>{CUSTODY_STATES[c.state]}</span>{handoverOf(c)&&<span className={'tag '+(handoverOf(c)==='return-reported'?'green':'amber')}>{HANDOVER_LABELS[handoverOf(c)!]}</span>}<small>{c.holder}{c.purpose&&' · '+c.purpose}</small>{onApprove&&handoverOf(c)==='return-reported'&&<button type="button" className="btn primary" onClick={e=>{e.stopPropagation();onApprove(f)}}><CheckCircle2 size={14}/> عاد الملف</button>}</td>
    <td className="nowrap">{formatDate(c.since)}<small>{daysBetween(c.since,today)} يوم</small></td><td className="nowrap">{c.dueDate?formatDate(c.dueDate):'—'}{late&&<small className="late-note">متأخر {daysBetween(c.dueDate,today)} يوم</small>}</td></tr>})}</tbody></table></div></>}</section>;
 }
 

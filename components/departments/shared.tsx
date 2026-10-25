@@ -1,5 +1,5 @@
 import FilterSelect from '../filter-select';
-import {useEffect,useState,type ReactNode} from 'react';
+import {useEffect,useState,type ReactNode,useCallback} from 'react';
 import {departmentRequest} from '@/lib/local-auth';
 import {departmentPages,type Department,type DepartmentRecord,type CaseSummary} from '@/lib/departments';
 import type {Change} from '@/lib/office';
@@ -14,7 +14,9 @@ export function useRecords<P>(workspace:Department) {
   // Show the last copy at once while the server's copy loads.
   void readSnapshot<DepartmentRecord<P>[]>('dept:'+workspace).then(r=>{if(active&&r&&!fresh){setRows(r);setLoading(false)}});
   departmentPages<DepartmentRecord<P>>(workspace,'records_page').then(r=>{fresh=true;if(active){setRows(r);void writeSnapshot('dept:'+workspace,r)}}).catch(e=>{if(active){setRows([]);setError(e.message)}}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[workspace,version]);
- return {rows,loading,error,reload:()=>setVersion(v=>v+1)};
+ // A quiet refresh keeps the page as it is while it fetches, for changes made elsewhere (a colleague confirming a receipt).
+ const refresh=useCallback(()=>departmentPages<DepartmentRecord<P>>(workspace,'records_page').then(r=>{setRows(r);void writeSnapshot('dept:'+workspace,r)}).catch(()=>undefined),[workspace]);
+ return {rows,loading,error,reload:()=>setVersion(v=>v+1),refresh};
 }
 export function StatusMessage({loading,error}:{loading:boolean;error:string}) {return <>{loading&&<p role="status">جارٍ تحميل السجلات…</p>}{error&&<p className="notice" role="alert">{error}</p>}</>}
 export function EditorDialog({title,description,children,busy,onClose}:{title:string;description:string;children:ReactNode;busy:boolean;onClose:()=>void}) {

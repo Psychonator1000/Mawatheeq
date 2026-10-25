@@ -209,6 +209,17 @@ try{
  await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await click('إغلاق الملف (إتلاف أو انتهاء الحفظ)');await page.getByText(/تجده في «المغلقة»/).first().waitFor();
  await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});await page.getByRole('button',{name:/^مغلقة\s*1$/}).click();
  await page.locator('.archive-table').getByText('ARC-00001').click();await click('إعادة فتح الملف');await page.getByText('أُعيد فتح الملف').first().waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});
+ // The handover sheet: the file goes out, its recipient confirms receipt from the header and reports the return, and the archive confirms it is back.
+ await page.getByRole('button',{name:/^كشف التسليم/}).click();await page.getByLabel('رقم الأرشيف أو كود القضية',{exact:true}).fill('arc-00001');await page.keyboard.press('Enter');
+ await page.getByLabel('مستلم ARC-00001',{exact:true}).selectOption({label:'ui_owner'});await page.getByLabel('غرض ARC-00001',{exact:true}).fill('حضور جلسة');
+ await page.getByRole('button',{name:/^إرسال وإشعار المستلمين \(1\)/}).click();await page.getByText(/أُرسل كشف/).waitFor();
+ await page.getByRole('button',{name:'طباعة الكشف للتوقيع'}).click();html=await printed();assert.ok(html.includes('كشف تسليم ملفات من الأرشيف')&&html.includes('ARC-00001')&&html.includes('توقيع المستلم'),'The handover sheet prints for signatures');
+ await page.getByRole('button',{name:/^العهدة/}).click();await page.getByText('بانتظار تأكيد الاستلام').first().waitFor();
+ await page.getByRole('button',{name:/^ملفاتي الورقية: 1 بانتظار تأكيد استلامك/}).click();const mine=page.getByRole('dialog',{name:'ملفاتي الورقية'});
+ await mine.getByRole('button',{name:'استلمت',exact:true}).click();await mine.getByRole('button',{name:'أرجعت الملف'}).click();await mine.getByText('بانتظار تأكيد الأرشيف').waitFor();await screen('paper-files');await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:/^العهدة/}).click();await page.getByText('أبلغ بإرجاعه · بانتظار تأكيدك').first().waitFor();
+ await page.locator('.office-table').getByRole('button',{name:'عاد الملف'}).click();await page.getByText('عاد الملف ARC-00001 إلى الأرشيف').first().waitFor();
+ await page.getByRole('button',{name:/^ملفاتي الورقية/}).waitFor({state:'detached'});
  // Every case gets a paper file: the cases without one are offered in one step, numbered from their office code.
  await page.getByRole('button',{name:/^الملفات/}).click();await page.locator('.archive-missing').getByText('24').waitFor();await click('إنشاء ملفاتها');
  await page.getByText('أُنشئ 24 ملف ورقي').waitFor({timeout:30000});await page.locator('.archive-missing').waitFor({state:'detached'});
@@ -292,6 +303,10 @@ try{
   recs=await dept('collections','records_page');assert.equal(byCode('W-2').caseId,'ui-case-1','Linked from the file');
   // From the case: the linked file shows, and another file is attached by searching.
   await switchTo('القضايا');await page.getByRole('button',{name:/^سجل الأحكام/}).first().click();await page.getByRole('button',{name:'فتح القضية TEST-1',exact:true}).click();
+  // The case's paper file: where it is, and a request the archive receives.
+  await page.locator('.case-paper').getByText('ARC-00001').waitFor();await page.locator('.case-paper').getByRole('button',{name:'طلب الملف'}).first().click();
+  await page.getByRole('button',{name:'إرسال الطلب'}).click();await page.locator('.case-paper').getByText(/طلبته · بانتظار التجهيز/).first().waitFor();
+  assert.ok((await dept('archive','records_page')).some(r=>r.kind==='request'&&r.payload.status==='pending'&&r.payload.requester),'The request reaches the archive');
   await page.getByRole('tab',{name:/^ملفات التحصيل/}).click();await page.getByText('ملف W-2').waitFor();await page.getByRole('button',{name:'ربط ملف تحصيل'}).click();await page.getByLabel(/ابحث برقم الملف/).fill('W-3');
   // A file already linked elsewhere names that case, and moving it asks first.
   const w3=page.locator('.linked-files li').filter({hasText:'W-3'});await w3.getByText(/مرتبط بالقضية كود TEST-0 · الرقم الآلي 1000/).waitFor();

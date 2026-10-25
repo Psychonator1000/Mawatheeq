@@ -5,7 +5,9 @@ export type LocationData = {code:string;name:string;cabinet:string;shelf:string;
 export type FileData = {number:string;title:string;type:string;volume:string;pages:string;locationId:string;originals:'yes'|'no';confidential:'yes'|'no';intakeDate:string;retentionUntil:string;notes:string};
 export type MovementType = 'checkout'|'court'|'client'|'return'|'move'|'audit';
 export type CustodyState = 'in'|'staff'|'court'|'client';
-export type MovementData = {type:MovementType;date:string;holder:string;holderId:string;purpose:string;dueDate:string;locationId:string;notes:string;status:'posted'|'void';voidReason:string;fromState:CustodyState;toState:CustodyState};
+export type MovementData = {type:MovementType;date:string;holder:string;holderId:string;purpose:string;dueDate:string;locationId:string;notes:string;status:'posted'|'void';voidReason:string;fromState:CustodyState;toState:CustodyState;
+ /** Set by the server on a hand-out to an account: the recipient confirms receipt, then reports the return the archive approves. */
+ receipt?:''|'pending'|'received';receivedAt?:string;returnClaimedAt?:string;batchId?:string};
 export type RequestStatus = 'pending'|'ready'|'done'|'declined';
 export type RequestData = {requester:string;requesterId:string;neededBy:string;purpose:string;status:RequestStatus;notes:string;decisionNote:string};
 export type ArchiveLocation = DepartmentRecord<LocationData>;
@@ -83,3 +85,23 @@ export function code39Svg(text:string,height=34,unit=1.2):string {
  const total=x+10*unit;
  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total.toFixed(2)} ${height}" width="${total.toFixed(2)}" height="${height}" role="img" aria-label="${text.replace(/[<>&"]/g,'')}"><rect width="100%" height="100%" fill="#fff"/><g fill="#000">${bars}</g></svg>`;
 }
+
+/** Where a hand-out stands between the archive and its recipient: sent and not yet confirmed, or reported back. */
+export type Handover = 'awaiting-receipt'|'return-reported'|null;
+export function handoverOf(c:Custody):Handover {
+ const p=c.state==='staff'?c.last?.payload:undefined;
+ if(!p||p.type!=='checkout')return null;
+ if(p.receipt==='pending')return 'awaiting-receipt';
+ if(p.receipt==='received'&&p.returnClaimedAt)return 'return-reported';
+ return null;
+}
+export const HANDOVER_LABELS: Record<'awaiting-receipt'|'return-reported',string> = {'awaiting-receipt':'بانتظار تأكيد الاستلام','return-reported':'أبلغ بإرجاعه · بانتظار تأكيدك'};
+
+/** A file as its holder or a colleague sees it, outside the archive section. */
+export type DeskFile = {fileId:string;number:string;title:string;type:string;volume:string;caseId:string;caseCode:string;client:string;opponent:string};
+export type HeldFile = DeskFile & {movementId:string;date:string;dueDate:string;purpose:string;receipt:''|'pending'|'received';receivedAt:string;returnClaimedAt:string;sentBy:string;sentAt:string};
+export type MyRequest = DeskFile & {id:string;neededBy:string;purpose:string;status:RequestStatus;decisionNote:string;createdAt:string;updatedAt:string};
+export type MyPaperFiles = {holding:HeldFile[];requests:MyRequest[]};
+export type CasePaperFile = DeskFile & {state:CustodyState;holder:string;mine:boolean;receipt:string;returnClaimedAt:string;movementId:string|null;dueDate:string;request:{id:string;status:RequestStatus;neededBy:string}|null};
+/** Asking for, receiving or returning a file anywhere refreshes «ملفاتي الورقية» and the case window at once. */
+export const PAPER_FILES_EVENT='mawatheeq-paper-files';
