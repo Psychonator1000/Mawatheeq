@@ -19,7 +19,7 @@ type Point={label:string;when:string;detail?:string;state:'done'|'now'|'next'|'w
 type Filter='open'|'mine'|'complete'|'all';
 
 const desk=<T,>(action:string,data:Record<string,unknown>={})=>departmentRequest<T>(action,{...data,workspace:'archive'});
-const STAGES:Record<Stage,[string,string]>={requested:['طلبتَه · بانتظار الأرشيف','amber'],ready:['جاهز للتسليم','green'],marked:['عُلّم «سُلّم» ولم يُرسل','red'],declined:['اعتذر الأرشيف','red'],
+const STAGES:Record<Stage,[string,string]>={requested:['طلبتَه · بانتظار الأرشيف','amber'],ready:['جاهز للتسليم','green'],marked:['عُلّم «سُلّم» · أكّد الاستلام','red'],declined:['اعتذر الأرشيف','red'],
  awaiting:['بانتظار استلامك','amber'],with:['معك','green'],reported:['أبلغت بإرجاعه · بانتظار الأرشيف','amber'],away:['خارج الأرشيف','wine'],complete:['اكتملت · الملف في الأرشيف','']};
 const OPEN:Stage[]=['requested','ready','marked','awaiting','with','reported','away'];
 const caseLine=(f:DeskFile)=>[f.caseCode&&'كود '+f.caseCode,[f.client,f.opponent].filter(Boolean).join(' ضد ')].filter(Boolean).join(' · ');
@@ -41,7 +41,7 @@ function pointsOf(j:Journey,today:string):Point[]{
  if(r)p.push({label:'طلبتَ الملف',when:officeTime(r.createdAt),detail:[r.purpose,r.neededBy&&'مطلوب '+formatDate(r.neededBy)].filter(Boolean).join(' · '),state:'done'});
  if(!h){
   if(r?.status==='declined')p.push({label:r.decisionNote==='ألغاه مقدّم الطلب'?'ألغيتَ الطلب':'اعتذر الأرشيف',when:officeTime(r.updatedAt),detail:r.decisionNote===  'ألغاه مقدّم الطلب'?'':r.decisionNote,state:'warn'});
-  else if(r?.status==='done')p.push({label:'علّمه الأرشيف «سُلّم» دون إرسال الملف إليك',when:officeTime(r.updatedAt),detail:'لم يُسجَّل تسليم باسمك، فلا يوجد ما تؤكد استلامه. اطلب من الأرشيف إرساله من «كشف التسليم».',state:'warn'});
+  else if(r?.status==='done'){p.push({label:'علّمه الأرشيف «سُلّم»',when:officeTime(r.updatedAt),detail:'إن كانت الأوراق معك فاضغط «استلمت» لتبدأ عهدتها باسمك.',state:'warn'});p.push({label:'تستلمه',when:'',state:'now'},{label:'يعود إلى الأرشيف',when:'',state:'next'})}
   else{p.push({label:r?.status==='ready'?'جهّزه الأرشيف':'بانتظار تجهيز الأرشيف',when:r?.status==='ready'?officeTime(r.updatedAt):'',state:r?.status==='ready'?'done':'now'});
    p.push({label:'يرسله الأرشيف إليك',when:'',state:'next'},{label:'تستلمه',when:'',state:'next'},{label:'يعود إلى الأرشيف',when:'',state:'next'})}
   return p;
@@ -84,6 +84,7 @@ export default function PaperFilesPage(){
    <div className="journey-head"><div><b><span dir="ltr">{j.file.number}</span> · {j.file.title}</b><small>{caseLine(j.file)}</small></div><span className={'tag '+tone}>{label}</span>
     <div className="journey-actions">{h?.current&&h.receipt==='pending'&&<button type="button" className="btn primary" disabled={!!busy} onClick={()=>void act(h.movementId,()=>desk('desk_receive',{movementId:h.movementId}),'أكدت استلام '+h.number)}><CheckCircle2 size={15}/> استلمت</button>}
      {h?.current&&h.receipt!=='pending'&&!h.returnClaimedAt&&<button type="button" className="btn" disabled={!!busy} onClick={()=>void act(h.movementId,()=>desk('desk_return',{movementId:h.movementId}),'أبلغت الأرشيف بإرجاع '+h.number)}><Undo2 size={15}/> أرجعت الملف</button>}
+     {!h&&j.stage==='marked'&&<button type="button" className="btn primary" disabled={!!busy} onClick={()=>void act(j.request!.id,()=>desk('desk_accept_marked',{requestId:j.request!.id}),'سُجّل استلامك لـ '+j.file.number)}><CheckCircle2 size={15}/> استلمت</button>}
      {!h&&j.request?.status==='pending'&&<button type="button" className="btn" disabled={!!busy} onClick={()=>void act(j.request!.id,()=>desk('desk_cancel',{id:j.request!.id}),'أُلغي طلب '+j.file.number)}><X size={15}/> إلغاء الطلب</button>}</div></div>
    <ol className="journey-steps">{points.map((pt,i)=><li key={i} className={pt.state}><i aria-hidden/><b>{pt.label}</b>{pt.when&&<small>{pt.when}</small>}{pt.detail&&<small>{pt.detail}</small>}</li>)}</ol>
   </li>})}</ol>}</>}

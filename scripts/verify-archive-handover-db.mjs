@@ -141,4 +141,22 @@ assert.equal(j.requests[0].movementId, again.movements[0].id, 'A request links t
 assert.equal(j.requests[1].movementId, held.movementId);
 assert.equal((await arc(other, 'desk_journeys')).requests[0].status, 'declined', 'Cancelled requests stay in the story');
 assert.equal((await arc(clerk, 'desk_journeys')).handouts[0].current, true, 'A file still held is current');
+// «سُلّم» set by hand sends the file for real; a request marked that way before can be confirmed by its requester.
+const f4 = await file('ARC-H-4', c1.id), f5 = await file('ARC-H-5', c1.id);
+const r4 = await arc(lawyer, 'desk_request', { fileId: f4.id, purpose: 'مراجعة' });
+await arc(keeper, 'save_record', { record: { ...r4, payload: { ...r4.payload, status: 'done' } } });
+const auto = (await arc(lawyer, 'desk_mine')).holding.find(h => h.number === 'ARC-H-4');
+assert.equal(auto?.receipt, 'pending', 'Marking «سُلّم» hands the file over and waits for «استلمت»');
+const r5 = await arc(lawyer, 'desk_request', { fileId: f5.id });
+await db.exec('reset role');
+await db.query("update mawatheeq_private.department_records set payload=payload||'{\"status\":\"done\"}',updated_by=$2 where id=$1", [r5.id, ids.keeper]);
+await db.exec('set role anon');
+await denied(() => arc(other, 'desk_accept_marked', { requestId: r5.id }));
+const accepted = await arc(lawyer, 'desk_accept_marked', { requestId: r5.id });
+assert.equal(accepted.payload.receipt, 'received'); assert.equal(accepted.payload.holderId, ids.lawyer); assert.equal(accepted.payload.toState, 'staff');
+await refused(() => arc(lawyer, 'desk_accept_marked', { requestId: r5.id }), 'بالفعل');
+const marked = (await arc(lawyer, 'desk_journeys')).handouts.find(h => h.number === 'ARC-H-5');
+assert.equal(marked.sentBy, 'أمين الأرشيف', 'The hand-out is credited to whoever marked it'); assert.equal(marked.current, true);
+assert.equal((await arc(lawyer, 'desk_journeys')).requests.find(r => r.id === r5.id).movementId, accepted.id);
+await refused(() => arc(lawyer, 'desk_accept_marked', { requestId: r4.id }), 'بالفعل');
 console.log('Archive handover database checks passed.');

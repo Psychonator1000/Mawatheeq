@@ -472,3 +472,6 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .journey-steps li.next{color:var(--muted-foreground)}.journey-steps li.next b{font-weight:500}
 .journey-steps li b{font-size:12.5px}.journey-steps li small{color:var(--muted-foreground);font-size:11.5px;line-height:1.5;text-align:start;direction:rtl}
 @media(max-width:700px){.journey-steps{grid-template-columns:1fr}.journey-steps li{padding:0 22px 12px 0}.journey-steps li::before{top:0;bottom:0;inset-inline:5px auto;width:2px;height:auto}.journey-steps li i{inset-inline-start:0}}
+.office-table td .tag+.tag{margin-inline-start:6px}.office-table td>.tag{margin-block:2px}
+.holder-chips .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border:1px solid var(--border);border-radius:999px;background:var(--card);font-size:12.5px}
+.holder-chips .chip b{min-width:20px;height:19px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand);font-size:11px;display:inline-grid;place-items:center}

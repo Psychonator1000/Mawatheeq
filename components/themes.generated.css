@@ -2671,6 +2671,8 @@
 :root[data-mode=dark] .journey-steps li.warn b{color:#dba7ac}
 :root[data-mode=dark] .journey-steps li.next{color:var(--muted-foreground)}
 :root[data-mode=dark] .journey-steps li small{color:var(--muted-foreground)}
+:root[data-mode=dark] .holder-chips .chip{border:1px solid var(--border);background:var(--card)}
+:root[data-mode=dark] .holder-chips .chip b{background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

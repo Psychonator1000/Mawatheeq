@@ -279,6 +279,7 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .work-chip b{min-width:22px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--dept) 12%,transparent);font-size:12px;line-height:20px;text-align:center;font-variant-numeric:tabular-nums}
 .work-chip.late b{background:#a32e381f;color:#a32e38}.work-chip.on{background:var(--dept);border-color:var(--dept);color:var(--card)}.work-chip.on b{background:color-mix(in srgb,var(--card) 25%,transparent);color:inherit}
 .work-desk-filters{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.work-desk-filters>.field{flex:1 1 200px;min-width:160px}.work-desk-filters>:is(label,div):not(.layout-toggle):not(.roll-print){flex:0 1 170px}
+.work-desk-filters>label.field:first-child:not(.filter-select){flex:2 1 280px;min-width:220px}
 .work-desk-filters .field input,.work-desk-filters [data-slot=select-trigger]{min-height:38px!important;height:38px;padding-top:6px;padding-bottom:6px}
 .work-desk-filters .layout-toggle{padding:0;gap:4px}.work-desk-filters .layout-toggle .btn,.work-desk-filters .roll-print .btn{min-height:38px;padding:6px 12px}
 .work-desk-filters .roll-print{margin:0;gap:6px;flex-wrap:nowrap}.work-desk-filters .roll-print .field{width:150px}
@@ -567,7 +568,31 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
  .books-body .books-journals-dash .books-journal .btn{min-height:27px;padding:2px 7px;font-size:11.5px;border-radius:7px}
  .books-body .books-journals-dash .books-balance b{font-size:17px}
  /* The section switch (books / mail) sits close under the top bar. */
- .department-content.desk-page{padding-top:8px}
- .department-content.desk-page .mail-switch{margin-bottom:8px}
- .department-content.desk-page .mail-switch .btn{min-height:34px;padding:5px 14px}
+ .department-content:is(.desk-page,:has(>.mail-switch)){padding-top:8px}
+ /* The workspace / mail switch is the same size on every page it shows on. */
+ .department-content .mail-switch{margin-bottom:8px}
+ .department-content .mail-switch .btn{min-height:34px;padding:5px 14px}
 }
+/* The legal workspace menu fits the screen: compact rows, two short groups, and a box to jump to any page («/»). */
+@media(min-width:768px){
+ .sidebar-brand{padding:14px 18px 10px!important;gap:10px}.sidebar-brand .brand-logo{--logo-h:42px}
+ :root[data-scrolled] .sidebar-brand{padding-block:14px 10px}
+ .nav-section{padding:10px 22px 4px!important;font-size:11.5px}
+ .nav-button{height:34px!important;margin-bottom:0!important;padding:0 12px!important;font-size:13.5px!important;gap:10px!important}
+ [data-sidebar=content] [data-sidebar=menu]{gap:1px}
+ .nav-button svg{width:17px;height:17px}
+ :root[data-density=compact] .nav-button{height:32px!important}
+}
+.nav-go{display:flex;align-items:center;gap:6px;margin:0 14px 6px;padding:0 10px;min-height:34px;border-radius:9px;background:#ffffff14;border:1px solid #ffffff22;color:var(--sidebar-foreground)}
+.nav-go:focus-within{border-color:#ffffff66;background:#ffffff1f}
+.nav-go input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:inherit;font:inherit;font-size:13px}.nav-go input::placeholder{color:inherit;opacity:.65}
+.nav-go kbd{font:inherit;font-size:10.5px;line-height:16px;border:1px solid #ffffff40;border-radius:4px;padding:0 5px;opacity:.75}
+.nav-button.nav-hit{background:#ffffff1f!important}
+.nav-none{padding:10px 12px;font-size:12.5px;opacity:.75;margin:0}
+/* A date's clear «×» sits inside its box, so date fields line up with the fields beside them. */
+.date-picker-control{position:relative}
+.date-picker-control>.icon-btn{position:absolute;inset-inline-end:6px;top:50%;translate:0 -50%;width:26px;height:26px;min-height:0;padding:0;border:0;background:transparent;z-index:1}
+.date-picker-control:has(>.icon-btn) .date-picker-button{padding-inline-end:36px}
+/* The custody card says what its line is: a shelf, or who holds the file. */
+.custody-what{font-size:11.5px;color:var(--muted-foreground)}
+.movement-filters>.field:first-child{flex:2 1 260px;min-width:220px}

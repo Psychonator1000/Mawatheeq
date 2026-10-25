@@ -5,7 +5,10 @@ begin;
 --   until the file is next back in the archive (sent on to a court or an expert, moved, returned), with who recorded
 --   each one and where the file was shelved on its return. A journey is complete once a movement brings it back in.
 -- * requests: every request this person made, with what became of it and the hand-out that answered it, if any.
--- Like the other «desk_*» actions it needs no archive section. Safe to run again.
+-- * A request marked «سُلّم» by hand now really hands the file to its requester (waiting for «استلمت») when the file
+--   is in the archive. A request marked that way before, with no hand-out behind it, can be confirmed by its
+--   requester with «استلمت» (desk_accept_marked): the hand-out is recorded as made by whoever marked it, received now.
+-- Like the other «desk_*» actions these need no archive section. Safe to run again.
 
 do $$ begin
  if not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='mawatheeq_private' and p.proname='archive_request_handover') then
@@ -15,8 +18,43 @@ end $$;
 
 create or replace function mawatheeq_private.archive_request(p_token text,p_action text,p_data jsonb) returns jsonb
 language plpgsql security definer set search_path='' as $$
-declare actor uuid;
+declare actor uuid; result jsonb; v_req mawatheeq_private.department_records%rowtype; v_file mawatheeq_private.department_records%rowtype;
+ v_mv mawatheeq_private.department_records%rowtype; st jsonb; v_name text; before jsonb;
 begin
+ if p_action='desk_accept_marked' then
+  actor:=mawatheeq_private.authorize(p_token);
+  select * into v_req from mawatheeq_private.department_records where id=nullif(p_data->>'requestId','')::uuid and workspace='archive' and kind='request';
+  perform mawatheeq_private.require_access(v_req.id is not null and v_req.payload->>'requesterId'=actor::text);
+  perform pg_advisory_xact_lock(hashtext('archive-file-'||v_req.subject_id::text));
+  if v_req.payload->>'status'<>'done' then raise exception 'هذا الطلب لم يُعلَّم «سُلّم».'; end if;
+  if exists(select 1 from mawatheeq_private.department_records x where x.workspace='archive' and x.kind='movement' and x.subject_id=v_req.subject_id and x.payload->>'type'='checkout'
+    and x.payload->>'holderId'=actor::text and x.payload->>'status'='posted' and x.created_at>=v_req.created_at) then raise exception 'سُجّل تسليم هذا الملف لك بالفعل.'; end if;
+  select * into v_file from mawatheeq_private.department_records where id=v_req.subject_id;
+  st:=mawatheeq_private.archive_state(v_file.id);
+  if v_file.archived or st->>'state'<>'in' then
+   raise exception 'الملف مسجّل الآن %. اطلب من الأرشيف تصحيح عهدته.',coalesce((select 'مع '||nullif(x.payload->>'holder','') from mawatheeq_private.department_records x where x.id=(st->>'lastId')::uuid),'خارج الأرشيف');
+  end if;
+  select coalesce(nullif(display_name,''),username) into v_name from mawatheeq_private.accounts where id=actor;
+  insert into mawatheeq_private.department_records(id,workspace,kind,case_id,subject_id,payload,created_by,updated_by,created_at,updated_at)
+   values(gen_random_uuid(),'archive','movement',v_file.case_id,v_file.id,jsonb_build_object('type','checkout','date',((v_req.updated_at at time zone 'Asia/Kuwait')::date)::text,'holder',v_name,
+    'holderId',actor::text,'purpose',coalesce(v_req.payload->>'purpose',''),'dueDate','','locationId','','notes','استلام مؤكد لطلب علّمه الأرشيف «سُلّم»',
+    'status','posted','voidReason','','fromState','in','toState','staff','receipt','received','receivedAt',mawatheeq_private.archive_now(),'returnClaimedAt','','batchId',''),
+    coalesce(v_req.updated_by,actor),actor,clock_timestamp(),clock_timestamp()) returning * into v_mv;
+  return mawatheeq_private.archive_log(null,v_mv,actor);
+ end if;
+ if p_action='save_record' and p_data->'record'->>'kind'='request' then
+  -- «سُلّم» set by hand hands the file to its requester, so they receive the notice and confirm.
+  before:=(select mawatheeq_private.department_json(x) from mawatheeq_private.department_records x where x.id=nullif(p_data->'record'->>'id','')::uuid);
+  result:=mawatheeq_private.archive_request_handover(p_token,p_action,p_data);
+  if result->'payload'->>'status'='done' and coalesce(before->'payload'->>'status','')<>'done' and coalesce(result->'payload'->>'requesterId','')<>''
+    and mawatheeq_private.archive_state((result->>'subjectId')::uuid)->>'state'='in'
+    and not exists(select 1 from mawatheeq_private.department_records x where x.workspace='archive' and x.kind='movement' and x.subject_id=(result->>'subjectId')::uuid
+     and x.payload->>'type'='checkout' and x.payload->>'holderId'=result->'payload'->>'requesterId' and x.payload->>'status'='posted' and x.created_at>=(result->>'createdAt')::timestamptz) then
+   perform mawatheeq_private.archive_request_handover(p_token,'dispatch',jsonb_build_object('workspace','archive','date',((clock_timestamp() at time zone 'Asia/Kuwait')::date)::text,
+    'items',jsonb_build_array(jsonb_build_object('fileId',result->>'subjectId','holderId',result->'payload'->>'requesterId','purpose',coalesce(result->'payload'->>'purpose','')))));
+  end if;
+  return result;
+ end if;
  if p_action<>'desk_journeys' then return mawatheeq_private.archive_request_handover(p_token,p_action,p_data); end if;
  actor:=mawatheeq_private.authorize(p_token);
  return jsonb_build_object(
