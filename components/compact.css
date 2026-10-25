@@ -72,7 +72,7 @@
 /* Printing any page: plain white paper, no moving background, cursor shape or floating buttons, and every item shown
    (items that normally fade in while scrolling would otherwise stay invisible on paper). */
 @media print{
- :root .ambient,:root .burst-canvas,:root .cursor-halo,:root .scroll-progress,:root .scroll-rail,:root .egg-splash,:root .chat-bubble,:root .chat-panel,:root .page-help,:root [data-sonner-toaster],:root .back-to-top{display:none!important}
+ :root .ambient,:root .burst-canvas,:root .cursor-halo,:root .scroll-progress,:root .scroll-rail,:root .egg-splash,:root .chat-panel,:root .page-help,:root [data-sonner-toaster],:root .back-to-top{display:none!important}
  html,body,:root main,:root [data-slot=sidebar-inset]{background:#fff!important;background-image:none!important}
  :root *,:root *::before,:root *::after{animation:none!important;transition:none!important}
  :root :is(.panel,.stat,.legend-row,.bar-item,.client-card,.collection-card,.timeline-item,.my-work-item,.agenda-item,.notice-list li,.comment-list li,.calendar-day,.page-head,.department-hero){opacity:1!important;transform:none!important;translate:none!important;scale:none!important;filter:none!important;box-shadow:none!important}

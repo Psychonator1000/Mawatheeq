@@ -197,7 +197,7 @@ await question.getByRole('button',{name:'إخفاء الردود'}).click();awai
 await question.getByRole('button',{name:'tools_clerk'}).first().click();
 const withClerk=page.getByRole('dialog',{name:'المحادثات'});await withClerk.locator('.chat-title').getByText('tools_clerk').waitFor();
 await withClerk.getByLabel('نص الرسالة').fill('بخصوص النقاش');await withClerk.getByRole('button',{name:'إرسال'}).click();await withClerk.getByText('بخصوص النقاش').waitFor();
-await page.getByRole('button',{name:/^المحادثات/}).first().click();await withClerk.waitFor({state:'detached'});
+await withClerk.getByRole('button',{name:'إغلاق المحادثات'}).click();await withClerk.waitFor({state:'detached'});
 await answer.getByRole('button',{name:'حذف التعليق'}).click();await question.locator('.comment-replies>li.deleted').waitFor();
 await discussion.getByRole('listitem').filter({hasText:'نعم، استلمناها اليوم'}).getByRole('button',{name:'حذف التعليق'}).click();
 await page.waitForFunction(()=>document.querySelectorAll('.comment-thread li.deleted').length===3);

@@ -240,8 +240,6 @@
 .staff-search{margin:0 0 12px;max-width:420px}.staff-search small{white-space:nowrap;color:var(--muted-foreground);font-size:12px}
 /* Staff chat: a bubble on every page and a panel above it. */
 .chat-bubble{position:fixed;bottom:20px;inset-inline-end:20px;z-index:60;width:56px;height:56px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;color:#fff;background:var(--brand);box-shadow:0 12px 30px -10px color-mix(in srgb,var(--brand) 70%,#000),0 0 0 4px color-mix(in srgb,var(--brand) 14%,transparent);transition:transform .2s,box-shadow .2s}
-.chat-window-trigger{position:absolute;top:12px;inset-inline-end:12px;z-index:2;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--brand);display:grid;place-items:center;cursor:pointer;transition:background-color .2s,transform .2s}
-.chat-window-trigger:hover,.chat-window-trigger.open{background:color-mix(in srgb,var(--brand) 10%,var(--card))}.chat-window-trigger .chat-badge{top:-5px;inset-inline-start:-5px;inset-inline-end:auto}
 .chat-panel.in-window{bottom:20px}
 .chat-bubble:hover{transform:translateY(-2px) scale(1.04)}.chat-bubble.open{transform:scale(.94)}.chat-bubble:focus-visible{outline:3px solid var(--brand-ring,var(--brand));outline-offset:3px}
 .chat-badge{position:absolute;top:-3px;inset-inline-start:-3px;min-width:21px;height:21px;padding:0 6px;border-radius:11px;background:#c2410c;color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;border:2px solid var(--background)}
@@ -280,7 +278,7 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .chat-suggest button{all:unset;box-sizing:border-box;width:100%;display:grid;padding:7px 10px;border-radius:8px;cursor:pointer}.chat-suggest b{font-size:13.5px}.chat-suggest small{font-size:11.5px;color:var(--muted-foreground)}
 .chat-suggest [aria-selected=true] button,.chat-suggest button:hover{background:color-mix(in srgb,var(--brand) 10%,transparent)}
 .chat-info{padding:4px 12px 14px;gap:8px}.chat-inline{display:grid;gap:8px}.chat-inline .chat-field{margin:0}.chat-members{margin:0;padding-inline-start:18px;font-size:13.5px;line-height:1.9}.chat-leave{margin-top:12px;color:#a32e38}
-@media(max-width:640px){.chat-bubble{bottom:14px;inset-inline-end:14px;width:52px;height:52px}.chat-panel{inset:0;width:auto;height:auto;bottom:0;border-radius:0}}
+@media(max-width:640px){.chat-panel{inset:0;width:auto;height:auto;bottom:0;border-radius:0}}
 :root[data-perf=lite] .chat-panel{animation:none}
 /* Case lists: one click target per row. The number leads, the code sits under it; date and age share a cell. */
 .case-table-rows>tbody>tr.case-row{cursor:pointer}

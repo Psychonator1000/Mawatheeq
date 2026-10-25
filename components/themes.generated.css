@@ -2537,8 +2537,6 @@
 :root[data-mode=dark] .venue-choice .checkbox-line:has(input:checked){border-color:var(--brand);background:#211e1a;color:var(--brand)}
 :root[data-mode=dark] .staff-search small{color:var(--muted-foreground)}
 :root[data-mode=dark] .chat-bubble{color:#131313;background:var(--brand)}
-:root[data-mode=dark] .chat-window-trigger{border:1px solid var(--border);background:var(--card);color:var(--brand)}
-:root[data-mode=dark] .chat-window-trigger:hover,:root[data-mode=dark] .chat-window-trigger.open{background:color-mix(in srgb,var(--brand) 10%,var(--card))}
 :root[data-mode=dark] .chat-bubble:focus-visible{outline:3px solid var(--brand-ring,var(--brand))}
 :root[data-mode=dark] .chat-badge{background:#eab199;color:#131313;border:2px solid var(--background)}
 :root[data-mode=dark] .chat-panel{background:var(--card);color:var(--foreground);border:1px solid var(--border)}
