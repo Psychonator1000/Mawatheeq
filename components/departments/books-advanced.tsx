@@ -15,7 +15,8 @@ import type {FullSetup} from './books-invoicing';
 
 export type AdvSetup=FullSetup&AdvancedSetup;
 const amount=(v:string)=>money(toFils(v));
-const fail=(e:unknown)=>toast.error((e as Error).message);
+// A request sent for approval was announced already; it is not an error.
+const fail=(e:unknown)=>{if(!(e as {handled?:boolean}).handled)toast.error((e as Error).message)};
 const popupBlocked=()=>toast.error('اسمح بالنوافذ المنبثقة في المتصفح للطباعة.');
 const accOptions=(setup:AdvSetup)=>setup.accounts.filter(a=>!a.deprecated).map(a=>({value:a.id,label:a.code+' '+a.name}));
 const accByCode=(setup:AdvSetup,code:string)=>setup.accounts.find(a=>a.code===code)?.id||'';

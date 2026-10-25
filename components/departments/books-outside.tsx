@@ -23,7 +23,8 @@ export type Outside={id:string;caseId:string;partnerId:string;date:string;kind:s
  custody:{date:string;toState:string;holder:string;note:string;by:string;at:string}[]};
 type CaseLite={id:string;code?:string;autoNumber?:string;client?:string;archived?:boolean;clientEntityId?:string};
 const amount=(v:string)=>money(toFils(v));
-const fail=(e:unknown)=>toast.error((e as Error).message);
+// A request sent for approval was announced already; it is not an error.
+const fail=(e:unknown)=>{if(!(e as {handled?:boolean}).handled)toast.error((e as Error).message)};
 const popupBlocked=()=>toast.error('اسمح بالنوافذ المنبثقة في المتصفح للطباعة.');
 const caseLabel=(c?:CaseLite)=>c?((c.code||c.autoNumber||'')+' · '+(c.client||'')):'';
 const blank=(caseId=''):Outside=>({id:'',caseId,partnerId:'',date:todayISO(),kind:'',direction:'out',entity:'',amount:'',method:'petty',reference:'',chequeNumber:'',docType:'إيصال رسوم',handledBy:'',billable:true,state:'draft',

@@ -172,6 +172,19 @@ try{
   await v.locator('.books-custody li').nth(1).waitFor();await screen('outside-transaction');await v.getByRole('button',{name:'إغلاق',exact:true}).last().click();}
  await page.locator('.books-table').getByText('ARC-9').waitFor();await page.getByLabel('تحديد رسوم قيد دعوى R-77',{exact:true}).check();await click('مطالبة الموكل (1)');
  await page.getByRole('dialog').locator('.books-invoice-lines').waitFor();await screen('outside-billed');await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();
+ // Controls: approval requests, a client credit limit, the payment run, closing and reopening a month, the change log and the approval rules.
+ await page.locator('.books-tabs').getByRole('button',{name:/^الرقابة والاعتماد/}).click();await page.getByText('لا طلبات بانتظار الاعتماد').waitFor();
+ await click('حدود الائتمان');await click('إضافة حد ائتمان');{const v=page.getByRole('dialog');await v.getByLabel('الموكل',{exact:true}).selectOption({label:'عميل واجهة تجريبي'});
+  await v.getByLabel('الحد (د.ك)',{exact:true}).fill('50');await v.getByRole('checkbox',{name:/منع الفواتير/}).check();await v.getByRole('button',{name:'حفظ',exact:true}).click();}
+ await page.getByText('حُفظ حد الائتمان').first().waitFor();await page.getByRole('row').filter({hasText:'عميل واجهة تجريبي'}).getByText('موقوف عند التجاوز').waitFor();
+ await click('دفعة الموردين');await page.getByText(/لا شيء مستحق حتى هذا التاريخ|^دفع \d+ مستند/).first().waitFor();
+ {const year=new Date().getFullYear();await click('الفترات الشهرية');const jan=page.getByRole('row').filter({hasText:'يناير '+year});
+  await jan.getByRole('button',{name:'إقفال',exact:true}).click();await jan.getByText('مقفل',{exact:true}).waitFor();await screen('books-periods');
+  await jan.getByRole('button',{name:'إعادة فتح',exact:true}).click();await jan.getByText('مفتوح',{exact:true}).waitFor();}
+ await click('سجل التغييرات');await page.getByRole('row').filter({hasText:'إعادة فتح شهر'}).first().waitFor();
+ await page.getByRole('row').filter({hasText:'حد ائتمان'}).getByRole('button',{name:'قبل وبعد',exact:true}).first().click();
+ {const v=page.getByRole('dialog');await v.getByRole('columnheader',{name:'قبل',exact:true}).waitFor();await screen('books-change');await v.getByRole('button',{name:'إغلاق',exact:true}).last().click();}
+ await click('صلاحيات الاعتماد');await page.getByRole('checkbox',{name:/تفعيل الاعتماد/}).waitFor();await screen('books-approval-rules');
  await switchTo('الموارد البشرية');await page.getByText('@ui_owner',{exact:true}).waitFor();await click('موظف جديد');await field('الرقم الوظيفي','EMP-UI-1');await field('اسم الموظف','موظف واجهة تجريبي');await field('المسمى الوظيفي','مساعد');await field('القسم','السكرتارية');await pickToday('تاريخ الانضمام');await click('حفظ سجل الموارد البشرية');await page.locator('.people-table').getByText('موظف واجهة تجريبي',{exact:true}).waitFor();
  await screen('hr-desktop');await click('الإجازات');await click('طلب إجازة جديد');
  const people=await dept('hr','records_page');await page.getByLabel('الموظف',{exact:true}).selectOption(people.find(r=>r.kind==='employee').id);await page.getByLabel('قرار الإجازة',{exact:true}).selectOption('approved');await field('ملاحظة القرار / السبب','موافقة تجريبية');await click('حفظ سجل الموارد البشرية');await page.getByRole('cell',{name:'معتمدة',exact:true}).waitFor();

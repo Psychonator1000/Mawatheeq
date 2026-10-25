@@ -33,7 +33,23 @@ export const commentRequest =<T = unknown>(action: string, data: Record<string, 
 export const chatRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_chat_request', action, data);
 export const caseFileRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_case_file_request', action, data);
 export const departmentRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_department_request', action, data);
-export const booksRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_books_request', action, data);
+/** Raised for the books screens: a request sent for approval instead of posted, or a client taken over their credit limit. */
+export const BOOKS_NOTICE = 'mawatheeq-books-notice';
+export type BooksNotice = { kind: 'pending' | 'credit'; message: string };
+export async function booksRequest<T = unknown>(action: string, data: Record<string, unknown> = {}): Promise<T> {
+  const result = await sessionRequest<T>('mawatheeq_books_request', action, data);
+  const o = result as { pendingApproval?: boolean; message?: string; creditWarning?: string } | null;
+  if (o && typeof o === 'object' && !Array.isArray(o)) {
+    if (o.creditWarning) dispatchEvent(new CustomEvent<BooksNotice>(BOOKS_NOTICE, { detail: { kind: 'credit', message: o.creditWarning } }));
+    // Over the person's limit nothing was posted: the screen keeps the document as it was, and is told so once.
+    if (o.pendingApproval) {
+      const message = o.message || 'أُرسل للاعتماد ولم يُرحّل بعد.';
+      dispatchEvent(new CustomEvent<BooksNotice>(BOOKS_NOTICE, { detail: { kind: 'pending', message } }));
+      throw Object.assign(new Error(message), { handled: true });
+    }
+  }
+  return result;
+}
 /** The current session token, for edge functions that check it in the database themselves. */
 export const sessionToken = () => token || localStorage.getItem(storageKey) || '';
 export const mailRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_mail_request', action, data);

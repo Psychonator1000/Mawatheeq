@@ -238,3 +238,37 @@ export function lineTaxes(subtotal: number, quantity: string, taxes: Pick<Tax, '
   }
   return { base, tax };
 }
+
+// Phase 7: approvals, the payment run, monthly periods, the change log and client credit limits.
+export type Controls = { approvalsEnabled: boolean; myLimit: string | null; canApprove: boolean; pending: number; myPending: number; closedMonths: string[];
+  credit: Record<string, { limit: string; block: boolean; open: string }> };
+export type ControlsSetup = { controls: Controls };
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type Approval = { id: string; action: string; moveId: string; label: string; partnerId: string; partner: string; amount: string; status: ApprovalStatus;
+  requestedBy: string; requester: string; requestedAt: string; decider: string; decidedAt: string | null; note: string; mine?: boolean };
+export const APPROVAL_STATUSES: Record<ApprovalStatus, string> = { pending: 'بانتظار الاعتماد', approved: 'معتمد', rejected: 'مرفوض', cancelled: 'مسحوب' };
+export type ApprovalPerson = { userId: string; name: string; postLimit: string; canApprove: boolean; approveLimit: string };
+export type ApprovalSettings = { enabled: boolean; defaultLimit: string; revision: number; people: ApprovalPerson[] };
+export type ProposalItem = { id: string; name: string; moveType: string; partnerId: string; partner: string; date: string; due: string; daysLate: number; residual: string; ref: string; pending: boolean };
+export type Period = { month: string; closed: boolean; closedBy: string; closedAt: string | null; posted: number; drafts: number; pending: number };
+export type Change = { id: number; at: string; by: string; byId: string; recordType: string; recordId: string; action: string; label: string; amount: string; hasDetail: boolean };
+export type CreditRow = { partnerId: string; name: string; limit: string; block: boolean; open: string; available: string; overdue: string };
+/** What each logged action and record kind is called in the change log. */
+export const CHANGE_ACTIONS: Record<string, string> = { save: 'حفظ', post: 'ترحيل', reset_draft: 'إعادة إلى مسودة', cancel: 'إلغاء', delete: 'حذف', reverse: 'عكس',
+  credit_note: 'إشعار دائن', match: 'مطابقة', unmatch: 'فك مطابقة', request: 'طلب اعتماد', approve: 'اعتماد', reject: 'رفض', close_period: 'إقفال شهر',
+  reopen_period: 'إعادة فتح شهر', credit: 'حد ائتمان', approvals: 'إعدادات الاعتماد' };
+export const CHANGE_RECORDS: Record<string, string> = { move: 'مستند أو قيد', account: 'حساب', journal: 'دفتر', partner: 'شريك', settings: 'إعدادات',
+  approval: 'طلب اعتماد', period: 'فترة شهرية' };
+/** The fields that differ between a record before and after a change, ignoring bookkeeping fields. */
+export function changedFields(before: unknown, after: unknown): string[] {
+  const b = (before && typeof before === 'object' ? before : {}) as Record<string, unknown>, a = (after && typeof after === 'object' ? after : {}) as Record<string, unknown>;
+  const skip = new Set(['revision', 'updatedAt', 'updated_at', 'updatedBy', 'updated_by']);
+  return [...new Set([...Object.keys(b), ...Object.keys(a)])].filter(k => !skip.has(k) && JSON.stringify(b[k] ?? null) !== JSON.stringify(a[k] ?? null)).sort();
+}
+/** Field names in the change log's before-and-after view. */
+export const CHANGE_FIELDS: Record<string, string> = { date: 'التاريخ', ref: 'المرجع', narration: 'البيان', state: 'الحالة', name: 'الرقم', partnerId: 'الشريك', partner: 'الشريك',
+  journalId: 'الدفتر', caseId: 'القضية', moveType: 'النوع', amountTotal: 'الإجمالي', amountResidual: 'المتبقي', paymentState: 'حالة الدفع', lines: 'الأسطر',
+  debit: 'مدين', credit: 'دائن', postedAt: 'وقت الترحيل', postedBy: 'رحّله', dueDate: 'الاستحقاق', invoiceDateDue: 'الاستحقاق', limit: 'حد الائتمان',
+  block: 'منع عند التجاوز', enabled: 'مفعّل', defaultLimit: 'الحد الافتراضي', people: 'الموظفون', status: 'الحالة', amount: 'المبلغ', note: 'ملاحظة',
+  code: 'الرمز', type: 'النوع', kind: 'النوع', deprecated: 'موقوف', active: 'فعال', lockDate: 'إقفال الفترة حتى', fiscalLockDate: 'إقفال السنة حتى',
+  label: 'الوصف', month: 'الشهر', requester: 'مقدّم الطلب', decider: 'صاحب القرار' };

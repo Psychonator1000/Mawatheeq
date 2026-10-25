@@ -471,3 +471,7 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 .chooser-account{gap:8px;align-items:center}
 .chat-trigger.open{background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand)}
 @media(min-width:641px){.chat-panel.docked{top:72px;bottom:auto;height:min(600px,calc(100dvh - 92px))}}
+/* Accounting controls: credit usage bars and limit inputs. */
+.credit-bar{width:90px;display:inline-flex;vertical-align:middle;margin-inline-end:6px}
+.books-limit{width:120px;min-height:32px;padding:4px 8px;border:1px solid var(--input,#dfd3c3);border-radius:8px;background:var(--card);font:inherit}
+.books-limit:disabled{opacity:.5}

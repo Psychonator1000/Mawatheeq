@@ -1,7 +1,7 @@
 import {useEffect,useMemo,useState,type ReactNode} from 'react';
 import {Plus,Printer,Download,FileSpreadsheet,Scale,RotateCcw,Undo2,Ban,Trash2,Check,History,Landmark,Banknote,Receipt,ShoppingCart,NotebookPen,Lock} from 'lucide-react';
 import {toast} from 'sonner';
-import {booksRequest} from '@/lib/local-auth';
+import {BOOKS_NOTICE,booksRequest,type BooksNotice} from '@/lib/local-auth';
 import {ACCOUNT_TYPES,DOC_KINDS,GROUP_LABELS,docKindOf,type Doc,type DocKind,JOURNAL_TYPES,MOVE_STATES,PARTNER_KINDS,balanceSheet,balancingLine,fiscalYearStart,money,moveTotals,nextAccountCode,profitAndLoss,runningLedger,toFils,
  type Account,type AccountType,type BooksSetup,type Journal,type JournalType,type LedgerLine,type Move,type MoveLine,type MoveSummary,type Partner,type PartnerKind,type StatementSection,type TrialRow} from '@/lib/books';
 import type {CaseSummary} from '@/lib/departments';
@@ -19,15 +19,17 @@ import {EXTRA_REPORTS,ExtraReports,type ExtraReport} from './books-reports';
 import BankCash,{type BankSetup} from './books-bank';
 import Advanced,{AnalyticPanel,CurrenciesPanel,TaxesPanel,type AdvSetup} from './books-advanced';
 import OutsideView,{CollectionsToBooks,MonthlyChart} from './books-outside';
+import Controls,{type CtlSetup} from './books-controls';
 import {InvoiceEditor,InvoicingPanel,PartnerSide,PaymentEditor,ProductsPanel,TermsPanel,blankDoc,type FullSetup} from './books-invoicing';
 
-type View='dashboard'|'customers'|'vendors'|'bank'|'outside'|'advanced'|'moves'|'reports'|'config';
+type View='dashboard'|'customers'|'vendors'|'bank'|'outside'|'advanced'|'controls'|'moves'|'reports'|'config';
 type Report='trial'|'ledger'|'pl'|'bs'|ExtraReport;
 type Draft=Omit<Move,'lines'>&{lines:MoveLine[]};
 const JOURNAL_ICONS:Record<JournalType,typeof Landmark>={bank:Landmark,cash:Banknote,sale:Receipt,purchase:ShoppingCart,general:NotebookPen};
 const amount=(v:string)=>money(toFils(v));
 const popupBlocked=()=>toast.error('اسمح بالنوافذ المنبثقة في المتصفح للطباعة.');
-const fail=(e:unknown)=>toast.error((e as Error).message);
+// A request sent for approval was announced already; it is not an error.
+const fail=(e:unknown)=>{if(!(e as {handled?:boolean}).handled)toast.error((e as Error).message)};
 const blankLine=():MoveLine=>({accountId:'',partnerId:'',caseId:'',label:'',debit:'',credit:'',dateMaturity:null});
 const blankMove=(journalId:string):Draft=>({id:'',journalId,name:'/',moveType:'entry',state:'draft',date:todayISO(),ref:'',narration:'',partnerId:'',caseId:'',reversedFrom:'',reversedBy:'',source:'',revision:0,createdBy:'',postedBy:'',postedAt:null,debit:'0',credit:'0',lines:[blankLine(),blankLine()]});
 
@@ -43,11 +45,15 @@ export default function Books({cases,access,views}:{cases:CaseSummary[];access:P
  const [editing,setEditing]=useState<Draft|null>(null),[doc,setDoc]=useState<Doc|null>(null),[journalFilter,setJournalFilter]=useState(''),[ledgerAccount,setLedgerAccount]=useState(''),[report,setReport]=useState<Report>('trial');
  useEffect(()=>{let live=true;booksRequest<BooksSetup>('setup').then(s=>{if(live){setSetup(s);setError('')}}).catch(e=>{if(live)setError((e as Error).message)});return()=>{live=false}},[version]);
  const reload=()=>setVersion(v=>v+1);
+ // Sent for approval instead of posted, or a client over their credit limit: said once, wherever it happened.
+ useEffect(()=>{const on=(e:Event)=>{const n=(e as CustomEvent<BooksNotice>).detail;
+   if(n.kind==='pending'){toast.message('أُرسل للاعتماد',{description:n.message,action:{label:'طلبات الاعتماد',onClick:()=>setView('controls')}});setVersion(v=>v+1)}else toast.warning(n.message)};
+  addEventListener(BOOKS_NOTICE,on);return()=>removeEventListener(BOOKS_NOTICE,on)},[]);
  // Invoices, bills and payments open in their own editor; other entries in the journal entry editor.
  async function open(id:string){try{const m=await booksRequest<Doc>('get_move',{id});if(docKindOf(m)){setEditing(null);setDoc(m)}else{setDoc(null);setEditing(m as unknown as Draft)}}catch(e){fail(e)}}
- const full=setup&&'paymentTerms' in setup?setup as FullSetup:null,bank=setup&&'bank' in setup?setup as BankSetup:null,adv=setup&&'advanced' in setup?setup as AdvSetup:null,links=!!setup&&'links' in setup;
+ const full=setup&&'paymentTerms' in setup?setup as FullSetup:null,bank=setup&&'bank' in setup?setup as BankSetup:null,adv=setup&&'advanced' in setup?setup as AdvSetup:null,links=!!setup&&'links' in setup,ctl=setup&&'controls' in setup?setup as CtlSetup:null;
  const newDoc=(kind:DocKind,partnerId='')=>{if(full){setEditing(null);setDoc(blankDoc(full,kind,partnerId))}};
- const tabs=<div className="work-chips books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','الموكلون'],['vendors','الموردون']] as const:[]),...(bank?[['bank','البنك والنقد']] as const:[]),...(links?[['outside','المعاملات الخارجية']] as const:[]),...(adv?[['advanced','المحاسبة المتقدمة']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
+ const tabs=<div className="work-chips books-tabs" role="group" aria-label="أقسام الدفاتر">{([['dashboard','لوحة المحاسبة'],...(full?[['customers','الموكلون'],['vendors','الموردون']] as const:[]),...(bank?[['bank','البنك والنقد']] as const:[]),...(links?[['outside','المعاملات الخارجية']] as const:[]),...(adv?[['advanced','المحاسبة المتقدمة']] as const:[]),...(ctl?[['controls',ctl.controls.pending&&ctl.controls.canApprove?`الرقابة والاعتماد (${ctl.controls.pending})`:'الرقابة والاعتماد']] as const:[]),['moves','القيود اليومية'],['reports','التقارير المالية'],['config','الحسابات والإعدادات']] as const).map(([k,label])=>
   <button key={k} className={'work-chip'+(view===k?' on':'')} aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}</div>;
  return <>
   {/* One screen: the section's header and the books' pages scrolling inside one panel. */}
@@ -59,6 +65,7 @@ export default function Books({cases,access,views}:{cases:CaseSummary[];access:P
    {bank&&view==='bank'&&<BankCash setup={bank} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
    {links&&setup&&view==='outside'&&<OutsideView setup={setup} cases={cases} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
    {adv&&view==='advanced'&&<Advanced setup={adv} cases={cases} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
+   {ctl&&view==='controls'&&<Controls setup={ctl} onOpen={id=>void open(id)} onChanged={reload} version={version}/>}
    {view==='moves'&&<Moves setup={setup} cases={cases} journal={journalFilter} onJournal={setJournalFilter} onOpen={id=>void open(id)} onNew={()=>setEditing(blankMove(journalFilter||setup.journals.find(j=>j.type==='general')?.id||setup.journals[0]?.id||''))} version={version} canExport={access.canExport}/>}
    {view==='reports'&&<Reports setup={setup} report={report} onReport={setReport} account={ledgerAccount} onAccount={setLedgerAccount} onOpen={id=>void open(id)} canExport={access.canExport} version={version}/>}
    {view==='config'&&<Config setup={setup} full={full} adv={adv} onChanged={reload}/>}

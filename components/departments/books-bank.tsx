@@ -16,7 +16,8 @@ import type {FullSetup} from './books-invoicing';
 
 export type BankSetup=FullSetup&{bank:Record<string,BankStats>};
 const amount=(v:string)=>money(toFils(v));
-const fail=(e:unknown)=>toast.error((e as Error).message);
+// A request sent for approval was announced already; it is not an error.
+const fail=(e:unknown)=>{if(!(e as {handled?:boolean}).handled)toast.error((e as Error).message)};
 type Tab='statements'|'reconcile'|'cheques'|'transfer'|'batches';
 
 /**

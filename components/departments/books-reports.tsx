@@ -12,7 +12,8 @@ import {exportCsv,exportXlsx} from './shared';
 export type ExtraReport='partners'|'aged_in'|'aged_out'|'cash'|'summary'|'cases'|'journal'|'taxes'|'analytic';
 export const EXTRA_REPORTS:[ExtraReport,string][]=[['summary','الملخص التنفيذي'],['partners','دفتر الشركاء'],['aged_in','أعمار ديون الموكلين'],['aged_out','أعمار ديون الموردين'],['cash','التدفقات النقدية'],['cases','ربحية القضايا'],['journal','تقرير الدفتر'],['taxes','تقرير الضريبة'],['analytic','مراكز التكلفة']];
 const amount=(v:string)=>money(toFils(v));
-const fail=(e:unknown)=>toast.error((e as Error).message);
+// A request sent for approval was announced already; it is not an error.
+const fail=(e:unknown)=>{if(!(e as {handled?:boolean}).handled)toast.error((e as Error).message)};
 type Table={headers:string[];body:string[][];totals:[string,string][]};
 type PartnerRow={partnerId:string;name:string;opening:string;debit:string;credit:string;closing:string;lines:{moveId:string;name:string;date:string;ref:string;label:string;dateMaturity:string|null;debit:string;credit:string;residual:string}[]};
 type AgedRow={partnerId:string;name:string;total:string;current:string;d30:string;d60:string;d90:string;d120:string;older:string;lines:{moveId:string;name:string;date:string;due:string;days:number;amount:string}[]};

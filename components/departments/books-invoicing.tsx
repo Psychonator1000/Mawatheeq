@@ -19,7 +19,8 @@ import {BatchPay} from './books-bank';
 
 export type FullSetup=BooksSetup&InvoicingSetup;
 const amount=(v:string)=>money(toFils(v));
-const fail=(e:unknown)=>toast.error((e as Error).message);
+// A request sent for approval was announced already; it is not an error.
+const fail=(e:unknown)=>{if(!(e as {handled?:boolean}).handled)toast.error((e as Error).message)};
 const popupBlocked=()=>toast.error('اسمح بالنوافذ المنبثقة في المتصفح للطباعة.');
 const isInvoice=(k:DocKind)=>k==='out_invoice'||k==='out_refund'||k==='in_invoice'||k==='in_refund';
 const sideOf=(k:DocKind)=>DOC_KINDS[k].side;
