@@ -191,7 +191,7 @@ try{
  // Archive: a location, a paper file with its number, hand-out with a printed receipt, return, label, barcode lookup and stocktake.
  await switchTo('الأرشيف');await page.getByRole('heading',{name:'الأرشيف',exact:true}).waitFor();
  await page.evaluate(()=>{window.__printed='';window.__mawatheeqPrint=h=>{window.__printed+=h}});const printed=async()=>{const h=await page.evaluate(()=>window.__printed);await page.evaluate(()=>{window.__printed=''});return h};
- await page.getByRole('button',{name:/^المواقع/}).click();await click('موقع حفظ جديد');await field('رمز الموقع','a-1');await field('اسم الموقع','غرفة الأرشيف');await field('السعة (عدد الملفات)','40');await click('حفظ الموقع');await page.getByRole('heading',{name:'غرفة الأرشيف',exact:true}).waitFor();
+ await page.getByRole('button',{name:/^خريطة الحفظ/}).click();await click('مكان حفظ جديد');await field('رمز المكان','a-1');await field('الغرفة','غرفة الأرشيف');await field('السعة (عدد الملفات)','40');await click('حفظ المكان');await page.getByRole('heading',{name:'غرفة الأرشيف',exact:true}).waitFor();
  await page.getByRole('button',{name:/^الملفات/}).click();await click('ملف ورقي جديد');
  assert.equal(await page.getByRole('dialog').getByLabel('رقم الأرشيف',{exact:true}).inputValue(),'ARC-00001','The next archive number is suggested');
  await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-1');await page.getByLabel('موقع الحفظ',{exact:true}).selectOption({label:'A-1 · غرفة الأرشيف'});await page.getByRole('dialog').getByText('يحتوي على مستندات أصلية').click();
@@ -202,8 +202,12 @@ try{
  await click('ملصق الملف');html=await printed();assert.ok(html.includes('<svg')&&html.includes('ARC-00001')&&html.includes('A-1'),'Label prints with a barcode and location');
  await screen('archive-file');await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});
  await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('arc-00001');await page.keyboard.press('Enter');await page.getByRole('dialog').getByText('ARC-00001').first().waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});
- await page.getByRole('button',{name:/^المواقع/}).click();await page.getByRole('button',{name:/^جرد$/}).click();await click('تحديد الكل');await click('تسجيل الجرد (1)');await page.getByRole('dialog').waitFor({state:'detached'});
- const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','return']);
+ await page.getByRole('button',{name:/^خريطة الحفظ/}).click();await page.getByRole('button',{name:/^A-1 ·/}).click();await page.getByRole('button',{name:/^جرد$/}).click();await click('تحديد الكل');await click('تسجيل الجرد (1)');await page.getByRole('dialog').waitFor({state:'detached'});
+ // A whole cabinet at once, a file placed in a drawer by scanning it, and the search lighting up where it is.
+ await click('خزانة جديدة بأدراجها');await field('اسم الخزانة أو رقمها','B');await field('عدد الأدراج أو الرفوف','2');await click('إضافة الخزانة (2)');await page.getByRole('dialog').waitFor({state:'detached'});
+ await page.getByRole('button',{name:/^B-2 · درج 2/}).click();await page.getByLabel('ضع ملفاً في هذا المكان',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await page.locator('.map-files').getByText('ARC-00001').waitFor();
+ await page.getByLabel('ابحث عن مكان ملف',{exact:true}).fill('00001');await page.locator('.map-hits').getByRole('button').first().click();await page.locator('.map-found').getByText(/خزانة B ← درج 2/).waitFor();await page.locator('.map-slot.lit').waitFor();await screen('archive-map');
+ const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','move','return']);
  await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
  // A closed file leaves the active list and is found under «مغلقة»; reopening brings it back.
  await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await click('إغلاق الملف (إتلاف أو انتهاء الحفظ)');await page.getByText(/تجده في «المغلقة»/).first().waitFor();
