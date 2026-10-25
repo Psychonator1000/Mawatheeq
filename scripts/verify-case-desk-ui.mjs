@@ -57,7 +57,7 @@ const count=async(label,expected)=>{let n='';for(let i=0;i<50;i++){n=(await page
 const screen=async name=>page.screenshot({path:artifacts+'/'+name+'.png',fullPage:true});
 try{
  await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await click('فتح مساحة العمل');
- await click('فتح القضايا');await page.locator('.nav-section',{hasText:'أعمال القضايا'}).waitFor();
+ await click('فتح القضايا');await page.locator('.nav-section',{hasText:'الجلسات والمواعيد'}).waitFor();
  assert.equal(await count('سجل الأحكام','3'),'3','Cases under study stay out of the judgments register');
  assert.equal(await count('أخطاء الترحيل','1'),'1','One posting error in the sidebar');
 

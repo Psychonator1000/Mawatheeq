@@ -68,10 +68,21 @@ function Nav({view,go,total,errors,access,owner,mail}:{view:string;go:(s:string)
  const {setOpenMobile}=useSidebar(),[q,setQ]=useState(''),[active,setActive]=useState(0),box=useRef<HTMLInputElement>(null);
  type Item={id:string;label:string;icon:React.ElementType;count?:number;alert?:boolean};
  // Every page in two short groups, small enough to fit the screen; the box filters them and «/» puts the cursor in it.
+ // Pages grouped by what they are about, so related pages sit together: the cases, the hearings and dates, the clients and
+ // reports, then your own mail and paper files. Pages you cannot open drop out, and empty groups with them.
+ const page=new Map<string,Item>([...NAV.filter(n=>canOpen(access,n.id,owner)).map(n=>[n.id,{...n,count:n.id==='cases'?total:undefined}] as [string,Item]),
+  ...(canOpen(access,'cases',owner)?DESK_PAGES.filter(([id])=>!FROM_REGISTER.includes(id)).map(([id,label])=>[id,{id,label,icon:DESK_ICONS[id],count:id==='postingErrors'&&errors>0?errors:undefined,alert:true}] as [string,Item]):[]),
+  ...(mail!==null?[['mail',{id:'mail',label:'البريد',icon:MailIcon,count:mail||undefined,alert:true}] as [string,Item]]:[]),
+  ...(sharedBackend?[['paper',{id:'paper',label:'ملفاتي الورقية',icon:PaperIcon}] as [string,Item]]:[]),
+  ...(canOpen(access,'settings',owner)?[['settings',{id:'settings',label:'الإعدادات والبيانات',icon:Settings}] as [string,Item]]:[])]);
+ const pick=(ids:string[])=>ids.map(id=>page.get(id)).filter((x):x is Item=>!!x);
  const groups:{title:string;items:Item[]}[]=[
-  {title:'مساحة العمل',items:[...NAV.filter(n=>canOpen(access,n.id,owner)).map(n=>({...n,count:n.id==='cases'?total:undefined})),...(mail!==null?[{id:'mail',label:'البريد',icon:MailIcon,count:mail||undefined,alert:true}]:[]),...(sharedBackend?[{id:'paper',label:'ملفاتي الورقية',icon:PaperIcon}]:[])]},
-  ...(canOpen(access,'cases',owner)?[{title:'أعمال القضايا',items:DESK_PAGES.filter(([id])=>!FROM_REGISTER.includes(id)).map(([id,label])=>({id,label,icon:DESK_ICONS[id],count:id==='postingErrors'&&errors>0?errors:undefined,alert:true}))}]:[]),
-  {title:'',items:[{id:'settings',label:'الإعدادات والبيانات',icon:Settings}].filter(n=>canOpen(access,n.id,owner))}];
+  {title:'',items:pick(['overview'])},
+  {title:'القضايا',items:pick(['cases','study','consultations','stayed','noContract','verification','conflicts'])},
+  {title:'الجلسات والمواعيد',items:pick(['work','posting','postingErrors','followup','deadlines'])},
+  {title:'الموكلون والتقارير',items:pick(['clients','analytics'])},
+  {title:'بريدي وملفاتي',items:pick(['mail','paper'])},
+  {title:'',items:pick(['settings'])}];
  const term=normalizeSearch(q.trim()),hits=term?groups.flatMap(g=>g.items).filter(n=>normalizeSearch(n.label).includes(term)):[];
  const open=(id:string)=>{go(id);setOpenMobile(false);setQ('')};
  useEffect(()=>{const key=(e:KeyboardEvent)=>{const t=e.target as HTMLElement|null;if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!t?.closest('input,textarea,select,[contenteditable=true]')&&!document.querySelector('[role=dialog]')){e.preventDefault();box.current?.focus()}};addEventListener('keydown',key);return()=>removeEventListener('keydown',key)},[]);

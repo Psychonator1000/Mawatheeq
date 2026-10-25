@@ -591,7 +591,8 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 .nav-none{padding:10px 12px;font-size:12.5px;opacity:.75;margin:0}
 /* A date's clear «×» sits inside its box, so date fields line up with the fields beside them. */
 .date-picker-control{position:relative}
-.date-picker-control>.icon-btn{position:absolute;inset-inline-end:6px;top:50%;translate:0 -50%;width:26px;height:26px;min-height:0;padding:0;border:0;background:transparent;z-index:1}
+:root .date-picker-control>.icon-btn{position:absolute;inset-inline-end:6px;top:0;bottom:0;margin-block:auto;translate:none!important;transform:none;width:26px;height:26px;min-height:0;padding:0;border:0;background:transparent;z-index:1;display:grid;place-items:center}
+:root .date-picker-control:has(+.date-invalid)>.icon-btn{bottom:auto;top:8px}
 .date-picker-control:has(>.icon-btn) .date-picker-button{padding-inline-end:36px}
 /* The custody card says what its line is: a shelf, or who holds the file. */
 .custody-what{font-size:11.5px;color:var(--muted-foreground)}

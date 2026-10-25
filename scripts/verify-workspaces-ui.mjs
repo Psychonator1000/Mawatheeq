@@ -196,7 +196,7 @@ try{
  assert.equal(await page.getByRole('dialog').getByLabel('رقم الأرشيف',{exact:true}).inputValue(),'ARC-00001','The next archive number is suggested');
  await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-1');await page.getByLabel('موقع الحفظ',{exact:true}).selectOption({label:'A-1 · غرفة الأرشيف'});await page.getByRole('dialog').getByText('يحتوي على مستندات أصلية').click();
  await click('حفظ بيانات الملف');await page.getByRole('tab',{name:/^العهدة والحركة/}).click();
- await click('تسليم لموظف');await field('الموظف المستلم','ui_owner');await field('الغرض','حضور جلسة');await click('تسجيل الحركة');await page.locator('.custody-now.staff').waitFor();
+ await click('تسليم لموظف');await page.getByRole('dialog').getByLabel('الموظف المستلم',{exact:true}).selectOption({label:'ui_owner'});await page.getByRole('dialog').getByLabel('الغرض',{exact:true}).selectOption('حضور جلسة');await click('تسجيل الحركة');await page.locator('.custody-now.staff').waitFor();
  await page.getByRole('button',{name:/طباعة إيصال التسليم/}).click();let html=await printed();assert.ok(html.includes('إيصال تسليم ملف من الأرشيف')&&html.includes('ARC-00001')&&html.includes('حضور جلسة'),'Handover receipt prints');
  await click('إعادة للأرشيف');await click('تسجيل الحركة');await page.locator('.custody-now.in').waitFor();
  await click('ملصق الملف');html=await printed();assert.ok(html.includes('<svg')&&html.includes('ARC-00001')&&html.includes('A-1'),'Label prints with a barcode and location');
