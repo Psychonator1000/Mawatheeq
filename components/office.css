@@ -451,5 +451,24 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .dispatch-foot{display:grid;gap:10px;margin-top:12px}.dispatch-foot .actions{display:flex;gap:8px;flex-wrap:wrap}
 .dispatch-done{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.dispatch-done>span{flex:1}
 @media(max-width:900px){.dispatch-add{grid-template-columns:1fr}}
-.paper-page .status-chips{margin-bottom:10px}.paper-table td{vertical-align:middle}.paper-table td small{display:block}
-.paper-page .archive-subhead{display:flex;align-items:center;gap:6px;margin-top:18px}
+/* «ملفاتي الورقية»: one card per file journey, its dated steps from request to the file back in the archive. */
+.paper-page{padding:20px 22px}.paper-page-head h2{margin:0 0 4px}.paper-page-head{margin-bottom:14px}
+.paper-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}.paper-toolbar .status-chips{margin:0}
+.paper-search{display:flex;align-items:center;gap:8px;min-width:min(320px,100%);border:1px solid var(--input,#dfd3c3);border-radius:10px;padding:0 12px;min-height:40px;background:var(--card);color:var(--muted-foreground)}
+.paper-search:focus-within{border-color:var(--brand)}.paper-search input{border:0;outline:0;background:transparent;flex:1;min-width:0;font:inherit;color:var(--foreground)}
+.journeys{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.journey{border:1px solid var(--border);border-inline-start:4px solid var(--brand);border-radius:14px;padding:14px 16px;background:var(--card)}
+.journey.complete,.journey.declined{border-inline-start-color:var(--border);opacity:.92}.journey.marked{border-inline-start-color:#a32e38}
+.journey-head{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}.journey-head>div:first-child{flex:1;min-width:220px;display:grid;gap:2px}
+.journey-head b{font-size:14.5px}.journey-head small{color:var(--muted-foreground);font-size:12px}
+.journey-actions{display:flex;gap:6px}.journey-actions .btn{min-height:32px;padding:4px 12px;font-size:12.5px}
+.journey-steps{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0}
+.journey-steps li{position:relative;display:grid;gap:2px;align-content:start;padding:18px 8px 0 12px;font-size:12px}
+.journey-steps li::before{content:'';position:absolute;top:6px;inset-inline:0;height:2px;background:var(--border)}
+.journey-steps li.done::before{background:var(--brand)}
+.journey-steps li i{position:absolute;top:1px;inset-inline-start:0;width:12px;height:12px;border-radius:50%;background:var(--card);border:2px solid var(--border)}
+.journey-steps li.done i{background:var(--brand);border-color:var(--brand)}.journey-steps li.now i{border-color:var(--brand);box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 18%,transparent)}
+.journey-steps li.warn i{background:#a32e38;border-color:#a32e38}.journey-steps li.warn b{color:#a32e38}
+.journey-steps li.next{color:var(--muted-foreground)}.journey-steps li.next b{font-weight:500}
+.journey-steps li b{font-size:12.5px}.journey-steps li small{color:var(--muted-foreground);font-size:11.5px;line-height:1.5;text-align:start;direction:rtl}
+@media(max-width:700px){.journey-steps{grid-template-columns:1fr}.journey-steps li{padding:0 22px 12px 0}.journey-steps li::before{top:0;bottom:0;inset-inline:5px auto;width:2px;height:auto}.journey-steps li i{inset-inline-start:0}}

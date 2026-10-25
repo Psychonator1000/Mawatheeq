@@ -122,10 +122,23 @@ const typed = await arc(keeper, 'save_record', { record: { id: uuid(), kind: 'mo
 assert.equal(typed.payload.receipt, undefined);
 const history = await arc(keeper, 'history', { id: held.movementId });
 assert.equal(history[0].after.payload.returnClaimedAt, back.payload.returnClaimedAt, 'Receipts and returns are in the record history');
-// «ملفاتي الورقية» page: every hand-out to this person, newest first, with what became of it.
-const past = await arc(lawyer, 'desk_history');
-assert.equal(past.length, 1); assert.equal(past[0].number, 'ARC-H-1'); assert.equal(past[0].current, false);
-assert.equal(past[0].next.type, 'return'); assert.equal(past[0].next.date, '2026-10-06'); assert.match(past[0].receivedAt, /^\d{4}-/);
-assert.equal((await arc(other, 'desk_history'))[0].current, false, 'A hand-out returned at the desk is history too');
-assert.equal((await arc(clerk, 'desk_history'))[0].current, true, 'A file still held is current');
+// «ملفاتي الورقية» page: each file's journey with this person, from the request to the file back in the archive.
+const again = await arc(keeper, 'dispatch', { date: '2026-10-08', items: [{ fileId: f1.id, holderId: ids.lawyer, purpose: 'تقديم للخبير' }] });
+await arc(lawyer, 'desk_receive', { movementId: again.movements[0].id });
+await arc(keeper, 'save_record', { record: { id: uuid(), kind: 'movement', caseId: c1.id, subjectId: f1.id, revision: 0,
+  payload: { type: 'court', date: '2026-10-09', holder: 'إدارة الخبراء', holderId: '', purpose: '', dueDate: '', locationId: '', notes: '' } } });
+let j = await arc(lawyer, 'desk_journeys');
+assert.equal(j.handouts.length, 2); assert.equal(j.handouts[0].movementId, again.movements[0].id, 'Newest first');
+assert.deepEqual(j.handouts[0].steps.map(x => x.type), ['court'], 'Sent on to the expert: the journey goes on');
+assert.equal(j.handouts[0].steps[0].holder, 'إدارة الخبراء'); assert.equal(j.handouts[0].steps[0].by, 'أمين الأرشيف');
+await arc(keeper, 'approve_return', { fileId: f1.id, date: '2026-10-12' });
+j = await arc(lawyer, 'desk_journeys');
+assert.deepEqual(j.handouts[0].steps.map(x => [x.type, x.date, x.toState]), [['court', '2026-10-09', 'court'], ['return', '2026-10-12', 'in']], 'Back in the archive ends the journey');
+assert.deepEqual(j.handouts[1].steps.map(x => x.type), ['return'], 'The earlier journey stops at its own return');
+assert.match(j.handouts[1].receivedAt, /^\d{4}-/); assert.match(j.handouts[1].returnClaimedAt, /^\d{4}-/);
+assert.equal(j.requests.length, 2); assert.equal(j.requests.every(r => r.status === 'done'), true);
+assert.equal(j.requests[0].movementId, again.movements[0].id, 'A request links to the hand-out that answered it');
+assert.equal(j.requests[1].movementId, held.movementId);
+assert.equal((await arc(other, 'desk_journeys')).requests[0].status, 'declined', 'Cancelled requests stay in the story');
+assert.equal((await arc(clerk, 'desk_journeys')).handouts[0].current, true, 'A file still held is current');
 console.log('Archive handover database checks passed.');
