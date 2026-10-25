@@ -205,6 +205,10 @@ try{
  await page.getByRole('button',{name:/^المواقع/}).click();await page.getByRole('button',{name:/^جرد$/}).click();await click('تحديد الكل');await click('تسجيل الجرد (1)');await page.getByRole('dialog').waitFor({state:'detached'});
  const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','return']);
  await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
+ // A closed file leaves the active list and is found under «مغلقة»; reopening brings it back.
+ await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await click('إغلاق الملف (إتلاف أو انتهاء الحفظ)');await page.getByText(/تجده في «المغلقة»/).first().waitFor();
+ await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});await page.getByRole('button',{name:/^مغلقة\s*1$/}).click();
+ await page.locator('.archive-table').getByText('ARC-00001').click();await click('إعادة فتح الملف');await page.getByText('أُعيد فتح الملف').first().waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});
  // Every case gets a paper file: the cases without one are offered in one step, numbered from their office code.
  await page.getByRole('button',{name:/^الملفات/}).click();await page.locator('.archive-missing').getByText('24').waitFor();await click('إنشاء ملفاتها');
  await page.getByText('أُنشئ 24 ملف ورقي').waitFor({timeout:30000});await page.locator('.archive-missing').waitFor({state:'detached'});

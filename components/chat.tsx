@@ -15,7 +15,7 @@ const missing=(e:unknown)=>/Could not find the function|PGRST202|404/.test(Strin
 /**
  * Staff chat: one-to-one and group conversations that can point at cases, clients, tasks and people. Its button sits
  * in the page header beside the mail and notification icons; inside an open case or record window, which covers the
- * header, it stays a round button in the window's corner.
+ * header, it moves to the top corner of the window's side column.
  */
 export default function Chat({userId}:{userId:string}){
  const [available,setAvailable]=useState(true),[open,setOpen]=useState(false),[summary,setSummary]=useState<ChatSummary|null>(null);
@@ -36,14 +36,17 @@ export default function Chat({userId}:{userId:string}){
   catch(err){toast.error(missing(err)?'المحادثات غير مفعّلة بعد.':(err as Error).message)}};
   addEventListener(CHAT_WITH_EVENT,go);return()=>removeEventListener(CHAT_WITH_EVENT,go)},[userId,refresh]);
  const host=useWindowHost(),slot=useChatSlot(),docked=!host&&!!slot;
+ // Inside a window the button sits in the top corner of the window's side column, clear of its buttons.
+ const pin=host?.querySelector<HTMLElement>(':scope>.case-pin')||null;
  if(!available)return null;
  const conv=summary?.conversations.find(c=>c.id===active)||null;
  const label=unread?`المحادثات، ${unread} غير مقروءة`:'المحادثات',count=unread>99?'99+':unread;
  return <>
   {docked&&createPortal(<button type="button" className={'icon-btn notice-trigger chat-trigger'+(open?' open':'')} aria-label={label} aria-expanded={open} onClick={()=>setOpen(o=>!o)}><MessageCircle/>{unread>0&&<span key={'chat-'+unread} className="notice-count chat-count" aria-hidden="true">{count}</span>}</button>,slot!)}
+  {pin&&createPortal(<button type="button" className={'icon-btn chat-window-trigger'+(open?' open':'')} aria-label={label} aria-expanded={open} title="المحادثات" onClick={()=>setOpen(o=>!o)}><MessageCircle size={17}/>{unread>0&&<span className="chat-badge">{count}</span>}</button>,pin)}
   {createPortal(<>
-  {!docked&&<button type="button" className={'chat-bubble'+(open?' open':'')} aria-label={label} aria-expanded={open} onClick={()=>setOpen(o=>!o)}><MessageCircle size={24}/>{unread>0&&<span className="chat-badge">{count}</span>}</button>}
-  {open&&<section className={'chat-panel'+(docked?' docked':'')} role="dialog" aria-label="المحادثات" dir="rtl" ref={panel}>
+  {!docked&&!pin&&<button type="button" className={'chat-bubble'+(open?' open':'')} aria-label={label} aria-expanded={open} onClick={()=>setOpen(o=>!o)}><MessageCircle size={24}/>{unread>0&&<span className="chat-badge">{count}</span>}</button>}
+  {open&&<section className={'chat-panel'+(docked?' docked':'')+(pin?' in-window':'')} role="dialog" aria-label="المحادثات" dir="rtl" ref={panel}>
    {conv&&view==='list'?<Conversation key={conv.id} conv={conv} me={userId} onLeave={()=>setOpen(false)} onBack={()=>setActive(null)} onInfo={()=>setView('info')} onChanged={refresh} onDirect={async id=>{const r=await chatRequest<{id:string}>('start_direct',{userId:id});reopenChat(userId,r.id);await refresh();setActive(r.id)}}/>
    :view==='new'||view==='group'?<NewChat group={view==='group'} onCancel={()=>setView('list')} onCreated={async id=>{reopenChat(userId,id);await refresh();setView('list');setActive(id)}}/>
    :view==='info'&&conv?<GroupInfo conv={conv} me={userId} onBack={()=>setView('list')} onChanged={async left=>{await refresh();setView('list');if(left)setActive(null)}}/>
