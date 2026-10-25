@@ -52,7 +52,7 @@ export default function PaperFiles({userId}:{userId:string}){
  return createPortal(<Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild>
   <button type="button" className="icon-btn notice-trigger paper-trigger" aria-label={label} title="ملفاتي الورقية"><FolderOpen/>{count>0&&<span key={'paper-'+count+pending.length} className={'notice-count'+(pending.length?' urgent':'')} aria-hidden="true">{count}</span>}</button></PopoverTrigger>
   <PopoverContent align="end" dir="rtl" className="notice-panel paper-panel" aria-label="ملفاتي الورقية">
-   <div className="notice-head"><b>ملفاتي الورقية</b><small>الملفات التي سلّمها لك الأرشيف وطلباتك</small></div>
+   <div className="notice-head"><b>ملفاتي الورقية</b><small>الملفات التي سلّمها لك الأرشيف وطلباتك{document.querySelector('.topbar')&&<> · <a href="#paper" onClick={()=>setOpen(false)}>كل ملفاتي</a></>}</small></div>
    {pending.length>0&&<section className="paper-group alert" aria-label="بانتظار تأكيد استلامك"><div className="paper-group-head"><h3>وصلتك من الأرشيف</h3>{pending.length>1&&<button type="button" className="btn primary" disabled={!!busy} onClick={()=>void receiveAll()}><CheckCircle2 size={15}/> استلمت الكل ({pending.length})</button>}</div>
     <p className="paper-hint">لا تُسلَّم الأوراق إلا بعد ضغط «استلمت».</p>
     <ul>{pending.map(h=><Held key={h.movementId} file={h} today={today} action={<button type="button" className="btn primary" disabled={!!busy} onClick={()=>void act(h.movementId,()=>desk('desk_receive',{movementId:h.movementId}),'أكدت استلام '+h.number)}><CheckCircle2 size={15}/> استلمت</button>}/>)}</ul></section>}

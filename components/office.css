@@ -451,3 +451,5 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .dispatch-foot{display:grid;gap:10px;margin-top:12px}.dispatch-foot .actions{display:flex;gap:8px;flex-wrap:wrap}
 .dispatch-done{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.dispatch-done>span{flex:1}
 @media(max-width:900px){.dispatch-add{grid-template-columns:1fr}}
+.paper-page .status-chips{margin-bottom:10px}.paper-table td{vertical-align:middle}.paper-table td small{display:block}
+.paper-page .archive-subhead{display:flex;align-items:center;gap:6px;margin-top:18px}

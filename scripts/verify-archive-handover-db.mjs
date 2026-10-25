@@ -122,4 +122,10 @@ const typed = await arc(keeper, 'save_record', { record: { id: uuid(), kind: 'mo
 assert.equal(typed.payload.receipt, undefined);
 const history = await arc(keeper, 'history', { id: held.movementId });
 assert.equal(history[0].after.payload.returnClaimedAt, back.payload.returnClaimedAt, 'Receipts and returns are in the record history');
+// «ملفاتي الورقية» page: every hand-out to this person, newest first, with what became of it.
+const past = await arc(lawyer, 'desk_history');
+assert.equal(past.length, 1); assert.equal(past[0].number, 'ARC-H-1'); assert.equal(past[0].current, false);
+assert.equal(past[0].next.type, 'return'); assert.equal(past[0].next.date, '2026-10-06'); assert.match(past[0].receivedAt, /^\d{4}-/);
+assert.equal((await arc(other, 'desk_history'))[0].current, false, 'A hand-out returned at the desk is history too');
+assert.equal((await arc(clerk, 'desk_history'))[0].current, true, 'A file still held is current');
 console.log('Archive handover database checks passed.');

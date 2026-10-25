@@ -302,7 +302,10 @@ try{
   await page.getByText('رُبط الملف بالقضية').first().waitFor();await page.keyboard.press('Escape');
   recs=await dept('collections','records_page');assert.equal(byCode('W-2').caseId,'ui-case-1','Linked from the file');
   // From the case: the linked file shows, and another file is attached by searching.
-  await switchTo('القضايا');await page.getByRole('button',{name:/^سجل الأحكام/}).first().click();await page.getByRole('button',{name:'فتح القضية TEST-1',exact:true}).click();
+  await switchTo('القضايا');
+  // «ملفاتي الورقية»: every file the archive handed you, here the one sent, received and returned earlier.
+  await page.getByRole('button',{name:'ملفاتي الورقية',exact:true}).click();await page.locator('.paper-table').getByText(/أُعيد للأرشيف/).first().waitFor();await page.locator('.paper-table').getByText(/استلمته/).first().waitFor();await screen('paper-page');
+  await page.getByRole('button',{name:/^سجل الأحكام/}).first().click();await page.getByRole('button',{name:'فتح القضية TEST-1',exact:true}).click();
   // The case's paper file: where it is, and a request the archive receives.
   await page.locator('.case-paper').getByText('ARC-00001').waitFor();await page.locator('.case-paper').getByRole('button',{name:'طلب الملف'}).first().click();
   await page.getByRole('button',{name:'إرسال الطلب'}).click();await page.locator('.case-paper').getByText(/طلبته · بانتظار التجهيز/).first().waitFor();
