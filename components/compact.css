@@ -640,3 +640,12 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 :root .sec-agenda :is(input,textarea,select){background:#fffdf8;color:#2a201b}
 :root .sec-agenda .btn:not(.primary){background:#fffaf2;color:var(--dept);border-color:transparent}
 :root .sec-agenda svg{color:currentColor}
+/* Soft lights drift slowly across the accent panel; transform-only, so it stays cheap. Still under «off» or reduced motion. */
+:root .sec-agenda.panel{position:relative;isolation:isolate;overflow:hidden}
+:root .sec-agenda.panel::before,:root .sec-agenda.panel::after{content:'';position:absolute;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(24px);will-change:transform}
+:root .sec-agenda.panel::before{width:120%;aspect-ratio:1;top:-45%;inset-inline-start:-50%;background:radial-gradient(circle,color-mix(in srgb,var(--dept) 45%,#fff) 0,transparent 64%);opacity:.6;animation:agenda-light-one 11s ease-in-out -5s infinite alternate}
+:root .sec-agenda.panel::after{width:110%;aspect-ratio:1;bottom:-40%;inset-inline-end:-55%;background:radial-gradient(circle,color-mix(in srgb,var(--dept) 55%,#ffb98a) 0,transparent 62%);opacity:.5;animation:agenda-light-two 14s ease-in-out -9s infinite alternate}
+@keyframes agenda-light-one{to{transform:translate3d(-45%,70%,0) scale(1.15)}}
+@keyframes agenda-light-two{to{transform:translate3d(40%,-85%,0) scale(.9)}}
+:root[data-motion=off] .sec-agenda.panel::before,:root[data-motion=off] .sec-agenda.panel::after{animation:none}
+@media (prefers-reduced-motion:reduce){:root .sec-agenda.panel::before,:root .sec-agenda.panel::after{animation:none}}
