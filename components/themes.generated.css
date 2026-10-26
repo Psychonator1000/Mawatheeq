@@ -2778,8 +2778,11 @@
 :root[data-mode=dark] .journey-short input{border:1px solid var(--input,#322d27);background:var(--card)}
 :root[data-mode=dark] .log-cleared{color:var(--muted-foreground)}
 :root[data-mode=dark] .btn.primary.danger{background:#dba7ac;border-color:#dba7ac;color:#131313}
-:root[data-mode=dark] .map-cabinet.cab-before{border-inline-start-color:var(--brand)}
+:root[data-mode=dark] .map-cabinet.cab-above{border-top-color:var(--brand)}
+:root[data-mode=dark] .map-cabinet.cab-under{border-bottom-color:var(--brand)}
+:root[data-mode=dark] .map-column.cab-end{background:linear-gradient(to top,color-mix(in srgb,var(--brand) 14%,transparent) 0 26px,transparent 26px)}
 :root[data-mode=dark] .map-room.cab-into{outline:2px dashed var(--brand)}
+:root[data-mode=dark] .cabinet-rename{border:1px solid var(--brand);background:var(--card)}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

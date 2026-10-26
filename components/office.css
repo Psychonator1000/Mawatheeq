@@ -549,9 +549,15 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .panel-head>.btn+.btn{margin-inline-start:6px}
 .btn.primary.danger{background:#a32e38;border-color:#a32e38;color:#fff}.btn.primary.danger:disabled{opacity:.5}
 /* Arranging cabinets: the picked-up cabinet folds out of its row, a line marks where it will go, and a room it will join glows. */
-.map-cabinet{transition:width .28s cubic-bezier(.2,.8,.2,1),padding .28s,opacity .2s,margin .28s,border-color .2s}
-.map-cabinet.lifted{width:0;padding-inline:0;border-width:0;opacity:0;margin-inline:-6px;overflow:hidden;pointer-events:none}
-.map-cabinet.cab-before{border-inline-start-color:var(--brand);border-inline-start-width:4px}
+.map-cabinet{transition:height .28s cubic-bezier(.2,.8,.2,1),padding .28s,opacity .2s,margin .28s,border-color .2s}.map-column{transition:width .28s,opacity .2s,margin .28s,background .2s}
+.map-cabinet.lifted{height:0;padding-block:0;border-width:0;opacity:0;margin-block:-6px;overflow:hidden;pointer-events:none}
+.map-column:has(>.map-cabinet.lifted:only-child){width:0;opacity:0;margin-inline:-6px}
+.map-column{display:flex;flex-direction:column;gap:12px;align-self:stretch;min-height:60px;border-radius:12px;padding-bottom:28px}
+.map-cabinet.cab-above{border-top-color:var(--brand);border-top-width:5px}.map-cabinet.cab-under{border-bottom-color:var(--brand);border-bottom-width:5px}
+.map-column.cab-end{background:linear-gradient(to top,color-mix(in srgb,var(--brand) 14%,transparent) 0 26px,transparent 26px)}
 .map-room.cab-into{outline:2px dashed var(--brand);outline-offset:4px;border-radius:12px}
 .map-cabinet-name.grabbable{cursor:grab;touch-action:none;user-select:none;display:flex;align-items:center;justify-content:center;gap:4px}
 :root[data-motion=off] .map-cabinet{transition:none}
+.map-cabinet-name .icon-btn{width:22px;height:22px;opacity:.45}.map-cabinet-name .cabinet-rename-btn{margin-inline-start:auto}.map-cabinet:hover .map-cabinet-name .icon-btn{opacity:1}
+.cabinet-rename{width:70px;min-width:0;font:inherit;font-size:12px;padding:1px 6px;border:1px solid var(--brand);border-radius:6px;background:var(--card);text-align:center}
+.cabinet-plan,.cabinet-away{margin:8px 0 0;padding-inline-start:18px;display:grid;gap:4px;font-size:13px}
