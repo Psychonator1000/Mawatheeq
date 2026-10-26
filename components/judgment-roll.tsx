@@ -27,7 +27,7 @@ export default function JudgmentRoll({shown,selected,all,shownLabel,toRow,printe
  const [filter,setFilter]=useState<RollFilter>(EMPTY_ROLL_FILTER),[sort,setSort]=useState<RollSort>('date-desc'),[group,setGroup]=useState<RollGroupKey>('');
  const [layout,setLayoutState]=useState<Layout>(savedLayout);
  const setLayout=(v:Layout)=>{setLayoutState(v);try{localStorage.setItem(LAYOUT_KEY,v)}catch{/* kept for this visit only */}};
- const [columns,setColumns]=useState<RollColumn[]>(savedColumns),[panel,setPanel]=useState<'filters'|'columns'|''>('filters');
+ const [columns,setColumns]=useState<RollColumn[]>(savedColumns),[panel,setPanel]=useState<'filters'|'columns'|''>('');
  const rowsOf=useMemo(()=>({shown:shown.map(toRow),selected:selected.map(toRow),all:all.map(toRow)}),[shown,selected,all]);// eslint-disable-line react-hooks/exhaustive-deps
  const base=rowsOf[scope];
  const options=useMemo(()=>({years:distinct(base,r=>r.date.slice(0,4)).sort().reverse(),clients:distinct(base,r=>r.client),lawyers:distinct(base,r=>r.lawyer),outcomes:distinct(base,r=>r.outcome),statuses:distinct(base,r=>r.status),levels:distinct(base,r=>r.level),courts:distinct(base,r=>r.court)}),[base]);

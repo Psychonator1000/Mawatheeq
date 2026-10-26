@@ -327,8 +327,8 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .roll-dialog{max-width:1100px!important}
 .roll-options{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:end;margin-top:10px}
 .roll-options .field{margin:0}
-.roll-scope{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px}.roll-scope legend{font-size:13px;margin-bottom:6px;color:#5d4a3d}
-.roll-choice{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid #e4d9cb;border-radius:10px;background:#fffdf8;font-size:13px;cursor:pointer}
+.roll-scope{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:5px}.roll-scope legend{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);font-size:13px;color:#5d4a3d}
+.roll-choice{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid #e4d9cb;border-radius:8px;background:#fffdf8;font-size:12.5px;cursor:pointer}
 .roll-choice b{min-width:22px;height:20px;padding:0 6px;border-radius:999px;background:#efe6da;font-size:11px;display:inline-grid;place-items:center}
 .roll-choice.on{border-color:var(--brand);background:#f6eee3;color:var(--brand);font-weight:600}.roll-choice:has(input:disabled){opacity:.5;cursor:not-allowed}
 .roll-choice input{accent-color:var(--brand)}
@@ -341,13 +341,13 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .role-chip-case{display:inline-block;margin-top:4px;margin-inline-end:6px;padding:0 8px;border-radius:999px;font-size:11px;line-height:1.8;background:#ece6f2;color:#53406b}
 .case-when small.case-type{color:#6d5a4c;font-weight:500}
 /* Judgment roll: scope and count, arrangement, filters and column choice. */
-.roll-top{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:8px}
-.roll-count{display:flex;align-items:baseline;gap:6px;padding:8px 14px;border-radius:12px;background:#f3eadf}.roll-count b{font-size:22px;color:var(--brand);font-variant-numeric:tabular-nums}.roll-count span{font-size:13px;color:#6d5a4c}
-.roll-arrange{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:12px;align-items:end;margin-top:12px}.roll-arrange .field{margin:0}
+.roll-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:2px}
+.roll-count{display:flex;align-items:baseline;gap:6px;padding:3px 10px;border-radius:8px;background:#f3eadf}.roll-count b{font-size:16px;color:var(--brand);font-variant-numeric:tabular-nums}.roll-count span{font-size:13px;color:#6d5a4c}
+.roll-arrange{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:8px;align-items:end;margin-top:6px}.roll-arrange .field{margin:0}
 .roll-toggles{display:flex;gap:6px}
-.roll-panel{border:1px solid #e4d9cb;border-radius:12px;background:#fbf7ef;padding:12px 14px;margin-top:10px}
-.roll-filter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 12px}.roll-filter-grid .field{margin:0}
-.roll-panel>.btn,.roll-panel .actions{margin-top:10px}
+.roll-panel{border:1px solid #e4d9cb;border-radius:10px;background:#fbf7ef;padding:6px 10px;margin-top:6px}
+.roll-filter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:4px 8px}.roll-filter-grid .field{margin:0}
+.roll-panel>.btn,.roll-panel .actions{margin-top:6px}
 .roll-columns{display:flex;flex-wrap:wrap;gap:6px}
 .roll-dialog .roll-preview{height:48vh}
 @media(max-width:800px){.roll-arrange{grid-template-columns:1fr 1fr}.roll-toggles{grid-column:1/-1}}
@@ -570,3 +570,9 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .dispatch-table tr.dispatch-group th{display:table-cell}.dispatch-table tr.dispatch-group th>span{display:inline-flex;align-items:center;gap:6px;font-weight:700;margin-inline-end:10px}
 .dispatch-table tr.dispatch-group .btn{min-height:30px;padding:3px 10px;font-size:12.5px;margin-inline-end:6px}
 .dispatch-done{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+/* The roll window's controls stay small so the preview gets the room: short boxes, small labels. */
+.roll-dialog{--control-h:32px}
+.roll-dialog :is(.roll-arrange,.roll-filter-grid,.desk-toolbar) .field>span:first-child{font-size:11px;margin-bottom:1px}
+.roll-dialog :is(.roll-arrange,.roll-filter-grid,.desk-toolbar) :is(input,select,.date-picker-button){min-height:32px;height:32px;padding-block:3px;font-size:12.5px}
+.roll-dialog .roll-toggles .btn{min-height:32px;padding:3px 10px;font-size:12.5px}
+.roll-dialog [data-slot=dialog-header]{gap:2px}.roll-dialog [data-slot=dialog-description]{font-size:12px}

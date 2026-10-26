@@ -71,7 +71,7 @@ try{
  {const printed=await page.evaluate(()=>window.__printed);assert.ok(firstTwo.every(n=>printed.includes('>'+n+'<')),'Both selected cases are printed');assert.ok(printed.includes('2 قضية')&&printed.includes('landscape;margin:0'),'Only the selection, landscape, no browser header');assert.ok(printed.includes('المحكمة / الدائرة / الدور')&&printed.includes('الجلسة القادمة')&&printed.includes('آخر إجراء'),'The roll carries the full story');}
  await roll.getByRole('radio',{name:/القضايا المعروضة/}).check();await page.frameLocator('.roll-preview').getByText(/25 قضية/).waitFor();
  // Filters narrow the roll (a month with no judgments prints nothing), and columns can be dropped.
- await roll.locator('.roll-filter-grid').getByLabel('شهر الحكم',{exact:true}).selectOption('01');await roll.locator('.roll-count').getByText('0',{exact:true}).waitFor();assert.equal(await roll.getByRole('button',{name:/طباعة الرول/}).isDisabled(),true);
+ await roll.getByRole('button',{name:/^التصفية/}).click();await roll.locator('.roll-filter-grid').getByLabel('شهر الحكم',{exact:true}).selectOption('01');await roll.locator('.roll-count').getByText('0',{exact:true}).waitFor();assert.equal(await roll.getByRole('button',{name:/طباعة الرول/}).isDisabled(),true);
  await roll.getByRole('button',{name:'مسح التصفية'}).click();await roll.locator('.roll-count').getByText('25',{exact:true}).waitFor();
  await roll.getByRole('button',{name:/الأعمدة/}).click();await roll.getByRole('checkbox',{name:'الكود',exact:true}).uncheck();
  await page.evaluate(()=>{window.__printed=''});await roll.getByRole('button',{name:/طباعة الرول/}).click();assert.ok(!(await page.evaluate(()=>window.__printed)).includes('<th>الكود</th>'),'An unticked column is not printed');
