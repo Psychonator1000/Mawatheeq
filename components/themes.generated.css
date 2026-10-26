@@ -2816,6 +2816,8 @@
 :root[data-mode=dark] .chat-window .chat-foot{border-top-color:color-mix(in srgb,var(--brand) 18%,var(--border))}
 :root[data-mode=dark] .chat-pick svg{color:var(--brand)}
 :root[data-mode=dark] .chat-latest .chat-avatar{background:color-mix(in srgb,var(--brand) 18%,var(--card))}
+:root[data-mode=dark] .choice-pv{border:1px solid color-mix(in srgb,var(--foreground) 12%,transparent);background:var(--pv-paper);color:var(--foreground)}
+:root[data-mode=dark] .choice-pv .pv-text{color:var(--brand)}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

@@ -3,7 +3,7 @@ import {ArrowUp} from 'lucide-react';
 import {motionAllowed,pointerEffectsOn,toggleSecretTheme,SECRET_WORDS,loadAppearance,saveAppearance,markSlow} from '@/lib/appearance';
 import {toast} from 'sonner';
 import {createBackdrop,createBursts,type FxState} from './motion-fx';
-import {createPatternField} from './pattern-field';
+import {createPatternSheet,PATTERNED} from './pattern-field';
 import './motion.css';
 import './themes.generated.css';
 import './themes.css';
@@ -12,9 +12,6 @@ const RIPPLE='.btn,.icon-btn,.nav-button,.office-card,.stat,.workspace-option,.c
 const STRONG='.btn.primary,.back-to-top,.workspace-option,.stat.featured';
 const MAGNETIC='.btn.primary,.icon-btn,.back-to-top,.quick-search-trigger';
 const GLOW='.panel,.office-card,.client-card,.person-card,.my-work-item,.device-card,.att-stat,[data-sidebar=sidebar],.stat.featured';
-const PATTERNED='.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured,.ledger-balance,.payroll-totals>div';
-// Small accent cards: their pattern starts at their corner and drifts by moving its tiles, not the layer.
-const PATTERN_CARD='.stat.featured,.ledger-balance,.payroll-totals>div';
 const INTERACTIVE='a,button,[role=button],[role=tab],input,select,textarea,label,summary';
 // Rows, cards and list items that sweep in from the scroll direction each time they enter the screen.
 const REACTIVE='.office-card,.client-card,.person-card,.collection-card,.device-card,.att-stat,.stat,.my-work-item,.agenda-item,.notice-list li,.timeline-item,.doc-row,.quick-card,.legend-row,.bar-item,.calendar-day,.comment-list li,.department-metrics>div,.holiday-list li,.bridge-list li,.evidence-row,.help-block,.empty-state,.page-navigation,.pagination';
@@ -58,33 +55,28 @@ export default function MotionLayer() {
     magnet.style.setProperty('--mag-x',(mx*6).toFixed(2)+'px');magnet.style.setProperty('--mag-y',(my*5).toFixed(2)+'px')}
    if(glow){const r=glow.getBoundingClientRect();glow.style.setProperty('--gx',(x-r.left).toFixed(0)+'px');glow.style.setProperty('--gy',(y-r.top).toFixed(0)+'px')}};
   let hoverOn=false;
-  // Accent panels draw their pattern live while the mouse is over them or a ripple is spreading.
-  const fields=new Map<HTMLElement,ReturnType<typeof createPatternField>>();let overField:ReturnType<typeof createPatternField>|null=null;
-  const fieldOf=(el:HTMLElement)=>{let f=fields.get(el);if(f&&!el.isConnected){f.destroy();fields.delete(el);f=undefined}
-   for(const [k,v] of fields)if(!k.isConnected){v.destroy();fields.delete(k)}
-   if(!f){f=el.matches(PATTERN_CARD)?createPatternField(el,0,20):createPatternField(el,-18,26);fields.set(el,f)}return f};
-  const hoverField=(el:HTMLElement|null)=>{const next=el&&root.dataset.pattern!=='none'?fieldOf(el):null;if(next!==overField){overField?.leave();overField=next;next?.enter()}};
+  // The patterned sheet under the accent surfaces: drawn live while the mouse is over one or a ripple is spreading.
+  const sheet=createPatternSheet();
   const onMove=(e:PointerEvent)=>{
-   if(e.pointerType!=='mouse'||!pointerEffectsOn()){if(pointerOn){pointerOn=false;root.removeAttribute('data-pointer');hoverField(null)}return}
+   if(e.pointerType!=='mouse'||!pointerEffectsOn()){if(pointerOn){pointerOn=false;root.removeAttribute('data-pointer');sheet.hover(false)}return}
    x=e.clientX;y=e.clientY;if(!pointerOn){pointerOn=true;root.setAttribute('data-pointer','')}
    const t=e.target instanceof Element?e.target:null;
    tilt=trackTilt(t?.closest('[data-tilt]') as HTMLElement|null);
    magnet=trackMagnet(t?.closest(MAGNETIC) as HTMLElement|null);
    glow=trackGlow(t?.closest(GLOW) as HTMLElement|null);
-   hoverField(t?.closest(PATTERNED) as HTMLElement|null);overField?.move(x,y);
+   sheet.move(x,y);sheet.hover(!!t?.closest(PATTERNED));
    // Only the cursor circle changes, never the whole page, so moving the mouse stays cheap.
    const hover=!!t?.closest(INTERACTIVE);if(hoverOn!==hover){hoverOn=hover;document.querySelector('.cursor-halo')?.toggleAttribute('data-hover',hover)}
    if(!frame&&!document.hidden)frame=requestAnimationFrame(paint);
   };
-  const onLeave=()=>{hoverField(null);tilt=trackTilt(null);magnet=trackMagnet(null);glow=trackGlow(null);pointerOn=false;root.removeAttribute('data-pointer')};
+  const onLeave=()=>{sheet.hover(false);tilt=trackTilt(null);magnet=trackMagnet(null);glow=trackGlow(null);pointerOn=false;root.removeAttribute('data-pointer')};
   // Each press sends a soft ripple through the element and a web of dots around it.
   const onDown=(e:PointerEvent)=>{
    if(!motionAllowed()||e.button>0)return;
    const el=e.target instanceof Element?e.target.closest(RIPPLE) as HTMLElement|null:null;
    document.querySelector('.cursor-halo')?.setAttribute('data-press','');
-   // A press inside a patterned panel sends a slow ripple through its lines from that point.
-   const pat=e.target instanceof Element?e.target.closest(PATTERNED) as HTMLElement|null:null;
-   if(pat&&root.dataset.pattern!=='none')fieldOf(pat).press(e.clientX,e.clientY);
+   // Any press sends a slow ripple through the sheet, seen in every accent surface it reaches.
+   sheet.press(e.clientX,e.clientY);
    if(!el||(el as HTMLButtonElement).disabled){backdrop?.pulse(e.clientX,e.clientY);return}
    if(getComputedStyle(el).position==='static')el.style.position='relative';
    const r=el.getBoundingClientRect(),size=Math.max(r.width,r.height)*2.2;
@@ -213,7 +205,7 @@ export default function MotionLayer() {
   onScrollFrame();scheduleMeasure();
   addEventListener('pointermove',onMove,{passive:true});addEventListener('pointerdown',onDown,{passive:true});addEventListener('pointerup',onUp,{passive:true});addEventListener('pointercancel',onUp,{passive:true});document.addEventListener('pointerleave',onLeave);
   addEventListener('scroll',onScroll,{passive:true});document.addEventListener('scroll',onInnerScroll,{capture:true,passive:true});addEventListener('resize',scheduleMeasure,{passive:true});addEventListener('mawatheeq-appearance',onAppearance);reducedQuery.addEventListener('change',onAppearance);
-  return()=>{for(const f of fields.values())f.destroy();for(const c of canvases)c.removeEventListener('contextlost',onContextLost);cancelAnimationFrame(perfFrame);clearTimeout(perfStop);cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);cancelAnimationFrame(scrollFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
+  return()=>{sheet.destroy();for(const c of canvases)c.removeEventListener('contextlost',onContextLost);cancelAnimationFrame(perfFrame);clearTimeout(perfStop);cancelAnimationFrame(frame);cancelAnimationFrame(velFrame);cancelAnimationFrame(scrollFrame);clearTimeout(settle);clearTimeout(measureTimer);observer.disconnect();reveal.disconnect();rowObserver.disconnect();cancelAnimationFrame(spotFrame);clearTimeout(spotTimer);document.removeEventListener('animationend',onRevealEnd);document.removeEventListener('animationend',onRowRevealEnd);backdrop?.stop();bursts?.stop();
    removeEventListener('pointermove',onMove);removeEventListener('pointerdown',onDown);removeEventListener('pointerup',onUp);removeEventListener('pointercancel',onUp);document.removeEventListener('pointerleave',onLeave);
    removeEventListener('keydown',onKey);clearTimeout(splashTimer);removeEventListener('scroll',onScroll);document.removeEventListener('scroll',onInnerScroll,{capture:true});removeEventListener('resize',scheduleMeasure);removeEventListener('mawatheeq-appearance',onAppearance);reducedQuery.removeEventListener('change',onAppearance);
    for(const a of ['data-scrolled','data-scrolling','data-pointer'])root.removeAttribute(a)};

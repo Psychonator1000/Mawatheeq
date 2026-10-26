@@ -605,3 +605,13 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .chat-window .chat-foot{border-top-color:color-mix(in srgb,var(--brand) 18%,var(--border))}
 .chat-pick svg{color:var(--brand);opacity:.7}
 .chat-latest .chat-avatar{background:color-mix(in srgb,var(--brand) 18%,var(--card))}
+/* Appearance choices: a small picture of what each one does. */
+.choice-pv{--pv-paper:var(--background);flex:none;width:52px;height:37px;border-radius:9px;overflow:hidden;display:grid;place-items:center;border:1px solid color-mix(in srgb,var(--foreground) 12%,transparent);background:var(--pv-paper);color:var(--foreground)}
+.choice-pv svg{width:100%;height:100%;display:block}
+.choice-pv .pv-text{font-size:17px;line-height:1;font-weight:600;color:var(--brand)}
+.choice-pv .pv-ball{transform-box:fill-box;transform-origin:center}
+:root:not([data-motion=off]) .choice:hover .pv-ball.full{animation:pv-hop .9s ease-in-out infinite alternate}
+:root:not([data-motion=off]) .choice:hover .pv-ball.calm{animation:pv-hop-calm 1.8s ease-in-out infinite alternate}
+@keyframes pv-hop{from{translate:-30px 12px}to{translate:0 0}}
+@keyframes pv-hop-calm{from{translate:-14px 2px}to{translate:0 0}}
+@media (prefers-reduced-motion:reduce){.choice .pv-ball{animation:none!important}}
