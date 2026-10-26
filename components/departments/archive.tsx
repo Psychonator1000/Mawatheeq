@@ -46,7 +46,7 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
  useEffect(()=>{departmentRequest<Person[]>('people',{workspace:'archive'}).then(setPeople).catch(()=>setPeople([]))},[]);
  const [view,setView]=useState<View>('files'),[search,setSearch]=useState(''),[state,setState]=useState(''),[place,setPlace]=useState(''),[type,setType]=useState(''),[show,setShow]=useState('active'),[page,setPage]=useState(1);
  const [editing,setEditingRaw]=useState<ArchiveFile|null>(null),[preset,setPreset]=useState<Preset|null>(null),[location,setLocation]=useState<ArchiveLocation|null>(null),[stocktake,setStocktake]=useState<ArchiveLocation|null>(null),[request,setRequest]=useState<ArchiveRequest|null>(null);
- const [picked,setPicked]=useState<Set<string>>(()=>new Set()),[scan,setScan]=useState(''),[returning,setReturning]=useState<ArchiveFile|null>(null);
+ const [picked,setPicked]=useState<Set<string>>(()=>new Set()),[scan,setScan]=useState(''),[returning,setReturning]=useState<{f:ArchiveFile;out:string}|null>(null);
  const today=todayISO(),all=access.caseScope==='all';
  const caseOf=(id:string)=>cases.find(c=>c.id===id),locOf=(id:string)=>locations.find(l=>l.id===id);
  const caseRef=(f:ArchiveFile)=>{const c=caseOf(f.caseId);return c?c.code||c.autoNumber||'بلا كود':f.caseId?'قضية غير متاحة':'ملف عام'};
@@ -62,10 +62,12 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
  const out=active.filter(f=>cu(f).state!=='in'),overdue=out.filter(f=>isOverdue(cu(f),today)),pending=requests.filter(r=>!r.archived&&(r.payload.status==='pending'||r.payload.status==='ready'));
  const label=(f:ArchiveFile)=>({number:f.payload.number,barcode:code39Ready(f.payload.number)?code39Svg(f.payload.number):'',title:f.payload.title,caseRef:caseRef(f),parties:parties(f),type:[f.payload.type,f.payload.volume&&'مجلد '+f.payload.volume].filter(Boolean).join(' · '),location:locationLabel(locOf(cu(f).locationId))});
  const printLabels=(list:ArchiveFile[])=>{if(!printHtml(archiveLabelsHtml(list.map(label),formatDate(today),'')))toast.error('تعذر فتح نافذة الطباعة.')};
- const openScan=()=>{const v=scan.trim().toUpperCase();if(!v){toast.error('امسح الباركود أو اكتب رقم الأرشيف أولاً.');return}const f=files.find(f=>f.payload.number.toUpperCase()===v);if(f){setScan('');if(cu(f).state!=='in'&&access.canEdit){setReturning(f);return}setView('files');setEditing(f)}else toast.error('لا يوجد ملف بهذا الرقم: '+v)};
+ const openScan=()=>{const v=scan.trim().toUpperCase();if(!v){toast.error('امسح الباركود أو اكتب رقم الأرشيف أولاً.');return}const f=files.find(f=>f.payload.number.toUpperCase()===v);if(f){setScan('');if(cu(f).state!=='in'&&access.canEdit){if(!open)setReturning({f,out:cu(f).last?.id||''});return}setView('files');setEditing(f)}else toast.error('لا يوجد ملف بهذا الرقم: '+v)};
  const reported=out.filter(f=>handoverOf(cu(f))==='return-reported'),unconfirmed=out.filter(f=>handoverOf(cu(f))==='awaiting-receipt');
  // Every return goes through the check against what the file went out with.
- const approve=async(f:ArchiveFile)=>setReturning(f);
+ // A return check belongs to the hand-out it was opened for: once the file is back in, or has moved on, it closes by itself.
+ const approve=async(f:ArchiveFile)=>setReturning({f,out:cu(f).last?.id||''});
+ const open=returning&&cu(returning.f).state!=='in'&&(cu(returning.f).last?.id||'')===returning.out?returning.f:null;
  const views:[View,string,LucideIcon,number?][]=[['files','الملفات',BookCopy],...(access.canEdit?[['dispatch','كشف التسليم',ClipboardList] as [View,string,LucideIcon]]:[]),['custody','العهدة',ArrowLeftRight,out.length],['requests','الطلبات',Inbox,pending.length],['locations','خريطة الحفظ',MapPin],['log','سجل الحركة',History]];
  const newFile=()=>setEditing(newDepartmentRecord('archive','file',blankFile(nextNumber(files))) as unknown as ArchiveFile);
  // Every case has a paper file in the archive: one per office code, whichever of its judgments it is linked to.
@@ -126,7 +128,7 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
  </section></div>
  {editing&&<FileEditor key={editing.id+(preset?.requestId||'')} nav={nav} onNavigate={step} enter={enter} initial={editing} preset={preset} cases={cases} locations={locations} movements={fileMovements(editing.id,movements)} requests={requests.filter(r=>r.subjectId===editing.id)} people={people} access={access}
   label={label} onClose={()=>setEditing(null)} onChanged={reload} onRequest={f=>setRequest({...newDepartmentRecord('archive','request',{requester:'',requesterId:'',neededBy:'',purpose:'',status:'pending',notes:'',decisionNote:''}) as unknown as ArchiveRequest,caseId:f.caseId,subjectId:f.id})}/>}
- {returning&&<ReturnCheck key={returning.id} file={returning} custody={cu(returning)} onClose={()=>setReturning(null)} onDone={()=>{setReturning(null);reload()}}/>}
+ {open&&<ReturnCheck key={open.id} file={open} custody={cu(open)} onClose={()=>setReturning(null)} onDone={()=>{setReturning(null);reload()}}/>}
  {location&&<LocationEditor initial={location} onClose={()=>setLocation(null)} onSaved={()=>{setLocation(null);reload()}}/>}
  {stocktake&&<Stocktake location={stocktake} files={active.filter(f=>cu(f).locationId===stocktake.id||f.payload.locationId===stocktake.id)} custody={custody} caseRef={caseRef} canPrint={access.canExport} onClose={()=>setStocktake(null)} onDone={()=>{setStocktake(null);reload()}}/>}
  {request&&<RequestEditor initial={request} files={active} custody={custody} people={people} canEdit={access.canEdit} onClose={()=>setRequest(null)} onSaved={()=>{setRequest(null);reload()}}/>}
@@ -205,7 +207,7 @@ function CustodyPanel({file,custody:c,log,locations,people,preset,editable,canPr
    {editable&&<button type="button" className="btn primary" disabled={busy} onClick={()=>void act('mark_found',{fileId:file.id,note:''},'سُجّل العثور على الملف')}>وُجد الملف</button>}</div>}
   {short&&<div className="notice lost-note"><span><b>عاد ناقصاً</b> في {formatDate(short.payload.date)} من {short.payload.fromHolder||'آخر مستلم'}: {short.payload.missing}</span>
    {editable&&<div className="inline-settle"><Field label="كيف سُوّيت النواقص" value={note} onChange={setNote} placeholder="مثل: أعاد الأصل في اليوم التالي"/><button type="button" className="btn" disabled={busy||!note.trim()} onClick={()=>void act('resolve_missing',{movementId:short.id,note},'سُجّلت تسوية النواقص',r=>onPosted(r,''))}>تسجيل التسوية</button></div>}</div>}
-  {checking&&<ReturnCheck file={file} custody={c} onClose={()=>setChecking(false)} onDone={m=>{setChecking(false);if(m){onPosted(m,'');setLast(m)}}}/>}
+  {checking&&c.state!=='in'&&<ReturnCheck file={file} custody={c} onClose={()=>setChecking(false)} onDone={m=>{setChecking(false);if(m){onPosted(m,'');setLast(m)}}}/>}
   {file.payload.confidential==='yes'&&c.state==='in'&&<p className="notice">ملف سري: يُسلّم للمحامي المسؤول عن القضية أو بإذن مسؤول المكتب.</p>}
   {editable&&!form&&<div className="actions">{allowed.map(t=><button key={t} type="button" className={'btn'+(t==='return'||t==='checkout'?' primary':'')} onClick={()=>t==='return'?setChecking(true):setForm(blank(t))}>{t==='return'?<Undo2 size={15}/>:t==='audit'?<ClipboardCheck size={15}/>:t==='move'?<MapPin size={15}/>:<ArrowLeftRight size={15}/>} {MOVEMENTS[t].label}</button>)}</div>}
   {editable&&!form&&file.payload.lost!=='yes'&&(marking?<div className="inline-settle"><Field label="ما تعرفه عن فقد الملف" value={note} onChange={setNote} placeholder="مثل: لم يُعثر عليه في الجرد"/><button type="button" className="btn primary" disabled={busy||!note.trim()} onClick={()=>void act('mark_lost',{fileId:file.id,note},'سُجّل الملف مفقوداً')}>تسجيل مفقود</button><button type="button" className="btn" onClick={()=>setMarking(false)}>إلغاء</button></div>

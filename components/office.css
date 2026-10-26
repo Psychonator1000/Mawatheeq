@@ -505,7 +505,7 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .map-panel-actions{display:flex;gap:6px;flex-wrap:wrap}.map-panel-actions .btn{min-height:32px;padding:4px 10px;font-size:12.5px}
 .map-panel h4{margin:0;font-size:13px}
 .map-files{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:50vh;overflow:auto}
-.map-files li{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px dashed var(--border);font-size:12.5px}.map-files li>span:not(.tag){flex:1;display:grid;min-width:0}.map-files small{color:var(--muted-foreground);font-size:11px}
+.map-files li{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px dashed var(--border);font-size:12.5px}.map-files li>.map-file-name{flex:1;display:grid;min-width:0}.map-files small{color:var(--muted-foreground);font-size:11px}
 @media(max-width:900px){.map-body:has(.map-panel){grid-template-columns:1fr}.map-panel{position:static}}
 /* Return check: the file's contents ticked off on its return; what is missing stays visible until settled. */
 .return-check{display:grid;gap:12px}.return-who{margin:0;font-size:13px}.return-who .tag{margin-inline-start:6px}
@@ -534,7 +534,7 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .map-grip{color:var(--muted-foreground);flex:none}
 .map-row-actions{display:flex;gap:2px;opacity:.55;transition:opacity .2s}.map-files li:hover .map-row-actions,.map-files li:focus-within .map-row-actions{opacity:1}
 .map-row-actions .icon-btn,.map-move .icon-btn{width:26px;height:26px}
-.map-move{display:flex;align-items:center;gap:4px}.map-move select{max-width:150px;min-height:28px;border:1px solid var(--border);border-radius:7px;background:var(--card);font:inherit;font-size:12px}
+.map-files li:has(.map-move){flex-wrap:wrap;max-height:none}.map-move{flex:1 0 100%;display:flex;align-items:center;gap:6px;padding-inline-start:22px;animation:pin-in .2s both}.map-move select{flex:1;min-width:0;min-height:28px;border:1px solid var(--border);border-radius:7px;background:var(--card);font:inherit;font-size:12px}
 .map-slot.over{border-color:var(--brand);border-style:dashed;background:color-mix(in srgb,var(--brand) 12%,var(--card));transform:scale(1.04)}
 .map-slot.landed{animation:slot-land .8s cubic-bezier(.3,1.6,.5,1)}
 @keyframes slot-land{0%{transform:scale(1.08);background:color-mix(in srgb,#3f8f6b 22%,var(--card))}100%{transform:scale(1)}}

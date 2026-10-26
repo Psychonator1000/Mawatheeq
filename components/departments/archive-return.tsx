@@ -23,7 +23,7 @@ export default function ReturnCheck({file,custody,onClose,onDone}:{file:ArchiveF
  async function run(fn:()=>Promise<ArchiveMovement>,done:string){setBusy(true);setError('');try{const m=await fn();toast.success(done);dispatchEvent(new Event(PAPER_FILES_EVENT));onDone(m)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  const confirm=(check:'complete'|'missing')=>run(()=>departmentRequest<ArchiveMovement>('approve_return',{workspace:'archive',fileId:file.id,check,missing:check==='missing'?(missing||`عدد الأوراق ${pages} من ${expected}`):'',pages}),
   check==='complete'?'عاد الملف كاملاً إلى الأرشيف':'عاد الملف ناقصاً؛ سُجّلت النواقص على '+(custody.holder||'آخر مستلم'));
- return <EditorDialog title={'استلام الملف '+file.payload.number+(custody.holder?' من '+custody.holder:'')} description="طابق الأوراق مع ما خرج به الملف قبل تأكيد عودته." busy={busy} onClose={onClose}>
+ return <EditorDialog title={'استلام الملف '+file.payload.number+(custody.holder?' من '+custody.holder:'')} description="طابق الأوراق مع ما خرج به الملف قبل تأكيد عودته." busy={false} onClose={onClose}>
   <div className="return-check">
    <p className="return-who">{custody.holder?<>مع <b>{custody.holder}</b> منذ {formatDate(custody.since)}</>:'خارج الأرشيف'}{claimed&&<> · أبلغ بإرجاعه {officeTime(claimed)}{late>=2&&<span className="tag red">منذ {late} يوم</span>}</>}</p>
    {out?.receivedMissing&&<p className="notice">عند استلامه أفاد بنقص: {out.receivedMissing}</p>}
@@ -37,7 +37,7 @@ export default function ReturnCheck({file,custody,onClose,onDone}:{file:ArchiveF
    :<div className="actions">{!short&&<button type="button" className="btn primary" disabled={busy} onClick={()=>void confirm('complete')}><CheckCircle2 size={16}/> عاد كاملاً</button>}
      {short&&<button type="button" className="btn primary" disabled={busy} onClick={()=>void confirm('missing')}><AlertTriangle size={16}/> عاد ناقصاً</button>}
      {claimed&&<button type="button" className="btn" disabled={busy} onClick={()=>setRejecting(true)}><XCircle size={16}/> لم يصل الملف</button>}
-     <button type="button" className="btn" disabled={busy} onClick={onClose}>إلغاء</button></div>}
+     <button type="button" className="btn" onClick={onClose}>إلغاء</button></div>}
   </div>
  </EditorDialog>;
 }
