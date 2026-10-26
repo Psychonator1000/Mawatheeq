@@ -164,13 +164,45 @@ export function printHtml(html: string): boolean {
   return true;
 }
 
-export type RollRow = { time: string; title: string; location: string; caseRef: string; parties: string; caseNumber: string; level: string; assignee: string; notes: string };
+export type RollRow = { time: string; title: string; location: string; caseRef: string; parties: string; caseNumber: string; level: string; assignee: string; notes: string; client?: string; opponent?: string; autoNumber?: string };
 /** The day's hearings roll (رول الجلسات), grouped by court or expert office, in time order. */
+/** One case on a roll, as a band: who's who in a headline, every number under its name, the office code large. */
+export type RollCard = { code: string; client: string; role?: string; opponent: string; lawyer?: string; facts: [string, string, string?][]; writeIn?: string[] };
+const ROLL_CARD_STYLE = `<style>
+.rc{display:grid;grid-template-columns:34px 1fr auto;gap:0 10px;align-items:stretch;border:1px solid #d8cfc4;border-radius:6px;margin:0 0 6px;padding:6px 8px;break-inside:avoid}
+.rc-n{display:grid;place-items:center;font-size:22px;font-weight:700;color:#6e1f33;border-inline-end:1px solid #e6ddd2}
+.rc-main{display:grid;gap:4px;min-width:0}
+.rc-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-size:12.5px}
+.rc-head small,.rc-facts dt,.rc-code small,.rc-write small{color:#8a7a70;font-size:9.5px;font-weight:600}
+.rc-head b{font-size:13px}.rc-head em{font-style:normal;color:#6b5a50;font-size:11px}.rc-vs{color:#a08f84;font-weight:700}.rc-lawyer{margin-inline-start:auto}
+.rc-facts{display:flex;flex-wrap:wrap;gap:3px 14px;margin:0}.rc-facts div{display:grid}.rc-facts dd{margin:0;font-weight:600;font-size:11.5px;direction:auto}.rc-facts dd small{font-weight:400;color:#6b5a50;font-size:10px}
+.rc-code{display:grid;align-content:center;justify-items:center;min-width:64px;border-inline-start:1px solid #e6ddd2;padding-inline-start:8px}.rc-code b{font-size:22px;letter-spacing:.5px}
+.rc-write{display:flex;gap:18px;font-size:11px;margin-top:2px}.rc-write span{flex:1;border-bottom:1px dotted #b9ab9f;min-height:16px}
+.rc-legend{font-size:10.5px;color:#6b5a50;margin:0 0 8px}
+</style>`;
+function rollCard(n: number, c: RollCard): string {
+  // Every label shows, empty or not, so the bands line up and each number keeps its name.
+  const facts = c.facts.map(([k, v, sub]) => `<div><dt>${escape(k)}</dt><dd>${escape(v || '—')}${sub ? ` <small>${escape(sub)}</small>` : ''}</dd></div>`).join('');
+  return `<article class="rc"><div class="rc-n">${n}</div><div class="rc-main"><div class="rc-head"><span><small>الموكل</small> <b>${escape(c.client || '—')}</b>${c.role ? ` <em>(${escape(c.role)})</em>` : ''}</span><span class="rc-vs">ضد</span><span><small>الخصم</small> <b>${escape(c.opponent || '—')}</b></span>${c.lawyer ? `<span class="rc-lawyer"><small>المحامي</small> <b>أ/ ${escape(c.lawyer)}</b></span>` : ''}</div>`
+    + `${facts ? `<dl class="rc-facts">${facts}</dl>` : ''}${c.writeIn?.length ? `<div class="rc-write">${c.writeIn.map(w => `<small>${escape(w)}</small><span></span>`).join('')}</div>` : ''}</div>`
+    + `<div class="rc-code"><small>الكود</small><b>${escape(c.code || '—')}</b></div></article>`;
+}
+/** A roll of case bands, grouped; used by «رول الأحكام» (cards layout) and the daily hearings roll. */
+export function rollCardsHtml(title: string, scope: string, groups: [string, RollCard[]][], printedAt: string, printedBy: string, landscape = true, unit = 'قضية'): string {
+  const total = groups.reduce((n, [, l]) => n + l.length, 0);
+  let index = 0;
+  const body = groups.map(([label, list]) => `${label ? `<h2>${escape(label)} (${list.length})</h2>` : ''}${list.map(c => rollCard(++index, c)).join('')}`).join('');
+  return page(title, `${ROLL_CARD_STYLE}<header><h1>${escape(title)}</h1><p>${escape(scope)} · ${total} ${unit}</p></header><p class="rc-legend">م: التسلسل · الكود: كود المكتب للقضية · الرقم الآلي: رقم القضية في نظام المحاكم</p>${body || '<p>لا توجد سجلات.</p>'}${footer(printedAt, printedBy)}`, landscape);
+}
+
 export function hearingRollHtml(date: string, rows: RollRow[], printedAt: string, printedBy: string): string {
   const groups = new Map<string, RollRow[]>();
   for (const r of [...rows].sort((a, b) => (a.location + a.time).localeCompare(b.location + b.time))) groups.set(r.location || 'المكان غير محدد', [...(groups.get(r.location || 'المكان غير محدد') || []), r]);
-  const body = [...groups].map(([place, list]) => `<h2>${escape(place)} (${list.length})</h2><table class="list"><tr><th>الوقت</th><th>القضية</th><th>الأطراف</th><th>رقم القضية</th><th>الدرجة</th><th>المحامي المسؤول</th><th>القرار السابق / ملاحظات</th><th>قرار الجلسة</th></tr>${list.map(r => `<tr><td class="nowrap">${escape(r.time || '—')}</td><td class="nowrap">${escape(r.caseRef)}</td><td>${escape(r.parties)}</td><td class="nowrap">${escape(r.caseNumber)}</td><td class="nowrap">${escape(r.level)}</td><td>${escape(r.assignee)}</td><td>${escape(r.notes)}</td><td style="width:18%"></td></tr>`).join('')}</table>`).join('');
-  return page('رول الجلسات ' + dmy(date), `<header><h1>رول الجلسات</h1><p>${escape(dmy(date))} · ${rows.length} جلسة</p></header>${body || '<p>لا توجد جلسات في هذا اليوم.</p>'}${footer(printedAt, printedBy)}`);
+  const cards: [string, RollCard[]][] = [...groups].map(([place, list]) => [place, list.map(r => {
+    const [client, opponent] = r.client !== undefined ? [r.client, r.opponent || ''] : [r.parties.split(' ضد ')[0] || r.parties, r.parties.split(' ضد ')[1] || ''];
+    return { code: r.caseRef, client, opponent, lawyer: r.assignee, facts: [['وقت الجلسة', r.time || '—'], ['الرقم الآلي', r.autoNumber || ''], ['رقم القضية', r.caseNumber, r.level], ['الجلسة', r.title], ['القرار السابق / ملاحظات', r.notes]], writeIn: ['قرار الجلسة', 'الجلسة القادمة'] };
+  })]);
+  return rollCardsHtml('رول الجلسات ' + dmy(date), dmy(date), cards, printedAt, printedBy, false, 'جلسة');
 }
 
 /**

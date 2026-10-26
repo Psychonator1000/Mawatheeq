@@ -126,7 +126,11 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
  const inside=(l:ArchiveLocation)=>files.filter(f=>cu(f).locationId===l.id&&cu(f).state==='in');
  const unplaced=files.filter(f=>!cu(f).locationId);
  const term=normalizeSearch(q.trim()),caseCode=(id:string)=>cases.find(c=>c.id===id)?.code||'';
- const hits=term.length<1?[]:files.filter(f=>normalizeSearch([f.payload.number,f.payload.title,caseCode(f.caseId)].join(' ')).includes(term)).slice(0,8);
+ // Best match first: the exact archive number («6» finds ARC-6) or case code, then numbers and codes that start with it,
+ // then anything that contains it.
+ const rank=(f:ArchiveFile)=>{const n=normalizeSearch(f.payload.number),bare=n.replace(/^arc-0*/,''),code=normalizeSearch(caseCode(f.caseId)),t=term.replace(/^arc-0*/,'');
+  return n===term||bare===t||code===term?0:bare.startsWith(t)||code.startsWith(term)?1:2};
+ const hits=term.length<1?[]:files.filter(f=>normalizeSearch([f.payload.number,f.payload.title,caseCode(f.caseId)].join(' ')).includes(term)).map(f=>({f,r:rank(f)})).sort((a,b)=>a.r-b.r).map(x=>x.f).slice(0,8);
  const lit=found&&cu(found).state==='in'?cu(found).locationId:'',awaits=found&&cu(found).state!=='in'?cu(found).locationId:'',slot=locations.find(l=>l.id===picked)||null;
  const show=(f:ArchiveFile)=>{setFound(f);setQ('');const id=cu(f).locationId;if(id){setPicked(id);requestAnimationFrame(()=>document.getElementById('slot-'+id)?.scrollIntoView({block:'center',behavior:'smooth'}))}};
  const sheet=(l:ArchiveLocation)=>printHtml(listHtml('كشف جرد '+l.payload.code,locationLabel(l),['✓','رقم الأرشيف','الملف','القضية','النوع','الحالة'],files.filter(f=>cu(f).locationId===l.id).sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true})).map(f=>{const c=cu(f);return ['☐',f.payload.number,f.payload.title,caseRef(f),f.payload.type,c.state==='in'?'في المكان':CUSTODY_STATES[c.state]+': '+c.holder]}),formatDate(todayISO()),''));

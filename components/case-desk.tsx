@@ -5,7 +5,7 @@ import {type CaseRecord,emptyCase,formatDate,todayISO,daysBetween} from '@/lib/d
 import {type ClientEntity,clientName,enrichCase} from '@/lib/clients';
 import {DECISIONS,EXPERT_DECISIONS,sessionProcedure,type Venue} from '@/lib/sessions';
 import {type DeskPage,CONSULTATION_STATUSES,CONSULTATION_TYPES,POSTING_ERRORS,dueForPosting,judgmentsBetween,lastSitting,nextSitting,postingErrors,renewalDeadline,shiftDays,sittingsBetween,stayOf,withoutContract,workflowOf,type ConsultationStatus} from '@/lib/case-desk';
-import {judgmentRollHtml,printHtml} from '@/lib/print';
+import {judgmentRollHtml,printHtml,rollCardsHtml} from '@/lib/print';
 import {Field,DateField,Empty,api} from './shared';
 import {OfficeSelect} from './office-shared';
 import {EditorDialog} from './departments/shared';
@@ -91,12 +91,16 @@ function Roll(p:Props){
  const [from,setFrom]=useState(todayISO()),[to,setTo]=useState(shiftDays(todayISO(),6)),law=useLawyerFilter(p.records);
  const rows=sittingsBetween(p.records,from,to||from).filter(s=>law.match(s.c));
  const days=[...new Set(rows.map(r=>r.date))];
- return <Panel title="مواعيد الجلسات (رول)" note="الجلسات القادمة حسب آخر ترحيل لكل قضية، مجمعة باليوم ثم المحكمة."
-  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,'رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to)}`,['التاريخ','الساعة','المحكمة','القضية','الأطراف','آخر قرار','المطلوب','المحامي'],rows.map(r=>[formatDate(r.date),r.time,r.court,ref(r.c),parties(r.c),String(r.last?.decision||''),r.required,String(r.c.lawyer||'')]),p.printedBy,[8,5,12,8,22,14,15,10])}><Printer size={15}/> طباعة الرول</button>}>
-  <div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/>{law.select}<span className="tag">{rows.length} جلسة</span></div>
-  {!rows.length?<Empty title="لا جلسات في هذه الفترة"/>:<div className="desk-days">{days.map(d=><div key={d} className="desk-day"><h3 className="desk-sub">{formatDate(d)} <small>{rows.filter(r=>r.date===d).length} جلسة</small></h3>
-   <div className="table-wrap"><table className="office-table"><thead><tr><th>الساعة</th><th>المحكمة</th><th>القضية</th><th>آخر قرار</th><th>المطلوب</th><th>المحامي</th></tr></thead><tbody>{rows.filter(r=>r.date===d).map(r=><tr key={r.c.id}><td className="nowrap">{r.time||'—'}</td><td>{r.court||'—'}{r.venue!=='المحكمة'&&<small>{r.venue}</small>}</td><td><CaseCell c={r.c} onOpen={p.onOpen}/></td><td>{String(r.last?.decision||'—')}</td><td>{r.required}</td><td>{String(r.c.lawyer||'—')}</td></tr>)}</tbody></table></div></div>)}</div>}
-</Panel>;
+ // Laid out like «رول الأحكام»: what is previewed is what prints, each sitting a band with every value under its name.
+ const html=rollCardsHtml('رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to||from)}`,days.map(d=>[formatDate(d),rows.filter(r=>r.date===d).map(r=>({code:ref(r.c),client:clientName(r.c)||'—',role:String(r.c.role||''),opponent:r.c.opponent||'—',lawyer:String(r.c.lawyer||''),
+  facts:[['الساعة',r.time||'—'],['المحكمة',r.court||'—',r.venue!=='المحكمة'?r.venue:''],['الرقم الآلي',String(r.c.autoNumber||'')],['رقم القضية',String(r.c.caseNumber||'')],['آخر قرار',String(r.last?.decision||'')],['المطلوب',r.required]] as [string,string,string?][],
+  writeIn:['قرار الجلسة','الجلسة القادمة']}))]),formatDate(todayISO()),p.printedBy,true,'جلسة');
+ return <Panel title="مواعيد الجلسات (رول)" note="الجلسات القادمة حسب آخر ترحيل لكل قضية، مجمعة باليوم.">
+  <div className="roll-top desk-roll-top"><div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/>{law.select}</div>
+   <div className="roll-count" role="status"><b>{rows.length}</b><span>جلسة ستُطبع</span></div></div>
+  {!rows.length?<Empty title="لا جلسات في هذه الفترة"/>:<iframe className="roll-preview" title="معاينة رول الجلسات" sandbox="" srcDoc={html}/>}
+  <div className="actions roll-actions">{p.canExport?<button className="btn primary" disabled={!rows.length} onClick={()=>{if(!printHtml(html))toast.error('اسمح بالنوافذ المنبثقة للطباعة.')}}><Printer size={15}/> طباعة الرول ({rows.length})</button>:<p className="subtitle">الطباعة غير متاحة لحسابك؛ اطلبها من مسؤول المكتب.</p>}</div>
+ </Panel>;
 }
 function Followup(p:Props){
  const today=todayISO(),[span,setSpan]=useState('14'),law=useLawyerFilter(p.records);

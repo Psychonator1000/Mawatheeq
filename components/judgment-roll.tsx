@@ -3,7 +3,7 @@ import {useMemo,useState} from 'react';
 import {Printer,Filter,Columns3,RotateCcw} from 'lucide-react';
 import {toast} from 'sonner';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from './ui/dialog';
-import {judgmentRollHtml,printHtml} from '@/lib/print';
+import {judgmentRollHtml,printHtml,rollCardsHtml,type RollCard} from '@/lib/print';
 import {ROLL_COLUMNS,DEFAULT_ROLL_COLUMNS,ROLL_GROUPS,ROLL_SORTS,EMPTY_ROLL_FILTER,filterRoll,sortRoll,groupRoll,rollCell,type RollCase,type RollColumn,type RollFilter,type RollGroupKey,type RollSort} from '@/lib/judgment-roll';
 import {MONTH_NAMES} from '@/lib/case-browse';
 import {formatDate,todayISO,type CaseRecord} from '@/lib/domain';
@@ -11,7 +11,12 @@ import {Field,DateField} from './shared';
 import {SelectList} from './filter-select';
 
 type Scope='shown'|'selected'|'all';
-const COLUMNS_KEY='mawatheeq.roll-columns.v1';
+const COLUMNS_KEY='mawatheeq.roll-columns.v1',LAYOUT_KEY='mawatheeq.roll-layout.v1';
+type Layout='cards'|'table';
+const savedLayout=():Layout=>{try{return localStorage.getItem(LAYOUT_KEY)==='table'?'table':'cards'}catch{return 'cards'}};
+// A case as a band: the parties and lawyer in a headline, every other chosen column under its own name, the code large.
+const toCard=(r:RollCase,columns:RollColumn[]):RollCard=>({code:r.code,client:r.client,role:r.role,opponent:r.opponent,lawyer:columns.includes('lawyer')?r.lawyer:'',
+ facts:columns.filter(c=>!['code','client','opponent','lawyer'].includes(c)).map(c=>{const [main,sub]=rollCell(r,c);return [ROLL_COLUMNS.find(x=>x[0]===c)![1],main,sub] as [string,string,string]})});
 const savedColumns=():RollColumn[]=>{try{const v=JSON.parse(localStorage.getItem(COLUMNS_KEY)||'null');return Array.isArray(v)&&v.length?v.filter((c:string)=>ROLL_COLUMNS.some(x=>x[0]===c)):DEFAULT_ROLL_COLUMNS}catch{return DEFAULT_ROLL_COLUMNS}};
 const distinct=(rows:RollCase[],get:(r:RollCase)=>string)=>[...new Set(rows.map(get).map(v=>v.trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
 
@@ -19,6 +24,8 @@ const distinct=(rows:RollCase[],get:(r:RollCase)=>string)=>[...new Set(rows.map(
 export default function JudgmentRoll({shown,selected,all,shownLabel,toRow,printedBy,canPrint,onClose}:{shown:CaseRecord[];selected:CaseRecord[];all:CaseRecord[];shownLabel:string;toRow:(c:CaseRecord)=>RollCase;printedBy:string;canPrint:boolean;onClose:()=>void}) {
  const [scope,setScope]=useState<Scope>(selected.length?'selected':'shown'),[title,setTitle]=useState('رول الأحكام');
  const [filter,setFilter]=useState<RollFilter>(EMPTY_ROLL_FILTER),[sort,setSort]=useState<RollSort>('date-desc'),[group,setGroup]=useState<RollGroupKey>('');
+ const [layout,setLayoutState]=useState<Layout>(savedLayout);
+ const setLayout=(v:Layout)=>{setLayoutState(v);try{localStorage.setItem(LAYOUT_KEY,v)}catch{/* kept for this visit only */}};
  const [columns,setColumns]=useState<RollColumn[]>(savedColumns),[panel,setPanel]=useState<'filters'|'columns'|''>('filters');
  const rowsOf=useMemo(()=>({shown:shown.map(toRow),selected:selected.map(toRow),all:all.map(toRow)}),[shown,selected,all]);// eslint-disable-line react-hooks/exhaustive-deps
  const base=rowsOf[scope];
@@ -34,7 +41,7 @@ export default function JudgmentRoll({shown,selected,all,shownLabel,toRow,printe
   for(const k of ['client','lawyer','court','outcome','status','level'] as const)if(filter[k])parts.push(filter[k]);
   if(filter.category)parts.push({execution:'التنفيذ',insurance:'التأمين',telecom:'الاتصالات'}[filter.category]||filter.category);
   if(group)parts.push('مجمّعة حسب '+ROLL_GROUPS.find(g=>g[0]===group)![1]);return parts.join(' · ')};
- const html=useMemo(()=>judgmentRollHtml(title.trim()||'رول الأحكام',describe(),columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![1]),groupRoll(rows,group).map(([g,list])=>[g,list.map(r=>columns.map(c=>rollCell(r,c)))]),formatDate(todayISO()),printedBy,columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![3])),[rows,group,columns,title,scope,filter]);// eslint-disable-line react-hooks/exhaustive-deps
+ const html=useMemo(()=>layout==='cards'?rollCardsHtml(title.trim()||'رول الأحكام',describe(),groupRoll(rows,group).map(([g,list])=>[g,list.map(r=>toCard(r,columns))]),formatDate(todayISO()),printedBy):judgmentRollHtml(title.trim()||'رول الأحكام',describe(),columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![1]),groupRoll(rows,group).map(([g,list])=>[g,list.map(r=>columns.map(c=>rollCell(r,c)))]),formatDate(todayISO()),printedBy,columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![3])),[rows,group,columns,title,scope,filter,layout]);// eslint-disable-line react-hooks/exhaustive-deps
  const select=(label:string,k:keyof RollFilter,list:string[]|[string,string][],all='الكل')=><label className="field"><span>{label}</span><SelectList aria-label={label} value={filter[k]} onChange={e=>setF(k,e.target.value)}><option value="">{all}</option>{list.map(o=>Array.isArray(o)?<option key={o[0]} value={o[0]}>{o[1]}</option>:<option key={o} value={o}>{o}</option>)}</SelectList></label>;
  return <Dialog open onOpenChange={v=>{if(!v)onClose()}}><DialogContent dir="rtl" className="office-dialog roll-dialog"><DialogHeader><DialogTitle>رول الأحكام</DialogTitle><DialogDescription>اختر القضايا وصفِّها وحدد الأعمدة، وراجع الرول قبل الطباعة. يُطبع أفقياً دون عنوان الموقع.</DialogDescription></DialogHeader>
   <div className="roll-top">
@@ -44,6 +51,7 @@ export default function JudgmentRoll({shown,selected,all,shownLabel,toRow,printe
   <div className="roll-arrange">
    <label className="field"><span>الترتيب</span><SelectList aria-label="الترتيب" value={sort} onChange={e=>setSort(e.target.value as RollSort)}>{ROLL_SORTS.map(([id,l])=><option key={id} value={id}>{l}</option>)}</SelectList></label>
    <label className="field"><span>التجميع</span><SelectList aria-label="التجميع" value={group} onChange={e=>setGroup(e.target.value as RollGroupKey)}>{ROLL_GROUPS.map(([id,l])=><option key={id} value={id}>{l}</option>)}</SelectList></label>
+   <label className="field"><span>شكل الرول</span><SelectList aria-label="شكل الرول" value={layout} onChange={e=>setLayout(e.target.value as Layout)}><option value="cards">بطاقات بعناوين واضحة</option><option value="table">جدول</option></SelectList></label>
    <Field label="عنوان الرول" value={title} onChange={setTitle}/>
    <div className="roll-toggles"><button type="button" className={'btn'+(panel==='filters'?' primary':'')} aria-expanded={panel==='filters'} onClick={()=>setPanel(p=>p==='filters'?'':'filters')}><Filter size={15}/> التصفية{active?` (${active})`:''}</button><button type="button" className={'btn'+(panel==='columns'?' primary':'')} aria-expanded={panel==='columns'} onClick={()=>setPanel(p=>p==='columns'?'':'columns')}><Columns3 size={15}/> الأعمدة ({columns.length})</button></div>
   </div>
