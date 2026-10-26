@@ -12,7 +12,9 @@ const RIPPLE='.btn,.icon-btn,.nav-button,.office-card,.stat,.workspace-option,.c
 const STRONG='.btn.primary,.back-to-top,.workspace-option,.stat.featured';
 const MAGNETIC='.btn.primary,.icon-btn,.back-to-top,.quick-search-trigger';
 const GLOW='.panel,.office-card,.client-card,.person-card,.my-work-item,.device-card,.att-stat,[data-sidebar=sidebar],.stat.featured';
-const PATTERNED='.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured';
+const PATTERNED='.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured,.ledger-balance,.payroll-totals>div';
+// Small accent cards: their pattern starts at their corner and drifts by moving its tiles, not the layer.
+const PATTERN_CARD='.stat.featured,.ledger-balance,.payroll-totals>div';
 const INTERACTIVE='a,button,[role=button],[role=tab],input,select,textarea,label,summary';
 // Rows, cards and list items that sweep in from the scroll direction each time they enter the screen.
 const REACTIVE='.office-card,.client-card,.person-card,.collection-card,.device-card,.att-stat,.stat,.my-work-item,.agenda-item,.notice-list li,.timeline-item,.doc-row,.quick-card,.legend-row,.bar-item,.calendar-day,.comment-list li,.department-metrics>div,.holiday-list li,.bridge-list li,.evidence-row,.help-block,.empty-state,.page-navigation,.pagination';
@@ -60,7 +62,7 @@ export default function MotionLayer() {
   const fields=new Map<HTMLElement,ReturnType<typeof createPatternField>>();let overField:ReturnType<typeof createPatternField>|null=null;
   const fieldOf=(el:HTMLElement)=>{let f=fields.get(el);if(f&&!el.isConnected){f.destroy();fields.delete(el);f=undefined}
    for(const [k,v] of fields)if(!k.isConnected){v.destroy();fields.delete(k)}
-   if(!f){f=el.matches('.stat.featured')?createPatternField(el,0,20):createPatternField(el,-18,26);fields.set(el,f)}return f};
+   if(!f){f=el.matches(PATTERN_CARD)?createPatternField(el,0,20):createPatternField(el,-18,26);fields.set(el,f)}return f};
   const hoverField=(el:HTMLElement|null)=>{const next=el&&root.dataset.pattern!=='none'?fieldOf(el):null;if(next!==overField){overField?.leave();overField=next;next?.enter()}};
   const onMove=(e:PointerEvent)=>{
    if(e.pointerType!=='mouse'||!pointerEffectsOn()){if(pointerOn){pointerOn=false;root.removeAttribute('data-pointer');hoverField(null)}return}
