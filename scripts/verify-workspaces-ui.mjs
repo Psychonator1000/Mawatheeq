@@ -208,7 +208,13 @@ try{
  await page.getByRole('button',{name:/^B-2 · درج 2/}).click();await page.getByLabel('ضع ملفاً في هذا المكان',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await page.locator('.map-files').getByText('ARC-00001').waitFor();
  await page.getByLabel('ابحث عن مكان ملف',{exact:true}).fill('00001');await page.locator('.map-hits').getByRole('button').first().click();await page.locator('.map-found').getByText(/خزانة B ← درج 2/).waitFor();await page.locator('.map-slot.lit').waitFor();await screen('archive-map');
  await page.getByRole('button',{name:'نقل ARC-00001',exact:true}).click();await page.getByLabel('نقل ARC-00001 إلى',{exact:true}).selectOption({label:'غرفة الأرشيف · خزانة B · درج 1'});await page.getByText(/نُقل ARC-00001 إلى درج 1/).first().waitFor();
- const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','move','move','return']);
+ // Dragging it back: the row leaves the list as a card that follows the pointer, and drops into the drawer under it.
+ await page.getByRole('button',{name:/^B-1 · درج 1/}).click();const row=page.locator('.map-files li.grabbable',{hasText:'ARC-00001'});await row.waitFor();
+ {const a=await row.boundingBox(),b=await page.getByRole('button',{name:/^B-2 · درج 2/}).boundingBox();await page.mouse.move(a.x+a.width/2,a.y+a.height/2);await page.mouse.down();
+  await page.mouse.move(a.x+a.width/2+20,a.y+a.height/2+10,{steps:3});await page.locator('.drag-card').waitFor();assert.ok(await row.evaluate(e=>e.classList.contains('dragging')),'the picked-up row should leave the list');
+  await page.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:8});await page.locator('.drag-card.aimed').waitFor();await page.mouse.up();}
+ await page.getByText(/نُقل ARC-00001 إلى درج 2/).first().waitFor();await page.locator('.drag-card').waitFor({state:'detached'});
+ const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','move','move','move','return']);
  await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
  // A closed file leaves the active list and is found under «مغلقة»; reopening brings it back.
  await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await click('إغلاق الملف (إتلاف أو انتهاء الحفظ)');await page.getByText(/تجده في «المغلقة»/).first().waitFor();

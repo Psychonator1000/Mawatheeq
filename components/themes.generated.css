@@ -2753,6 +2753,13 @@
 :root[data-mode=dark] .return-items .off{color:#dba7ac}
 :root[data-mode=dark] .lost-note{border-inline-start:4px solid #dba7ac}
 :root[data-mode=dark] .lost-link{color:var(--muted-foreground)}
+:root[data-mode=dark] .map-files li.grabbable:hover{background:color-mix(in srgb,var(--brand) 6%,transparent)}
+:root[data-mode=dark] .map-files li.dragging{border-color:transparent}
+:root[data-mode=dark] .drag-card{background:var(--card);color:var(--foreground);border:1px solid color-mix(in srgb,var(--brand) 35%,var(--border))}
+:root[data-mode=dark] .drag-card-tab{background:color-mix(in srgb,var(--brand) 70%,var(--card))}
+:root[data-mode=dark] .drag-card small{color:var(--muted-foreground)}
+:root[data-mode=dark] .drag-card.aimed{border-color:var(--brand)}
+:root[data-mode=dark] .drag-card.aimed small{color:var(--brand)}
 :root[data-mode=dark] .map-away{color:#dba7ac!important}
 :root[data-mode=dark] .map-grip{color:var(--muted-foreground)}
 :root[data-mode=dark] .map-move select{border:1px solid var(--border);background:var(--card)}

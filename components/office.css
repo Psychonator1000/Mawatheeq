@@ -516,13 +516,26 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .inline-settle{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}.inline-settle .field{flex:1;min-width:200px}
 .lost-link{font-size:12px;color:var(--muted-foreground);justify-self:start}
 /* Drag a file from a drawer's list onto another drawer: it lifts, the drawer under it glows, and lands with a pulse. */
-.map-files li[draggable=true]{cursor:grab}.map-files li.dragging{opacity:.45;transform:scale(.97)}
+.map-files li.grabbable{cursor:grab;touch-action:none;user-select:none;border-radius:8px}.map-files li.grabbable:hover{background:color-mix(in srgb,var(--brand) 6%,transparent)}
+.map-files li{max-height:140px;overflow:hidden;transition:max-height .28s cubic-bezier(.2,.8,.2,1),padding .28s,opacity .2s,border-color .2s,background-color .2s}
+.map-files li.dragging{max-height:0;padding-block:0;opacity:0;border-color:transparent;pointer-events:none}
+/* The picked-up file: a folder card that follows the pointer, settles into a drawer, or flies back. */
+.drag-card{position:fixed;top:0;left:0;z-index:200;pointer-events:none;display:grid;gap:2px;padding:14px 14px 10px;border-radius:4px 12px 12px 12px;background:var(--card);color:var(--foreground);
+ border:1px solid color-mix(in srgb,var(--brand) 35%,var(--border));transform-origin:30% 30%;animation:card-lift .18s cubic-bezier(.3,1.5,.5,1)}
+.drag-card-tab{position:absolute;top:-9px;inset-inline-start:-1px;width:62px;height:10px;border-radius:7px 7px 0 0;background:color-mix(in srgb,var(--brand) 70%,var(--card))}
+.drag-card b{font-size:14px}.drag-card span{font-size:12px;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.drag-card small{font-size:11px;color:var(--muted-foreground);margin-top:2px}.drag-card.aimed{border-color:var(--brand)}.drag-card.aimed small{color:var(--brand);font-weight:700}
+.drag-card.drag{transition:transform .06s linear}
+.drag-card.drop{transition:transform .32s cubic-bezier(.5,0,.75,0),opacity .32s;opacity:0}
+.drag-card.back{transition:transform .34s cubic-bezier(.2,.8,.2,1),opacity .34s;opacity:.4}
+@keyframes card-lift{from{scale:.94;opacity:.6}}
+:root[data-motion=off] :is(.drag-card,.map-files li){transition:none;animation:none}
 .map-files li.away{opacity:.8}.map-away{color:#a32e38!important}
 .map-grip{color:var(--muted-foreground);flex:none}
 .map-row-actions{display:flex;gap:2px;opacity:.55;transition:opacity .2s}.map-files li:hover .map-row-actions,.map-files li:focus-within .map-row-actions{opacity:1}
 .map-row-actions .icon-btn,.map-move .icon-btn{width:26px;height:26px}
 .map-move{display:flex;align-items:center;gap:4px}.map-move select{max-width:150px;min-height:28px;border:1px solid var(--border);border-radius:7px;background:var(--card);font:inherit;font-size:12px}
-.map-slot.over{border-color:var(--brand);border-style:dashed;background:color-mix(in srgb,var(--brand) 12%,var(--card));transform:scale(1.04);box-shadow:0 8px 20px -10px color-mix(in srgb,var(--brand) 60%,transparent)}
+.map-slot.over{border-color:var(--brand);border-style:dashed;background:color-mix(in srgb,var(--brand) 12%,var(--card));transform:scale(1.04)}
 .map-slot.landed{animation:slot-land .8s cubic-bezier(.3,1.6,.5,1)}
 @keyframes slot-land{0%{transform:scale(1.08);background:color-mix(in srgb,#3f8f6b 22%,var(--card))}100%{transform:scale(1)}}
 .map-slot.awaits{border-style:dashed;border-color:#a32e38;background:repeating-linear-gradient(45deg,transparent 0 6px,color-mix(in srgb,#a32e38 7%,transparent) 6px 12px)}
