@@ -1,21 +1,24 @@
 /**
  * One patterned sheet lies under the whole screen, and every accent surface (the menu, side panels, featured figures,
  * primary buttons) is a window cut into it: each shows the part of the pattern at its place on the screen, so the lines
- * run on from one window to the next. While the mouse is over a window, or a ripple is still spreading, the sheet is
- * drawn here as real lines in every window on screen: they lean away from the pointer, and a press anywhere sends one
- * slow ripple through them like water. When all is quiet the canvases hide and the still CSS pattern shows.
+ * run on from one window to the next. The still pattern is CSS; this draws light on its lines, never moving them: a soft
+ * sheen where the pointer rests over a window, and a fine ring of light that glides out from a press across every window.
  */
-export type PatternKind = 'pinstripe' | 'grid' | 'columns' | 'stars';
-type Group = { alpha: number; width: number; lines: number[][] };
+export type PatternKind = 'pinstripe' | 'grid' | 'columns' | 'stars' | 'depth' | 'depthgrid';
+/** `depth` is how far a layer drifts with the mouse relative to the sheet: parallax patterns stack a far and a near layer. */
+type Group = { alpha: number; width: number; lines: number[][]; depth?: number };
+// Parallax layers: the far layer drifts at FAR of the sheet's drift, the near one at NEAR (compact.css uses the same).
+const FAR = .3, NEAR = 2.6;
 type Ripple = { x: number; y: number; at: number };
 
-const STEP = 8;
-// Pointer: how far the lines feel it and how far they lean away.
-const REACH = 110, LEAN = 6;
-// Ripple: speed (px/s), wavelength, packet width, how long it lasts, how far lines move at first.
-const SPEED = 150, WAVE = 44, PACKET = 70, LIFE = 3.2, LIFT = 9;
+// Lines stay straight, so a segment needs only its ends.
+const STEP = 1e6;
+// The sheen under the pointer: its reach and strength.
+const REACH = 150, SHEEN = .22;
+// A press: how far its ring of light travels, how wide the ring is, how long it lasts and how bright it starts.
+const SPAN = 760, BAND = 30, LIFE = 1.6, GLINT = .34;
 
-/** A segment cut into points every few pixels, so the line can bend. */
+/** A segment as a list of points. */
 function seg(x1: number, y1: number, x2: number, y2: number, out: number[] = []) {
   const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / STEP));
   for (let i = out.length ? 1 : 0; i <= n; i++) out.push(x1 + (x2 - x1) * i / n, y1 + (y2 - y1) * i / n);
@@ -38,6 +41,23 @@ const DRIFT = 16;
 export function build(kind: PatternKind, X0: number, Y0: number, X1: number, Y1: number): Group[] {
   const m = 30, x0 = X0 - m, y0 = Y0 - m, x1 = X1 + m, y1 = Y1 + m;
   const fx = (size: number) => Math.floor(x0 / size) * size, fy = (size: number) => Math.floor(y0 / size) * size;
+  if (kind === 'depth' || kind === 'depthgrid') {
+    // Each layer spans the box widened by the most it can drift.
+    const far = build(kind === 'depth' ? 'pinstripe' : 'grid', X0 - 30, Y0 - 30, X1 + 30, Y1 + 30).map(g => ({ ...g, alpha: g.alpha * .7, depth: FAR }));
+    const near: number[][] = [];
+    if (kind === 'depth') {
+      // Sparse lines across the pinstripes (x + y = c, every 48px).
+      for (let c = Math.floor((x0 + y0 - 30) / 48) * 48; c <= x1 + y1 + 30; c += 48) {
+        const ya = Math.max(y0 - 30, c - x1 - 30), yb = Math.min(y1 + 30, c - x0 + 30);
+        if (yb > ya) near.push(seg(c - ya, ya, c - yb, yb));
+      }
+    } else {
+      // Small diamonds floating over the grid, every 64px.
+      for (let a = fx(64) - 64; a <= x1 + 64; a += 64) for (let b = fy(64) - 64; b <= y1 + 64; b += 64)
+        near.push(ring([[a + 32, b + 28], [a + 36, b + 32], [a + 32, b + 36], [a + 28, b + 32]]));
+    }
+    return [...far, { alpha: .9, width: kind === 'depth' ? 1.2 : 1, lines: near, depth: NEAR }];
+  }
   if (kind === 'pinstripe') {
     const fine: number[][] = [], bold: number[][] = [];
     // Lines x − y = c every 8px; every fifth one (c a multiple of 40) is brighter.
@@ -74,7 +94,7 @@ export function build(kind: PatternKind, X0: number, Y0: number, X1: number, Y1:
   return [{ alpha: 1, width: 1.1, lines: stars }, { alpha: .75, width: .8, lines: rings }];
 }
 
-type Window = { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; groups: Group[]; built: string; box: DOMRect | null };
+type Window = { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; paths: { alpha: number; width: number; depth: number; path: Path2D }[]; built: string };
 
 export function createPatternSheet() {
   const root = document.documentElement, windows = new Map<HTMLElement, Window>(), placed = new WeakMap<HTMLElement, string>();
@@ -110,23 +130,24 @@ export function createPatternSheet() {
     if (!w) {
       const canvas = document.createElement('canvas');
       canvas.className = 'pattern-field'; canvas.setAttribute('aria-hidden', 'true'); el.append(canvas);
-      w = { canvas, ctx: canvas.getContext('2d')!, groups: [], built: '', box: null }; windows.set(el, w);
+      w = { canvas, ctx: canvas.getContext('2d')!, paths: [], built: '' }; windows.set(el, w);
     }
     return w;
   };
-  const sleep = (el: HTMLElement, w: Window) => { el.removeAttribute('data-pattern-live'); w.ctx.setTransform(1, 0, 0, 1, 0, 0); w.ctx.clearRect(0, 0, w.canvas.width, w.canvas.height); };
+  const clear = (w: Window) => { w.ctx.setTransform(1, 0, 0, 1, 0, 0); w.ctx.clearRect(0, 0, w.canvas.width, w.canvas.height); };
+  // A gradient that lights the lines it crosses; drawn over the still pattern, so only light is added.
+  const light = (ctx: CanvasRenderingContext2D, paint: CanvasGradient, p: Window['paths'][number]) => {
+    ctx.strokeStyle = paint; ctx.globalAlpha = p.alpha; ctx.lineWidth = p.width + .3; ctx.stroke(p.path);
+  };
   const draw = (now: number) => {
     frame = 0;
     for (const [el, w] of windows) if (!el.isConnected) { w.canvas.remove(); windows.delete(el); }
     const k = kind(), t = now / 1000;
     for (let i = ripples.length - 1; i >= 0; i--) if (t - ripples[i].at > LIFE) ripples.splice(i, 1);
-    strength += ((hovering ? 1 : 0) - strength) * .12;
+    strength += ((hovering ? 1 : 0) - strength) * .1;
     const active = k !== 'none' && (hovering || strength > .01 || ripples.length > 0);
-    if (!active) { strength = 0; for (const [el, w] of windows) sleep(el, w); return; }
-    const [ox, oy] = shift(), dpr = Math.min(2, devicePixelRatio || 1), lean = LEAN * strength;
-    // The still pattern shows at .34 (.48 under the pointer) of its .3 strength; match it.
-    const base = .102 + .042 * strength;
-    const seen = new Set<HTMLElement>();
+    if (!active) { strength = 0; for (const w of windows.values()) clear(w); return; }
+    const [ox, oy] = shift(), dpr = Math.min(2, devicePixelRatio || 1), seen = new Set<HTMLElement>();
     for (const el of document.querySelectorAll<HTMLElement>(PATTERNED)) {
       const box = el.getBoundingClientRect();
       if (box.width < 1 || box.bottom < 0 || box.top > innerHeight || box.right < 0 || box.left > innerWidth) continue;
@@ -134,45 +155,46 @@ export function createPatternSheet() {
       const size = `${Math.round(box.width * dpr)}x${Math.round(box.height * dpr)}`;
       if (w.canvas.dataset.size !== size) { w.canvas.dataset.size = size; w.canvas.width = Math.round(box.width * dpr); w.canvas.height = Math.round(box.height * dpr); }
       const key = `${k}:${box.left.toFixed(1)}:${box.top.toFixed(1)}:${size}`;
-      if (key !== w.built) { w.built = key; w.groups = build(k, box.left, box.top, box.right, box.bottom); }
-      // Drawn in screen coordinates, so every window shows its own part of the one sheet.
-      ctx.setTransform(dpr, 0, 0, dpr, -box.left * dpr, -box.top * dpr);
-      ctx.clearRect(box.left, box.top, box.width, box.height);
-      const glow = ctx.createRadialGradient(mx, my, 0, mx, my, REACH * 1.6);
-      glow.addColorStop(0, `rgba(255,255,255,${base + .06 * strength})`); glow.addColorStop(1, `rgba(255,255,255,${base})`);
-      ctx.strokeStyle = strength > .01 ? glow : `rgba(255,255,255,${base})`; ctx.lineJoin = 'round';
-      for (const g of w.groups) {
-        ctx.globalAlpha = g.alpha; ctx.lineWidth = g.width; ctx.beginPath();
-        for (const line of g.lines) for (let i = 0; i < line.length; i += 2) {
-          let x = line[i] + ox, y = line[i + 1] + oy;
-          const px = x, py = y;
-          if (lean > .05) { const vx = px - mx, vy = py - my, d = Math.hypot(vx, vy); if (d < REACH && d > .01) { const f = lean * (1 - d / REACH) ** 2 / d; x += vx * f; y += vy * f; } }
-          for (const rp of ripples) {
-            const age = t - rp.at, vx = px - rp.x, vy = py - rp.y, d = Math.hypot(vx, vy) || .01, phase = d - SPEED * age;
-            if (Math.abs(phase) > PACKET * 2.5) continue;
-            const a = LIFT * Math.exp(-(phase * phase) / (2 * PACKET * PACKET)) * Math.exp(-age / 1.3) * Math.min(1, age * 5) * Math.sin(phase * 2 * Math.PI / WAVE);
-            x += vx / d * a; y += vy / d * a;
-          }
-          if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+      if (key !== w.built) {
+        w.built = key;
+        w.paths = build(k, box.left, box.top, box.right, box.bottom).map(g => {
+          const path = new Path2D();
+          for (const line of g.lines) for (let i = 0; i < line.length; i += 2) { if (i) path.lineTo(line[i], line[i + 1]); else path.moveTo(line[i], line[i + 1]); }
+          return { alpha: g.alpha, width: g.width, depth: g.depth ?? 1, path };
+        });
+      }
+      clear(w);
+      for (const layer of w.paths) {
+        // Screen coordinates, shifted with the still pattern (each layer by its own depth), so the light falls exactly on its lines.
+        const dx = ox * layer.depth, dy = oy * layer.depth;
+        ctx.setTransform(dpr, 0, 0, dpr, (dx - box.left) * dpr, (dy - box.top) * dpr);
+        if (strength > .01) {
+          const g = ctx.createRadialGradient(mx - dx, my - dy, 0, mx - dx, my - dy, REACH);
+          g.addColorStop(0, `rgba(255,250,240,${SHEEN * strength})`); g.addColorStop(1, 'rgba(255,250,240,0)');
+          light(ctx, g, layer);
         }
-        ctx.stroke();
+        for (const rp of ripples) {
+          const p = (t - rp.at) / LIFE, r = SPAN * (1 - (1 - p) ** 3), a = GLINT * (1 - p) ** 1.6;
+          const g = ctx.createRadialGradient(rp.x - dx, rp.y - dy, Math.max(0, r - BAND), rp.x - dx, rp.y - dy, r + BAND);
+          g.addColorStop(0, 'rgba(255,248,232,0)'); g.addColorStop(.5, `rgba(255,248,232,${a})`); g.addColorStop(1, 'rgba(255,248,232,0)');
+          light(ctx, g, layer);
+        }
       }
       ctx.globalAlpha = 1;
-      el.setAttribute('data-pattern-live', '');
     }
-    for (const [el, w] of windows) if (!seen.has(el)) sleep(el, w);
+    for (const [el, w] of windows) if (!seen.has(el)) clear(w);
     frame = requestAnimationFrame(draw);
   };
   const wake = () => { if (!frame && kind() !== 'none') frame = requestAnimationFrame(draw); };
   return {
     move(x: number, y: number) { mx = x; my = y; },
     hover(on: boolean) { if (on !== hovering) { hovering = on; if (on) wake(); } },
-    /** A press anywhere: the ripple runs under the whole screen and shows through every window it reaches. */
+    /** A press anywhere: its ring of light glides under the whole screen and shows in every window it reaches. */
     press(x: number, y: number) { ripples.push({ x, y, at: performance.now() / 1000 }); if (ripples.length > 4) ripples.shift(); wake(); },
     destroy() {
       cancelAnimationFrame(frame); cancelAnimationFrame(placeFrame); clearTimeout(settle); watcher.disconnect();
       for (const e of events) removeEventListener(e, later, { capture: true });
-      for (const [el, w] of windows) { el.removeAttribute('data-pattern-live'); w.canvas.remove(); }
+      for (const w of windows.values()) w.canvas.remove();
       windows.clear();
     },
   };

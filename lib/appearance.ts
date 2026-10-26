@@ -69,6 +69,8 @@ export const PATTERNS = {
   grid: { label: 'شبكة دقيقة', hint: 'مربعات مسطرة بعلامات صغيرة كمخطط هندسي' },
   columns: { label: 'أعمدة', hint: 'خطوط عمودية كأعمدة قاعة المحكمة' },
   stars: { label: 'نجوم ثمانية', hint: 'نقش هندسي من نجوم متشابكة' },
+  depth: { label: 'خطوط بعمق', hint: 'خطوط رفيعة في العمق وخطوط متقاطعة أمامها تتحرك بسرعة مختلفة' },
+  depthgrid: { label: 'شبكة بعمق', hint: 'شبكة بعيدة ومعيّنات صغيرة تطفو أمامها' },
   none: { label: 'بدون نقش' },
 } as const;
 export const CURSORS = {
