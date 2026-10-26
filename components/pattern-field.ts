@@ -9,7 +9,7 @@ type Ripple = { x: number; y: number; at: number };
 
 const STEP = 8;
 // Pointer: how far the lines feel it and how far they lean away.
-const REACH = 130, LEAN = 15;
+const REACH = 110, LEAN = 6;
 // Ripple: speed (px/s), wavelength, packet width, how long it lasts, how far lines move at first.
 const SPEED = 150, WAVE = 44, PACKET = 70, LIFE = 3.2, LIFT = 9;
 
@@ -65,12 +65,17 @@ function build(kind: PatternKind, w: number, h: number, o: number): Group[] {
   return [{ alpha: 1, width: 1.1, lines: stars }, { alpha: .75, width: .8, lines: rings }];
 }
 
-export function createPatternField(host: HTMLElement, origin: number) {
+/**
+ * `origin` is where the stylesheet's tiles start and `drift` how far its still pattern shifts toward the mouse (see
+ * compact.css), so the live lines sit exactly on the still ones and the hand-over cannot be seen.
+ */
+export function createPatternField(host: HTMLElement, origin: number, drift: number) {
   const canvas = document.createElement('canvas');
   canvas.className = 'pattern-field'; canvas.setAttribute('aria-hidden', 'true');
   host.append(canvas);
   const ctx = canvas.getContext('2d')!;
-  let groups: Group[] = [], built = '', w = 0, h = 0, frame = 0, hovering = false, strength = 0, mx = -999, my = -999, sleepTimer = 0;
+  const root = document.documentElement;
+  let groups: Group[] = [], built = '', w = 0, h = 0, frame = 0, hovering = false, strength = 0, mx = -999, my = -999, sleepTimer = 0, ox = 0, oy = 0, awake = false;
   const ripples: Ripple[] = [];
   const kind = () => (document.documentElement.dataset.pattern || 'pinstripe') as PatternKind | 'none';
   const fit = () => {
@@ -84,24 +89,34 @@ export function createPatternField(host: HTMLElement, origin: number) {
   const wake = () => {
     clearTimeout(sleepTimer);
     if (!host.isConnected || !fit()) return;
+    if (!awake) { awake = true; [ox, oy] = shift(); }
     host.setAttribute('data-pattern-live', '');
     if (!frame) frame = requestAnimationFrame(draw);
+  };
+  // The still pattern's shift toward the mouse, as the stylesheet computes it (it eases over about a second).
+  const shift = () => {
+    if (!root.hasAttribute('data-pointer') || root.dataset.motion === 'off') return [0, 0];
+    const v = (n: string) => (parseFloat(root.style.getPropertyValue(n)) || .5) - .5;
+    return [v('--ax') * -drift, v('--ay') * -drift];
   };
   const draw = (now: number) => {
     frame = 0;
     if (!host.isConnected) return;
     strength += ((hovering ? 1 : 0) - strength) * .12;
+    const [tx, ty] = shift(); ox += (tx - ox) * .07; oy += (ty - oy) * .07;
+    // The still pattern shows at .34 (.48 under the pointer) of its .3 strength; match it.
+    const base = .102 + .042 * strength;
     const t = now / 1000;
     for (let i = ripples.length - 1; i >= 0; i--) if (t - ripples[i].at > LIFE) ripples.splice(i, 1);
     ctx.clearRect(0, 0, w, h);
     const glow = ctx.createRadialGradient(mx, my, 0, mx, my, REACH * 1.6);
-    glow.addColorStop(0, `rgba(255,246,232,${.16 + .2 * strength})`); glow.addColorStop(1, 'rgba(255,246,232,.16)');
-    ctx.strokeStyle = strength > .01 ? glow : 'rgba(255,246,232,.16)'; ctx.lineJoin = 'round';
+    glow.addColorStop(0, `rgba(255,255,255,${base + .06 * strength})`); glow.addColorStop(1, `rgba(255,255,255,${base})`);
+    ctx.strokeStyle = strength > .01 ? glow : `rgba(255,255,255,${base})`; ctx.lineJoin = 'round';
     const lean = LEAN * strength;
     for (const g of groups) {
       ctx.globalAlpha = g.alpha; ctx.lineWidth = g.width; ctx.beginPath();
       for (const line of g.lines) for (let i = 0; i < line.length; i += 2) {
-        let x = line[i], y = line[i + 1];
+        let x = line[i] + ox, y = line[i + 1] + oy;
         const px = x, py = y;
         if (lean > .05) { const vx = px - mx, vy = py - my, d = Math.hypot(vx, vy); if (d < REACH && d > .01) { const f = lean * (1 - d / REACH) ** 2 / d; x += vx * f; y += vy * f; } }
         for (const rp of ripples) {
@@ -116,7 +131,7 @@ export function createPatternField(host: HTMLElement, origin: number) {
     }
     ctx.globalAlpha = 1;
     if (hovering || strength > .01 || ripples.length) frame = requestAnimationFrame(draw);
-    else { host.removeAttribute('data-pattern-live'); sleepTimer = window.setTimeout(() => ctx.clearRect(0, 0, w, h), 400); }
+    else { awake = false; host.removeAttribute('data-pattern-live'); sleepTimer = window.setTimeout(() => ctx.clearRect(0, 0, w, h), 400); }
   };
   const local = (x: number, y: number) => { const box = host.getBoundingClientRect(); return [x - box.left, y - box.top] as const; };
   return {

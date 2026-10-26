@@ -60,7 +60,7 @@ export default function MotionLayer() {
   const fields=new Map<HTMLElement,ReturnType<typeof createPatternField>>();let overField:ReturnType<typeof createPatternField>|null=null;
   const fieldOf=(el:HTMLElement)=>{let f=fields.get(el);if(f&&!el.isConnected){f.destroy();fields.delete(el);f=undefined}
    for(const [k,v] of fields)if(!k.isConnected){v.destroy();fields.delete(k)}
-   if(!f){f=createPatternField(el,el.matches('.stat.featured')?0:-18);fields.set(el,f)}return f};
+   if(!f){f=el.matches('.stat.featured')?createPatternField(el,0,20):createPatternField(el,-18,26);fields.set(el,f)}return f};
   const hoverField=(el:HTMLElement|null)=>{const next=el&&root.dataset.pattern!=='none'?fieldOf(el):null;if(next!==overField){overField?.leave();overField=next;next?.enter()}};
   const onMove=(e:PointerEvent)=>{
    if(e.pointerType!=='mouse'||!pointerEffectsOn()){if(pointerOn){pointerOn=false;root.removeAttribute('data-pointer');hoverField(null)}return}

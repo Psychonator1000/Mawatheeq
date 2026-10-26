@@ -652,8 +652,9 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 :root :is(.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured)::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background:var(--pat) 0 0/var(--pat-w) var(--pat-h)}
 :root[data-pattern=none] :is(.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured)::before{display:none}
 /* The live pattern (pattern-field.ts) takes over from the still one while it is drawing. */
-.pattern-field{position:absolute;inset:0;z-index:-1;width:100%;height:100%;pointer-events:none;border-radius:inherit;opacity:0;transition:opacity .35s}
-[data-pattern-live]>.pattern-field{opacity:1}:root [data-pattern-live]::before{opacity:0!important;transition:opacity .35s}
+.pattern-field{position:absolute;inset:0;z-index:-1;width:100%;height:100%;pointer-events:none;border-radius:inherit;opacity:0}
+/* The two draw the same lines in the same place, so they swap at once; the breathing patches carry on over the live lines. */
+[data-pattern-live]>.pattern-field{opacity:1}:root:root:root [data-pattern-live]::before{-webkit-mask-image:radial-gradient(closest-side,#000,#0000),radial-gradient(closest-side,#000,#0000),linear-gradient(#0000,#0000);mask-image:radial-gradient(closest-side,#000,#0000),radial-gradient(closest-side,#000,#0000),linear-gradient(#0000,#0000)}
 :root :is(.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured)::before{opacity:.34;-webkit-mask-image:radial-gradient(closest-side,#000,#0000),radial-gradient(closest-side,#000,#0000),linear-gradient(#0000004d,#0000004d);mask-image:radial-gradient(closest-side,#000,#0000),radial-gradient(closest-side,#000,#0000),linear-gradient(#0000004d,#0000004d);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
  -webkit-mask-size:0 0,0 0,100% 100%;mask-size:0 0,0 0,100% 100%;animation:pattern-breathe 7s ease-in-out infinite,pattern-wander 49s step-end infinite;transition:opacity .5s,translate .9s cubic-bezier(.2,.8,.2,1),background-position .9s cubic-bezier(.2,.8,.2,1)}
 :root:root [data-sidebar=sidebar]::before{animation-delay:-17.5s}:root:root .stat.featured::before{animation-delay:-31.5s}
