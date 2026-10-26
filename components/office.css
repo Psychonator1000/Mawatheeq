@@ -561,7 +561,8 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .map-cabinet-name.grabbable{cursor:grab;touch-action:none;user-select:none;display:flex;align-items:center;justify-content:center;gap:4px}
 :root[data-motion=off] .map-cabinet{transition:none}
 .map-cabinet-name .icon-btn{width:22px;height:22px;opacity:.45}.map-cabinet-name .cabinet-rename-btn{margin-inline-start:auto}.map-cabinet:hover .map-cabinet-name .icon-btn{opacity:1}
-.cabinet-rename{flex:1;width:auto;min-width:60px;font:inherit;font-size:12px;padding:1px 6px;border:1px solid var(--brand);border-radius:6px;background:var(--card);text-align:center}
+.map-cabinet-name{min-width:0;overflow:hidden}.map-cabinet-name>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cabinet-rename{flex:1;width:100%;min-width:0;font:inherit;font-size:12px;padding:1px 6px;border:1px solid var(--brand);border-radius:6px;background:var(--card);text-align:center}
 .cabinet-plan,.cabinet-away{margin:8px 0 0;padding-inline-start:18px;display:grid;gap:4px;font-size:13px}
 .dispatch-view{margin:0 0 8px}.dispatch-view .chip{display:inline-flex;align-items:center;gap:6px}
 .dispatch-sheet .actions .field,.dispatch-done .field{min-width:250px}

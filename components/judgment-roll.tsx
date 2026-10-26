@@ -11,6 +11,7 @@ import {Field,DateField} from './shared';
 import {SelectList} from './filter-select';
 
 type Scope='shown'|'selected'|'all';
+const PREVIEW=150;
 const COLUMNS_KEY='mawatheeq.roll-columns.v1',LAYOUT_KEY='mawatheeq.roll-layout.v1';
 type Layout='cards'|'table';
 const savedLayout=():Layout=>{try{return localStorage.getItem(LAYOUT_KEY)==='table'?'table':'cards'}catch{return 'cards'}};
@@ -41,7 +42,10 @@ export default function JudgmentRoll({shown,selected,all,shownLabel,toRow,printe
   for(const k of ['client','lawyer','court','outcome','status','level'] as const)if(filter[k])parts.push(filter[k]);
   if(filter.category)parts.push({execution:'التنفيذ',insurance:'التأمين',telecom:'الاتصالات'}[filter.category]||filter.category);
   if(group)parts.push('مجمّعة حسب '+ROLL_GROUPS.find(g=>g[0]===group)![1]);return parts.join(' · ')};
- const html=useMemo(()=>layout==='cards'?rollCardsHtml(title.trim()||'رول الأحكام',describe(),groupRoll(rows,group).map(([g,list])=>[g,list.map(r=>toCard(r,columns))]),formatDate(todayISO()),printedBy):judgmentRollHtml(title.trim()||'رول الأحكام',describe(),columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![1]),groupRoll(rows,group).map(([g,list])=>[g,list.map(r=>columns.map(c=>rollCell(r,c)))]),formatDate(todayISO()),printedBy,columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![3])),[rows,group,columns,title,scope,filter,layout]);// eslint-disable-line react-hooks/exhaustive-deps
+ const build=(list:RollCase[])=>layout==='cards'?rollCardsHtml(title.trim()||'رول الأحكام',describe(),groupRoll(list,group).map(([g,list])=>[g,list.map(r=>toCard(r,columns))]),formatDate(todayISO()),printedBy):judgmentRollHtml(title.trim()||'رول الأحكام',describe(),columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![1]),groupRoll(list,group).map(([g,list])=>[g,list.map(r=>columns.map(c=>rollCell(r,c)))]),formatDate(todayISO()),printedBy,columns.map(c=>ROLL_COLUMNS.find(x=>x[0]===c)![3]));
+ const html=useMemo(()=>build(rows),[rows,group,columns,title,scope,filter,layout]);// eslint-disable-line react-hooks/exhaustive-deps
+ // The preview shows the first cases only, so a long roll stays light on screen; printing always includes every case.
+ const preview=useMemo(()=>rows.length<=PREVIEW?html:build(rows.slice(0,PREVIEW)),[html,rows]);// eslint-disable-line react-hooks/exhaustive-deps
  const select=(label:string,k:keyof RollFilter,list:string[]|[string,string][],all='الكل')=><label className="field"><span>{label}</span><SelectList aria-label={label} value={filter[k]} onChange={e=>setF(k,e.target.value)}><option value="">{all}</option>{list.map(o=>Array.isArray(o)?<option key={o[0]} value={o[0]}>{o[1]}</option>:<option key={o} value={o}>{o}</option>)}</SelectList></label>;
  return <Dialog open onOpenChange={v=>{if(!v)onClose()}}><DialogContent dir="rtl" className="office-dialog roll-dialog"><DialogHeader><DialogTitle>رول الأحكام</DialogTitle><DialogDescription>اختر القضايا وصفِّها وحدد الأعمدة، وراجع الرول قبل الطباعة. يُطبع أفقياً دون عنوان الموقع.</DialogDescription></DialogHeader>
   <div className="roll-top">
@@ -60,7 +64,7 @@ export default function JudgmentRoll({shown,selected,all,shownLabel,toRow,printe
     <DateField label="أحكام من تاريخ" value={filter.from} onChange={v=>setF('from',v)}/><DateField label="أحكام إلى تاريخ" value={filter.to} onChange={v=>setF('to',v)}/>
     {select('سنة الحكم','year',options.years,'كل السنوات')}{select('شهر الحكم','month',MONTH_NAMES.map((m,i)=>[String(i+1).padStart(2,'0'),m] as [string,string]),'كل الأشهر')}
     <DateField label="جلسات من تاريخ" value={filter.hearingFrom} onChange={v=>setF('hearingFrom',v)}/><DateField label="جلسات إلى تاريخ" value={filter.hearingTo} onChange={v=>setF('hearingTo',v)}/>
-    {select('الموكل','client',options.clients,'كل الموكلين')}{select('المحامي','lawyer',options.lawyers,'كل المحامين')}
+    {select('الموكل','client',options.clients,'كل الموكلين')}{select('المستشار','lawyer',options.lawyers,'كل المستشارين')}
     {select('المحكمة','court',options.courts,'كل المحاكم')}{select('التصنيف','category',[['execution','التنفيذ'],['insurance','التأمين'],['telecom','الاتصالات']],'كل التصنيفات')}
     {select('نتيجة الحكم','outcome',options.outcomes)}{select('حالة الملف','status',options.statuses)}{select('درجة التقاضي','level',options.levels)}
    </div>
@@ -70,7 +74,7 @@ export default function JudgmentRoll({shown,selected,all,shownLabel,toRow,printe
    <div className="roll-columns">{ROLL_COLUMNS.map(([id,label])=><label key={id} className={'roll-choice'+(columns.includes(id)?' on':'')}><input type="checkbox" checked={columns.includes(id)} onChange={e=>pickColumns(e.target.checked?[...columns,id]:columns.filter(c=>c!==id))}/><span>{label}</span></label>)}</div>
    <div className="actions"><button type="button" className="btn" onClick={()=>pickColumns(ROLL_COLUMNS.map(c=>c[0]))}>كل الأعمدة</button><button type="button" className="btn" onClick={()=>pickColumns(DEFAULT_ROLL_COLUMNS)}>الأعمدة المعتادة</button></div>
   </section>}
-  <iframe className="roll-preview" title="معاينة رول الأحكام" sandbox="" srcDoc={html}/>
+  <iframe className="roll-preview" title="معاينة رول الأحكام" sandbox="" srcDoc={preview}/>{rows.length>PREVIEW&&<p className="subtitle roll-preview-note">المعاينة تعرض أول {PREVIEW} قضية؛ الطباعة تشمل الـ {rows.length} كلها.</p>}
   <div className="actions">{canPrint?<button className="btn primary" disabled={!rows.length||!columns.length} onClick={()=>{if(!printHtml(html))toast.error('تعذر فتح نافذة الطباعة.')}}><Printer/> طباعة الرول ({rows.length})</button>:<p className="subtitle">الطباعة غير متاحة لحسابك؛ اطلبها من مسؤول المكتب.</p>}<button className="btn" onClick={onClose}>إغلاق</button></div>
  </DialogContent></Dialog>;
 }

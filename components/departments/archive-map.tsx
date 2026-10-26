@@ -69,15 +69,20 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
  // into another room. Its drawers take the room's name, and each cabinet keeps its column and its place in it (column ×
  // 100 + row). It shows at once while it saves.
  const latest=useRef(new Map<string,ArchiveLocation>());
- const [arranged,setArranged]=useState<Map<string,{patch:Partial<LocationData>;base:ArchiveLocation}>>(()=>new Map());
- const placed=useMemo(()=>locations.map(l=>{const o=arranged.get(l.id);return o&&o.base===l?{...l,payload:{...l.payload,...o.patch}}:l}),[locations,arranged]);
+ // A shown change stays until the server holds it: while its save is pending (rev Infinity), then up to the revision
+ // that save produced. A newer revision (someone else's change) wins.
+ const [arranged,setArranged]=useState<Map<string,{patch:Partial<LocationData>;rev:number}>>(()=>new Map());
+ const placed=useMemo(()=>locations.map(l=>{const o=arranged.get(l.id);return o&&l.revision<=o.rev?{...l,payload:{...l.payload,...o.patch}}:l}),[locations,arranged]);
+ const [saving,setSaving]=useState(false);
  // Changes to many places at once (arranging, renaming): they show at once, save one by one, and go back if a save fails.
  async function patchPlaces(changes:{l:ArchiveLocation;patch:Partial<LocationData>}[],done:string){
   // Saves build on the latest saved copy of each place, so arranging again before the list reloads never sends an old revision.
-  if(!changes.length)return;const bases=new Map(locations.map(l=>{const f=latest.current.get(l.id);return [l.id,f&&f.revision>l.revision?f:l]}));
-  setArranged(prev=>{const n=new Map(prev);for(const c of changes)n.set(c.l.id,{patch:{...prev.get(c.l.id)?.patch,...c.patch},base:bases.get(c.l.id)!});return n});
-  try{for(const c of changes){const l=bases.get(c.l.id)!;const r=await save({...l,payload:{...l.payload,...c.patch}} as unknown as DepartmentRecord<LocationData>);latest.current.set(r.id,r as unknown as ArchiveLocation)}toast.success(done);onChanged()}
-  catch(e){setArranged(prev=>{const n=new Map(prev);for(const c of changes)n.delete(c.l.id);return n});toast.error((e as Error).message);onChanged()}}
+  if(!changes.length)return;setSaving(true);const bases=new Map(locations.map(l=>{const f=latest.current.get(l.id);return [l.id,f&&f.revision>l.revision?f:l]}));
+  setArranged(prev=>{const n=new Map(prev);for(const c of changes)n.set(c.l.id,{patch:{...prev.get(c.l.id)?.patch,...c.patch},rev:Infinity});return n});
+  try{for(const c of changes){const l=bases.get(c.l.id)!;const r=await save({...l,payload:{...l.payload,...c.patch}} as unknown as DepartmentRecord<LocationData>);latest.current.set(r.id,r as unknown as ArchiveLocation);
+    setArranged(prev=>{const n=new Map(prev),o=n.get(r.id);if(o)n.set(r.id,{...o,rev:r.revision});return n})}toast.success(done);onChanged()}
+  catch(e){setArranged(prev=>{const n=new Map(prev);for(const c of changes)n.delete(c.l.id);return n});toast.error((e as Error).message);onChanged()}
+  finally{setSaving(false)}}
  const [renaming,setRenaming]=useState<{room:string;cab:string;value:string}|null>(null);
  function rename(){const r=renaming;setRenaming(null);if(!r)return;const value=r.value.trim(),room=rooms.find(x=>x.name===r.room),c=room?.cabinets.find(x=>x.name===r.cab);
   if(!room||!c||value===c.name)return;if(room.cabinets.some(x=>x.name===value)){toast.error(`يوجد في ${r.room} خزانة باسم ${value||'«بلا خزانة»'}.`);return}
@@ -97,7 +102,8 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
   cols.filter(col=>col.length).forEach((col,ci)=>col.forEach((c,ri)=>{for(const l of c.slots){const name=roomName(to.into),position=String((ci+1)*100+ri);if(l.payload.name!==name||(l.payload.position||'')!==position)changes.push({l,patch:{name,position}})}}));
   void patchPlaces(changes,`${moving.name?cabinetLabel(moving.name):'الأدراج بلا خزانة'}: ${fromRoom===to.into?'رُتّبت':'نُقلت إلى '+to.into}`)}
  function grabCabinet(room:string,c:Cabinet,e:React.PointerEvent<HTMLElement>){
-  if(!canEdit||e.button!==0||(e.target as HTMLElement).closest('button'))return;
+  if(!canEdit||e.button!==0||(e.target as HTMLElement).closest('button,input'))return;
+  if(saving){toast.message('يُحفظ الترتيب السابق… لحظة ثم أعد المحاولة.');return}
   const box=(e.currentTarget.closest('.map-cabinet') as HTMLElement).getBoundingClientRect(),sx=e.clientX,sy=e.clientY;let started=false;
   const label=(c.name?cabinetLabel(c.name):'بلا خزانة')+` · ${c.slots.length} ${c.slots.length>2&&c.slots.length<11?'أدراج':'درج'}`;
   // Over a cabinet: above or under it by which half the pointer is on. Over a column's empty end: under its last cabinet.
@@ -118,7 +124,8 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
  const rooms=useMemo<Room[]>(()=>{const m=new Map<string,Map<string,ArchiveLocation[]>>();
   for(const l of placed.filter(l=>closed||!l.archived).sort(byCode)){const r=l.payload.name||'بلا غرفة',c=l.payload.cabinet||'';if(!m.has(r))m.set(r,new Map());const cm=m.get(r)!;if(!cm.has(c))cm.set(c,[]);cm.get(c)!.push(l)}
   // A cabinet never arranged stands in its own column, after the arranged ones, in code order.
-  const pos=(slots:ArchiveLocation[])=>Math.min(...slots.map(l=>Number(l.payload.position)||Infinity));
+  // A cabinet stands where most of its drawers say, so one left half-saved still shows in one place.
+  const pos=(slots:ArchiveLocation[])=>{const n=new Map<number,number>();for(const l of slots){const p=Number(l.payload.position)||Infinity;n.set(p,(n.get(p)||0)+1)}return [...n].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0]?.[0]??Infinity};
   return [...m].map(([name,cm])=>{const cabs=[...cm].map(([c,slots],i)=>{const p=pos(slots);return {c:{name:c,slots},col:Number.isFinite(p)?Math.floor(p/100):1e6+i,row:Number.isFinite(p)?p%100:0}});
    const cols=new Map<number,typeof cabs>();for(const x of cabs){if(!cols.has(x.col))cols.set(x.col,[]);cols.get(x.col)!.push(x)}
    const columns=[...cols].sort((a,b)=>a[0]-b[0]).map(([,xs])=>xs.sort((a,b)=>a.row-b.row).map(x=>x.c));
@@ -145,7 +152,7 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
   {!rooms.length?<Empty title="لا توجد أماكن حفظ" text="أضف خزانة بأدراجها؛ يظهر هنا رسم الغرفة وما في كل درج."/>
   :<div className="map-body"><div className="map-rooms">{rooms.map(r=><section key={r.name} className={'map-room'+(cab&&cab.into===r.name&&cab.col===null?' cab-into':'')} aria-label={r.name} data-room={r.name}><h3><MapPin size={15} aria-hidden/> {r.name}</h3><div className="map-cabinets">
     {r.columns.map((col,ci)=><div key={ci} className={'map-column'+(cab&&cab.into===r.name&&cab.col===ci&&cab.at===null?' cab-end':'')} data-room={r.name} data-col={ci}>{col.map(c=><div key={c.name} className={'map-cabinet'+(cab&&cab.phase!=='back'&&cab.room===r.name&&cab.cab===c.name?' lifted':'')+(cab&&cab.into===r.name&&cab.at!==null&&cab.at===c.name?' cab-'+cab.side:'')} data-room={r.name} data-cabinet={c.name}>
-     <b className={'map-cabinet-name'+(canEdit?' grabbable':'')} onPointerDown={canEdit?e=>grabCabinet(r.name,c,e):undefined} title={canEdit?'اسحب الخزانة لترتيبها أو نقلها إلى غرفة أخرى':undefined}>{canEdit&&<GripVertical size={13} className="map-grip" aria-hidden/>}{renaming&&renaming.room===r.name&&renaming.cab===c.name?<input className="cabinet-rename" autoFocus aria-label="اسم الخزانة" value={renaming.value} onPointerDown={e=>e.stopPropagation()} onChange={e=>setRenaming({...renaming,value:e.target.value})} onBlur={rename} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();rename()}else if(e.key==='Escape'){e.stopPropagation();setRenaming(null)}}}/>:<span>{c.name?cabinetLabel(c.name):'بلا خزانة'}</span>}{canEdit&&!renaming&&<button type="button" className="icon-btn cabinet-rename-btn" aria-label={'تسمية '+(c.name?cabinetLabel(c.name):'الأدراج بلا خزانة')} title="تغيير اسم الخزانة" onClick={()=>setRenaming({room:r.name,cab:c.name,value:c.name})}><Pencil size={12}/></button>}{canEdit&&c.slots.some(l=>!l.archived)&&<button type="button" className="icon-btn cabinet-remove" aria-label={'إزالة '+(c.name?cabinetLabel(c.name):'الأدراج بلا خزانة')} title="إزالة الخزانة (عند استبدالها)" onClick={()=>setRemoving({room:r.name,cabinet:c})}><Trash2 size={13}/></button>}</b><div className="map-slots">{c.slots.map(l=>{const n=inside(l).length,cap=Number(l.payload.capacity)||0,pct=cap?Math.min(100,Math.round(n/cap*100)):0;
+     <b className={'map-cabinet-name'+(canEdit?' grabbable':'')} onPointerDown={canEdit?e=>grabCabinet(r.name,c,e):undefined} title={canEdit?'اسحب الخزانة لترتيبها أو نقلها إلى غرفة أخرى':undefined}>{canEdit&&<GripVertical size={13} className="map-grip" aria-hidden/>}{renaming&&renaming.room===r.name&&renaming.cab===c.name?<input className="cabinet-rename" autoFocus aria-label="اسم الخزانة" value={renaming.value} onPointerDown={e=>e.stopPropagation()} onChange={e=>setRenaming({...renaming,value:e.target.value})} onBlur={rename} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();rename()}else if(e.key==='Escape'){e.stopPropagation();setRenaming(null)}}}/>:<span>{c.name?cabinetLabel(c.name):'بلا خزانة'}</span>}{canEdit&&!renaming&&!saving&&<button type="button" className="icon-btn cabinet-rename-btn" aria-label={'تسمية '+(c.name?cabinetLabel(c.name):'الأدراج بلا خزانة')} title="تغيير اسم الخزانة" onClick={()=>setRenaming({room:r.name,cab:c.name,value:c.name})}><Pencil size={12}/></button>}{canEdit&&!renaming&&c.slots.some(l=>!l.archived)&&<button type="button" className="icon-btn cabinet-remove" aria-label={'إزالة '+(c.name?cabinetLabel(c.name):'الأدراج بلا خزانة')} title="إزالة الخزانة (عند استبدالها)" onClick={()=>setRemoving({room:r.name,cabinet:c})}><Trash2 size={13}/></button>}</b><div className="map-slots">{c.slots.map(l=>{const n=inside(l).length,cap=Number(l.payload.capacity)||0,pct=cap?Math.min(100,Math.round(n/cap*100)):0;
      return <button type="button" key={l.id} id={'slot-'+l.id} className={'map-slot'+(picked===l.id?' on':'')+(lit===l.id?' lit':'')+(awaits===l.id?' awaits':'')+(over===l.id?' over':'')+(landed===l.id?' landed':'')+(cap&&n>=cap?' full':pct>=75?' busy':'')+(l.archived?' closed':'')} aria-pressed={picked===l.id} aria-label={`${l.payload.code} · ${slotName(l)}: ${n} ملف`} onClick={()=>setPicked(p=>p===l.id?'':l.id)}
       data-slot={l.id}>
       <span className="map-slot-name">{slotName(l)}</span><span className="map-slot-count">{n}{cap?<small>/{cap}</small>:null}</span>{cap>0&&<i style={{width:pct+'%'}} aria-hidden/>}<small className="map-slot-code" dir="ltr">{l.payload.code}</small></button>})}</div></div>)}</div>)}</div></section>)}</div>

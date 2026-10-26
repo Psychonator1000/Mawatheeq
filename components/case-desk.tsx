@@ -86,7 +86,7 @@ function PostingErrors(p:Props){
   </>}
  </Panel>;
 }
-function useLawyerFilter(records:CaseRecord[]){const [lawyer,setLawyer]=useState('');const options=lawyersOf(records);return {lawyer,match:(c:CaseRecord)=>!lawyer||String(c.lawyer||'').trim()===lawyer,select:options.length>0&&<OfficeSelect label="المحامي" value={lawyer} onChange={setLawyer} options={[['','كل المحامين'],...options.map(l=>[l,l] as [string,string])]}/>}}
+function useLawyerFilter(records:CaseRecord[]){const [lawyer,setLawyer]=useState('');const options=lawyersOf(records);return {lawyer,match:(c:CaseRecord)=>!lawyer||String(c.lawyer||'').trim()===lawyer,select:options.length>0&&<OfficeSelect label="المستشار" value={lawyer} onChange={setLawyer} options={[['','كل المستشارين'],...options.map(l=>[l,l] as [string,string])]}/>}}
 function Roll(p:Props){
  const [from,setFrom]=useState(todayISO()),[to,setTo]=useState(shiftDays(todayISO(),6)),law=useLawyerFilter(p.records);
  const rows=sittingsBetween(p.records,from,to||from).filter(s=>law.match(s.c));

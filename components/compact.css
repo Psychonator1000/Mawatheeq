@@ -443,10 +443,11 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 .desk-roll-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}.desk-roll-top .desk-toolbar{flex:1;margin:0}
 .desk-bare>.roll-actions,.desk-panel .roll-actions{justify-content:flex-start;margin-top:auto;padding-top:10px}.roll-dialog>.desk-bare>.empty-state,.roll-dialog>.desk-bare>.empty{flex:1 1 auto}
 .desk-panel .roll-preview{width:100%;height:60vh;border:1px solid var(--border);border-radius:12px;background:#fff}
-/* Roll windows cover most of the screen, so they carry their own slow glow in place of the page's moving background. */
+/* Roll windows cover most of the screen, so they carry their own soft glow in place of the page's background. It stays
+   still: a moving layer behind a preview of hundreds of cases made the whole page heavy. */
 .roll-dialog{isolation:isolate}
-.roll-dialog::before{content:'';position:absolute;inset:-25%;z-index:-1;pointer-events:none;background:radial-gradient(38% 32% at 18% 12%,color-mix(in srgb,var(--brand) 11%,transparent),transparent 70%),radial-gradient(34% 30% at 86% 84%,color-mix(in srgb,#c9a24a 14%,transparent),transparent 70%),radial-gradient(30% 26% at 60% 40%,color-mix(in srgb,var(--brand) 6%,transparent),transparent 70%);animation:drift-one 30s ease-in-out infinite alternate}
-:root[data-motion=off] .roll-dialog::before{animation:none}
+.roll-dialog::before{content:'';position:absolute;inset:-25%;z-index:-1;pointer-events:none;background:radial-gradient(38% 32% at 18% 12%,color-mix(in srgb,var(--brand) 11%,transparent),transparent 70%),radial-gradient(34% 30% at 86% 84%,color-mix(in srgb,#c9a24a 14%,transparent),transparent 70%),radial-gradient(30% 26% at 60% 40%,color-mix(in srgb,var(--brand) 6%,transparent),transparent 70%)}
+.roll-dialog .roll-preview{contain:strict}
  .roll-dialog>.desk-bare>:is(.table-wrap,.desk-days){flex:1 1 auto!important;min-height:120px;overflow:auto;overscroll-behavior:contain}
  .roll-dialog .desk-days{display:flex;flex-direction:column;gap:14px}.roll-dialog .desk-days>*{flex-shrink:0;margin:0}
  .roll-dialog .desk-bare .table-wrap [data-slot=table-container]{overflow:visible}

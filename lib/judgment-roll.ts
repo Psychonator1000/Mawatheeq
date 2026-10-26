@@ -13,7 +13,7 @@ export const ROLL_COLUMNS: [RollColumn, string, boolean, number][] = [
   ['client', 'الموكل وصفته', true, 2], ['opponent', 'الخصم', true, 1.8], ['court', 'المحكمة / الدائرة / الدور', true, 2], ['subject', 'موضوع الدعوى', true, 1.8],
   ['date', 'تاريخ الحكم', true, 1.3], ['type', 'نوع الحكم', true, 1.1], ['outcome', 'النتيجة', true, 1], ['remaining', 'المتبقي للطعن', true, 1.1],
   ['status', 'حالة الملف', true, 1.3], ['appeal', 'حالة الطعن', false, 1.1], ['lastAction', 'آخر إجراء', true, 2], ['nextHearing', 'الجلسة القادمة', true, 1.6],
-  ['lawyer', 'المحامي', true, 1.1], ['executionStage', 'مرحلة التنفيذ', false, 1.3], ['notes', 'ملاحظات', false, 2.2],
+  ['lawyer', 'المستشار', true, 1.1], ['executionStage', 'مرحلة التنفيذ', false, 1.3], ['notes', 'ملاحظات', false, 2.2],
 ];
 export const DEFAULT_ROLL_COLUMNS = ROLL_COLUMNS.filter(c => c[2]).map(c => c[0]);
 
@@ -41,7 +41,7 @@ export function sortRoll(rows: RollCase[], sort: RollSort): RollCase[] {
   return [...rows].sort(by[sort]);
 }
 export type RollGroupKey = '' | 'client' | 'role' | 'type' | 'lawyer' | 'outcome' | 'status' | 'level' | 'month' | 'court' | 'hearing';
-export const ROLL_GROUPS: [RollGroupKey, string][] = [['', 'بدون تجميع'], ['court', 'المحكمة'], ['hearing', 'يوم الجلسة القادمة'], ['client', 'الموكل'], ['lawyer', 'المحامي'], ['month', 'شهر الحكم'], ['outcome', 'نتيجة الحكم'], ['status', 'حالة الملف'], ['level', 'درجة التقاضي'], ['type', 'نوع الحكم'], ['role', 'صفة الموكل']];
+export const ROLL_GROUPS: [RollGroupKey, string][] = [['', 'بدون تجميع'], ['court', 'المحكمة'], ['hearing', 'يوم الجلسة القادمة'], ['client', 'الموكل'], ['lawyer', 'المستشار'], ['month', 'شهر الحكم'], ['outcome', 'نتيجة الحكم'], ['status', 'حالة الملف'], ['level', 'درجة التقاضي'], ['type', 'نوع الحكم'], ['role', 'صفة الموكل']];
 const dmy = (iso: string) => /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : iso;
 /** Groups rows in their current order; rows without a value go to a final «غير محدد» group. */
 export function groupRoll(rows: RollCase[], key: RollGroupKey): [string, RollCase[]][] {

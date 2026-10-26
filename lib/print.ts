@@ -183,7 +183,7 @@ const ROLL_CARD_STYLE = `<style>
 function rollCard(n: number, c: RollCard): string {
   // Every label shows, empty or not, so the bands line up and each number keeps its name.
   const facts = c.facts.map(([k, v, sub]) => `<div><dt>${escape(k)}</dt><dd>${escape(v || '—')}${sub ? ` <small>${escape(sub)}</small>` : ''}</dd></div>`).join('');
-  return `<article class="rc"><div class="rc-n">${n}</div><div class="rc-main"><div class="rc-head"><span><small>الموكل</small> <b>${escape(c.client || '—')}</b>${c.role ? ` <em>(${escape(c.role)})</em>` : ''}</span><span class="rc-vs">ضد</span><span><small>الخصم</small> <b>${escape(c.opponent || '—')}</b></span>${c.lawyer ? `<span class="rc-lawyer"><small>المحامي</small> <b>أ/ ${escape(c.lawyer)}</b></span>` : ''}</div>`
+  return `<article class="rc"><div class="rc-n">${n}</div><div class="rc-main"><div class="rc-head"><span><small>الموكل</small> <b>${escape(c.client || '—')}</b>${c.role ? ` <em>(${escape(c.role)})</em>` : ''}</span><span class="rc-vs">ضد</span><span><small>الخصم</small> <b>${escape(c.opponent || '—')}</b></span>${c.lawyer ? `<span class="rc-lawyer"><small>المستشار</small> <b>أ/ ${escape(c.lawyer.replace(/^\s*[اأإ]\s*[/.]\s*/, ''))}</b></span>` : ''}</div>`
     + `${facts ? `<dl class="rc-facts">${facts}</dl>` : ''}${c.writeIn?.length ? `<div class="rc-write">${c.writeIn.map(w => `<small>${escape(w)}</small><span></span>`).join('')}</div>` : ''}</div>`
     + `<div class="rc-code"><small>الكود</small><b>${escape(c.code || '—')}</b></div></article>`;
 }

@@ -225,7 +225,7 @@ try{
  await page.getByText(/سُمّيت الخزانة «C»/).first().waitFor();await page.locator('.map-cabinet-name').getByText('خزانة C',{exact:true}).waitFor();
  await page.getByRole('button',{name:'إزالة خزانة C',exact:true}).click();{const dlg=page.getByRole('dialog',{name:'إزالة خزانة C'});
   await dlg.getByLabel('تُرفع من أماكنها وأضعها في الخزانة الجديدة لاحقاً بمسحها').check();await dlg.getByRole('button',{name:'رفع الملفات وإزالة الخزانة'}).click();await dlg.waitFor({state:'detached'});}
- await page.getByText(/أُزيلت خزانة C/).first().waitFor();assert.equal(await page.locator('.map-cabinet-name').getByText('خزانة C',{exact:true}).count(),0,'The removed cabinet leaves the map');
+ await page.getByText(/أُزيلت خزانة C/).first().waitFor();await page.locator('.map-cabinet-name').getByText('خزانة C',{exact:true}).waitFor({state:'detached'});
  await page.locator('.notice').getByText(/ملف بلا مكان حفظ/).waitFor();
  const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','move','move','move','move','return']);
  await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
