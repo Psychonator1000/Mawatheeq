@@ -6,6 +6,31 @@ import {normalizeSearch} from '@/lib/case-browse';
 export type FilterOption = { value: string; label: string; hint?: string };
 
 /**
+ * Where an open list is drawn: in the window, dialog or page that holds its box, not inside the box, so table scroll
+ * areas and the layers of animated rows and panels cannot clip or cover it. It opens on the side with more room, is
+ * never taller than the room it has, and follows the box while anything scrolls.
+ */
+export function useListHost(open:boolean,input:React.RefObject<HTMLInputElement|null>,list:React.RefObject<HTMLUListElement|null>,key:unknown){
+ const [host,setHost]=useState<HTMLElement|null>(null);
+ // Called as the list opens: the host is read from where the box sits at that moment.
+ const aim=()=>setHost((input.current?.closest('[role=dialog],[data-record-window]') as HTMLElement|null)||document.body);
+ useLayoutEffect(()=>{if(!open||!host)return;
+  const place=()=>{const el=input.current,ul=list.current;if(!el||!ul)return;
+   const r=el.getBoundingClientRect(),body=host===document.body,h=body?{top:-scrollY,left:-scrollX}:host.getBoundingClientRect();
+   const offTop=body?0:host.scrollTop-host.clientTop,offLeft=body?0:host.scrollLeft-host.clientLeft;
+   // The room the list may use: what is left of the dialog (or window) above and below the box.
+   const view=body?{top:0,bottom:innerHeight}:{top:Math.max(h.top,0),bottom:Math.min(h.top+host.clientHeight,innerHeight)};
+   const below=view.bottom-r.bottom-10,above=r.top-view.top-10,full=ul.scrollHeight,up=below<Math.min(full,300)&&above>below;
+   const height=Math.max(Math.min(full,300,up?above:below),96);
+   Object.assign(ul.style,{position:'absolute',insetInline:'auto',left:r.left-h.left+offLeft+'px',width:Math.max(r.width,200)+'px',maxHeight:height+'px',
+    top:(up?r.top-h.top+offTop-Math.min(full,height)-4:r.bottom-h.top+offTop+4)+'px',zIndex:'1000'});
+   ul.classList.toggle('more',full>height)};
+  place();addEventListener('scroll',place,true);addEventListener('resize',place);
+  return()=>{removeEventListener('scroll',place,true);removeEventListener('resize',place)}},[open,host,key,input,list]);
+ return {host:open?host:null,aim};
+}
+
+/**
  * Every list in the app: a box you can type into, where typing only narrows the list and the value is always one of
  * the options (or empty when `empty` is given). A saved value that is not on the list shows as written until another
  * one is picked. The input carries the chosen value in `data-value`.
@@ -13,19 +38,8 @@ export type FilterOption = { value: string; label: string; hint?: string };
 export function FilterBox({label,value,onChange,options,empty,placeholder='اكتب للبحث أو اختر',disabled=false,className='',id}:{label:string;value:string;onChange:(v:string)=>void;options:FilterOption[];empty?:string;placeholder?:string;disabled?:boolean;className?:string;id?:string}) {
  const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[active,setActive]=useState(0);
  const listId=useId(),input=useRef<HTMLInputElement>(null),list=useRef<HTMLUListElement>(null),closing=useRef<ReturnType<typeof setTimeout>>(undefined);
- // The open list is drawn in the window, dialog or page that holds the box, not inside it, so table scroll areas and the
- // layers of animated rows and panels cannot clip or cover it. It follows the box while anything scrolls.
- const [host,setHost]=useState<HTMLElement|null>(null);
- const show=()=>{if(!open)setHost((input.current?.closest('[role=dialog],[data-record-window]') as HTMLElement|null)||document.body);setOpen(true)};
- useLayoutEffect(()=>{if(!open||!host)return;
-  const place=()=>{const el=input.current,ul=list.current;if(!el||!ul)return;
-   const r=el.getBoundingClientRect(),body=host===document.body,h=body?{top:-scrollY,left:-scrollX}:host.getBoundingClientRect();
-   const offTop=body?0:host.scrollTop-host.clientTop,offLeft=body?0:host.scrollLeft-host.clientLeft;
-   const below=innerHeight-r.bottom,height=Math.min(ul.scrollHeight,260),up=below<height+12&&r.top>below;
-   Object.assign(ul.style,{position:'absolute',insetInline:'auto',left:r.left-h.left+offLeft+'px',width:Math.max(r.width,200)+'px',
-    top:(up?r.top-h.top+offTop-height-4:r.bottom-h.top+offTop+4)+'px',zIndex:'1000'})};
-  place();addEventListener('scroll',place,true);addEventListener('resize',place);
-  return()=>{removeEventListener('scroll',place,true);removeEventListener('resize',place)}},[open,host,query]);
+ const {host,aim}=useListHost(open,input,list,query);
+ const show=()=>{if(!open)aim();setOpen(true)};
  // Escape closes only the open list. Dialogs listen for Escape on the document while capturing, so this listens earlier, on the window.
  useEffect(()=>{if(!open)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape'&&e.target===input.current){e.stopPropagation();e.preventDefault();setOpen(false);setQuery('')}};
   window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true)},[open]);

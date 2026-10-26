@@ -23,8 +23,14 @@ type Room={name:string;cabinets:{name:string;slots:ArchiveLocation[]}[]};
  * with how full they are. Searching a file lights up the drawer it sits in; picking a drawer lists its files and lets
  * you place files there by scanning them, one after another.
  */
-export default function ArchiveMap({locations,files,custody,cases,canEdit,canPrint,caseRef,onEdit,onAdd,onStocktake,onChanged}:{locations:ArchiveLocation[];files:ArchiveFile[];custody:Map<string,Custody>;cases:CaseSummary[];canEdit:boolean;canPrint:boolean;caseRef:(f:ArchiveFile)=>string;onEdit:(l:ArchiveLocation)=>void;onAdd?:()=>void;onStocktake:(l:ArchiveLocation)=>void;onChanged:()=>void}){
+export default function ArchiveMap({locations,files,custody:stored,cases,canEdit,canPrint,caseRef,onEdit,onAdd,onStocktake,onChanged}:{locations:ArchiveLocation[];files:ArchiveFile[];custody:Map<string,Custody>;cases:CaseSummary[];canEdit:boolean;canPrint:boolean;caseRef:(f:ArchiveFile)=>string;onEdit:(l:ArchiveLocation)=>void;onAdd?:()=>void;onStocktake:(l:ArchiveLocation)=>void;onChanged:()=>void}){
  const [closed,setClosed]=useState(false),[q,setQ]=useState(''),[found,setFound]=useState<ArchiveFile|null>(null),[picked,setPicked]=useState<string>(''),[cabinet,setCabinet]=useState(false);
+ // A move shows at once: the file sits in its new drawer while the save goes out, and goes back if the save fails.
+ // Each shown move lasts until fresh records for that file arrive.
+ const [moved,setMoved]=useState<Map<string,{to:string;base:Custody|undefined}>>(()=>new Map());
+ const custody=useMemo(()=>{const live=[...moved].filter(([id,m])=>stored.get(id)===m.base);if(!live.length)return stored;
+  const map=new Map(stored);for(const [id,m] of live)map.set(id,{...m.base!,locationId:m.to});return map},[stored,moved]);
+ const shift=(f:ArchiveFile,to:string|null)=>setMoved(prev=>{const next=new Map(prev);if(to===null)next.delete(f.id);else next.set(f.id,{to,base:stored.get(f.id)});return next});
  const cu=(f:ArchiveFile)=>custody.get(f.id)!;
  const [over,setOver]=useState<string>(''),[landed,setLanded]=useState<string>('');
  // Picking a file up: it leaves its row as a card that follows the pointer, and drops into the drawer under it.
@@ -52,9 +58,10 @@ export default function ArchiveMap({locations,files,custody,cases,canEdit,canPri
  async function moveTo(f:ArchiveFile,l:ArchiveLocation){const c=cu(f);
   if(c.locationId===l.id)return;
   if(c.state!=='in'){toast.error(`${f.payload.number} ليس في الأرشيف الآن (${CUSTODY_STATES[c.state]}${c.holder?': '+c.holder:''}).`);return}
+  shift(f,l.id);setLanded(l.id);setTimeout(()=>setLanded(''),900);
   try{await save({...newDepartmentRecord('archive','movement',{type:'move',date:todayISO(),holder:'',holderId:'',purpose:'',dueDate:'',locationId:l.id,notes:'نُقل إلى '+l.payload.code}),caseId:f.caseId,subjectId:f.id} as unknown as DepartmentRecord<ArchiveMovement['payload']>);
-   setLanded(l.id);setTimeout(()=>setLanded(''),900);toast.success(`نُقل ${f.payload.number} إلى ${slotName(l)}`);onChanged()}catch(e){toast.error((e as Error).message)}}
- async function unplace(f:ArchiveFile){try{await departmentRequest('unplace_file',{workspace:'archive',fileId:f.id});toast.success(`رُفع ${f.payload.number} من مكانه`);onChanged()}catch(e){toast.error((e as Error).message)}}
+   toast.success(`نُقل ${f.payload.number} إلى ${slotName(l)}`);onChanged()}catch(e){shift(f,null);toast.error((e as Error).message)}}
+ async function unplace(f:ArchiveFile){shift(f,'');try{await departmentRequest('unplace_file',{workspace:'archive',fileId:f.id});toast.success(`رُفع ${f.payload.number} من مكانه`);onChanged()}catch(e){shift(f,null);toast.error((e as Error).message)}}
  const rooms=useMemo<Room[]>(()=>{const m=new Map<string,Map<string,ArchiveLocation[]>>();
   for(const l of locations.filter(l=>closed||!l.archived).sort(byCode)){const r=l.payload.name||'بلا غرفة',c=l.payload.cabinet||'';if(!m.has(r))m.set(r,new Map());const cm=m.get(r)!;if(!cm.has(c))cm.set(c,[]);cm.get(c)!.push(l)}
   return [...m].map(([name,cm])=>({name,cabinets:[...cm].map(([c,slots])=>({name:c,slots}))}))},[locations,closed]);
