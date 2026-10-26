@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
-import {BACKDROPS,CURSORS,DENSITIES,FONTS,DEFAULT_APPEARANCE,FOLLOWERS,MODES,MOTION_LEVELS,PERFORMANCE,liteMode,liteReason,markedSlow,clearSlow,TEXT_SIZES,THEMES,isHidden,loadAppearance,saveAppearance,type Appearance} from '@/lib/appearance';
+import {BACKDROPS,CURSORS,DENSITIES,FONTS,DEFAULT_APPEARANCE,FOLLOWERS,MODES,MOTION_LEVELS,PATTERNS,PERFORMANCE,liteMode,liteReason,markedSlow,clearSlow,TEXT_SIZES,THEMES,isHidden,loadAppearance,saveAppearance,type Appearance} from '@/lib/appearance';
 
 /** Colour theme, background animation and motion level; saved on this device and applied instantly. */
 export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
@@ -15,6 +15,7 @@ export default function AppearanceDialog({onClose}:{onClose:()=>void}) {
   {group('theme','لون الواجهة',visibleThemes,true)}
   {group('mode','فاتح أو داكن',MODES)}
   {group('backdrop','الخلفية المتحركة',BACKDROPS)}
+  {group('pattern','نقش اللوحات الملونة',PATTERNS)}
   {group('motion','مستوى الحركة',MOTION_LEVELS)}
   {group('performance','الأداء',PERFORMANCE)}
   {value.performance==='auto'&&liteMode(value)&&<div className="perf-reason"><p className="subtitle">الوضع الخفيف مفعّل تلقائياً على هذا الجهاز: {liteReason()}</p>

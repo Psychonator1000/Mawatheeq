@@ -64,12 +64,19 @@ export const PERFORMANCE = {
   lite: { label: 'خفيف', hint: 'بدون خلفية متحركة أو تأثيرات زجاجية؛ أسرع على الأجهزة القديمة' },
   full: { label: 'كامل', hint: 'كل المؤثرات دائماً' },
 } as const;
+export const PATTERNS = {
+  pinstripe: { label: 'خطوط مائلة', hint: 'خطوط رفيعة كقماش البدلة الرسمية' },
+  grid: { label: 'شبكة دقيقة', hint: 'مربعات مسطرة بعلامات صغيرة كمخطط هندسي' },
+  columns: { label: 'أعمدة', hint: 'خطوط عمودية كأعمدة قاعة المحكمة' },
+  stars: { label: 'نجوم ثمانية', hint: 'نقش هندسي من نجوم متشابكة' },
+  none: { label: 'بدون نقش' },
+} as const;
 export const CURSORS = {
   themed: { label: 'بألوان السمة', hint: 'مؤشر الفأرة يتلون مع السمة' },
   system: { label: 'مؤشر النظام' },
 } as const;
-export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; font: keyof typeof FONTS; density: keyof typeof DENSITIES; mode: keyof typeof MODES; performance: keyof typeof PERFORMANCE; follower: keyof typeof FOLLOWERS; cursor: keyof typeof CURSORS; unlocked: string[]; previous?: keyof typeof THEMES };
-export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', font: 'gulf', density: 'comfortable', mode: 'auto', performance: 'auto', follower: 'ring', cursor: 'themed', unlocked: [] };
+export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; font: keyof typeof FONTS; density: keyof typeof DENSITIES; mode: keyof typeof MODES; performance: keyof typeof PERFORMANCE; follower: keyof typeof FOLLOWERS; cursor: keyof typeof CURSORS; pattern: keyof typeof PATTERNS; unlocked: string[]; previous?: keyof typeof THEMES };
+export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', font: 'gulf', density: 'comfortable', mode: 'auto', performance: 'auto', follower: 'ring', cursor: 'themed', pattern: 'pinstripe', unlocked: [] };
 /** Themes whose own look is dark. */
 const DARK_NATIVE = new Set<string>(['noir', 'phantom']);
 /**
@@ -101,6 +108,7 @@ export function loadAppearance(): Appearance {
       performance: saved.performance in PERFORMANCE ? saved.performance : DEFAULT_APPEARANCE.performance,
       follower: saved.follower in FOLLOWERS ? saved.follower : DEFAULT_APPEARANCE.follower,
       cursor: saved.cursor in CURSORS ? saved.cursor : DEFAULT_APPEARANCE.cursor,
+      pattern: saved.pattern in PATTERNS ? saved.pattern : DEFAULT_APPEARANCE.pattern,
       unlocked: Array.isArray(saved.unlocked) ? saved.unlocked.filter((t: string) => t in THEMES) : [],
       previous: saved.previous in THEMES ? saved.previous : undefined,
     };
@@ -110,7 +118,7 @@ export function applyAppearance(a: Appearance) {
   const root = document.documentElement;
   const view = resolveTheme(a);
   root.dataset.theme = view.theme; root.dataset.backdrop = a.backdrop; root.dataset.motion = a.motion; root.dataset.text = a.text; root.dataset.font = a.font; root.dataset.density = a.density;
-  root.dataset.follower = a.follower; root.dataset.cursor = a.cursor;
+  root.dataset.follower = a.follower; root.dataset.cursor = a.cursor; root.dataset.pattern = a.pattern;
   if (liteMode(a)) root.dataset.perf = 'lite'; else delete root.dataset.perf;
   if (view.mode) root.dataset.mode = view.mode; else delete root.dataset.mode;
   if (a.cursor === 'themed') applyThemedCursor(view.theme, view.dark); else { root.style.removeProperty('--cursor-arrow'); root.style.removeProperty('--cursor-hand'); }

@@ -10,7 +10,8 @@ import './themes.css';
 const RIPPLE='.btn,.icon-btn,.nav-button,.office-card,.stat,.workspace-option,.client-card,.person-card,.calendar-add,.account-menu-item,.notice-item,.choice,.my-work-item,.back-to-top,.text-link,.number-link,.legend-row,[role=tab],.att-cell,.chip-toggle,.rail-mark,.device-card';
 const STRONG='.btn.primary,.back-to-top,.workspace-option,.stat.featured';
 const MAGNETIC='.btn.primary,.icon-btn,.back-to-top,.quick-search-trigger';
-const GLOW='.panel,.office-card,.client-card,.person-card,.my-work-item,.device-card,.att-stat';
+const GLOW='.panel,.office-card,.client-card,.person-card,.my-work-item,.device-card,.att-stat,[data-sidebar=sidebar],.stat.featured';
+const PATTERNED='.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured';
 const INTERACTIVE='a,button,[role=button],[role=tab],input,select,textarea,label,summary';
 // Rows, cards and list items that sweep in from the scroll direction each time they enter the screen.
 const REACTIVE='.office-card,.client-card,.person-card,.collection-card,.device-card,.att-stat,.stat,.my-work-item,.agenda-item,.notice-list li,.timeline-item,.doc-row,.quick-card,.legend-row,.bar-item,.calendar-day,.comment-list li,.department-metrics>div,.holiday-list li,.bridge-list li,.evidence-row,.help-block,.empty-state,.page-navigation,.pagination';
@@ -71,6 +72,9 @@ export default function MotionLayer() {
    if(!motionAllowed()||e.button>0)return;
    const el=e.target instanceof Element?e.target.closest(RIPPLE) as HTMLElement|null:null;
    document.querySelector('.cursor-halo')?.setAttribute('data-press','');
+   // A press inside a patterned panel sends a ring through its pattern from that point (restarted on each press).
+   const pat=e.target instanceof Element?e.target.closest(PATTERNED) as HTMLElement|null:null;
+   if(pat){const r=pat.getBoundingClientRect();pat.style.setProperty('--px',(e.clientX-r.left).toFixed(0)+'px');pat.style.setProperty('--py',(e.clientY-r.top).toFixed(0)+'px');pat.removeAttribute('data-pattern-press');void pat.offsetWidth;pat.setAttribute('data-pattern-press','')}
    if(!el||(el as HTMLButtonElement).disabled){backdrop?.pulse(e.clientX,e.clientY);return}
    if(getComputedStyle(el).position==='static')el.style.position='relative';
    const r=el.getBoundingClientRect(),size=Math.max(r.width,r.height)*2.2;
