@@ -62,9 +62,45 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
   try{await save({...newDepartmentRecord('archive','movement',{type:'move',date:todayISO(),holder:'',holderId:'',purpose:'',dueDate:'',locationId:l.id,notes:'نُقل إلى '+l.payload.code}),caseId:f.caseId,subjectId:f.id} as unknown as DepartmentRecord<ArchiveMovement['payload']>);
    toast.success(`نُقل ${f.payload.number} إلى ${slotName(l)}`);onChanged()}catch(e){shift(f,null);toast.error((e as Error).message)}}
  async function unplace(f:ArchiveFile){shift(f,'');try{await departmentRequest('unplace_file',{workspace:'archive',fileId:f.id});toast.success(`رُفع ${f.payload.number} من مكانه`);onChanged()}catch(e){shift(f,null);toast.error((e as Error).message)}}
+ // Arranging cabinets: a cabinet is picked up by its top and dropped before another cabinet or into a room. Its drawers
+ // take the room's name and every cabinet in that room is numbered in the new order. It shows at once while it saves.
+ const [arranged,setArranged]=useState<Map<string,{name:string;position:string;base:ArchiveLocation}>>(()=>new Map());
+ const placed=useMemo(()=>locations.map(l=>{const o=arranged.get(l.id);return o&&o.base===l?{...l,payload:{...l.payload,name:o.name,position:o.position}}:l}),[locations,arranged]);
+ type CabDrag={room:string;cab:string;label:string;w:number;dx:number;dy:number;x:number;y:number;phase:'drag'|'drop'|'back';tx:number;ty:number;before:string|null;into:string};
+ const [cab,setCab]=useState<CabDrag|null>(null),cabRef=useRef<CabDrag|null>(null);
+ const putCab=(d:CabDrag|null)=>{cabRef.current=d;setCab(d)};
+ const roomName=(label:string)=>label==='بلا غرفة'?'':label;
+ async function arrange(fromRoom:string,cabName:string,toRoom:string,before:string|null){
+  const target=rooms.find(r=>r.name===toRoom),moving=rooms.find(r=>r.name===fromRoom)?.cabinets.find(c=>c.name===cabName);if(!target||!moving)return;
+  const order=target.cabinets.filter(c=>!(fromRoom===toRoom&&c.name===cabName));
+  const at=before===null?-1:order.findIndex(c=>c.name===before);order.splice(at<0?order.length:at,0,moving);
+  const changes:{l:ArchiveLocation;name:string;position:string}[]=[];
+  order.forEach((c,i)=>{for(const l of c.slots){const name=roomName(toRoom),position=String((i+1)*10);if(l.payload.name!==name||(l.payload.position||'')!==position)changes.push({l,name,position})}});
+  if(!changes.length)return;
+  const bases=new Map(locations.map(l=>[l.id,l]));
+  setArranged(prev=>{const n=new Map(prev);for(const c of changes)n.set(c.l.id,{name:c.name,position:c.position,base:bases.get(c.l.id)!});return n});
+  try{for(const c of changes){const l=bases.get(c.l.id)!;await save({...l,payload:{...l.payload,name:c.name,position:c.position}} as unknown as DepartmentRecord<LocationData>)}
+   toast.success(`${moving.name?'خزانة '+moving.name:'الأدراج بلا خزانة'}: ${fromRoom===toRoom?'رُتّبت':'نُقلت إلى '+toRoom}`);onChanged()}
+  catch(e){setArranged(prev=>{const n=new Map(prev);for(const c of changes)n.delete(c.l.id);return n});toast.error((e as Error).message);onChanged()}}
+ function grabCabinet(room:string,c:{name:string;slots:ArchiveLocation[]},e:React.PointerEvent<HTMLElement>){
+  if(!canEdit||e.button!==0)return;
+  const box=(e.currentTarget.closest('.map-cabinet') as HTMLElement).getBoundingClientRect(),sx=e.clientX,sy=e.clientY;let started=false;
+  const label=(c.name?'خزانة '+c.name:'بلا خزانة')+` · ${c.slots.length} ${c.slots.length>2&&c.slots.length<11?'أدراج':'درج'}`;
+  const aim=(x:number,y:number)=>{const el=document.elementFromPoint(x,y),cb=el?.closest('[data-cabinet]') as HTMLElement|null,rm=el?.closest('[data-room]') as HTMLElement|null;
+   return {before:cb&&!(cb.dataset.room===room&&cb.dataset.cabinet===c.name)?cb.dataset.cabinet??'':null,into:cb?.dataset.room||rm?.dataset.room||''}};
+  const move=(ev:PointerEvent)=>{
+   if(!started){if(Math.hypot(ev.clientX-sx,ev.clientY-sy)<5)return;started=true}
+   ev.preventDefault();const t=aim(ev.clientX,ev.clientY);
+   putCab({room,cab:c.name,label,w:box.width,dx:sx-box.left,dy:sy-box.top,x:ev.clientX,y:ev.clientY,phase:'drag',tx:0,ty:0,...t})};
+  const up=(ev:PointerEvent)=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);
+   if(!started)return;const d=cabRef.current;if(!d)return;const t=aim(ev.clientX,ev.clientY);
+   if(t.into){putCab(null);void arrange(room,c.name,t.into,t.before)}
+   else{putCab({...d,phase:'back',tx:box.left+d.dx,ty:box.top+d.dy});setTimeout(()=>putCab(null),340)}};
+  addEventListener('pointermove',move,{passive:false});addEventListener('pointerup',up);addEventListener('pointercancel',up)}
  const rooms=useMemo<Room[]>(()=>{const m=new Map<string,Map<string,ArchiveLocation[]>>();
-  for(const l of locations.filter(l=>closed||!l.archived).sort(byCode)){const r=l.payload.name||'بلا غرفة',c=l.payload.cabinet||'';if(!m.has(r))m.set(r,new Map());const cm=m.get(r)!;if(!cm.has(c))cm.set(c,[]);cm.get(c)!.push(l)}
-  return [...m].map(([name,cm])=>({name,cabinets:[...cm].map(([c,slots])=>({name:c,slots}))}))},[locations,closed]);
+  for(const l of placed.filter(l=>closed||!l.archived).sort(byCode)){const r=l.payload.name||'بلا غرفة',c=l.payload.cabinet||'';if(!m.has(r))m.set(r,new Map());const cm=m.get(r)!;if(!cm.has(c))cm.set(c,[]);cm.get(c)!.push(l)}
+  const pos=(slots:ArchiveLocation[])=>Math.min(...slots.map(l=>Number(l.payload.position)||Infinity));
+  return [...m].map(([name,cm])=>({name,cabinets:[...cm].map(([c,slots])=>({name:c,slots})).map((c,i)=>({c,i,p:pos(c.slots)})).sort((a,b)=>a.p-b.p||a.i-b.i).map(x=>x.c)}))},[placed,closed]);
  const inside=(l:ArchiveLocation)=>files.filter(f=>cu(f).locationId===l.id&&cu(f).state==='in');
  const unplaced=files.filter(f=>!cu(f).locationId);
  const term=normalizeSearch(q.trim()),caseCode=(id:string)=>cases.find(c=>c.id===id)?.code||'';
@@ -81,12 +117,15 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
     <button type="button" className="icon-btn" aria-label="إخفاء" onClick={()=>setFound(null)}><X size={14}/></button></p>}</div>
   {unplaced.length>0&&<p className="notice">{unplaced.length} ملف بلا مكان حفظ. {locations.length?'اختر درجاً من الخريطة ثم امسح ملفاته واحداً بعد الآخر.':'أضف خزانة بأدراجها أولاً، ثم وزّع الملفات عليها.'}</p>}
   {!rooms.length?<Empty title="لا توجد أماكن حفظ" text="أضف خزانة بأدراجها؛ يظهر هنا رسم الغرفة وما في كل درج."/>
-  :<div className="map-body"><div className="map-rooms">{rooms.map(r=><section key={r.name} className="map-room" aria-label={r.name}><h3><MapPin size={15} aria-hidden/> {r.name}</h3><div className="map-cabinets">
-    {r.cabinets.map(c=><div key={c.name} className="map-cabinet"><b className="map-cabinet-name">{c.name?'خزانة '+c.name:'بلا خزانة'}</b><div className="map-slots">{c.slots.map(l=>{const n=inside(l).length,cap=Number(l.payload.capacity)||0,pct=cap?Math.min(100,Math.round(n/cap*100)):0;
+  :<div className="map-body"><div className="map-rooms">{rooms.map(r=><section key={r.name} className={'map-room'+(cab&&cab.into===r.name&&cab.before===null?' cab-into':'')} aria-label={r.name} data-room={r.name}><h3><MapPin size={15} aria-hidden/> {r.name}</h3><div className="map-cabinets">
+    {r.cabinets.map(c=><div key={c.name} className={'map-cabinet'+(cab&&cab.phase!=='back'&&cab.room===r.name&&cab.cab===c.name?' lifted':'')+(cab&&cab.into===r.name&&cab.before!==null&&cab.before===c.name?' cab-before':'')} data-room={r.name} data-cabinet={c.name}>
+     <b className={'map-cabinet-name'+(canEdit?' grabbable':'')} onPointerDown={canEdit?e=>grabCabinet(r.name,c,e):undefined} title={canEdit?'اسحب الخزانة لترتيبها أو نقلها إلى غرفة أخرى':undefined}>{canEdit&&<GripVertical size={13} className="map-grip" aria-hidden/>}{c.name?'خزانة '+c.name:'بلا خزانة'}</b><div className="map-slots">{c.slots.map(l=>{const n=inside(l).length,cap=Number(l.payload.capacity)||0,pct=cap?Math.min(100,Math.round(n/cap*100)):0;
      return <button type="button" key={l.id} id={'slot-'+l.id} className={'map-slot'+(picked===l.id?' on':'')+(lit===l.id?' lit':'')+(awaits===l.id?' awaits':'')+(over===l.id?' over':'')+(landed===l.id?' landed':'')+(cap&&n>=cap?' full':pct>=75?' busy':'')+(l.archived?' closed':'')} aria-pressed={picked===l.id} aria-label={`${l.payload.code} · ${slotName(l)}: ${n} ملف`} onClick={()=>setPicked(p=>p===l.id?'':l.id)}
       data-slot={l.id}>
       <span className="map-slot-name">{slotName(l)}</span><span className="map-slot-count">{n}{cap?<small>/{cap}</small>:null}</span>{cap>0&&<i style={{width:pct+'%'}} aria-hidden/>}<small className="map-slot-code" dir="ltr">{l.payload.code}</small></button>})}</div></div>)}</div></section>)}</div>
    {slot&&<SlotPanel key={slot.id} slot={slot} slots={locations.filter(l=>!l.archived)} onMove={moveTo} onUnplace={unplace} dragging={dragging} onGrab={grab} files={files} custody={custody} cases={cases} canEdit={canEdit} canPrint={canPrint} caseRef={caseRef} onClose={()=>setPicked('')} onEdit={()=>onEdit(slot)} onStocktake={()=>onStocktake(slot)} onPrint={()=>sheet(slot)} onChanged={onChanged}/>}</div>}
+  {cab&&createPortal(<div className={'drag-card cab-card '+cab.phase+(cab.into?' aimed':'')} aria-hidden style={{width:cab.w,transform:cab.phase==='back'?`translate(${cab.tx-cab.dx}px,${cab.ty-cab.dy}px)`:`translate(${cab.x-cab.dx}px,${cab.y-cab.dy}px) rotate(${cab.into?0:-3}deg) scale(1.03)`}}>
+   <span className="drag-card-tab"/><b>{cab.label}</b><small>{cab.into?(cab.before!==null?`قبل ${cab.before?'خزانة '+cab.before:'الأدراج بلا خزانة'} · ${cab.into}`:`إلى ${cab.into}`):'اسحبها إلى مكانها في الغرفة'}</small></div>,document.body)}
   {drag&&createPortal(<div className={'drag-card '+drag.phase+(drag.to?' aimed':'')} aria-hidden style={{width:drag.w,transform:drag.phase==='drag'?`translate(${drag.x-drag.dx}px,${drag.y-drag.dy}px) rotate(${drag.to?0:-4}deg) scale(1.04)`:drag.phase==='drop'?`translate(${drag.tx-drag.w/2}px,${drag.ty-22}px) rotate(0deg) scale(.25)`:`translate(${drag.tx-drag.dx}px,${drag.ty-drag.dy}px) rotate(0deg) scale(1)`}}>
    <span className="drag-card-tab"/><b dir="ltr">{drag.f.payload.number}</b><span>{drag.f.payload.title}</span>
    <small>{drag.to?(()=>{const l=locations.find(x=>x.id===drag.to);return l?'إلى '+[l.payload.cabinet&&'خزانة '+l.payload.cabinet,slotName(l)].filter(Boolean).join(' · '):''})():'اسحبه إلى درج على الخريطة'}</small></div>,document.body)}

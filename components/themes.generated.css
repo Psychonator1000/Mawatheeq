@@ -288,6 +288,7 @@
 :root[data-theme=noir] .map-found.away svg{color:#d2a5a9}
 :root[data-theme=noir] .journey.short{border-inline-start-color:#d2a5a9}
 :root[data-theme=noir] .journey-short input{border:1px solid var(--input,#34312b)}
+:root[data-theme=noir] .btn.primary.danger{background:#d2a5a9;border-color:#d2a5a9;color:#11100e}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
 :root[data-theme=noir] .workspace-option p{color:#c4bbaa}
@@ -704,6 +705,7 @@
 :root[data-theme=phantom] .map-found.away svg{color:#ddc3c5}
 :root[data-theme=phantom] .journey.short{border-inline-start-color:#ddc3c5}
 :root[data-theme=phantom] .journey-short input{border:1px solid var(--input,#262626)}
+:root[data-theme=phantom] .btn.primary.danger{background:#ddc3c5;border-color:#ddc3c5;color:#0d0d0d}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .workspace-option p{color:#cdcdcd}
@@ -1120,6 +1122,7 @@
 :root[data-theme=yorha] .map-found.away svg{color:#654447}
 :root[data-theme=yorha] .journey.short{border-inline-start-color:#654447}
 :root[data-theme=yorha] .journey-short input{border:1px solid var(--input,#e8e5dc)}
+:root[data-theme=yorha] .btn.primary.danger{background:#654447;border-color:#654447;color:#f3f2ed}
 :root[data-theme=yorha] .workspace-chooser header p{color:#5d5a4f}
 :root[data-theme=yorha] .workspace-option{border:1px solid #eae8e0;background:#f2f0eb;color:#4c4941}
 :root[data-theme=yorha] .workspace-option p{color:#5f5b51}
@@ -1425,6 +1428,7 @@
 :root[data-theme=ivory] .paper-search{border:1px solid var(--input,#d5d2cd)}
 :root[data-theme=ivory] .map-slot.lit{background:#f9f8f7}
 :root[data-theme=ivory] .journey-short input{border:1px solid var(--input,#d5d2cd)}
+:root[data-theme=ivory] .btn.primary.danger{color:#ffffff}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
 :root[data-theme=ivory] .department-topbar{background:#fefefed9}
 :root[data-theme=ivory] .department-brand .brand-mark{color:#faf9f8}
@@ -1709,6 +1713,7 @@
 :root[data-theme=phantom-light] .paper-search{border:1px solid var(--input,#d4d2cd)}
 :root[data-theme=phantom-light] .map-slot.lit{background:#fdfcfc}
 :root[data-theme=phantom-light] .journey-short input{border:1px solid var(--input,#d4d2cd)}
+:root[data-theme=phantom-light] .btn.primary.danger{color:#ffffff}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
 :root[data-theme=phantom-light] .workspace-option{border:1px solid #fafaf9;background:#fefefe;color:#403c39}
 :root[data-theme=phantom-light] .workspace-option p{color:#757270}
@@ -2138,6 +2143,7 @@
 :root[data-theme=yorha-dark] .map-found.away svg{color:#c9afb1}
 :root[data-theme=yorha-dark] .journey.short{border-inline-start-color:#c9afb1}
 :root[data-theme=yorha-dark] .journey-short input{border:1px solid var(--input,#2a2924)}
+:root[data-theme=yorha-dark] .btn.primary.danger{background:#c9afb1;border-color:#c9afb1;color:#191815}
 :root[data-theme=yorha-dark] .workspace-chooser header p{color:#cac4ac}
 :root[data-theme=yorha-dark] .workspace-option{border:1px solid #262521;background:#1a1916;color:#d3cebb}
 :root[data-theme=yorha-dark] .workspace-option p{color:#c9c3aa}
@@ -2770,6 +2776,10 @@
 :root[data-mode=dark] .map-drag-hint{background:color-mix(in srgb,var(--brand) 10%,var(--card))}
 :root[data-mode=dark] .journey.short{border-inline-start-color:#dba7ac}
 :root[data-mode=dark] .journey-short input{border:1px solid var(--input,#322d27);background:var(--card)}
+:root[data-mode=dark] .log-cleared{color:var(--muted-foreground)}
+:root[data-mode=dark] .btn.primary.danger{background:#dba7ac;border-color:#dba7ac;color:#131313}
+:root[data-mode=dark] .map-cabinet.cab-before{border-inline-start-color:var(--brand)}
+:root[data-mode=dark] .map-room.cab-into{outline:2px dashed var(--brand)}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

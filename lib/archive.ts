@@ -1,7 +1,9 @@
 /** «الأرشيف»: physical files, where each one is kept, who holds it, and the custody log behind that. */
 import type {DepartmentRecord} from './departments';
 
-export type LocationData = {code:string;name:string;cabinet:string;shelf:string;box:string;capacity:string;notes:string};
+export type LocationData = {code:string;name:string;cabinet:string;shelf:string;box:string;capacity:string;notes:string;
+ /** The cabinet's place in its room on the storage map; empty keeps the order by code. */
+ position?:string};
 export type FileData = {number:string;title:string;type:string;volume:string;pages:string;locationId:string;originals:'yes'|'no';confidential:'yes'|'no';intakeDate:string;retentionUntil:string;notes:string;
  /** Important items, one per line (chiefly originals); checked out with the file and checked again on its return. */
  contents?:string;

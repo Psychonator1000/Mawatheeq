@@ -50,6 +50,6 @@ export function liveTopicOf(endpoint: string, action: string, data: Record<strin
   if (endpoint === 'mawatheeq_chat_request') return READS[endpoint].includes(action) ? null : 'chat';
   if (endpoint === 'mawatheeq_comment_request') return READS[endpoint].includes(action) || action === 'mark_mentions_read' ? null : 'comments';
   if (endpoint === 'mawatheeq_department_request' && data.workspace === 'archive')
-    return ['records_page', 'people', 'cases_page', 'check_export', 'history', 'desk_mine', 'desk_case', 'desk_journeys'].includes(action) ? null : 'paper';
+    return ['records_page', 'people', 'cases_page', 'check_export', 'history', 'desk_mine', 'desk_case', 'desk_journeys', 'log_clears'].includes(action) ? null : 'paper';
   return null;
 }

@@ -206,4 +206,20 @@ assert.equal(off.payload.unplaced, 'yes'); assert.equal(await placeOf(), '', 'Ta
 await refused(() => arc(keeper, 'unplace_file', { fileId: f6.id }), 'بلا مكان');
 await arc(keeper, 'save_record', { record: { id: uuid(), kind: 'movement', caseId: c1.id, subjectId: f6.id, revision: 0, payload: { type: 'move', date: '2026-10-16', holder: '', holderId: '', purpose: '', dueDate: '', locationId: shelf.id, notes: '' } } });
 assert.equal(await placeOf(), shelf.id, 'Put back, it has its place again');
+// Clearing the log: owner only, by date range, and never at the cost of where any file is or who holds it.
+const states = async () => { await db.exec('reset role'); const r = (await db.query("select f.id, mawatheeq_private.archive_state(f.id) - 'lastId' s from mawatheeq_private.department_records f where f.workspace='archive' and f.kind='file' order by f.id")).rows; const n = (await db.query("select count(*)::int n from mawatheeq_private.department_records where workspace='archive' and kind='movement'")).rows[0].n; await db.exec('set role anon'); return { r: JSON.stringify(r), n }; };
+const beforeClear = await states();
+await denied(() => arc(keeper, 'clear_log', { from: '2026-10-01', to: '2026-10-31' }));
+await refused(() => arc(owner, 'clear_log', { from: '2026-10-31', to: '2026-10-01' }), 'بعد نهايتها');
+await refused(() => arc(owner, 'clear_log', { from: '', to: '2026-10-01' }), 'حدد');
+const cleared = await arc(owner, 'clear_log', { from: '2026-10-01', to: '2026-10-31' });
+const afterClear = await states();
+assert.ok(cleared.removed > 0 && cleared.kept > 0, 'Old movements go, the ones custody stands on stay');
+assert.equal(afterClear.n, beforeClear.n - cleared.removed);
+assert.equal(afterClear.r, beforeClear.r, 'Every file keeps its state and its place');
+assert.equal(await placeOf(), shelf.id);
+const { clears, canClear } = await arc(keeper, 'log_clears');
+assert.equal(canClear, false); assert.equal((await arc(owner, 'log_clears')).canClear, true, 'Only the owner is offered the clearing');
+assert.equal(clears.length, 1); assert.equal(clears[0].from, '2026-10-01'); assert.equal(clears[0].by, 'المسؤول'); assert.equal(clears[0].removed, cleared.removed);
+assert.equal((await arc(owner, 'clear_log', { from: '2026-10-01', to: '2026-10-31' })).removed, 0, 'Clearing the same range again removes nothing more');
 console.log('Archive handover database checks passed.');

@@ -545,3 +545,13 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 :root[data-motion=off] :is(.map-slot,.map-slot.landed){animation:none;transition:none}
 .journey.short{border-inline-start-color:#a32e38}
 .journey-short{display:flex;gap:6px;align-items:center}.journey-short input{min-height:32px;border:1px solid var(--input,#dfd3c3);border-radius:8px;padding:0 10px;font:inherit;font-size:12.5px;background:var(--card);min-width:160px}
+.log-cleared{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12px;color:var(--muted-foreground)}
+.panel-head>.btn+.btn{margin-inline-start:6px}
+.btn.primary.danger{background:#a32e38;border-color:#a32e38;color:#fff}.btn.primary.danger:disabled{opacity:.5}
+/* Arranging cabinets: the picked-up cabinet folds out of its row, a line marks where it will go, and a room it will join glows. */
+.map-cabinet{transition:width .28s cubic-bezier(.2,.8,.2,1),padding .28s,opacity .2s,margin .28s,border-color .2s}
+.map-cabinet.lifted{width:0;padding-inline:0;border-width:0;opacity:0;margin-inline:-6px;overflow:hidden;pointer-events:none}
+.map-cabinet.cab-before{border-inline-start-color:var(--brand);border-inline-start-width:4px}
+.map-room.cab-into{outline:2px dashed var(--brand);outline-offset:4px;border-radius:12px}
+.map-cabinet-name.grabbable{cursor:grab;touch-action:none;user-select:none;display:flex;align-items:center;justify-content:center;gap:4px}
+:root[data-motion=off] .map-cabinet{transition:none}

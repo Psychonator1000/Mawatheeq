@@ -205,6 +205,12 @@ try{
  await page.getByRole('button',{name:/^خريطة الحفظ/}).click();await page.getByRole('button',{name:/^A-1 ·/}).click();await page.getByRole('button',{name:/^جرد$/}).click();await click('تحديد الكل');await click('تسجيل الجرد (1)');await page.getByRole('dialog').waitFor({state:'detached'});
  // A whole cabinet at once, a file placed in a drawer by scanning it, and the search lighting up where it is.
  await click('خزانة جديدة بأدراجها');await field('اسم الخزانة أو رقمها','B');await field('عدد الأدراج أو الرفوف','2');await click('إضافة الخزانة (2)');await page.getByRole('dialog').waitFor({state:'detached'});
+ // Cabinets are arranged by dragging their top: the last one dropped on the first takes its place.
+ {const names=()=>page.locator('.map-cabinet-name').allInnerTexts();const before=await names();assert.ok(before.length>=2);
+  const a=await page.locator('.map-cabinet-name').last().boundingBox(),b=await page.locator('.map-cabinet').first().boundingBox();
+  await page.mouse.move(a.x+a.width/2,a.y+a.height/2);await page.mouse.down();await page.mouse.move(a.x+a.width/2+15,a.y+a.height/2+8,{steps:3});await page.locator('.cab-card').waitFor();
+  await page.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:8});await page.locator('.map-cabinet.cab-before').waitFor();await page.mouse.up();
+  await page.getByText(/رُتّبت/).first().waitFor();assert.equal((await names())[0],before.at(-1),'The dragged cabinet now comes first');}
  await page.getByRole('button',{name:/^B-2 · درج 2/}).click();await page.getByLabel('ضع ملفاً في هذا المكان',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await page.locator('.map-files').getByText('ARC-00001').waitFor();
  await page.getByLabel('ابحث عن مكان ملف',{exact:true}).fill('00001');await page.locator('.map-hits').getByRole('button').first().click();await page.locator('.map-found').getByText(/خزانة B ← درج 2/).waitFor();await page.locator('.map-slot.lit').waitFor();await screen('archive-map');
  await page.getByRole('button',{name:'نقل ARC-00001',exact:true}).click();await page.getByLabel('نقل ARC-00001 إلى',{exact:true}).selectOption({label:'غرفة الأرشيف · خزانة B · درج 1'});await page.getByText(/نُقل ARC-00001 إلى درج 1/).first().waitFor();
@@ -216,9 +222,14 @@ try{
  await page.getByText(/نُقل ARC-00001 إلى درج 2/).first().waitFor();await page.locator('.drag-card').waitFor({state:'detached'});
  const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','move','move','move','return']);
  await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
- // A closed file leaves the active list and is found under «مغلقة»; reopening brings it back.
- await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await click('إغلاق الملف (إتلاف أو انتهاء الحفظ)');await page.getByText(/تجده في «المغلقة»/).first().waitFor();
- await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});await page.getByRole('button',{name:/^مغلقة\s*1$/}).click();
+ // The owner clears a range of the log; what the files' custody stands on stays, and the clearing is noted for everyone.
+ await click('مسح السجل');{const dlg=page.getByRole('dialog',{name:'مسح سجل الحركة'});await dlg.getByRole('button',{name:'إلى تاريخ',exact:true}).click();await page.getByRole('button',{name:'اليوم',exact:true}).click();
+  await dlg.getByLabel('أفهم أن الحركات الممسوحة لا تعود',{exact:true}).check();await dlg.getByRole('button',{name:/^مسح حركات/}).click();await dlg.waitFor({state:'detached'});}
+ await page.locator('.log-cleared').getByText(/مُسحت حركات/).waitFor();
+ assert.ok((await dept('archive','records_page')).filter(r=>r.kind==='movement').length>=1,'The movements the files stand on remain');
+ // A closed file leaves the active list and is found under «حفظ»; reopening brings it back.
+ await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await click('إغلاق الملف (إتلاف أو انتهاء الحفظ)');await page.getByText(/تجده في «الحفظ»/).first().waitFor();
+ await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});await page.getByRole('button',{name:/^حفظ\s*1$/}).click();
  await page.locator('.archive-table').getByText('ARC-00001').click();await click('إعادة فتح الملف');await page.getByText('أُعيد فتح الملف').first().waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});
  // The handover sheet: the file goes out, its recipient confirms receipt from the header and reports the return, and the archive confirms it is back.
  await page.getByRole('button',{name:/^كشف التسليم/}).click();await page.getByLabel('رقم الأرشيف أو كود القضية',{exact:true}).fill('arc-00001');await page.keyboard.press('Enter');
