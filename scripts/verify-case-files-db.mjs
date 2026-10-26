@@ -76,7 +76,7 @@ assert.deepEqual(list.files.map(f => f.title), ['حافظة مستندات خب�
 await denied(() => files(badr, 'update', { id: memo.id, revision: 1, title: 'x', category: 'مذكرات' }));
 const renamed = await files(amal, 'update', { id: memo.id, revision: 1, title: 'مذكرة دفاع منا', category: 'مذكرات', docDate: '2026-08-31' });
 assert.deepEqual([renamed.title, renamed.docDate, renamed.revision], ['مذكرة دفاع منا', '2026-08-31', 2]);
-await assert.rejects(() => files(amal, 'update', { id: memo.id, revision: 1, title: 'قديم', category: 'مذكرات' }), e => e.code === '40001', 'A stale edit is refused');
+await assert.rejects(() => files(amal, 'update', { id: memo.id, revision: 1, title: 'قديم', category: 'مذكرات' }), e => e.code === 'PT409', 'A stale edit is refused');
 await assert.rejects(() => files(amal, 'update', { id: memo.id, revision: 2, title: ' ', category: 'مذكرات' }), /عنوان/);
 assert.deepEqual(await files(badr, 'download', { id: memo.id }), { path: up.path, name: 'مذكرة دفاع.pdf', mime: 'application/pdf' });
 await denied(() => files(salem, 'download', { id: memo.id }));

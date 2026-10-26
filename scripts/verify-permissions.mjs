@@ -121,7 +121,7 @@ const changed=await office(admin.token,'set_member_access',{id:reader.user.id,pe
 await assert.rejects(()=>local(reader.token,'cases_page'),e=>e.code==='28000');
 await assert.rejects(()=>local(reader.token,'password',{currentPassword:'Fixture-password-123',newPassword:'Stale-password-123'}),e=>e.code==='28000');
 const readerAgain=await login('reader');assert.deepEqual((await local(readerAgain.token,'cases_page')).map(c=>c.id),[hidden.id]);
-await assert.rejects(()=>office(admin.token,'set_member_access',{id:reader.user.id,permissions:scoped,revision:reader.member.permissions.revision}),e=>e.code==='40001');
+await assert.rejects(()=>office(admin.token,'set_member_access',{id:reader.user.id,permissions:scoped,revision:reader.member.permissions.revision}),e=>e.code==='PT409');
 assert.equal((await office(admin.token,'access_history',{id:reader.user.id})).length,2);
 await office(admin.token,'reset_member_password',{id:reader.user.id,password:'Reset-password-123'});
 await assert.rejects(()=>local(readerAgain.token,'password',{currentPassword:'Fixture-password-123',newPassword:'Stale-password-123'}),e=>e.code==='28000');

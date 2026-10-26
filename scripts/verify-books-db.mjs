@@ -70,7 +70,7 @@ await refused(() => books(amal, 'save_move', { move: { journalId: jr('MISC'), da
 d1 = await books(amal, 'post', { id: d1.id, revision: d1.revision });
 assert.deepEqual([d1.state, d1.name, d1.postedBy], ['posted', 'MISC/2026/0001', 'أمل']);
 await refused(() => books(amal, 'save_move', { move: { ...d1, lines } }), 'المرحّل');
-await assert.rejects(() => books(amal, 'post', { id: d1.id, revision: d1.revision - 1 }), e => e.code === '40001', 'Stale revisions are refused');
+await assert.rejects(() => books(amal, 'post', { id: d1.id, revision: d1.revision - 1 }), e => e.code === 'PT409', 'Stale revisions are refused');
 
 // An unbalanced draft is refused at posting; once fixed it takes the next number.
 let d2 = await books(amal, 'save_move', { move: { journalId: jr('MISC'), date: '2026-04-01', lines: [{ accountId: acc('502000'), debit: '300' }, { accountId: acc('101000'), credit: '250' }] } });
@@ -143,7 +143,7 @@ s = (await books(owner, 'setup')).settings;
 await refused(() => books(owner, 'save_settings', { ...s, fiscalLockDate: '2026-01-31' }), 'الوراء');
 await refused(() => books(owner, 'save_settings', { ...s, fiscalLockDate: '' }), 'الوراء');
 await refused(() => books(owner, 'save_move', { move: { journalId: jr('MISC'), date: '2026-02-01', lines } }), 'مقفلة');
-await assert.rejects(() => books(amal, 'save_partner', { partner: { id: client.id, revision: 0, name: 'x' } }), e => e.code === '40001');
+await assert.rejects(() => books(amal, 'save_partner', { partner: { id: client.id, revision: 0, name: 'x' } }), e => e.code === 'PT409');
 
 // The tables stay private.
 await assert.rejects(() => db.query('select * from mawatheeq_private.acc_moves'), e => e.code === '42501');

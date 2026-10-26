@@ -61,7 +61,7 @@ assert.equal((await att(accountant.token, 'employees')).length, 2, 'Accounting s
 const settings = { ...ctx.settings, graceMinutes: 15, monthlyLateAllowanceMinutes: 90, holidays: [{ date: '2026-10-15', name: 'عطلة تجريبية' }] };
 const saved = await att(accountant.token, 'save_settings', { settings, revision: ctx.revision });
 assert.equal(saved.settings.graceMinutes, 15);
-await assert.rejects(() => att(hr.token, 'save_settings', { settings, revision: ctx.revision }), e => e.code === '40001', 'Stale settings are rejected');
+await assert.rejects(() => att(hr.token, 'save_settings', { settings, revision: ctx.revision }), e => e.code === 'PT409', 'Stale settings are rejected');
 await assert.rejects(() => att(hr.token, 'save_settings', { settings: { ...settings, timezone: 'Mars/Base' }, revision: saved.revision }), /غير صالحة/);
 await assert.rejects(() => att(hr.token, 'save_settings', { settings: { ...settings, start: '17:00', end: '08:00' }, revision: saved.revision }), /غير صالحة/);
 await assert.rejects(() => att(hr.token, 'save_settings', { settings: { ...settings, days: { 4: { start: '14:00', end: '13:00' } } }, revision: saved.revision }), /غير صالحة/, 'A day that ends before it starts is refused');
@@ -73,7 +73,7 @@ const p1 = await att(hr.token, 'save_profile', { employeeId: uuid(1), revision: 
 assert.equal(p1.salaryMinor, '900000');
 await assert.rejects(() => att(accountant.token, 'save_profile', { employeeId: uuid(2), revision: 0, profile: { pin: '101', salaryMinor: '1', currency: 'KWD' } }), /مستخدم لموظف آخر/);
 await att(accountant.token, 'save_profile', { employeeId: uuid(2), revision: 0, profile: { pin: '102', salaryMinor: '650500', currency: 'KWD', schedule: { start: '09:00', end: '15:00', workDays: [0, 1, 2, 3, 4] } } });
-await assert.rejects(() => att(hr.token, 'save_profile', { employeeId: uuid(1), revision: 0, profile: { pin: '101', salaryMinor: '1', currency: 'KWD' } }), e => e.code === '40001');
+await assert.rejects(() => att(hr.token, 'save_profile', { employeeId: uuid(1), revision: 0, profile: { pin: '101', salaryMinor: '1', currency: 'KWD' } }), e => e.code === 'PT409');
 await assert.rejects(() => att(hr.token, 'save_profile', { employeeId: uuid(9), revision: 0, profile: { pin: '109', salaryMinor: '1', currency: 'KWD' } }), /غير موجود/, 'Leave records are not employees');
 await assert.rejects(() => att(hr.token, 'save_profile', { employeeId: uuid(1), revision: 1, profile: { pin: '1 01', salaryMinor: '-5', currency: 'KWD' } }), /غير صالحة/);
 
@@ -157,7 +157,7 @@ const disabled = await att(hr.token, 'save_device', { device: { ...door, enabled
 await assert.rejects(() => att(hr.token, 'queue_command', { deviceId: uuid(40), kind: 'unlock_door' }), /معطل/);
 await denied(() => att(accountant.token, 'delete_device', { id: uuid(30), revision: 1 }));
 await denied(() => att(hrReader.token, 'delete_device', { id: uuid(30), revision: 1 }));
-await assert.rejects(() => att(hr.token, 'delete_device', { id: uuid(40), revision: disabled.revision - 1 }), e => e.code === '40001', 'Removal checks the current revision');
+await assert.rejects(() => att(hr.token, 'delete_device', { id: uuid(40), revision: disabled.revision - 1 }), e => e.code === 'PT409', 'Removal checks the current revision');
 const before = (await att(accountant.token, 'punches', { from: '2026-10-01', to: '2026-10-31' })).length;
 const reception = (await att(hr.token, 'devices')).find(d => d.id === uuid(30));
 await att(hr.token, 'delete_device', { id: uuid(30), revision: reception.revision });
