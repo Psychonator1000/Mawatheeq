@@ -640,12 +640,20 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 :root .sec-agenda :is(input,textarea,select){background:#fffdf8;color:#2a201b}
 :root .sec-agenda .btn:not(.primary){background:#fffaf2;color:var(--dept);border-color:transparent}
 :root .sec-agenda svg{color:currentColor}
-/* Soft lights drift slowly across the accent panel; transform-only, so it stays cheap. Still under «off» or reduced motion. */
-:root .sec-agenda.panel{position:relative;isolation:isolate;overflow:hidden}
-:root .sec-agenda.panel::before,:root .sec-agenda.panel::after{content:'';position:absolute;z-index:-1;pointer-events:none;border-radius:50%;filter:blur(24px);will-change:transform}
-:root .sec-agenda.panel::before{width:120%;aspect-ratio:1;top:-45%;inset-inline-start:-50%;background:radial-gradient(circle,color-mix(in srgb,var(--dept) 45%,#fff) 0,transparent 64%);opacity:.6;animation:agenda-light-one 11s ease-in-out -5s infinite alternate}
-:root .sec-agenda.panel::after{width:110%;aspect-ratio:1;bottom:-40%;inset-inline-end:-55%;background:radial-gradient(circle,color-mix(in srgb,var(--dept) 55%,#ffb98a) 0,transparent 62%);opacity:.5;animation:agenda-light-two 14s ease-in-out -9s infinite alternate}
-@keyframes agenda-light-one{to{transform:translate3d(-45%,70%,0) scale(1.15)}}
-@keyframes agenda-light-two{to{transform:translate3d(40%,-85%,0) scale(.9)}}
-:root[data-motion=off] .sec-agenda.panel::before,:root[data-motion=off] .sec-agenda.panel::after{animation:none}
-@media (prefers-reduced-motion:reduce){:root .sec-agenda.panel::before,:root .sec-agenda.panel::after{animation:none}}
+/* The accent panels (a section's side panel, the main menu, the featured figure): an eight-point star lattice, as in a mashrabiya, slides by one tile at a time and leans a little
+   toward the pointer, while a band of light passes over it now and then. Transform-only, so it stays cheap; still under
+   «off» or reduced motion. */
+:root :is(.sec-agenda.panel,[data-sidebar=sidebar]){position:relative;isolation:isolate;overflow:hidden}
+:root .stat.featured{position:relative;isolation:isolate}
+:root :is(.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured)::before,:root :is(.sec-agenda.panel,[data-sidebar=sidebar])::after{content:'';position:absolute;z-index:-1;pointer-events:none}
+:root :is(.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured)::before{inset:-56px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.1'%3E%3Cpath d='M28 8 48 28 28 48 8 28Z M14 14h28v28H14Z M28 0v8 M28 48v8 M0 28h8 M48 28h8 M0 0l14 14 M56 0 42 14 M0 56l14-14 M56 56 42 42'/%3E%3Ccircle cx='28' cy='28' r='5'/%3E%3C/g%3E%3C/svg%3E") 0 0/56px 56px;opacity:.1;
+ -webkit-mask-image:linear-gradient(180deg,#000 0,#000c 40%,#0002 100%);mask-image:linear-gradient(180deg,#000 0,#000c 40%,#0002 100%);
+ translate:calc((var(--ax,.5) - .5)*-18px) calc((var(--ay,.5) - .5)*-18px);transition:translate .6s ease-out;animation:agenda-lattice 26s linear infinite}
+:root :is(.sec-agenda.panel,[data-sidebar=sidebar])::after{inset:-50% -30%;background:linear-gradient(115deg,transparent 42%,#ffffff1c 48%,#ffe9cf30 50%,#ffffff1c 52%,transparent 58%);
+ transform:translate3d(0,-60%,0);animation:agenda-sheen 9s cubic-bezier(.45,0,.2,1) 1.2s infinite}
+:root .stat.featured::before{inset:0;border-radius:inherit;translate:none;animation-name:agenda-lattice-in}
+@keyframes agenda-lattice-in{to{background-position:56px 56px}}
+@keyframes agenda-lattice{to{transform:translate3d(56px,56px,0)}}
+@keyframes agenda-sheen{0%{transform:translate3d(0,-60%,0)}45%,100%{transform:translate3d(0,60%,0)}}
+:root[data-motion=off] :is(.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured)::before,:root[data-motion=off] :is(.sec-agenda.panel,[data-sidebar=sidebar])::after{animation:none}:root[data-motion=off] :is(.sec-agenda.panel,[data-sidebar=sidebar])::after{opacity:0}
+@media (prefers-reduced-motion:reduce){:root :is(.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured)::before,:root :is(.sec-agenda.panel,[data-sidebar=sidebar])::after{animation:none}:root :is(.sec-agenda.panel,[data-sidebar=sidebar])::after{opacity:0}}
