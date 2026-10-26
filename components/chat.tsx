@@ -7,6 +7,7 @@ import {chatRequest,fileRequest} from '@/lib/local-auth';
 import {backend} from '@/lib/supabase-client';
 import {requestOpen} from '@/lib/open-record';
 import {useChatSlot} from './chat-slot';
+import {Popover,PopoverContent,PopoverTrigger} from './ui/popover';
 import {LIVE_EVENT,startLive} from '@/lib/live';
 import {CHAT_WITH_EVENT,FILE_TYPES,MAX_FILE,bodyParts,chatTime,conversationName,fileSize,refToken,triggerRefs,typedTrigger,type ChatConversation,type ChatMessage,type ChatPerson,type ChatRef,type ChatSummary} from '@/lib/chat';
 
@@ -37,19 +38,33 @@ export default function Chat({userId}:{userId:string}){
   try{const r=await chatRequest<{id:string}>('start_direct',{userId:id});reopenChat(userId,r.id);await refresh();setView('list');setActive(r.id);setOpen(true)}
   catch(err){toast.error(missing(err)?'المحادثات غير مفعّلة بعد.':(err as Error).message)}};
   addEventListener(CHAT_WITH_EVENT,go);return()=>removeEventListener(CHAT_WITH_EVENT,go)},[userId,refresh]);
- const host=useWindowHost(),slot=useChatSlot(),docked=!host&&!!slot;
- // The only button is the header one; an open window covers it, and a panel already open moves into the window.
+ const host=useWindowHost(),slot=useChatSlot(),[peek,setPeek]=useState(false);
+ // Like the mail: the header button shows the latest conversations, and «فتح المحادثات» (or any of them) opens the
+ // chat window, with the list beside the open conversation.
  if(!available)return null;
  const conv=summary?.conversations.find(c=>c.id===active)||null;
  const label=unread?`المحادثات، ${unread} غير مقروءة`:'المحادثات',count=unread>99?'99+':unread;
+ const latest=[...(summary?.conversations||[])].filter(c=>c.isMember&&c.last).sort((a,b)=>b.unread-a.unread||Date.parse(b.lastAt)-Date.parse(a.lastAt)).slice(0,6);
+ const openWindow=(id?:string)=>{setPeek(false);if(id){reopenChat(userId,id);setActive(id)}setView('list');setOpen(true)};
+ const main=conv&&view==='list'?<Conversation key={conv.id} conv={conv} me={userId} onLeave={()=>setOpen(false)} onBack={()=>setActive(null)} onInfo={()=>setView('info')} onChanged={refresh} onDirect={async id=>{const r=await chatRequest<{id:string}>('start_direct',{userId:id});reopenChat(userId,r.id);await refresh();setActive(r.id)}}/>
+  :view==='new'||view==='group'?<NewChat group={view==='group'} onCancel={()=>setView('list')} onCreated={async id=>{reopenChat(userId,id);await refresh();setView('list');setActive(id)}}/>
+  :view==='info'&&conv?<GroupInfo conv={conv} me={userId} onBack={()=>setView('list')} onChanged={async left=>{await refresh();setView('list');if(left)setActive(null)}}/>
+  :<div className="chat-pick"><MessageCircle size={34} aria-hidden/><b>اختر محادثة من القائمة</b><small>أو ابدأ محادثة جديدة مع زميل أو مجموعة.</small><button type="button" className="btn primary" onClick={()=>setView('new')}><Plus size={16}/> ابدأ محادثة</button></div>;
  return <>
-  {slot&&createPortal(<button type="button" className={'icon-btn notice-trigger chat-trigger'+(open?' open':'')} aria-label={label} aria-expanded={open} onClick={()=>setOpen(o=>!o)}><MessageCircle/>{unread>0&&<span key={'chat-'+unread} className="notice-count chat-count" aria-hidden="true">{count}</span>}</button>,slot!)}
+  {slot&&createPortal(<Popover open={peek} onOpenChange={setPeek}><PopoverTrigger asChild><button type="button" className={'icon-btn notice-trigger chat-trigger'+(open||peek?' open':'')} aria-label={label} aria-expanded={peek}><MessageCircle/>{unread>0&&<span key={'chat-'+unread} className="notice-count chat-count" aria-hidden="true">{count}</span>}</button></PopoverTrigger>
+   <PopoverContent align="end" dir="rtl" className="notice-panel chat-latest"><div className="notice-head"><b>المحادثات</b><small>{unread?`${unread} رسالة غير مقروءة`:'لا رسائل جديدة'}</small></div>
+    {latest.length>0?<ul className="notice-list">{latest.map(c=><li key={c.id}><button type="button" className={'notice-item info chat-latest-item'+(c.unread?' unread':'')} onClick={()=>openWindow(c.id)}>
+     <span className="chat-avatar" aria-hidden>{c.kind==='group'?<Users size={15}/>:conversationName(c,userId).replace(/^ا[/.]\s*/,'').slice(0,1)}</span>
+     <span><b>{conversationName(c,userId)}</b><small>{c.last?(c.last.mine?'أنت: ':c.kind==='group'?c.last.sender+': ':'')+c.last.body:''}</small></span>
+     <span className="chat-row-meta"><small>{chatTime(c.lastAt)}</small>{c.unread>0&&<span className="chat-badge inline">{c.unread}</span>}</span></button></li>)}</ul>
+     :<p className="chat-latest-empty">لا محادثات بعد.</p>}
+    <div className="mail-panel-foot"><button type="button" className="btn" onClick={()=>{setPeek(false);setActive(null);setView('new');setOpen(true)}}><Plus size={15}/> محادثة جديدة</button><button type="button" className="btn primary" onClick={()=>openWindow()}>فتح المحادثات</button></div>
+   </PopoverContent></Popover>,slot!)}
   {createPortal(<>
-  {open&&<section className={'chat-panel'+(docked?' docked':'')+(host?' in-window':'')} role="dialog" aria-label="المحادثات" dir="rtl" ref={panel}>
-   {conv&&view==='list'?<Conversation key={conv.id} conv={conv} me={userId} onLeave={()=>setOpen(false)} onBack={()=>setActive(null)} onInfo={()=>setView('info')} onChanged={refresh} onDirect={async id=>{const r=await chatRequest<{id:string}>('start_direct',{userId:id});reopenChat(userId,r.id);await refresh();setActive(r.id)}}/>
-   :view==='new'||view==='group'?<NewChat group={view==='group'} onCancel={()=>setView('list')} onCreated={async id=>{reopenChat(userId,id);await refresh();setView('list');setActive(id)}}/>
-   :view==='info'&&conv?<GroupInfo conv={conv} me={userId} onBack={()=>setView('list')} onChanged={async left=>{await refresh();setView('list');if(left)setActive(null)}}/>
-   :<ConversationList key={userId} summary={summary} me={userId} onOpen={id=>{reopenChat(userId,id);setActive(id);setView('list')}} onNew={()=>setView('new')} onGroup={()=>setView('group')} onClose={()=>setOpen(false)}/>}
+  {open&&<div className={'chat-scrim'+(host?' in-window':'')} onClick={()=>setOpen(false)} aria-hidden/>}
+  {open&&<section className={'chat-panel chat-window'+(host?' in-window':'')+(conv&&view==='list'||view!=='list'?' has-main':'')} role="dialog" aria-label="المحادثات" dir="rtl" ref={panel}>
+   <aside className="chat-side"><ConversationList key={userId} summary={summary} me={userId} active={active} onOpen={id=>{reopenChat(userId,id);setActive(id);setView('list')}} onNew={()=>setView('new')} onGroup={()=>setView('group')} onClose={()=>setOpen(false)}/></aside>
+   <div className="chat-main">{main}</div>
   </section>}
   </>,host??document.body)}
  </>;
@@ -69,9 +84,11 @@ const readClosed=(me:string):Record<string,string>=>{try{const v=JSON.parse(loca
 const writeClosed=(me:string,next:Record<string,string>)=>{try{localStorage.setItem(closedKey(me),JSON.stringify(next))}catch{/* kept for this visit only */}};
 /** Opening a conversation yourself (from search, a new chat or a name) puts it back in the list, like Discord. */
 const reopenChat=(me:string,id:string)=>{const c=readClosed(me);if(c[id]){delete c[id];writeClosed(me,c)}};
-function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:ChatSummary|null;me:string;onOpen:(id:string)=>void;onNew:()=>void;onGroup:()=>void;onClose:()=>void}){
- const [q,setQ]=useState(''),[closed,setClosed]=useState(()=>readClosed(me));
- const saveClosed=(next:Record<string,string>)=>{setClosed(next);writeClosed(me,next)};
+function ConversationList({summary,me,active,onOpen,onNew,onGroup,onClose}:{summary:ChatSummary|null;me:string;active?:string|null;onOpen:(id:string)=>void;onNew:()=>void;onGroup:()=>void;onClose:()=>void}){
+ // Read on every render: the list stays beside the open conversation, and opening or starting a chat elsewhere
+ // brings a closed one back.
+ const [q,setQ]=useState(''),[,bump]=useState(0),closed=readClosed(me);
+ const saveClosed=(next:Record<string,string>)=>{writeClosed(me,next);bump(n=>n+1)};
  // Closing removes a conversation from the list only; its messages stay. It returns when a new message arrives,
  // when you open it again (from a new chat or a name), and searching always finds it.
  const at=(v:string)=>{const t=Date.parse(v);return Number.isNaN(t)?0:t};
@@ -82,7 +99,7 @@ function ConversationList({summary,me,onOpen,onNew,onGroup,onClose}:{summary:Cha
  const list=matches.filter(c=>q.trim()||!isClosed(c));
  const mine=list.filter(c=>c.isMember),review=list.filter(c=>!c.isMember);
  const canNotify='Notification' in window&&Notification.permission==='default';
- const row=(c:ChatConversation)=><div key={c.id} className="chat-row-wrap"><button type="button" className={'chat-row'+(c.unread?' unread':'')+(isClosed(c)?' closed':'')} onClick={()=>onOpen(c.id)}>
+ const row=(c:ChatConversation)=><div key={c.id} className="chat-row-wrap"><button type="button" aria-current={c.id===active||undefined} className={'chat-row'+(c.unread?' unread':'')+(isClosed(c)?' closed':'')+(c.id===active?' on':'')} onClick={()=>onOpen(c.id)}>
   <span className="chat-avatar" aria-hidden>{c.kind==='group'?<Users size={16}/>:conversationName(c,me).replace(/^ا[/.]\s*/,'').slice(0,1)}</span>
   <span className="chat-row-text"><b>{conversationName(c,me)}</b><small>{c.last?(c.last.kind==='event'?'':c.last.mine?'أنت: ':c.kind==='group'?c.last.sender+': ':'')+c.last.body:'لا رسائل بعد'}</small></span>
   <span className="chat-row-meta"><small>{chatTime(c.lastAt)}</small>{c.unread>0&&<span className="chat-badge inline">{c.unread}</span>}</span></button>
@@ -153,7 +170,7 @@ function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeav
   <header className="chat-head"><button type="button" className="icon-btn" onClick={onBack} aria-label="رجوع إلى المحادثات"><ArrowRight size={18}/></button>
    <div className="chat-title"><b>{name}</b><small>{conv.kind==='group'?conv.members.map(m=>m.name).join('، '):readOnly?'مراجعة المسؤول':'محادثة خاصة'}</small></div>
    {conv.kind==='group'&&conv.isMember&&<button type="button" className="icon-btn" onClick={onInfo} aria-label="إدارة المجموعة"><UserPlus size={18}/></button>}
-   <button type="button" className="icon-btn" onClick={onLeave} aria-label="إغلاق المحادثات" title="إغلاق (Esc)"><X size={18}/></button></header>
+   </header>
   <div className="chat-scroll chat-messages" ref={scroller} aria-live="polite">
    {!loaded&&<p className="chat-empty" role="status">جارٍ التحميل…</p>}
    {loaded&&!messages.length&&<p className="chat-empty">ابدأ المحادثة. اكتب # للإشارة إلى قضية أو موكل أو مهمة، و@ لزميل.</p>}

@@ -196,7 +196,7 @@ await question.getByRole('button',{name:'إخفاء الردود'}).click();awai
 // A colleague's name opens a one-to-one chat with them.
 await question.getByRole('button',{name:'tools_clerk'}).first().click();
 const withClerk=page.getByRole('dialog',{name:'المحادثات'});await withClerk.locator('.chat-title').getByText('tools_clerk').waitFor();
-await withClerk.getByLabel('نص الرسالة').fill('بخصوص النقاش');await withClerk.getByRole('button',{name:'إرسال'}).click();await withClerk.getByText('بخصوص النقاش').waitFor();
+await withClerk.getByLabel('نص الرسالة').fill('بخصوص النقاش');await withClerk.getByRole('button',{name:'إرسال'}).click();await withClerk.locator('.chat-main').getByText('بخصوص النقاش').waitFor();
 await withClerk.getByRole('button',{name:'إغلاق المحادثات'}).click();await withClerk.waitFor({state:'detached'});
 await answer.getByRole('button',{name:'حذف التعليق'}).click();await question.locator('.comment-replies>li.deleted').waitFor();
 await discussion.getByRole('listitem').filter({hasText:'نعم، استلمناها اليوم'}).getByRole('button',{name:'حذف التعليق'}).click();
@@ -525,8 +525,10 @@ await lively.close();
 // Staff chat: the owner writes to a colleague with a case reference; the colleague sees the unread badge, opens the
 // case from the reference, and replies with a file; the owner downloads it and starts a group.
 {const bubble=page.getByRole('button',{name:/^المحادثات/});await page.goto(base+'#overview');await bubble.click();
+ // The header button shows the latest conversations, like the mail; «فتح المحادثات» opens the chat window.
+ await page.locator('.chat-latest').getByRole('button',{name:'فتح المحادثات'}).click();
  const panel=page.getByRole('dialog',{name:'المحادثات'});
- await panel.getByRole('button',{name:'محادثة جديدة'}).click();await panel.getByRole('button',{name:/tools_clerk/}).click();
+ await panel.getByRole('button',{name:'محادثة جديدة'}).click();await panel.locator('.chat-main').getByRole('button',{name:/tools_clerk/}).click();
  const box=panel.getByLabel('نص الرسالة');await box.click();await box.pressSequentially('مرحبا، راجع #TOOL-0');
  await panel.getByRole('option',{name:/كود TOOL-0/}).waitFor();await box.press('Enter');await box.pressSequentially('و !7001');
  await panel.getByRole('option',{name:/الرقم الآلي 7001/}).waitFor();await box.press('Enter');await box.pressSequentially('اليوم');
@@ -538,11 +540,12 @@ await lively.close();
  await cp.getByLabel('اسم المستخدم',{exact:true}).fill('tools_clerk');await cp.getByLabel('كلمة المرور',{exact:true}).fill('Fixture-password-123');await cp.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
  // Two unread: the note sent from the discussion and this message.
  const cb=cp.getByRole('button',{name:'المحادثات، 2 غير مقروءة'});await cb.waitFor({timeout:15000});await cb.click();
- const cpanel=cp.getByRole('dialog',{name:'المحادثات'});await cpanel.locator('.chat-row',{hasText:'tools_owner'}).click();
+ await cp.locator('.chat-latest-item.unread',{hasText:'tools_owner'}).click(); // A conversation in the popover opens the window on it
+ const cpanel=cp.getByRole('dialog',{name:'المحادثات'});
  await cpanel.locator('.chat-ref').getByText('كود TOOL-0').click();
  await cp.locator('[data-record-window] .case-pin').getByText('TOOL-0').waitFor();assert.equal(await cpanel.count(),0,'Opening a reference shows the case');
  await cp.keyboard.press('Escape');await cp.locator('[data-record-window]').waitFor({state:'hidden'});
- await cp.getByRole('button',{name:/^المحادثات/}).click();await cpanel.getByLabel('نص الرسالة').waitFor(); // Reopening returns to the same conversation
+ await cp.getByRole('button',{name:/^المحادثات/}).click();await cp.locator('.chat-latest').getByRole('button',{name:'فتح المحادثات'}).click();await cpanel.getByLabel('نص الرسالة').waitFor(); // Reopening returns to the same conversation
  await cpanel.locator('input[type=file]').setInputFiles({name:'memo.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')});
  await cpanel.getByLabel('نص الرسالة').fill('المذكرة مرفقة');await cpanel.getByRole('button',{name:'إرسال'}).click();
  await cpanel.locator('.chat-msg.mine .chat-file').getByText('memo.pdf').waitFor();assert.equal(uploads.length,1,'The file went to chat storage');
@@ -561,12 +564,12 @@ await lively.close();
  await panel.getByText('عُدّلت',{exact:false}).first().waitFor();
  await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();await panel.getByRole('button',{name:'مجموعة جديدة'}).click();
  await panel.getByLabel('اسم المجموعة').fill('فريق الأدوات');await panel.getByRole('checkbox').first().check();await panel.getByRole('button',{name:/إنشاء المجموعة/}).click();
- await panel.getByText(/أنشأ tools_owner المجموعة مع/).waitFor();await page.screenshot({path:artifacts+'/chat-group.png'});
+ await panel.locator('.chat-main').getByText(/أنشأ tools_owner المجموعة مع/).waitFor();await page.screenshot({path:artifacts+'/chat-group.png'});
  // Closing a conversation removes it from the list but keeps it; starting a chat with that person brings it back with its history.
  await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();const rows=panel.locator('.chat-row-wrap'),before=await rows.count();
  const direct=rows.filter({hasText:'tools_clerk'}).filter({hasNotText:'فريق'}).first();await direct.hover();await direct.getByRole('button',{name:/^إغلاق /}).click();
  await page.waitForTimeout(300);assert.equal(await rows.count(),before-1,'A closed conversation leaves the list');
- await panel.getByRole('button',{name:'محادثة جديدة'}).click();await panel.locator('button',{hasText:'tools_clerk'}).first().click();
+ await panel.getByRole('button',{name:'محادثة جديدة'}).click();await panel.locator('.chat-main button',{hasText:'tools_clerk'}).first().click();
  await panel.locator('.chat-msg').first().waitFor();await panel.getByRole('button',{name:'رجوع إلى المحادثات'}).click();assert.equal(await rows.count(),before,'Messaging the person again reopens it with its history');
  // A closed conversation comes back when the other person writes, even when this computer's clock runs ahead of the server.
  await page.evaluate(()=>{const real=Date.now;window.__realNow=real;Date.now=()=>real()+30*60e3});

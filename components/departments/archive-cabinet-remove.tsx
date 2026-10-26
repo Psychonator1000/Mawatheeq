@@ -15,7 +15,7 @@ const slotName=(l:ArchiveLocation)=>l.payload.shelf||l.payload.box||l.payload.co
 /**
  * Removing a cabinet, as when an old one is replaced. Its files either move drawer by drawer into the cabinet chosen
  * (the first drawer into the first, and so on; any extra into the last), or are taken off their places to be put in
- * the new cabinet later by scanning. Either way each file's history records it, and then the drawers are closed. A closed place keeps the history readable and shows again with «إظهار الأماكن المغلقة».
+ * the new cabinet later by scanning. Either way each file's history records it, and then the drawers are closed. A closed place leaves the map but keeps the files' history readable.
  * A file of it that is out with someone holds the removal until it is back.
  */
 export default function RemoveCabinet({room,cabinet,rooms,files,custody,onClose,onDone}:{room:string;cabinet:Cabinet;rooms:{name:string;cabinets:Cabinet[]}[];files:ArchiveFile[];custody:Map<string,Custody>;onClose:()=>void;onDone:()=>void}){

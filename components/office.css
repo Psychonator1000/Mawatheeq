@@ -576,3 +576,32 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .roll-dialog :is(.roll-arrange,.roll-filter-grid,.desk-toolbar) :is(input,select,.date-picker-button){min-height:32px;height:32px;padding-block:3px;font-size:12.5px}
 .roll-dialog .roll-toggles .btn{min-height:32px;padding:3px 10px;font-size:12.5px}
 .roll-dialog [data-slot=dialog-header]{gap:2px}.roll-dialog [data-slot=dialog-description]{font-size:12px}
+/* The chat window: the conversation list beside the open conversation, over a dimmed page. */
+.chat-scrim{position:fixed;inset:0;z-index:60;background:#1d140f40;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);animation:pin-in .2s both}
+.chat-panel.chat-window{inset:5vh max(3vw,calc((100vw - 1240px)/2));bottom:5vh;width:auto;height:auto;display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);flex-direction:unset;border-radius:20px}
+.chat-panel.chat-window.in-window{inset:3%;bottom:3%}
+.chat-window>.chat-side{display:flex;flex-direction:column;min-height:0;min-width:0;border-inline-end:1px solid var(--border);background:color-mix(in srgb,var(--brand) 3%,var(--card))}
+.chat-window>.chat-main{display:flex;flex-direction:column;min-height:0;min-width:0}
+.chat-row.on{background:color-mix(in srgb,var(--brand) 11%,transparent)}
+.chat-pick{flex:1;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;color:var(--muted-foreground);padding:24px}.chat-pick b{color:var(--foreground);font-size:15px}.chat-pick small{font-size:12.5px}.chat-pick .btn{margin-top:6px}
+@media(max-width:760px){.chat-panel.chat-window{inset:0;bottom:0;border-radius:0;grid-template-columns:1fr}.chat-window.has-main>.chat-side,.chat-window:not(.has-main)>.chat-main{display:none}}
+/* The header popover: the latest conversations, like the mail. */
+.chat-latest .chat-latest-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px}
+.chat-latest .chat-latest-item>span:nth-child(2){display:grid;min-width:0}.chat-latest .chat-latest-item small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-latest .chat-latest-item.unread b{color:var(--brand)}
+.chat-latest-empty{padding:16px;color:var(--muted-foreground);font-size:13px;margin:0}
+/* The chat window carries the theme's accent: a tinted list, accent headers, your own messages in the accent. */
+.chat-window{border-color:color-mix(in srgb,var(--brand) 30%,var(--border));background:linear-gradient(160deg,color-mix(in srgb,var(--brand) 5%,var(--card)),var(--card) 45%,color-mix(in srgb,var(--brand) 4%,var(--card)))}
+.chat-window>.chat-side{background:color-mix(in srgb,var(--brand) 8%,var(--card));border-inline-end-color:color-mix(in srgb,var(--brand) 22%,var(--border))}
+.chat-window .chat-head{background:linear-gradient(170deg,color-mix(in srgb,var(--brand) 18%,var(--card)),color-mix(in srgb,var(--brand) 5%,var(--card)));border-bottom-color:color-mix(in srgb,var(--brand) 22%,var(--border))}
+.chat-window .chat-head h2,.chat-window .chat-title b{color:var(--brand)}
+.chat-window .chat-row.on{background:color-mix(in srgb,var(--brand) 16%,var(--card));box-shadow:inset -3px 0 0 var(--brand)}
+.chat-window .chat-row:hover:not(.on){background:color-mix(in srgb,var(--brand) 9%,transparent)}
+.chat-window .chat-avatar{background:color-mix(in srgb,var(--brand) 22%,var(--card))}
+.chat-window .chat-msg.mine{background:color-mix(in srgb,var(--brand) 20%,var(--card));border-color:color-mix(in srgb,var(--brand) 40%,var(--border))}
+.chat-window .chat-badge,.chat-latest .chat-badge{background:var(--brand)}
+.chat-window .chat-send:not(:disabled){background:var(--brand);border-color:var(--brand);color:#fff}
+.chat-window .chat-search{border-color:color-mix(in srgb,var(--brand) 25%,var(--border))}
+.chat-window .chat-foot{border-top-color:color-mix(in srgb,var(--brand) 18%,var(--border))}
+.chat-pick svg{color:var(--brand);opacity:.7}
+.chat-latest .chat-avatar{background:color-mix(in srgb,var(--brand) 18%,var(--card))}

@@ -265,16 +265,6 @@ input[type=checkbox]:checked,input[type=radio]:checked{animation:check-pop .3s c
 /* ── Quality of life: text size, density, connection banner, copy chips, clock, what's new ── */
 :root[data-text=large] body{zoom:1.1}
 :root[data-text=xlarge] body{zoom:1.22}
-:root[data-density=compact] :is(.case-table,.office-table) td{padding-block:8px!important}
-:root[data-density=compact] :is(.case-table,.office-table) th{padding-block:9px!important}
-:root[data-density=compact] .case-table .party strong{line-height:1.5}
-:root[data-density=compact] :is(.panel-head){padding:14px 18px 8px}
-:root[data-density=compact] .panel-body{padding:4px 18px 16px}
-:root[data-density=compact] .stat{padding:14px}
-:root[data-density=compact] .stat-num{font-size:30px;line-height:1.4}
-:root[data-density=compact] .nav-button{height:40px!important;margin-bottom:2px}
-:root[data-density=compact] .workspace{padding-top:20px}
-:root[data-density=compact] .department-content>.panel,:root[data-density=compact] .att-section .panel{padding:16px}
 .connection-banner{position:fixed;top:10px;left:50%;translate:-50% 0;z-index:97;display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 12px 30px -12px #0006;animation:pop-in .35s cubic-bezier(.2,.9,.3,1.3) both}
 .connection-banner.offline{background:#a32e38;color:#fff}.connection-banner.online{background:#2f7a4f;color:#fff}
 .connection-banner .pulse{width:9px;height:9px;border-radius:50%;background:currentColor;animation:pulse-ring 1.6s ease-out infinite}

@@ -27,7 +27,7 @@ type Room={name:string;cabinets:Cabinet[];columns:Cabinet[][]};
  * you place files there by scanning them, one after another.
  */
 export default function ArchiveMap({locations,files,custody:stored,cases,canEdit,canPrint,caseRef,onEdit,onAdd,onStocktake,onChanged}:{locations:ArchiveLocation[];files:ArchiveFile[];custody:Map<string,Custody>;cases:CaseSummary[];canEdit:boolean;canPrint:boolean;caseRef:(f:ArchiveFile)=>string;onEdit:(l:ArchiveLocation)=>void;onAdd?:()=>void;onStocktake:(l:ArchiveLocation)=>void;onChanged:()=>void}){
- const [closed,setClosed]=useState(false),[q,setQ]=useState(''),[found,setFound]=useState<ArchiveFile|null>(null),[picked,setPicked]=useState<string>(''),[cabinet,setCabinet]=useState(false);
+ const [q,setQ]=useState(''),[found,setFound]=useState<ArchiveFile|null>(null),[picked,setPicked]=useState<string>(''),[cabinet,setCabinet]=useState(false);
  // A move shows at once: the file sits in its new drawer while the save goes out, and goes back if the save fails.
  // Each shown move lasts until fresh records for that file arrive.
  const [moved,setMoved]=useState<Map<string,{to:string;base:Custody|undefined}>>(()=>new Map());
@@ -122,14 +122,14 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
    else{putCab({...d,phase:'back',tx:box.left+d.dx,ty:box.top+d.dy});setTimeout(()=>putCab(null),340)}};
   addEventListener('pointermove',move,{passive:false});addEventListener('pointerup',up);addEventListener('pointercancel',up)}
  const rooms=useMemo<Room[]>(()=>{const m=new Map<string,Map<string,ArchiveLocation[]>>();
-  for(const l of placed.filter(l=>closed||!l.archived).sort(byCode)){const r=l.payload.name||'بلا غرفة',c=l.payload.cabinet||'';if(!m.has(r))m.set(r,new Map());const cm=m.get(r)!;if(!cm.has(c))cm.set(c,[]);cm.get(c)!.push(l)}
+  for(const l of placed.filter(l=>!l.archived).sort(byCode)){const r=l.payload.name||'بلا غرفة',c=l.payload.cabinet||'';if(!m.has(r))m.set(r,new Map());const cm=m.get(r)!;if(!cm.has(c))cm.set(c,[]);cm.get(c)!.push(l)}
   // A cabinet never arranged stands in its own column, after the arranged ones, in code order.
   // A cabinet stands where most of its drawers say, so one left half-saved still shows in one place.
   const pos=(slots:ArchiveLocation[])=>{const n=new Map<number,number>();for(const l of slots){const p=Number(l.payload.position)||Infinity;n.set(p,(n.get(p)||0)+1)}return [...n].sort((a,b)=>b[1]-a[1]||a[0]-b[0])[0]?.[0]??Infinity};
   return [...m].map(([name,cm])=>{const cabs=[...cm].map(([c,slots],i)=>{const p=pos(slots);return {c:{name:c,slots},col:Number.isFinite(p)?Math.floor(p/100):1e6+i,row:Number.isFinite(p)?p%100:0}});
    const cols=new Map<number,typeof cabs>();for(const x of cabs){if(!cols.has(x.col))cols.set(x.col,[]);cols.get(x.col)!.push(x)}
    const columns=[...cols].sort((a,b)=>a[0]-b[0]).map(([,xs])=>xs.sort((a,b)=>a.row-b.row).map(x=>x.c));
-   return {name,cabinets:columns.flat(),columns}})},[placed,closed]);
+   return {name,cabinets:columns.flat(),columns}})},[placed]);
  const inside=(l:ArchiveLocation)=>files.filter(f=>cu(f).locationId===l.id&&cu(f).state==='in');
  const unplaced=files.filter(f=>!cu(f).locationId);
  const term=normalizeSearch(q.trim()),caseCode=(id:string)=>cases.find(c=>c.id===id)?.code||'';
@@ -142,7 +142,7 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
  const show=(f:ArchiveFile)=>{setFound(f);setQ('');const id=cu(f).locationId;if(id){setPicked(id);requestAnimationFrame(()=>document.getElementById('slot-'+id)?.scrollIntoView({block:'center',behavior:'smooth'}))}};
  const sheet=(l:ArchiveLocation)=>printHtml(listHtml('كشف جرد '+l.payload.code,locationLabel(l),['✓','رقم الأرشيف','الملف','القضية','النوع','الحالة'],files.filter(f=>cu(f).locationId===l.id).sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true})).map(f=>{const c=cu(f);return ['☐',f.payload.number,f.payload.title,caseRef(f),f.payload.type,c.state==='in'?'في المكان':CUSTODY_STATES[c.state]+': '+c.holder]}),formatDate(todayISO()),''));
  return <section className="panel archive-map"><div className="panel-head"><div><h2>خريطة الحفظ</h2><p className="panel-note">أين يُحفظ كل ملف: الغرفة ثم الخزانة ثم الدرج أو الرف. ابحث عن ملف ليضيء مكانه، أو اختر درجاً لترى ما فيه وتضع فيه الملفات.</p></div>
-  <div className="actions archive-head-actions"><label className="checkbox-line"><input type="checkbox" checked={closed} onChange={e=>setClosed(e.target.checked)}/> إظهار الأماكن المغلقة</label>
+  <div className="actions archive-head-actions">
    {canEdit&&<button className="btn primary" onClick={()=>setCabinet(true)}><PackagePlus size={17}/> خزانة جديدة بأدراجها</button>}{onAdd&&<button className="btn" onClick={onAdd}><Plus size={17}/> مكان حفظ جديد</button>}</div></div>
   <div className="map-find"><label className="paper-search"><Search size={16} aria-hidden/><input aria-label="ابحث عن مكان ملف" value={q} onChange={e=>setQ(e.target.value)} placeholder="أين الملف؟ رقم الأرشيف أو كود القضية أو اسم الموكل"/></label>
    {term&&<ul className="map-hits" role="listbox" aria-label="الملفات">{hits.length?hits.map(f=>{const c=cu(f),l=locations.find(x=>x.id===c.locationId);return <li key={f.id}><button type="button" onClick={()=>show(f)}><b dir="ltr">{f.payload.number}</b><span className="map-file-name">{f.payload.title}</span><small>{c.state!=='in'?CUSTODY_STATES[c.state]+(c.holder?': '+c.holder:''):l?locationLabel(l):'بلا مكان محدد'}</small></button></li>}):<li className="muted">لا يوجد ملف بهذا البحث</li>}</ul>}

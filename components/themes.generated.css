@@ -289,6 +289,8 @@
 :root[data-theme=noir] .journey.short{border-inline-start-color:#d2a5a9}
 :root[data-theme=noir] .journey-short input{border:1px solid var(--input,#34312b)}
 :root[data-theme=noir] .btn.primary.danger{background:#d2a5a9;border-color:#d2a5a9;color:#11100e}
+:root[data-theme=noir] .chat-scrim{background:#e6e3db40}
+:root[data-theme=noir] .chat-window .chat-send:not(:disabled){color:#11100e}
 :root[data-theme=noir] .workspace-chooser header p{color:#c5bdac}
 :root[data-theme=noir] .workspace-option{border:1px solid #2d2a24;background:#141310;color:#d8d2c7}
 :root[data-theme=noir] .workspace-option p{color:#c4bbaa}
@@ -706,6 +708,8 @@
 :root[data-theme=phantom] .journey.short{border-inline-start-color:#ddc3c5}
 :root[data-theme=phantom] .journey-short input{border:1px solid var(--input,#262626)}
 :root[data-theme=phantom] .btn.primary.danger{background:#ddc3c5;border-color:#ddc3c5;color:#0d0d0d}
+:root[data-theme=phantom] .chat-scrim{background:#ededed40}
+:root[data-theme=phantom] .chat-window .chat-send:not(:disabled){color:#0d0d0d}
 :root[data-theme=phantom] .workspace-chooser header p{color:#cecece}
 :root[data-theme=phantom] .workspace-option{border:1px solid #212121;background:#0f0f0f;color:#e0e0e0}
 :root[data-theme=phantom] .workspace-option p{color:#cdcdcd}
@@ -1123,6 +1127,8 @@
 :root[data-theme=yorha] .journey.short{border-inline-start-color:#654447}
 :root[data-theme=yorha] .journey-short input{border:1px solid var(--input,#e8e5dc)}
 :root[data-theme=yorha] .btn.primary.danger{background:#654447;border-color:#654447;color:#f3f2ed}
+:root[data-theme=yorha] .chat-scrim{background:#3f3c3540}
+:root[data-theme=yorha] .chat-window .chat-send:not(:disabled){color:#f3f2ed}
 :root[data-theme=yorha] .workspace-chooser header p{color:#5d5a4f}
 :root[data-theme=yorha] .workspace-option{border:1px solid #eae8e0;background:#f2f0eb;color:#4c4941}
 :root[data-theme=yorha] .workspace-option p{color:#5f5b51}
@@ -1429,6 +1435,7 @@
 :root[data-theme=ivory] .map-slot.lit{background:#f9f8f7}
 :root[data-theme=ivory] .journey-short input{border:1px solid var(--input,#d5d2cd)}
 :root[data-theme=ivory] .btn.primary.danger{color:#ffffff}
+:root[data-theme=ivory] .chat-window .chat-send:not(:disabled){color:#ffffff}
 :root[data-theme=ivory] .workspace-option{border:1px solid #dedbd8;background:#fefdfd}
 :root[data-theme=ivory] .department-topbar{background:#fefefed9}
 :root[data-theme=ivory] .department-brand .brand-mark{color:#faf9f8}
@@ -1714,6 +1721,8 @@
 :root[data-theme=phantom-light] .map-slot.lit{background:#fdfcfc}
 :root[data-theme=phantom-light] .journey-short input{border:1px solid var(--input,#d4d2cd)}
 :root[data-theme=phantom-light] .btn.primary.danger{color:#ffffff}
+:root[data-theme=phantom-light] .chat-scrim{background:#18151440}
+:root[data-theme=phantom-light] .chat-window .chat-send:not(:disabled){color:#ffffff}
 :root[data-theme=phantom-light] .workspace-chooser header p{color:#716e6c}
 :root[data-theme=phantom-light] .workspace-option{border:1px solid #fafaf9;background:#fefefe;color:#403c39}
 :root[data-theme=phantom-light] .workspace-option p{color:#757270}
@@ -2144,6 +2153,8 @@
 :root[data-theme=yorha-dark] .journey.short{border-inline-start-color:#c9afb1}
 :root[data-theme=yorha-dark] .journey-short input{border:1px solid var(--input,#2a2924)}
 :root[data-theme=yorha-dark] .btn.primary.danger{background:#c9afb1;border-color:#c9afb1;color:#191815}
+:root[data-theme=yorha-dark] .chat-scrim{background:#dbd7c740}
+:root[data-theme=yorha-dark] .chat-window .chat-send:not(:disabled){color:#191815}
 :root[data-theme=yorha-dark] .workspace-chooser header p{color:#cac4ac}
 :root[data-theme=yorha-dark] .workspace-option{border:1px solid #262521;background:#1a1916;color:#d3cebb}
 :root[data-theme=yorha-dark] .workspace-option p{color:#c9c3aa}
@@ -2784,6 +2795,27 @@
 :root[data-mode=dark] .map-room.cab-into{outline:2px dashed var(--brand)}
 :root[data-mode=dark] .cabinet-rename{border:1px solid var(--brand);background:var(--card)}
 :root[data-mode=dark] .dispatch-table tr.dispatch-group th{background:color-mix(in srgb,var(--brand) 7%,var(--card))}
+:root[data-mode=dark] .chat-scrim{background:#e7e3e140}
+:root[data-mode=dark] .chat-window>.chat-side{border-inline-end:1px solid var(--border);background:color-mix(in srgb,var(--brand) 3%,var(--card))}
+:root[data-mode=dark] .chat-row.on{background:color-mix(in srgb,var(--brand) 11%,transparent)}
+:root[data-mode=dark] .chat-pick{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-pick b{color:var(--foreground)}
+:root[data-mode=dark] .chat-latest .chat-latest-item.unread b{color:var(--brand)}
+:root[data-mode=dark] .chat-latest-empty{color:var(--muted-foreground)}
+:root[data-mode=dark] .chat-window{border-color:color-mix(in srgb,var(--brand) 30%,var(--border));background:linear-gradient(160deg,color-mix(in srgb,var(--brand) 5%,var(--card)),var(--card) 45%,color-mix(in srgb,var(--brand) 4%,var(--card)))}
+:root[data-mode=dark] .chat-window>.chat-side{background:color-mix(in srgb,var(--brand) 8%,var(--card));border-inline-end-color:color-mix(in srgb,var(--brand) 22%,var(--border))}
+:root[data-mode=dark] .chat-window .chat-head{background:linear-gradient(170deg,color-mix(in srgb,var(--brand) 18%,var(--card)),color-mix(in srgb,var(--brand) 5%,var(--card)));border-bottom-color:color-mix(in srgb,var(--brand) 22%,var(--border))}
+:root[data-mode=dark] .chat-window .chat-head h2,:root[data-mode=dark] .chat-window .chat-title b{color:var(--brand)}
+:root[data-mode=dark] .chat-window .chat-row.on{background:color-mix(in srgb,var(--brand) 16%,var(--card))}
+:root[data-mode=dark] .chat-window .chat-row:hover:not(.on){background:color-mix(in srgb,var(--brand) 9%,transparent)}
+:root[data-mode=dark] .chat-window .chat-avatar{background:color-mix(in srgb,var(--brand) 22%,var(--card))}
+:root[data-mode=dark] .chat-window .chat-msg.mine{background:color-mix(in srgb,var(--brand) 20%,var(--card));border-color:color-mix(in srgb,var(--brand) 40%,var(--border))}
+:root[data-mode=dark] .chat-window .chat-badge,:root[data-mode=dark] .chat-latest .chat-badge{background:var(--brand)}
+:root[data-mode=dark] .chat-window .chat-send:not(:disabled){background:var(--brand);border-color:var(--brand);color:#131313}
+:root[data-mode=dark] .chat-window .chat-search{border-color:color-mix(in srgb,var(--brand) 25%,var(--border))}
+:root[data-mode=dark] .chat-window .chat-foot{border-top-color:color-mix(in srgb,var(--brand) 18%,var(--border))}
+:root[data-mode=dark] .chat-pick svg{color:var(--brand)}
+:root[data-mode=dark] .chat-latest .chat-avatar{background:color-mix(in srgb,var(--brand) 18%,var(--card))}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

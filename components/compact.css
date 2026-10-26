@@ -598,7 +598,6 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
  .nav-button{height:34px!important;margin-bottom:0!important;padding:0 12px!important;font-size:13.5px!important;gap:10px!important}
  [data-sidebar=content] [data-sidebar=menu]{gap:1px}
  .nav-button svg{width:17px;height:17px}
- :root[data-density=compact] .nav-button{height:32px!important}
 }
 .nav-go{display:flex;align-items:center;gap:6px;margin:0 14px 6px;padding:0 10px;min-height:34px;border-radius:9px;background:#ffffff14;border:1px solid #ffffff22;color:var(--sidebar-foreground)}
 .nav-go:focus-within{border-color:#ffffff66;background:#ffffff1f}
@@ -617,3 +616,27 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 /* Pages outside a department (the legal workspace) take the app's own colour wherever a department colour is used. */
 :root{--dept:var(--brand);--dept-soft:color-mix(in srgb,var(--brand) 9%,transparent)}
 /* Suggestion fields use the same box and list as the pickers, so every dropdown looks alike. */
+/* «مضغوطة»: everything a step tighter than the default layout above, never looser. */
+:root[data-density=compact]{--control-h:32px}
+:root[data-density=compact] :is(.case-table,.office-table) td{padding-block:6px!important}
+:root[data-density=compact] :is(.case-table,.office-table) th{padding-block:7px!important}
+:root[data-density=compact] .panel-head{padding:10px 16px 6px}
+:root[data-density=compact] .panel-body{padding:2px 16px 12px}
+:root[data-density=compact] .stat{padding:10px 12px}
+:root[data-density=compact] .nav-button{height:29px!important}
+:root[data-density=compact] .workspace{padding-top:12px}
+:root[data-density=compact] .department-content>.panel,:root[data-density=compact] .att-section .panel{padding:12px}
+/* The department side panel carries the accent like the main menu: an accent panel with light text, see-through
+   tiles, and light fields so typing stays easy. */
+:root .sec-agenda.panel{background:linear-gradient(175deg,var(--dept),color-mix(in srgb,var(--dept) 78%,#000))!important;color:#f8efe4;border-color:color-mix(in srgb,var(--dept) 70%,#000)!important;box-shadow:0 10px 30px -18px color-mix(in srgb,var(--dept) 70%,#000)}
+:root .sec-agenda :is(.sec-agenda-head h2,.desk-sub){color:#fff8ef}
+:root .sec-agenda :is(.sec-agenda-head small,.field>span,.sec-empty,.desk-note,.muted,.empty-state p){color:#f2e3d3cc}
+:root .sec-agenda .desk-stats>*{background:var(--background);border-color:transparent;color:var(--foreground)}
+:root .sec-agenda .desk-stats>*:hover{background:color-mix(in srgb,var(--background) 88%,var(--dept))}
+:root .sec-agenda .desk-stats>* :is(span,small){color:var(--muted-foreground)}:root .sec-agenda .desk-stats>* b{color:var(--dept)}
+:root .sec-agenda .sec-agenda-list .agenda-item{background:#ffffff12;color:#f8efe4;border-inline-start-color:#ffffffaa}
+:root .sec-agenda .sec-agenda-list .agenda-item.late{border-inline-start-color:#ffb4a8}
+:root .sec-agenda .sec-agenda-list .agenda-item :is(small,.agenda-time){color:#f2e3d3cc}
+:root .sec-agenda :is(input,textarea,select){background:#fffdf8;color:#2a201b}
+:root .sec-agenda .btn:not(.primary){background:#fffaf2;color:var(--dept);border-color:transparent}
+:root .sec-agenda svg{color:currentColor}
