@@ -305,6 +305,11 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .desk-sub{font-size:13.5px;margin:2px 0 -2px}.desk-alert{min-height:36px;justify-content:space-between;font-size:13px}.desk-alert b{color:#a3672e}
 .work-desk .status-chips{margin:0}.work-desk .pick-bar{margin:0}
 .work-desk-body>.panel,.work-desk-body>section{border:0;box-shadow:none;background:none;padding:0;margin:0}
+/* A list that fills its desk: the heading, filters and column names stay put and only the rows scroll. */
+.work-desk-body:has(>.desk-fill){overflow:hidden;display:flex;flex-direction:column}
+.work-desk-body>.desk-fill{flex:1;min-height:0;display:flex;flex-direction:column}
+.desk-fill>.table-wrap{flex:1;min-height:0;overflow:auto}.desk-fill>.table-wrap .office-table th{background:var(--card)}
+@media(max-width:1000px){.work-desk-body:has(>.desk-fill){overflow:visible;display:block}.desk-fill>.table-wrap{overflow-x:auto}}
 .collection-table td b,.collection-table td small{display:block}.collection-table td small{font-size:11.5px;color:var(--muted-foreground)}.collection-table .tag-line{display:flex;flex-wrap:wrap;gap:4px}
 .collection-table .pick-col{width:34px}.collection-row.picked td{background:color-mix(in srgb,var(--dept) 7%,transparent)}
 .work-desk-filters .more-filters{min-height:38px;padding:6px 12px;align-self:flex-end}.work-desk-filters .more-filters.on{border-color:var(--dept);color:var(--dept)}
