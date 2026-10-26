@@ -2,12 +2,19 @@
 import type {DepartmentRecord} from './departments';
 
 export type LocationData = {code:string;name:string;cabinet:string;shelf:string;box:string;capacity:string;notes:string};
-export type FileData = {number:string;title:string;type:string;volume:string;pages:string;locationId:string;originals:'yes'|'no';confidential:'yes'|'no';intakeDate:string;retentionUntil:string;notes:string};
+export type FileData = {number:string;title:string;type:string;volume:string;pages:string;locationId:string;originals:'yes'|'no';confidential:'yes'|'no';intakeDate:string;retentionUntil:string;notes:string;
+ /** Important items, one per line (chiefly originals); checked out with the file and checked again on its return. */
+ contents?:string;
+ /** Set by the server: a file that cannot be found, and who last confirmed holding it. */
+ lost?:''|'yes';lostAt?:string;lostNote?:string;lostBy?:string;lostHolder?:string;foundAt?:string;foundBy?:string;foundNote?:string};
 export type MovementType = 'checkout'|'court'|'client'|'return'|'move'|'audit';
 export type CustodyState = 'in'|'staff'|'court'|'client';
 export type MovementData = {type:MovementType;date:string;holder:string;holderId:string;purpose:string;dueDate:string;locationId:string;notes:string;status:'posted'|'void';voidReason:string;fromState:CustodyState;toState:CustodyState;
  /** Set by the server on a hand-out to an account: the recipient confirms receipt, then reports the return the archive approves. */
- receipt?:''|'pending'|'received';receivedAt?:string;returnClaimedAt?:string;batchId?:string};
+ receipt?:''|'pending'|'received';receivedAt?:string;returnClaimedAt?:string;batchId?:string;
+ unplaced?:''|'yes';contents?:string;pages?:string;receivedMissing?:string;rejections?:{at:string;by:string;reason:string;claimedAt:string}[];
+ /** On a return: whether it came back whole, what was missing, and how that was settled. */
+ returnCheck?:''|'complete'|'missing';missing?:string;pagesBack?:string;fromHolder?:string;fromHolderId?:string;missingResolvedAt?:string;missingResolution?:string;missingResolvedBy?:string};
 export type RequestStatus = 'pending'|'ready'|'done'|'declined';
 export type RequestData = {requester:string;requesterId:string;neededBy:string;purpose:string;status:RequestStatus;notes:string;decisionNote:string};
 export type ArchiveLocation = DepartmentRecord<LocationData>;
@@ -45,7 +52,7 @@ export function custodyOf(file:ArchiveFile,movements:ArchiveMovement[]):Custody 
  const c:Custody={state:'in',locationId:file.payload.locationId,holder:'',holderId:'',dueDate:'',since:file.payload.intakeDate,purpose:'',lastAudit:'',last:null};
  for(const m of posted){const p=m.payload;
   c.state=p.toState;c.last=m;c.since=p.date;
-  if(p.locationId)c.locationId=p.locationId;
+  if(p.locationId)c.locationId=p.locationId;else if(p.type==='move'&&p.unplaced==='yes')c.locationId='';
   if(p.type==='audit')c.lastAudit=p.date;
   if(p.toState==='in'){c.holder='';c.holderId='';c.dueDate='';c.purpose=''}else{c.holder=p.holder;c.holderId=p.holderId;c.dueDate=p.dueDate;c.purpose=p.purpose}
  }
@@ -105,3 +112,13 @@ export type MyPaperFiles = {holding:HeldFile[];requests:MyRequest[]};
 export type CasePaperFile = DeskFile & {state:CustodyState;holder:string;mine:boolean;receipt:string;returnClaimedAt:string;movementId:string|null;dueDate:string;request:{id:string;status:RequestStatus;neededBy:string}|null};
 /** Asking for, receiving or returning a file anywhere refreshes «ملفاتي الورقية» and the case window at once. */
 export const PAPER_FILES_EVENT='mawatheeq-paper-files';
+
+/** The contents list as items. */
+export const contentItems=(text?:string)=>(text||'').split('\n').map(x=>x.trim()).filter(Boolean);
+/** The latest return that came back short and is not yet settled: what is missing and who returned it. */
+export function openMissing(fileId:string,movements:ArchiveMovement[]):ArchiveMovement|null {
+ const back=fileMovements(fileId,movements).filter(m=>m.payload.status==='posted'&&m.payload.type==='return').at(-1);
+ return back&&back.payload.returnCheck==='missing'&&!back.payload.missingResolvedAt?back:null;
+}
+/** Whole days since a server timestamp. */
+export const daysSince=(at?:string)=>{const t=at?Date.parse(at):NaN;return Number.isNaN(t)?0:Math.floor((Date.now()-t)/864e5)};

@@ -1,3 +1,4 @@
+import {LIVE_EVENT} from '@/lib/live';
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {ChevronDown,ChevronLeft,Lock,MessageSquare,Reply,Send,Trash2,Users} from 'lucide-react';
 import {toast} from 'sonner';
@@ -24,7 +25,9 @@ export default function CommentThread({target,userId,isOwner,canPost}:{target:Co
  useEffect(()=>{let active=true;
   Promise.all([commentRequest<Comment[]>('list',{targetType,targetId}),canPost?commentRequest<CommentPerson[]>('mentionable',{targetType,targetId}):[]])
    .then(([list,who])=>{if(active){setComments(list);setPeople(who)}}).catch(e=>{if(active)setError(e.message)});
-  return()=>{active=false}},[targetType,targetId,canPost]);
+  // A colleague's comment shows at once when the live channel says the discussion changed.
+  const live=()=>{commentRequest<Comment[]>('list',{targetType,targetId}).then(list=>{if(active)setComments(list)}).catch(()=>undefined)};addEventListener(LIVE_EVENT.comments,live);
+  return()=>{active=false;removeEventListener(LIVE_EVENT.comments,live)}},[targetType,targetId,canPost]);
  const roots=useMemo(()=>tree(comments||[]),[comments]);
  async function remove(c:Comment){try{const saved=await commentRequest<Comment>('delete',{id:c.id});setComments(list=>(list||[]).map(x=>x.id===c.id?{...x,...saved}:x));toast.success('حُذف التعليق')}catch(e){toast.error((e as Error).message)}}
  const posted=(c:Comment)=>{setComments(list=>[...(list||[]),c]);setReplyTo(null)};

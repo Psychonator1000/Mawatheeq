@@ -349,7 +349,7 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  // صفة الموكل is a list with «أخرى…» for anything else (looked at, not changed, so nothing is left unsaved).
  await sw.getByRole('tab',{name:/^بيانات الحكم/}).click();await sw.getByRole('combobox',{name:'صفة الموكل'}).click();
  for(const o of ['مدعي','مدعى عليه','أخرى…'])await page.getByRole('option',{name:o,exact:true}).waitFor();await page.keyboard.press('Escape');await page.getByRole('listbox').waitFor({state:'hidden'});
- assert.equal(await sw.locator('input[list]').count()>0,true,'Court and opponent fields offer typing suggestions');
+ assert.equal(await sw.locator('input[aria-autocomplete=list]').count()>0,true,'Court and opponent fields offer typing suggestions');
  await page.keyboard.press('Escape');await sw.waitFor({state:'hidden'});
  await page.evaluate(()=>{location.hash='work'});await page.getByRole('heading',{name:'المهام والجلسات',level:2}).waitFor();
  await page.evaluate(()=>{window.__printed='';window.__mawatheeqPrint=h=>{window.__printed+=h}});

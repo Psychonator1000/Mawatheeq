@@ -507,3 +507,28 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .map-files{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:50vh;overflow:auto}
 .map-files li{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px dashed var(--border);font-size:12.5px}.map-files li>span:not(.tag){flex:1;display:grid;min-width:0}.map-files small{color:var(--muted-foreground);font-size:11px}
 @media(max-width:900px){.map-body:has(.map-panel){grid-template-columns:1fr}.map-panel{position:static}}
+/* Return check: the file's contents ticked off on its return; what is missing stays visible until settled. */
+.return-check{display:grid;gap:12px}.return-who{margin:0;font-size:13px}.return-who .tag{margin-inline-start:6px}
+.return-items{border:1px solid var(--border);border-radius:12px;padding:8px 12px;display:grid;gap:4px;margin:0}.return-items legend{font-size:12px;color:var(--muted-foreground);padding:0 4px}
+.return-items .off{color:#a32e38;text-decoration:line-through}
+.return-short{display:flex;align-items:center;gap:8px}.return-reject{display:grid;gap:8px}
+.lost-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-inline-start:4px solid #a32e38}.lost-note>span{flex:1;min-width:220px}
+.inline-settle{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}.inline-settle .field{flex:1;min-width:200px}
+.lost-link{font-size:12px;color:var(--muted-foreground);justify-self:start}
+/* Drag a file from a drawer's list onto another drawer: it lifts, the drawer under it glows, and lands with a pulse. */
+.map-files li[draggable=true]{cursor:grab}.map-files li.dragging{opacity:.45;transform:scale(.97)}
+.map-files li.away{opacity:.8}.map-away{color:#a32e38!important}
+.map-grip{color:var(--muted-foreground);flex:none}
+.map-row-actions{display:flex;gap:2px;opacity:.55;transition:opacity .2s}.map-files li:hover .map-row-actions,.map-files li:focus-within .map-row-actions{opacity:1}
+.map-row-actions .icon-btn,.map-move .icon-btn{width:26px;height:26px}
+.map-move{display:flex;align-items:center;gap:4px}.map-move select{max-width:150px;min-height:28px;border:1px solid var(--border);border-radius:7px;background:var(--card);font:inherit;font-size:12px}
+.map-slot.over{border-color:var(--brand);border-style:dashed;background:color-mix(in srgb,var(--brand) 12%,var(--card));transform:scale(1.04);box-shadow:0 8px 20px -10px color-mix(in srgb,var(--brand) 60%,transparent)}
+.map-slot.landed{animation:slot-land .8s cubic-bezier(.3,1.6,.5,1)}
+@keyframes slot-land{0%{transform:scale(1.08);background:color-mix(in srgb,#3f8f6b 22%,var(--card))}100%{transform:scale(1)}}
+.map-slot.awaits{border-style:dashed;border-color:#a32e38;background:repeating-linear-gradient(45deg,transparent 0 6px,color-mix(in srgb,#a32e38 7%,transparent) 6px 12px)}
+.map-found.away{background:color-mix(in srgb,#a32e38 9%,var(--card))}.map-found.away svg{color:#a32e38}
+.map-drag-hint{margin:0 0 8px;padding:6px 12px;border-radius:9px;background:color-mix(in srgb,var(--brand) 10%,var(--card));font-size:12.5px;animation:pin-in .25s both}
+.map-slot{transition:border-color .2s,box-shadow .2s,background-color .2s,transform .2s cubic-bezier(.3,1.4,.5,1)}
+:root[data-motion=off] :is(.map-slot,.map-slot.landed){animation:none;transition:none}
+.journey.short{border-inline-start-color:#a32e38}
+.journey-short{display:flex;gap:6px;align-items:center}.journey-short input{min-height:32px;border:1px solid var(--input,#dfd3c3);border-radius:8px;padding:0 10px;font:inherit;font-size:12.5px;background:var(--card);min-width:160px}

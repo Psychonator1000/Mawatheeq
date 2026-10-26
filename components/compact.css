@@ -599,3 +599,7 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 .movement-filters>.field:first-child{flex:2 1 260px;min-width:220px}
 /* Pages outside a department (the legal workspace) take the app's own colour wherever a department colour is used. */
 :root{--dept:var(--brand);--dept-soft:color-mix(in srgb,var(--brand) 9%,transparent)}
+/* A field with suggestions opens a real list on focus, narrowed as you type. */
+.suggest-field{position:relative}
+.suggest-list{position:absolute;top:100%;inset-inline:0;z-index:70;margin:4px 0 0;padding:4px;list-style:none;max-height:240px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 16px 40px -18px #0006}
+.suggest-list li{padding:7px 10px;border-radius:7px;font-size:13.5px;cursor:pointer}.suggest-list li:hover,.suggest-list li.on{background:color-mix(in srgb,var(--brand) 9%,transparent)}

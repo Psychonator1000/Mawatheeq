@@ -1,5 +1,6 @@
 'use client';
 import {normalizeSearch} from '@/lib/case-browse';
+import {LIVE_EVENT} from '@/lib/live';
 import React,{useState,useEffect,useMemo,useRef,useContext,lazy,Suspense} from 'react';
 import {LayoutDashboard,Scale,Gavel,ShieldCheck,CalendarDays,ChartNoAxesCombined,Settings,Search,Plus,Download,Upload,ArrowLeft,ChevronLeft,ArrowUpLeft,ArrowUp,ArrowDown,ArrowUpDown,RefreshCw,Printer,Archive,LoaderCircle,AlertCircle,Building2,CheckCheck,Save,CalendarClock,TriangleAlert,ClipboardList,CalendarCheck,FileText,MessagesSquare,Landmark,FileX,FileSearch,PauseCircle} from 'lucide-react';
 import {SidebarProvider,Sidebar,SidebarHeader,SidebarContent,SidebarMenu,SidebarMenuItem,SidebarMenuButton,SidebarGroup,SidebarTrigger,useSidebar} from '@/components/ui/sidebar';
@@ -105,6 +106,8 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
  const [office,setOffice]=useState<OfficeData|null>(null),[officeError,setOfficeError]=useState(''),[reviewSelection,setReviewSelection]=useState<ReviewSelection>({scope:'judgment',status:''}),[selectedTab,setSelectedTab]=useState('case');const officeGeneration=useRef(0);
  const [mentions,setMentions]=useState<MentionFeed|null>(null);
  const loadMentions=async()=>{if(await commentsAvailable())setMentions(await fetchMentions().catch(()=>null))};
+ // A mention reaches the bell at once over the live channel.
+ useEffect(()=>{const on=()=>void loadMentions();addEventListener(LIVE_EVENT.comments,on);return()=>removeEventListener(LIVE_EVENT.comments,on)},[]);
  const refreshOffice=async()=>{if(!sharedBackend)return;const generation=++officeGeneration.current;try{const next=await fetchOffice();if(generation===officeGeneration.current){setOffice(next);setOfficeError('');void writeSnapshot('office',next);void loadMentions()}}catch(e){if(generation===officeGeneration.current){setOffice(null);setOfficeError((e as Error).message)}}};
  // Open with the last copy at once; the server's copy replaces it as soon as it arrives.
  useEffect(()=>{const first=officeGeneration.current;if(sharedBackend)void readSnapshot<OfficeData>('office').then(d=>{if(d&&officeGeneration.current===first+1)setOffice(o=>o||d)});void refreshOffice();const refresh=()=>{if(document.visibilityState==='visible')void refreshOffice()};const timer=window.setInterval(refresh,30000);window.addEventListener('focus',refresh);return()=>{clearInterval(timer);window.removeEventListener('focus',refresh);officeGeneration.current++}},[]);

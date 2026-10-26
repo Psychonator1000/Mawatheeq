@@ -14,7 +14,7 @@ function contentSecurityPolicy(): Plugin {
   const policy = [
     "default-src 'self'", "script-src 'self' 'wasm-unsafe-eval'", "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src 'self' data: https://fonts.gstatic.com",
-    `img-src 'self' data: blob: https: ${api}`.trim(), `connect-src 'self' blob: ${api}`.trim(), `frame-src 'self' blob: ${api}`.trim(),
+    `img-src 'self' data: blob: https: ${api}`.trim(), `connect-src 'self' blob: ${api} ${api.replace(/^https:/,'wss:')}`.trim(), `frame-src 'self' blob: ${api}`.trim(),
     "object-src 'none'", "base-uri 'self'", "form-action 'none'",
   ].join('; ');
   return { name: 'content-security-policy', apply: 'build', transformIndexHtml: html => html.replace('<meta charset="UTF-8" />', `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`) };

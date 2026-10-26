@@ -3,25 +3,25 @@ import {useCallback,useEffect,useMemo,useState} from 'react';
 import {CheckCircle2,Undo2,X,Search} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
-import {PAPER_FILES_EVENT,daysBetween,type DeskFile,type HeldFile,type MyPaperFiles,type MyRequest} from '@/lib/archive';
+import {PAPER_FILES_EVENT,contentItems,daysBetween,type DeskFile,type HeldFile,type MyPaperFiles,type MyRequest} from '@/lib/archive';
 import {normalizeSearch} from '@/lib/case-browse';
 import {formatDate,todayISO} from '@/lib/domain';
 import {officeTime} from './office-shared';
 import {Empty} from './shared';
 
-type Step={id:string;type:string;date:string;holder:string;toState:string;purpose:string;notes:string;at:string;by:string;location:string};
-type Handout=HeldFile&{current:boolean;steps:Step[]};
+type Step={id:string;type:string;date:string;holder:string;toState:string;purpose:string;notes:string;at:string;by:string;location:string;returnCheck?:string;missing?:string;missingResolvedAt?:string;missingResolution?:string};
+type Handout=HeldFile&{current:boolean;steps:Step[];contents?:string;pages?:string;receivedMissing?:string;rejections?:{at:string;by:string;reason:string;claimedAt:string}[]};
 type Req=MyRequest&{removed?:boolean;movementId?:string|null};
 type Journeys={handouts:Handout[];requests:Req[]};
-type Stage='requested'|'ready'|'marked'|'declined'|'awaiting'|'with'|'reported'|'away'|'complete';
+type Stage='requested'|'ready'|'marked'|'declined'|'awaiting'|'with'|'reported'|'away'|'short'|'complete';
 type Journey={key:string;file:DeskFile;request:Req|null;handout:Handout|null;stage:Stage;last:string};
 type Point={label:string;when:string;detail?:string;state:'done'|'now'|'next'|'warn'};
 type Filter='open'|'mine'|'complete'|'all';
 
 const desk=<T,>(action:string,data:Record<string,unknown>={})=>departmentRequest<T>(action,{...data,workspace:'archive'});
 const STAGES:Record<Stage,[string,string]>={requested:['طلبتَه · بانتظار الأرشيف','amber'],ready:['جاهز للتسليم','green'],marked:['عُلّم «سُلّم» · أكّد الاستلام','red'],declined:['اعتذر الأرشيف','red'],
- awaiting:['بانتظار استلامك','amber'],with:['معك','green'],reported:['أبلغت بإرجاعه · بانتظار الأرشيف','amber'],away:['خارج الأرشيف','wine'],complete:['اكتملت · الملف في الأرشيف','']};
-const OPEN:Stage[]=['requested','ready','marked','awaiting','with','reported','away'];
+ awaiting:['بانتظار استلامك','amber'],short:['عاد ناقصاً · بانتظار التسوية','red'],with:['معك','green'],reported:['أبلغت بإرجاعه · بانتظار الأرشيف','amber'],away:['خارج الأرشيف','wine'],complete:['اكتملت · الملف في الأرشيف','']};
+const OPEN:Stage[]=['requested','ready','marked','awaiting','with','reported','away','short'];
 const caseLine=(f:DeskFile)=>[f.caseCode&&'كود '+f.caseCode,[f.client,f.opponent].filter(Boolean).join(' ضد ')].filter(Boolean).join(' · ');
 const ON:Record<string,string>={court:'أُرسل إلى',client:'سُلّم للموكل',move:'نُقل إلى موقع آخر',checkout:'سُلّم إلى',audit:'جُرد'};
 
@@ -29,7 +29,7 @@ const ON:Record<string,string>={court:'أُرسل إلى',client:'سُلّم ل�
 function journeysOf(d:Journeys):Journey[]{
  const out:Journey[]=[];
  for(const h of d.handouts){const r=d.requests.find(x=>x.movementId===h.movementId)||null,back=h.steps.find(s=>s.toState==='in');
-  const stage:Stage=back?'complete':!h.current?'away':h.receipt==='pending'?'awaiting':h.returnClaimedAt?'reported':'with';
+  const stage:Stage=back?(back.returnCheck==='missing'&&!back.missingResolvedAt?'short':'complete'):!h.current?'away':h.receipt==='pending'?'awaiting':h.returnClaimedAt?'reported':'with';
   out.push({key:h.movementId,file:h,request:r,handout:h,stage,last:back?.at||h.steps.at(-1)?.at||h.returnClaimedAt||h.receivedAt||h.sentAt})}
  for(const r of d.requests)if(!r.movementId&&!r.removed){const stage:Stage=r.status==='pending'?'requested':r.status==='ready'?'ready':r.status==='declined'?'declined':'marked';
   out.push({key:r.id,file:r,request:r,handout:null,stage,last:r.updatedAt})}
@@ -48,12 +48,16 @@ function pointsOf(j:Journey,today:string):Point[]{
  }
  const late=!!h.dueDate&&h.dueDate<today&&j.stage!=='complete';
  p.push({label:'أرسله الأرشيف إليك',when:formatDate(h.date),detail:['من '+h.sentBy,h.purpose,h.dueDate&&(late?`متأخر ${daysBetween(h.dueDate,today)} يوم عن موعد الإعادة`:'الإعادة '+formatDate(h.dueDate))].filter(Boolean).join(' · '),state:'done'});
- p.push(h.receivedAt?{label:'استلمتَه',when:officeTime(h.receivedAt),state:'done'}:h.receipt==='pending'&&h.current?{label:'بانتظار استلامك',when:'',detail:'اضغط «استلمت» عند تسلّم الأوراق.',state:'now'}:{label:'استلمتَه',when:'سُلّم دون تأكيد',state:'done'});
+ const sent=[h.pages&&h.pages+' ورقة',contentItems(h.contents).join('، ')].filter(Boolean).join(' · ');
+ p.push(h.receivedAt?{label:'استلمتَه',when:officeTime(h.receivedAt),detail:[sent&&'مع: '+sent,h.receivedMissing&&'أفدت بنقص: '+h.receivedMissing].filter(Boolean).join(' · '),state:h.receivedMissing?'warn':'done'}
+  :h.receipt==='pending'&&h.current?{label:'بانتظار استلامك',when:'',detail:(sent?'خرج مع: '+sent+'. ':'')+'اضغط «استلمت» عند تسلّم الأوراق، أو «ناقص شيء؟» إن نقص منها شيء.',state:'now'}:{label:'استلمتَه',when:'سُلّم دون تأكيد',state:'done'});
  const back=h.steps.find(s=>s.toState==='in');
  for(const s of h.steps)if(s!==back)p.push({label:(ON[s.type]||'حركة')+(s.type==='court'||s.type==='checkout'?' '+s.holder:''),when:formatDate(s.date),detail:['سجّلها '+s.by,s.purpose].filter(Boolean).join(' · '),state:'done'});
+ for(const r of h.rejections||[])p.push({label:'رفض الأرشيف إرجاعك',when:officeTime(r.at),detail:[r.reason,'رفضه '+r.by,'كنت أبلغت '+officeTime(r.claimedAt)].join(' · '),state:'warn'});
  if(h.returnClaimedAt)p.push({label:'أبلغتَ بإرجاعه',when:officeTime(h.returnClaimedAt),state:'done'});
  else if(!back&&j.stage==='with')p.push({label:'تُرجعه للأرشيف',when:'',detail:'اضغط «أرجعت الملف» عند تسليم الأوراق.',state:'next'});
- p.push(back?{label:'عاد إلى الأرشيف',when:formatDate(back.date),detail:['استلمه '+back.by,back.location].filter(Boolean).join(' · '),state:'done'}
+ p.push(back?{label:back.returnCheck==='missing'?'عاد ناقصاً: '+back.missing:back.returnCheck==='complete'?'عاد إلى الأرشيف كاملاً':'عاد إلى الأرشيف',when:formatDate(back.date),
+  detail:['استلمه '+back.by,back.location,back.returnCheck==='missing'?(back.missingResolvedAt?'سُوّيت: '+back.missingResolution:'تبقى النواقص عليك حتى تُسوّى مع الأرشيف'):''].filter(Boolean).join(' · '),state:back.returnCheck==='missing'&&!back.missingResolvedAt?'warn':'done'}
   :{label:'يعود إلى الأرشيف',when:'',detail:j.stage==='reported'?'بانتظار تأكيد الأرشيف لعودة الأوراق.':'',state:j.stage==='reported'?'now':'next'});
  return p;
 }
@@ -61,7 +65,7 @@ function pointsOf(j:Journey,today:string):Point[]{
 /** Every paper file you asked for or the archive handed you, as journeys that end only when the file is back in the archive. */
 export default function PaperFilesPage(){
  const [data,setData]=useState<Journeys|null>(null),[partial,setPartial]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState('');
- const [filter,setFilter]=useState<Filter>('open'),[search,setSearch]=useState('');
+ const [filter,setFilter]=useState<Filter>('open'),[search,setSearch]=useState(''),[shortOf,setShortOf]=useState(''),[shortText,setShortText]=useState('');
  // Before the journeys update is installed, the page shows what «ملفاتي الورقية» already knows: files held now and recent requests.
  const load=useCallback(()=>desk<Journeys>('desk_journeys').then(d=>{setData(d);setPartial(false);setError('')}).catch(()=>desk<MyPaperFiles>('desk_mine')
   .then(m=>{setData({handouts:m.holding.map(h=>({...h,current:true,steps:[]})),requests:m.requests.map(r=>({...r,movementId:null}))});setPartial(true);setError('')})
@@ -82,7 +86,9 @@ export default function PaperFilesPage(){
   {!list.length?<Empty title={all.length?'لا يوجد ملف في هذا التصنيف':'لا توجد ملفات ورقية بعد'} text={all.length?'جرّب «الكل» أو امسح البحث.':'اطلب ملف القضية من نافذة القضية، أو انتظر ما يرسله لك الأرشيف؛ تظهر رحلته هنا.'}/>
   :<ol className="journeys">{list.map(j=>{const [label,tone]=STAGES[j.stage],h=j.handout,points=pointsOf(j,today);return <li key={j.key} className={'journey '+j.stage}>
    <div className="journey-head"><div><b><span dir="ltr">{j.file.number}</span> · {j.file.title}</b><small>{caseLine(j.file)}</small></div><span className={'tag '+tone}>{label}</span>
-    <div className="journey-actions">{h?.current&&h.receipt==='pending'&&<button type="button" className="btn primary" disabled={!!busy} onClick={()=>void act(h.movementId,()=>desk('desk_receive',{movementId:h.movementId}),'أكدت استلام '+h.number)}><CheckCircle2 size={15}/> استلمت</button>}
+    <div className="journey-actions">{h?.current&&h.receipt==='pending'&&shortOf!==h.movementId&&<button type="button" className="btn" disabled={!!busy} onClick={()=>{setShortOf(h.movementId);setShortText('')}}>ناقص شيء؟</button>}
+     {h?.current&&h.receipt==='pending'&&shortOf===h.movementId&&<span className="journey-short"><input aria-label="ما الناقص" value={shortText} onChange={e=>setShortText(e.target.value)} placeholder="ما الناقص؟"/><button type="button" className="btn primary" disabled={!!busy||!shortText.trim()} onClick={()=>void act(h.movementId,()=>desk('desk_receive',{movementId:h.movementId,missing:shortText}),'أكدت الاستلام مع النقص')}>استلمت مع النقص</button></span>}
+     {h?.current&&h.receipt==='pending'&&shortOf!==h.movementId&&<button type="button" className="btn primary" disabled={!!busy} onClick={()=>void act(h.movementId,()=>desk('desk_receive',{movementId:h.movementId}),'أكدت استلام '+h.number)}><CheckCircle2 size={15}/> استلمت</button>}
      {h?.current&&h.receipt!=='pending'&&!h.returnClaimedAt&&<button type="button" className="btn" disabled={!!busy} onClick={()=>void act(h.movementId,()=>desk('desk_return',{movementId:h.movementId}),'أبلغت الأرشيف بإرجاع '+h.number)}><Undo2 size={15}/> أرجعت الملف</button>}
      {!h&&j.stage==='marked'&&<button type="button" className="btn primary" disabled={!!busy} onClick={()=>void act(j.request!.id,()=>desk('desk_accept_marked',{requestId:j.request!.id}),'سُجّل استلامك لـ '+j.file.number)}><CheckCircle2 size={15}/> استلمت</button>}
      {!h&&j.request?.status==='pending'&&<button type="button" className="btn" disabled={!!busy} onClick={()=>void act(j.request!.id,()=>desk('desk_cancel',{id:j.request!.id}),'أُلغي طلب '+j.file.number)}><X size={15}/> إلغاء الطلب</button>}</div></div>

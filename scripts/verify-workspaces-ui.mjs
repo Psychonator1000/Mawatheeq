@@ -198,7 +198,7 @@ try{
  await click('حفظ بيانات الملف');await page.getByRole('tab',{name:/^العهدة والحركة/}).click();
  await click('تسليم لموظف');await page.getByRole('dialog').getByLabel('الموظف المستلم',{exact:true}).selectOption({label:'ui_owner'});await page.getByRole('dialog').getByLabel('الغرض',{exact:true}).selectOption('حضور جلسة');await click('تسجيل الحركة');await page.locator('.custody-now.staff').waitFor();
  await page.getByRole('button',{name:/طباعة إيصال التسليم/}).click();let html=await printed();assert.ok(html.includes('إيصال تسليم ملف من الأرشيف')&&html.includes('ARC-00001')&&html.includes('حضور جلسة'),'Handover receipt prints');
- await click('إعادة للأرشيف');await click('تسجيل الحركة');await page.locator('.custody-now.in').waitFor();
+ await click('إعادة للأرشيف');await page.getByRole('dialog',{name:/^استلام الملف ARC-00001/}).getByRole('button',{name:'عاد كاملاً'}).click();await page.locator('.custody-now.in').waitFor();
  await click('ملصق الملف');html=await printed();assert.ok(html.includes('<svg')&&html.includes('ARC-00001')&&html.includes('A-1'),'Label prints with a barcode and location');
  await screen('archive-file');await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});
  await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('arc-00001');await page.keyboard.press('Enter');await page.getByRole('dialog').getByText('ARC-00001').first().waitFor();await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});
@@ -207,7 +207,8 @@ try{
  await click('خزانة جديدة بأدراجها');await field('اسم الخزانة أو رقمها','B');await field('عدد الأدراج أو الرفوف','2');await click('إضافة الخزانة (2)');await page.getByRole('dialog').waitFor({state:'detached'});
  await page.getByRole('button',{name:/^B-2 · درج 2/}).click();await page.getByLabel('ضع ملفاً في هذا المكان',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await page.locator('.map-files').getByText('ARC-00001').waitFor();
  await page.getByLabel('ابحث عن مكان ملف',{exact:true}).fill('00001');await page.locator('.map-hits').getByRole('button').first().click();await page.locator('.map-found').getByText(/خزانة B ← درج 2/).waitFor();await page.locator('.map-slot.lit').waitFor();await screen('archive-map');
- const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','move','return']);
+ await page.getByRole('button',{name:'نقل ARC-00001',exact:true}).click();await page.getByLabel('نقل ARC-00001 إلى',{exact:true}).selectOption({label:'غرفة الأرشيف · خزانة B · درج 1'});await page.getByText(/نُقل ARC-00001 إلى درج 1/).first().waitFor();
+ const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','move','move','return']);
  await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
  // A closed file leaves the active list and is found under «مغلقة»; reopening brings it back.
  await page.getByLabel('مسح الباركود أو كتابة رقم الأرشيف',{exact:true}).fill('ARC-00001');await page.keyboard.press('Enter');await click('إغلاق الملف (إتلاف أو انتهاء الحفظ)');await page.getByText(/تجده في «المغلقة»/).first().waitFor();
@@ -222,7 +223,13 @@ try{
  await page.getByRole('button',{name:/^ملفاتي الورقية: 1 بانتظار تأكيد استلامك/}).click();const mine=page.getByRole('dialog',{name:'ملفاتي الورقية'});
  await mine.getByRole('button',{name:'استلمت',exact:true}).click();await mine.getByRole('button',{name:'أرجعت الملف'}).click();await mine.getByText('بانتظار تأكيد الأرشيف').waitFor();await screen('paper-files');await page.keyboard.press('Escape');
  await page.getByRole('button',{name:/^العهدة/}).click();await page.getByText('أبلغ بإرجاعه · بانتظار تأكيدك').first().waitFor();
- await page.locator('.office-table').getByRole('button',{name:'عاد الملف'}).click();await page.getByText('عاد الملف ARC-00001 إلى الأرشيف').first().waitFor();
+ await page.locator('.office-table').getByRole('button',{name:'عاد الملف'}).click();
+ // The return check: a reported return can be rejected, then the file comes back short and the gap stays on record.
+ {const check=page.getByRole('dialog',{name:/^استلام الملف ARC-00001/});await check.getByRole('button',{name:'لم يصل الملف'}).click();await check.getByLabel('سبب رفض الإرجاع',{exact:true}).fill('لم يُسلَّم في المكتب');await check.getByRole('button',{name:'تأكيد الرفض'}).click();await check.waitFor({state:'detached'});}
+ await page.getByRole('button',{name:/^ملفاتي الورقية/}).click();await page.getByRole('dialog',{name:'ملفاتي الورقية'}).getByRole('button',{name:'أرجعت الملف'}).click();await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:/^العهدة/}).click();await page.getByText('أبلغ بإرجاعه · بانتظار تأكيدك').first().waitFor();await page.locator('.office-table').getByRole('button',{name:'عاد الملف'}).click();
+ {const check=page.getByRole('dialog',{name:/^استلام الملف ARC-00001/});await check.getByLabel('ناقص غير ما سبق',{exact:true}).fill('صورة الحكم');await check.getByRole('button',{name:'عاد ناقصاً'}).click();await check.waitFor({state:'detached'});}
+ await page.getByRole('button',{name:/^الملفات/}).click();await page.getByRole('button',{name:/^نواقص مفتوحة/}).click();await page.locator('.archive-table').getByText('ناقص',{exact:true}).waitFor();await page.getByRole('button',{name:/^كل الملفات/}).click();
  await page.getByRole('button',{name:/^ملفاتي الورقية/}).waitFor({state:'detached'});
  // Every case gets a paper file: the cases without one are offered in one step, numbered from their office code.
  await page.getByRole('button',{name:/^الملفات/}).click();await page.locator('.archive-missing').getByText('24').waitFor();await click('إنشاء ملفاتها');
@@ -309,7 +316,7 @@ try{
   await switchTo('القضايا');
   // «ملفاتي الورقية»: every file the archive handed you, here the one sent, received and returned earlier.
   await page.getByRole('button',{name:'ملفاتي الورقية',exact:true}).click();await page.getByRole('button',{name:/^المكتملة/}).click();
-  const trip=page.locator('.journey.complete').filter({hasText:'أبلغتَ بإرجاعه'}).first();for(const step of ['أرسله الأرشيف إليك','استلمتَه','أبلغتَ بإرجاعه','عاد إلى الأرشيف'])await trip.getByText(step,{exact:true}).waitFor();await screen('paper-page');
+  await page.getByRole('button',{name:/^الجارية/}).click();const trip=page.locator('.journey.short').first();for(const step of ['أرسله الأرشيف إليك','استلمتَه','رفض الأرشيف إرجاعك','أبلغتَ بإرجاعه','عاد ناقصاً: صورة الحكم'])await trip.getByText(step,{exact:true}).waitFor();await screen('paper-page');
   await page.getByRole('button',{name:/^سجل الأحكام/}).first().click();await page.getByRole('button',{name:'فتح القضية TEST-1',exact:true}).click();
   // The case's paper file: where it is, and a request the archive receives.
   await page.locator('.case-paper').getByText('ARC-00001').waitFor();await page.locator('.case-paper').getByRole('button',{name:'طلب الملف'}).first().click();

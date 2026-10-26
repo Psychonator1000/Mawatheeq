@@ -1,3 +1,4 @@
+import { liveTopicOf, pingLive } from './live';
 import { backend, loadBackend } from './supabase-client';
 import { clearBoot } from './boot-cache';
 
@@ -23,6 +24,8 @@ async function sessionRequest<T = unknown>(endpoint: string, action: string, dat
     if (error.code === '28000' && current === (localStorage.getItem(storageKey) || '')) saveToken('');
     throw Object.assign(new Error(error.message), { code: error.code });
   }
+  const topic = liveTopicOf(endpoint, action, data);
+  if (topic) pingLive(topic);
   return result as T;
 }
 export const localRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_local_request', action, data);

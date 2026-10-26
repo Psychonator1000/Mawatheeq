@@ -1,5 +1,5 @@
 import {useMemo,useState} from 'react';
-import {ClipboardCheck,MapPin,Plus,Printer,ScanLine,Search,X,PackagePlus,Pencil} from 'lucide-react';
+import {ClipboardCheck,MapPin,Plus,Printer,ScanLine,Search,X,PackagePlus,Pencil,GripVertical,MoveRight,Trash2} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
 import {newDepartmentRecord,type CaseSummary,type DepartmentRecord} from '@/lib/departments';
@@ -25,6 +25,15 @@ type Room={name:string;cabinets:{name:string;slots:ArchiveLocation[]}[]};
 export default function ArchiveMap({locations,files,custody,cases,canEdit,canPrint,caseRef,onEdit,onAdd,onStocktake,onChanged}:{locations:ArchiveLocation[];files:ArchiveFile[];custody:Map<string,Custody>;cases:CaseSummary[];canEdit:boolean;canPrint:boolean;caseRef:(f:ArchiveFile)=>string;onEdit:(l:ArchiveLocation)=>void;onAdd?:()=>void;onStocktake:(l:ArchiveLocation)=>void;onChanged:()=>void}){
  const [closed,setClosed]=useState(false),[q,setQ]=useState(''),[found,setFound]=useState<ArchiveFile|null>(null),[picked,setPicked]=useState<string>(''),[cabinet,setCabinet]=useState(false);
  const cu=(f:ArchiveFile)=>custody.get(f.id)!;
+ const [dragging,setDragging]=useState<string>(''),[over,setOver]=useState<string>(''),[landed,setLanded]=useState<string>('');
+ // Moving a file to a drawer, by drag and drop or from its row: a «نقل» movement in its history.
+ async function moveTo(f:ArchiveFile,l:ArchiveLocation){const c=cu(f);
+  if(c.locationId===l.id)return;
+  if(c.state!=='in'){toast.error(`${f.payload.number} ليس في الأرشيف الآن (${CUSTODY_STATES[c.state]}${c.holder?': '+c.holder:''}).`);return}
+  try{await save({...newDepartmentRecord('archive','movement',{type:'move',date:todayISO(),holder:'',holderId:'',purpose:'',dueDate:'',locationId:l.id,notes:'نُقل إلى '+l.payload.code}),caseId:f.caseId,subjectId:f.id} as unknown as DepartmentRecord<ArchiveMovement['payload']>);
+   setLanded(l.id);setTimeout(()=>setLanded(''),900);toast.success(`نُقل ${f.payload.number} إلى ${slotName(l)}`);onChanged()}catch(e){toast.error((e as Error).message)}}
+ async function unplace(f:ArchiveFile){try{await departmentRequest('unplace_file',{workspace:'archive',fileId:f.id});toast.success(`رُفع ${f.payload.number} من مكانه`);onChanged()}catch(e){toast.error((e as Error).message)}}
+ const fileById=(id:string)=>files.find(f=>f.id===id);
  const rooms=useMemo<Room[]>(()=>{const m=new Map<string,Map<string,ArchiveLocation[]>>();
   for(const l of locations.filter(l=>closed||!l.archived).sort(byCode)){const r=l.payload.name||'بلا غرفة',c=l.payload.cabinet||'';if(!m.has(r))m.set(r,new Map());const cm=m.get(r)!;if(!cm.has(c))cm.set(c,[]);cm.get(c)!.push(l)}
   return [...m].map(([name,cm])=>({name,cabinets:[...cm].map(([c,slots])=>({name:c,slots}))}))},[locations,closed]);
@@ -32,32 +41,35 @@ export default function ArchiveMap({locations,files,custody,cases,canEdit,canPri
  const unplaced=files.filter(f=>!cu(f).locationId);
  const term=normalizeSearch(q.trim()),caseCode=(id:string)=>cases.find(c=>c.id===id)?.code||'';
  const hits=term.length<1?[]:files.filter(f=>normalizeSearch([f.payload.number,f.payload.title,caseCode(f.caseId)].join(' ')).includes(term)).slice(0,8);
- const lit=found?cu(found).locationId:'',slot=locations.find(l=>l.id===picked)||null;
+ const lit=found&&cu(found).state==='in'?cu(found).locationId:'',awaits=found&&cu(found).state!=='in'?cu(found).locationId:'',slot=locations.find(l=>l.id===picked)||null;
  const show=(f:ArchiveFile)=>{setFound(f);setQ('');const id=cu(f).locationId;if(id){setPicked(id);requestAnimationFrame(()=>document.getElementById('slot-'+id)?.scrollIntoView({block:'center',behavior:'smooth'}))}};
  const sheet=(l:ArchiveLocation)=>printHtml(listHtml('كشف جرد '+l.payload.code,locationLabel(l),['✓','رقم الأرشيف','الملف','القضية','النوع','الحالة'],files.filter(f=>cu(f).locationId===l.id).sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true})).map(f=>{const c=cu(f);return ['☐',f.payload.number,f.payload.title,caseRef(f),f.payload.type,c.state==='in'?'في المكان':CUSTODY_STATES[c.state]+': '+c.holder]}),formatDate(todayISO()),''));
  return <section className="panel archive-map"><div className="panel-head"><div><h2>خريطة الحفظ</h2><p className="panel-note">أين يُحفظ كل ملف: الغرفة ثم الخزانة ثم الدرج أو الرف. ابحث عن ملف ليضيء مكانه، أو اختر درجاً لترى ما فيه وتضع فيه الملفات.</p></div>
   <div className="actions archive-head-actions"><label className="checkbox-line"><input type="checkbox" checked={closed} onChange={e=>setClosed(e.target.checked)}/> إظهار الأماكن المغلقة</label>
    {canEdit&&<button className="btn primary" onClick={()=>setCabinet(true)}><PackagePlus size={17}/> خزانة جديدة بأدراجها</button>}{onAdd&&<button className="btn" onClick={onAdd}><Plus size={17}/> مكان حفظ جديد</button>}</div></div>
+  {dragging&&<p className="map-drag-hint" role="status">اسحب الملف إلى الدرج الذي تريده على الخريطة وأفلته.</p>}
   <div className="map-find"><label className="paper-search"><Search size={16} aria-hidden/><input aria-label="ابحث عن مكان ملف" value={q} onChange={e=>setQ(e.target.value)} placeholder="أين الملف؟ رقم الأرشيف أو كود القضية أو اسم الموكل"/></label>
    {term&&<ul className="map-hits" role="listbox" aria-label="الملفات">{hits.length?hits.map(f=>{const c=cu(f),l=locations.find(x=>x.id===c.locationId);return <li key={f.id}><button type="button" onClick={()=>show(f)}><b dir="ltr">{f.payload.number}</b><span>{f.payload.title}</span><small>{c.state!=='in'?CUSTODY_STATES[c.state]+(c.holder?': '+c.holder:''):l?locationLabel(l):'بلا مكان محدد'}</small></button></li>}):<li className="muted">لا يوجد ملف بهذا البحث</li>}</ul>}
-   {found&&<p className="map-found" role="status"><MapPin size={15} aria-hidden/> <b dir="ltr">{found.payload.number}</b> {(()=>{const c=cu(found),l=locations.find(x=>x.id===c.locationId);return c.state!=='in'?`${CUSTODY_STATES[c.state]}${c.holder?': '+c.holder:''}${l?' · مكانه عند العودة: '+locationLabel(l):''}`:l?[l.payload.name,l.payload.cabinet&&'خزانة '+l.payload.cabinet,slotName(l)].filter(Boolean).join(' ← '):'لم يُحدَّد مكانه بعد'})()}
+   {found&&<p className={'map-found'+(cu(found).state!=='in'?' away':'')} role="status"><MapPin size={15} aria-hidden/> <b dir="ltr">{found.payload.number}</b> {(()=>{const c=cu(found),l=locations.find(x=>x.id===c.locationId);return c.state!=='in'?`ليس في ${l?slotName(l):'الأرشيف'} الآن · ${c.state==='staff'?'مع':c.state==='court'?'لدى':'سُلّم إلى'} ${c.holder||CUSTODY_STATES[c.state]}${c.since?' منذ '+formatDate(c.since):''}${l?' · يعود إلى '+[l.payload.name,l.payload.cabinet&&'خزانة '+l.payload.cabinet,slotName(l)].filter(Boolean).join(' ← '):''}`:l?[l.payload.name,l.payload.cabinet&&'خزانة '+l.payload.cabinet,slotName(l)].filter(Boolean).join(' ← '):'لم يُحدَّد مكانه بعد'})()}
     <button type="button" className="icon-btn" aria-label="إخفاء" onClick={()=>setFound(null)}><X size={14}/></button></p>}</div>
   {unplaced.length>0&&<p className="notice">{unplaced.length} ملف بلا مكان حفظ. {locations.length?'اختر درجاً من الخريطة ثم امسح ملفاته واحداً بعد الآخر.':'أضف خزانة بأدراجها أولاً، ثم وزّع الملفات عليها.'}</p>}
   {!rooms.length?<Empty title="لا توجد أماكن حفظ" text="أضف خزانة بأدراجها؛ يظهر هنا رسم الغرفة وما في كل درج."/>
   :<div className="map-body"><div className="map-rooms">{rooms.map(r=><section key={r.name} className="map-room" aria-label={r.name}><h3><MapPin size={15} aria-hidden/> {r.name}</h3><div className="map-cabinets">
     {r.cabinets.map(c=><div key={c.name} className="map-cabinet"><b className="map-cabinet-name">{c.name?'خزانة '+c.name:'بلا خزانة'}</b><div className="map-slots">{c.slots.map(l=>{const n=inside(l).length,cap=Number(l.payload.capacity)||0,pct=cap?Math.min(100,Math.round(n/cap*100)):0;
-     return <button type="button" key={l.id} id={'slot-'+l.id} className={'map-slot'+(picked===l.id?' on':'')+(lit===l.id?' lit':'')+(cap&&n>=cap?' full':pct>=75?' busy':'')+(l.archived?' closed':'')} aria-pressed={picked===l.id} aria-label={`${l.payload.code} · ${slotName(l)}: ${n} ملف`} onClick={()=>setPicked(p=>p===l.id?'':l.id)}>
+     return <button type="button" key={l.id} id={'slot-'+l.id} className={'map-slot'+(picked===l.id?' on':'')+(lit===l.id?' lit':'')+(awaits===l.id?' awaits':'')+(over===l.id?' over':'')+(landed===l.id?' landed':'')+(cap&&n>=cap?' full':pct>=75?' busy':'')+(l.archived?' closed':'')} aria-pressed={picked===l.id} aria-label={`${l.payload.code} · ${slotName(l)}: ${n} ملف`} onClick={()=>setPicked(p=>p===l.id?'':l.id)}
+      onDragOver={e=>{if(dragging&&!l.archived){e.preventDefault();e.dataTransfer.dropEffect='move';setOver(l.id)}}} onDragLeave={()=>setOver(o=>o===l.id?'':o)}
+      onDrop={e=>{e.preventDefault();setOver('');const f=fileById(e.dataTransfer.getData('text/archive-file')||dragging);setDragging('');if(f)void moveTo(f,l)}}>
       <span className="map-slot-name">{slotName(l)}</span><span className="map-slot-count">{n}{cap?<small>/{cap}</small>:null}</span>{cap>0&&<i style={{width:pct+'%'}} aria-hidden/>}<small className="map-slot-code" dir="ltr">{l.payload.code}</small></button>})}</div></div>)}</div></section>)}</div>
-   {slot&&<SlotPanel key={slot.id} slot={slot} files={files} custody={custody} cases={cases} canEdit={canEdit} canPrint={canPrint} caseRef={caseRef} onClose={()=>setPicked('')} onEdit={()=>onEdit(slot)} onStocktake={()=>onStocktake(slot)} onPrint={()=>sheet(slot)} onChanged={onChanged}/>}</div>}
+   {slot&&<SlotPanel key={slot.id} slot={slot} slots={locations.filter(l=>!l.archived)} onMove={moveTo} onUnplace={unplace} dragging={dragging} onDrag={setDragging} files={files} custody={custody} cases={cases} canEdit={canEdit} canPrint={canPrint} caseRef={caseRef} onClose={()=>setPicked('')} onEdit={()=>onEdit(slot)} onStocktake={()=>onStocktake(slot)} onPrint={()=>sheet(slot)} onChanged={onChanged}/>}</div>}
   {cabinet&&<CabinetMaker rooms={[...new Set(locations.map(l=>l.payload.name).filter(Boolean))]} taken={new Set(locations.map(l=>l.payload.code.toUpperCase()))} onClose={()=>setCabinet(false)} onDone={()=>{setCabinet(false);onChanged()}}/>}
  </section>;
 }
 
 /** One drawer: its files, and placing files in it by scanning or typing their number or case code. */
-function SlotPanel({slot,files,custody,cases,canEdit,canPrint,caseRef,onClose,onEdit,onStocktake,onPrint,onChanged}:{slot:ArchiveLocation;files:ArchiveFile[];custody:Map<string,Custody>;cases:CaseSummary[];canEdit:boolean;canPrint:boolean;caseRef:(f:ArchiveFile)=>string;onClose:()=>void;onEdit:()=>void;onStocktake:()=>void;onPrint:()=>void;onChanged:()=>void}){
- const [scan,setScan]=useState(''),[busy,setBusy]=useState(false),[placed,setPlaced]=useState<string[]>([]);
+function SlotPanel({slot,slots,onMove,onUnplace,dragging,onDrag,files,custody,cases,canEdit,canPrint,caseRef,onClose,onEdit,onStocktake,onPrint,onChanged}:{slots:ArchiveLocation[];onMove:(f:ArchiveFile,l:ArchiveLocation)=>Promise<void>;onUnplace:(f:ArchiveFile)=>Promise<void>;dragging:string;onDrag:(id:string)=>void;slot:ArchiveLocation;files:ArchiveFile[];custody:Map<string,Custody>;cases:CaseSummary[];canEdit:boolean;canPrint:boolean;caseRef:(f:ArchiveFile)=>string;onClose:()=>void;onEdit:()=>void;onStocktake:()=>void;onPrint:()=>void;onChanged:()=>void}){
+ const [scan,setScan]=useState(''),[busy,setBusy]=useState(false),[placed,setPlaced]=useState<string[]>([]),[moving,setMoving]=useState('');
  const cu=(f:ArchiveFile)=>custody.get(f.id)!;
- const here=files.filter(f=>cu(f).locationId===slot.id||placed.includes(f.id)).sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true}));
+ const here=files.filter(f=>cu(f).locationId===slot.id||(placed.includes(f.id)&&!cu(f).locationId)).sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true}));
  async function place(){const v=scan.trim().toUpperCase();if(!v)return;
   let list=files.filter(f=>f.payload.number.toUpperCase()===v||f.payload.number.toUpperCase()==='ARC-'+v);
   if(!list.length){const ids=new Set(cases.filter(c=>c.code&&c.code.toUpperCase()===v).map(c=>c.id));list=files.filter(f=>ids.has(f.caseId))}
@@ -73,7 +85,12 @@ function SlotPanel({slot,files,custody,cases,canEdit,canPrint,caseRef,onClose,on
   {canEdit&&!slot.archived&&<div className="archive-scan compact"><ScanLine size={18} aria-hidden/><label className="field"><span>ضع ملفاً في هذا المكان</span><input dir="ltr" value={scan} disabled={busy} onChange={e=>setScan(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void place()}}} placeholder="ARC-00001"/></label><button type="button" className="btn" disabled={busy} onClick={()=>void place()}>وضع</button></div>}
   <div className="map-panel-actions">{canEdit&&!slot.archived&&<button type="button" className="btn" onClick={onStocktake}><ClipboardCheck size={15}/> جرد</button>}{canPrint&&<button type="button" className="btn" onClick={onPrint}><Printer size={15}/> كشف الجرد</button>}{canEdit&&<button type="button" className="btn" onClick={onEdit}><Pencil size={15}/> تعديل</button>}</div>
   <h4>{here.length} ملف</h4>
-  {here.length?<ul className="map-files">{here.map(f=>{const c=cu(f);return <li key={f.id}><b dir="ltr">{f.payload.number}</b><span>{f.payload.title}<small>{caseRef(f)}</small></span>{c.state!=='in'&&<span className="tag amber">{CUSTODY_STATES[c.state]}</span>}{placed.includes(f.id)&&<span className="tag green">وُضع الآن</span>}</li>})}</ul>
+  {here.length?<ul className="map-files">{here.map(f=>{const c=cu(f),away=c.state!=='in';return <li key={f.id} className={(dragging===f.id?'dragging':'')+(away?' away':'')} draggable={canEdit&&!away}
+    onDragStart={e=>{e.dataTransfer.setData('text/archive-file',f.id);e.dataTransfer.effectAllowed='move';onDrag(f.id)}} onDragEnd={()=>onDrag('')}>
+   {canEdit&&!away&&<GripVertical size={14} className="map-grip" aria-hidden/>}<b dir="ltr">{f.payload.number}</b><span>{f.payload.title}<small>{caseRef(f)}</small>{away&&<small className="map-away">ليس في الدرج الآن · {c.state==='staff'?'مع':c.state==='court'?'لدى':'سُلّم إلى'} {c.holder||CUSTODY_STATES[c.state]}{c.since?' منذ '+formatDate(c.since):''}</small>}</span>
+   {placed.includes(f.id)&&<span className="tag green">وُضع الآن</span>}
+   {canEdit&&!away&&(moving===f.id?<span className="map-move"><select aria-label={'نقل '+f.payload.number+' إلى'} defaultValue="" onChange={e=>{const l=slots.find(x=>x.id===e.target.value);setMoving('');if(l)void onMove(f,l)}}><option value="" disabled>انقل إلى…</option>{slots.filter(l=>l.id!==slot.id).map(l=><option key={l.id} value={l.id}>{[l.payload.name,l.payload.cabinet&&'خزانة '+l.payload.cabinet,slotName(l)].filter(Boolean).join(' · ')}</option>)}</select><button type="button" className="icon-btn" aria-label="إلغاء النقل" onClick={()=>setMoving('')}><X size={13}/></button></span>
+    :<span className="map-row-actions"><button type="button" className="icon-btn" title="نقل إلى مكان آخر" aria-label={'نقل '+f.payload.number} onClick={()=>setMoving(f.id)}><MoveRight size={14}/></button><button type="button" className="icon-btn" title="إزالة من هذا الدرج" aria-label={'إزالة '+f.payload.number+' من الدرج'} onClick={()=>void onUnplace(f)}><Trash2 size={14}/></button></span>)}</li>})}</ul>
   :<p className="muted">لا توجد ملفات في هذا المكان بعد.</p>}
  </aside>;
 }
