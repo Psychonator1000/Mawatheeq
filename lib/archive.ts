@@ -68,7 +68,9 @@ export function nextNumber(files:ArchiveFile[],prefix='ARC-') {
  const n=Math.max(0,...files.map(f=>Number(new RegExp('^'+prefix+'(\\d+)$','i').exec(f.payload.number||'')?.[1]||0)));
  return prefix+String(n+1).padStart(5,'0');
 }
-export const locationLabel = (l?:ArchiveLocation) => l?[l.payload.code,l.payload.name,l.payload.cabinet&&'خزانة '+l.payload.cabinet,l.payload.shelf&&(/^\d/.test(l.payload.shelf)?'رف '+l.payload.shelf:l.payload.shelf),l.payload.box&&'صندوق '+l.payload.box].filter(Boolean).join(' · '):'';
+/** A cabinet's name as shown: a short code (a number or a letter or two) reads «خزانة 3»; any other name is shown as written. */
+export const cabinetLabel = (name:string) => !name?'':/^[0-9A-Za-z\u0660-\u0669]{1,4}$/.test(name)?'خزانة '+name:name;
+export const locationLabel = (l?:ArchiveLocation) => l?[l.payload.code,l.payload.name,l.payload.cabinet&&cabinetLabel(l.payload.cabinet),l.payload.shelf&&(/^\d/.test(l.payload.shelf)?'رف '+l.payload.shelf:l.payload.shelf),l.payload.box&&'صندوق '+l.payload.box].filter(Boolean).join(' · '):'';
 export const retentionDue = (f:ArchiveFile,today:string) => !!f.payload.retentionUntil&&f.payload.retentionUntil<=today;
 
 // Code 39: the barcode most handheld scanners read out of the box. Each character is 9 elements (bar, space, …),

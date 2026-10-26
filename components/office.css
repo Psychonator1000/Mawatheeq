@@ -98,8 +98,10 @@
 .case-pin-names{min-width:0}.case-pin-names h2{font-size:22px;line-height:1.35;margin:0}
 .case-pin-names p{margin-top:4px;font-size:15px;color:var(--foreground)}.case-pin-names .vs{color:var(--muted-foreground);font-size:12px;margin-inline-end:4px}
 .case-pin-id{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
-.case-pin-id>small{font-size:11px;color:var(--muted-foreground)}.case-pin-id>.copy-chip{font-size:16px;font-weight:700;padding:5px 12px}
-.case-pin-codes{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.case-pin-codes .copy-chip{font-size:11px;padding:2px 8px;opacity:.85}
+.case-pin-id>small{font-size:11px;color:var(--muted-foreground)}
+/* The case number and its codes are one row of equal chips. */
+.case-pin-id .copy-chip{font-size:13px;font-weight:700;padding:4px 11px;opacity:1}
+.case-pin-codes{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .case-progress{display:grid;gap:10px}
 .progress-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;position:relative}
 .progress-steps .step{display:flex;align-items:flex-start;gap:8px;position:relative;padding-inline-end:10px}
@@ -117,7 +119,7 @@
 .progress-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
 .latest-step{flex:1;min-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--foreground)}.latest-step small{color:var(--muted-foreground);margin-inline-end:6px}
 @media(max-width:950px){.detail-sheet>.case-pin{top:-24px;margin:-24px -24px 0;padding:20px 24px 14px}}
-@media(max-width:640px){.case-pin-top{flex-direction:column;gap:8px}.case-pin-names h2{font-size:18px}.case-pin-id{flex-direction:row;flex-wrap:wrap;align-items:center}.case-pin-id>small{display:none}.case-pin-id>.copy-chip{font-size:14px;padding:3px 10px}.step-dot{width:20px;height:20px;font-size:11px}.progress-steps .step{gap:5px}.progress-steps .step:not(:last-child)::after{top:10px;inset-inline-start:24px}.step-text b{font-size:12px}.step-text em{display:none}.progress-foot{flex-wrap:nowrap}.latest-step{min-width:0}}
+@media(max-width:640px){.case-pin-top{flex-direction:column;gap:8px}.case-pin-names h2{font-size:18px}.case-pin-id{flex-direction:row;flex-wrap:wrap;align-items:center}.case-pin-id>small{display:none}.step-dot{width:20px;height:20px;font-size:11px}.progress-steps .step{gap:5px}.progress-steps .step:not(:last-child)::after{top:10px;inset-inline-start:24px}.step-text b{font-size:12px}.step-text em{display:none}.progress-foot{flex-wrap:nowrap}.latest-step{min-width:0}}
 .step.next .step-dot{border-style:dashed;border-color:var(--brand);color:var(--brand)}.step.next .step-text b{color:var(--brand)}
 .step.current .step-text em{color:var(--brand);font-weight:600}.step.late .step-text em{color:#a32e38;font-weight:600}
 .progress-other{font-size:14px;margin:0}.progress-other b{color:var(--brand)}
@@ -559,5 +561,11 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .map-cabinet-name.grabbable{cursor:grab;touch-action:none;user-select:none;display:flex;align-items:center;justify-content:center;gap:4px}
 :root[data-motion=off] .map-cabinet{transition:none}
 .map-cabinet-name .icon-btn{width:22px;height:22px;opacity:.45}.map-cabinet-name .cabinet-rename-btn{margin-inline-start:auto}.map-cabinet:hover .map-cabinet-name .icon-btn{opacity:1}
-.cabinet-rename{width:70px;min-width:0;font:inherit;font-size:12px;padding:1px 6px;border:1px solid var(--brand);border-radius:6px;background:var(--card);text-align:center}
+.cabinet-rename{flex:1;width:auto;min-width:60px;font:inherit;font-size:12px;padding:1px 6px;border:1px solid var(--brand);border-radius:6px;background:var(--card);text-align:center}
 .cabinet-plan,.cabinet-away{margin:8px 0 0;padding-inline-start:18px;display:grid;gap:4px;font-size:13px}
+.dispatch-view{margin:0 0 8px}.dispatch-view .chip{display:inline-flex;align-items:center;gap:6px}
+.dispatch-sheet .actions .field,.dispatch-done .field{min-width:250px}
+.dispatch-table tr.dispatch-group th{background:color-mix(in srgb,var(--brand) 7%,var(--card));text-align:start;padding:8px 12px}
+.dispatch-table tr.dispatch-group th{display:table-cell}.dispatch-table tr.dispatch-group th>span{display:inline-flex;align-items:center;gap:6px;font-weight:700;margin-inline-end:10px}
+.dispatch-table tr.dispatch-group .btn{min-height:30px;padding:3px 10px;font-size:12.5px;margin-inline-end:6px}
+.dispatch-done{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}

@@ -2783,6 +2783,7 @@
 :root[data-mode=dark] .map-column.cab-end{background:linear-gradient(to top,color-mix(in srgb,var(--brand) 14%,transparent) 0 26px,transparent 26px)}
 :root[data-mode=dark] .map-room.cab-into{outline:2px dashed var(--brand)}
 :root[data-mode=dark] .cabinet-rename{border:1px solid var(--brand);background:var(--card)}
+:root[data-mode=dark] .dispatch-table tr.dispatch-group th{background:color-mix(in srgb,var(--brand) 7%,var(--card))}
 :root[data-mode=dark] .workspace-chooser header p{color:#c4beb9}
 :root[data-mode=dark] .workspace-option{border:1px solid #2c2722;background:#181613;color:#d9d3cf}
 :root[data-mode=dark] .workspace-option:hover{border-color:var(--dept)}

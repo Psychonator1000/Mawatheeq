@@ -195,6 +195,20 @@ export function listHtml(title: string, subtitle: string, headers: string[], row
   return page(title, `<header><h1>${escape(title)}</h1><p>${escape(subtitle)}</p></header>${rows.length ? table : '<p>لا توجد سجلات.</p>'}${sums}${footer(printedAt, printedBy)}`, headers.length > 6);
 }
 
+/**
+ * A handover sheet by recipient: each person's files with a signature block under them, either each on its own page
+ * (to hand every lawyer their own sheet) or all together on one sheet, divided by recipient.
+ */
+export function handoverSheetsHtml(title: string, subtitle: string, headers: string[], groups: { name: string; rows: string[][] }[], separate: boolean, printedAt: string, printedBy: string): string {
+  const sign = '<table class="sign"><tr><td>توقيع المستلم: ............................</td><td>التاريخ: ........../........../..........</td></tr></table>';
+  const table = (rows: string[][]) => `<table class="list"><thead><tr>${headers.map(h => `<th>${escape(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${escape(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const style = '<style>.sign{width:100%;margin:14px 0 4px;border:0}.sign td{border:0;padding:6px 0;font-size:12.5px}.person{break-inside:avoid}.person+.person{margin-top:18px}.sheet{break-after:page}.sheet:last-of-type{break-after:auto}</style>';
+  const body = separate
+    ? groups.map(g => `<section class="sheet"><header><h1>${escape(title)}</h1><p>${escape(subtitle)} · المستلم: ${escape(g.name)} · ${g.rows.length} ملف</p></header>${table(g.rows)}${sign}${footer(printedAt, printedBy)}</section>`).join('')
+    : `<header><h1>${escape(title)}</h1><p>${escape(subtitle)}</p></header>${groups.map(g => `<section class="person"><h2>${escape(g.name)} · ${g.rows.length} ملف</h2>${table(g.rows)}${sign}</section>`).join('')}${footer(printedAt, printedBy)}`;
+  return page(title, style + body, false);
+}
+
 export type ArchiveLabel = { number: string; barcode: string; title: string; caseRef: string; parties: string; type: string; location: string };
 /** Spine/cover labels for physical files, two per row, each with its archive number as a Code 39 barcode. */
 export function archiveLabelsHtml(labels: ArchiveLabel[], printedAt: string, printedBy: string): string {

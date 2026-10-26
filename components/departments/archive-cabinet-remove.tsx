@@ -3,13 +3,13 @@ import {Trash2} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
 import {newDepartmentRecord,type DepartmentRecord} from '@/lib/departments';
-import {CUSTODY_STATES,type ArchiveFile,type ArchiveLocation,type ArchiveMovement,type Custody} from '@/lib/archive';
+import {CUSTODY_STATES,type ArchiveFile,type ArchiveLocation,type ArchiveMovement,type Custody,cabinetLabel} from '@/lib/archive';
 import {todayISO} from '@/lib/domain';
 import {OfficeSelect} from '../office-shared';
 import {EditorDialog} from './shared';
 
 type Cabinet={name:string;slots:ArchiveLocation[]};
-const cabName=(c:Cabinet)=>c.name?'خزانة '+c.name:'الأدراج بلا خزانة';
+const cabName=(c:Cabinet)=>c.name?cabinetLabel(c.name):'الأدراج بلا خزانة';
 const slotName=(l:ArchiveLocation)=>l.payload.shelf||l.payload.box||l.payload.code;
 
 /**

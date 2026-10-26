@@ -241,6 +241,11 @@ try{
  // The handover sheet: the file goes out, its recipient confirms receipt from the header and reports the return, and the archive confirms it is back.
  await page.getByRole('button',{name:/^كشف التسليم/}).click();await page.getByLabel('رقم الأرشيف أو كود القضية',{exact:true}).fill('arc-00001');await page.keyboard.press('Enter');
  await page.getByLabel('مستلم ARC-00001',{exact:true}).selectOption({label:'ui_owner'});await page.getByLabel('غرض ARC-00001',{exact:true}).fill('حضور جلسة');
+ // By recipient: the file sits under its person, and each person can get a page of their own to sign.
+ await page.getByRole('button',{name:/^حسب المستلم/}).click();await page.locator('.dispatch-group').getByText('ui_owner · 1 ملف').waitFor();
+ await page.getByLabel('طريقة الطباعة',{exact:true}).selectOption({label:'صفحة لكل مستلم'});await page.getByRole('button',{name:'معاينة الكشف'}).click();
+ {const sheet=await printed();assert.ok(sheet.includes('المستلم: ui_owner')&&sheet.includes('توقيع المستلم')&&sheet.includes('ARC-00001'),'Each recipient gets a sheet to sign');}
+ await page.getByRole('button',{name:/^كل الملفات/}).click();
  await page.getByRole('button',{name:/^إرسال وإشعار المستلمين \(1\)/}).click();await page.getByText(/أُرسل كشف/).waitFor();
  await page.getByRole('button',{name:'طباعة الكشف للتوقيع'}).click();html=await printed();assert.ok(html.includes('كشف تسليم ملفات من الأرشيف')&&html.includes('ARC-00001')&&html.includes('توقيع المستلم'),'The handover sheet prints for signatures');
  await page.getByRole('button',{name:/^العهدة/}).click();await page.getByText('بانتظار تأكيد الاستلام').first().waitFor();
