@@ -5,7 +5,7 @@ import {type CaseRecord,emptyCase,formatDate,todayISO,daysBetween} from '@/lib/d
 import {type ClientEntity,clientName,enrichCase} from '@/lib/clients';
 import {DECISIONS,EXPERT_DECISIONS,sessionProcedure,type Venue} from '@/lib/sessions';
 import {type DeskPage,CONSULTATION_STATUSES,CONSULTATION_TYPES,POSTING_ERRORS,dueForPosting,judgmentsBetween,lastSitting,nextSitting,postingErrors,renewalDeadline,shiftDays,sittingsBetween,stayOf,withoutContract,workflowOf,type ConsultationStatus} from '@/lib/case-desk';
-import {judgmentRollHtml,printHtml,rollCardsHtml} from '@/lib/print';
+import {ROLL_BLANK,judgmentRollHtml,printHtml,rollCardsHtml} from '@/lib/print';
 import {Field,DateField,Empty,api} from './shared';
 import {OfficeSelect} from './office-shared';
 import {EditorDialog} from './departments/shared';
@@ -93,8 +93,8 @@ function Roll(p:Props){
  const days=[...new Set(rows.map(r=>r.date))];
  // Laid out like «رول الأحكام»: what is previewed is what prints, each sitting a band with every value under its name.
  const html=rollCardsHtml('رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to||from)}`,days.map(d=>[formatDate(d),rows.filter(r=>r.date===d).map(r=>({code:ref(r.c),client:clientName(r.c)||'—',role:String(r.c.role||''),opponent:r.c.opponent||'—',lawyer:String(r.c.lawyer||''),
-  facts:[['الساعة',r.time||'—'],['المحكمة',r.court||'—',r.venue!=='المحكمة'?r.venue:''],['الرقم الآلي',String(r.c.autoNumber||'')],['رقم القضية',String(r.c.caseNumber||'')],['آخر قرار',String(r.last?.decision||'')],['المطلوب',r.required]] as [string,string,string?][],
-  writeIn:['قرار الجلسة','الجلسة القادمة']}))]),formatDate(todayISO()),p.printedBy,true,'جلسة');
+  facts:[['الجلسة السابقة',r.last?.date?formatDate(String(r.last.date)):'—'],['تاريخ الجلسة',formatDate(r.date)],['الجلسة القادمة',ROLL_BLANK],['الساعة',r.time||'—'],['المحكمة',r.court||'—',r.venue!=='المحكمة'?r.venue:''],['الرقم الآلي',String(r.c.autoNumber||'')],['رقم القضية',String(r.c.caseNumber||'')],['آخر قرار',String(r.last?.decision||'')],['المطلوب',r.required]] as [string,string,string?][],
+  writeIn:['قرار الجلسة']}))]),formatDate(todayISO()),p.printedBy,true,'جلسة');
  return <Panel title="مواعيد الجلسات (رول)" note="الجلسات القادمة حسب آخر ترحيل لكل قضية، مجمعة باليوم.">
   <div className="roll-top desk-roll-top"><div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/>{law.select}</div>
    <div className="roll-count" role="status"><b>{rows.length}</b><span>جلسة ستُطبع</span></div></div>

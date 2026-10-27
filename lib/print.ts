@@ -167,6 +167,8 @@ export function printHtml(html: string): boolean {
 export type RollRow = { time: string; title: string; location: string; caseRef: string; parties: string; caseNumber: string; level: string; assignee: string; notes: string; client?: string; opponent?: string; autoNumber?: string };
 /** The day's hearings roll (رول الجلسات), grouped by court or expert office, in time order. */
 /** One case on a roll, as a band: who's who in a headline, every number under its name, the office code large. */
+/** A fact left blank on purpose, printed as a line to write on (e.g. the next session, decided at this one). */
+export const ROLL_BLANK = '\u2002';
 export type RollCard = { code: string; client: string; role?: string; opponent: string; lawyer?: string; facts: [string, string, string?][]; writeIn?: string[] };
 // Compact on purpose: a roll of a thousand cases should come out at around ten bands a page, not two.
 const ROLL_CARD_STYLE = `<style>
@@ -176,14 +178,15 @@ const ROLL_CARD_STYLE = `<style>
 .rc-head{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;align-items:baseline;gap:2px 8px;font-size:11px;padding-bottom:2px;border-bottom:1px solid #efe7dd;line-height:1.35}
 .rc-head small,.rc-facts dt,.rc-code small,.rc-write small{color:#8a7a70;font-size:8px;font-weight:600}
 .rc-head b{font-size:11.5px}.rc-head em{font-style:normal;color:#6b5a50;font-size:9.5px}.rc-vs{color:#a08f84;font-weight:700}.rc-lawyer{white-space:nowrap;padding-inline-start:8px;border-inline-start:1px solid #efe7dd}
-.rc-facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));grid-auto-flow:row dense;gap:1px 8px;margin:0;line-height:1.3}.rc-facts div{display:grid;align-content:start;min-width:0}.rc-facts .w{grid-column:span 2}.rc-facts dd{margin:0;font-weight:600;font-size:10px;direction:auto;overflow-wrap:anywhere}.rc-facts dd small{display:block;font-weight:400;color:#6b5a50;font-size:8.5px}
+.rc-facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));grid-auto-flow:row dense;gap:1px 8px;margin:0;line-height:1.3}.rc-facts div{display:grid;align-content:start;min-width:0}.rc-facts .w{grid-column:span 2}.rc-facts dd{margin:0;font-weight:600;font-size:10px;direction:auto;overflow-wrap:anywhere}.rc-facts dd.blank{border-bottom:1px dotted #b9ab9f;min-height:13px}
+.rc-facts dd small{display:block;font-weight:400;color:#6b5a50;font-size:8.5px}
 .rc-code{display:grid;align-content:center;justify-items:center;border-inline-start:1px solid #e6ddd2;padding-inline-start:6px;line-height:1.2}.rc-code{min-width:52px}.rc-code b{font-size:16px;letter-spacing:.3px;white-space:nowrap}
 .rc-write{display:grid;grid-template-columns:auto 1fr auto 1fr;align-items:end;gap:2px 8px;font-size:9.5px}.rc-write span{border-bottom:1px dotted #b9ab9f;min-height:13px}
 .rc-legend{font-size:9.5px;color:#6b5a50;margin:0 0 4px}
 </style>`;
 function rollCard(n: number, c: RollCard): string {
   // Every label shows, empty or not, so the bands line up and each number keeps its name.
-  const facts = c.facts.map(([k, v, sub]) => `<div${(v || '').length + (sub || '').length > 22 ? ' class="w"' : ''}><dt>${escape(k)}</dt><dd>${escape(v || '—')}${sub ? ` <small>${escape(sub)}</small>` : ''}</dd></div>`).join('');
+  const facts = c.facts.map(([k, v, sub]) => v === ROLL_BLANK ? `<div><dt>${escape(k)}</dt><dd class="blank"></dd></div>` : `<div${(v || '').length + (sub || '').length > 22 ? ' class="w"' : ''}><dt>${escape(k)}</dt><dd>${escape(v || '—')}${sub ? ` <small>${escape(sub)}</small>` : ''}</dd></div>`).join('');
   return `<article class="rc"><div class="rc-n">${n}</div><div class="rc-main"><div class="rc-head"><span><small>الموكل</small> <b>${escape(c.client || '—')}</b>${c.role ? ` <em>(${escape(c.role)})</em>` : ''}</span><span class="rc-vs">ضد</span><span><small>الخصم</small> <b>${escape(c.opponent || '—')}</b></span>${c.lawyer ? `<span class="rc-lawyer"><small>المستشار</small> <b>أ/ ${escape(c.lawyer.replace(/^\s*[اأإ]\s*[/.]\s*/, ''))}</b></span>` : ''}</div>`
     + `${facts ? `<dl class="rc-facts">${facts}</dl>` : ''}${c.writeIn?.length ? `<div class="rc-write">${c.writeIn.map(w => `<small>${escape(w)}</small><span></span>`).join('')}</div>` : ''}</div>`
     + `<div class="rc-code"><small>الكود</small><b>${escape(c.code || '—')}</b></div></article>`;
