@@ -22,7 +22,7 @@
     "test:browse": "node --experimental-strip-types scripts/verify-case-browse.mjs",
     "test:clients": "node --experimental-strip-types scripts/verify-client-model.mjs",
     "test:excel": "node scripts/verify-excel.mjs",
-    "test:roll": "node scripts/verify-roll-import.mjs && node scripts/verify-roll-db.mjs",
+    "test:roll": "node scripts/verify-roll-import.mjs && node scripts/verify-roll-db.mjs && node --experimental-strip-types scripts/verify-register-import.mjs",
     "test:office": "node --experimental-strip-types scripts/verify-office.mjs && node scripts/verify-office-db.mjs",
     "test:chat": "node scripts/verify-chat-db.mjs",
     "test:mail": "node scripts/verify-mail-db.mjs",
