@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
@@ -107,6 +108,18 @@ await denied(()=>local(caseOnly.token,'file_download',{id:documentId}));
 const allCases=await create('all_cases',{...full,canEdit:false});
 await local(admin.token,'save_case',{case:{...visible,id:'future-case',revision:0}});
 assert.equal((await local(allCases.token,'cases_page')).length,4,'all-case scope includes future records');
+{// Only what changed: a refresh returns the cases changed since the last look and a fingerprint of everything visible.
+ const fp=rows=>createHash('sha256').update([...rows].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0).map(r=>`${r.id}:${r.revision}`).join(',')).digest('hex');
+ const all=await local(allCases.token,'cases_page'),first=await local(allCases.token,'cases_changes',{});
+ assert.equal(first.count,4);assert.equal(first.fingerprint,fp(all),'The fingerprint covers every visible case and revision');assert.deepEqual(first.rows,[],'No «since» returns no rows');
+ await db.exec("reset role;alter table public.mawatheeq_cases disable trigger mawatheeq_cases_touch;update public.mawatheeq_cases set updated_at=now()-interval '1 hour';alter table public.mawatheeq_cases enable trigger mawatheeq_cases_touch;set role anon");
+ const quiet=await local(allCases.token,'cases_changes',{since:new Date().toISOString()});assert.deepEqual(quiet.rows,[],'Nothing changed, nothing sent');
+ const saved=await local(admin.token,'save_case',{case:{...(await local(admin.token,'cases_page')).find(c=>c.id==='future-case').payload,id:'future-case',revision:all.find(c=>c.id==='future-case').revision}});
+ const after=await local(allCases.token,'cases_changes',{since:new Date(Date.now()-5000).toISOString()});
+ assert.deepEqual(after.rows.map(r=>r.id),['future-case'],'Only the saved case comes back');assert.equal(after.fingerprint,fp(await local(allCases.token,'cases_page')));
+ const scoped=await local(reader.token,'cases_changes',{since:'2000-01-01T00:00:00Z'});
+ assert.deepEqual(scoped.rows.map(r=>r.id),[visible.id],'A reader is only sent the cases they may see');assert.equal(scoped.count,1);
+ await denied(()=>local(empty.token,'cases_changes',{}));void saved;}
 await denied(()=>local(allCases.token,'save_document',{id:documentId,payload:{},revision:document.revision}));
 await denied(()=>client(allCases.token,'save',{client:{...directory[0],name:'Readonly change'}}));
 // No authenticated/JWT or private legacy shortcut can skip the local session/ACL.
@@ -255,4 +268,4 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  assert.equal((await office(sw.token,'context')).canManage,false);
  const history=await office(admin.token,'access_history',{id:d.id});assert.deepEqual(history[0].after.adminPowers,['chat','staff'],'The audit records the powers');}
 await db.close();
-console.log('Passed permissions: several jobs per employee (ordered, audited, granting nothing), delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
+console.log('Passed permissions: refreshes send only changed cases with a fingerprint of everything visible, several jobs per employee (ordered, audited, granting nothing), delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
