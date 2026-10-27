@@ -286,7 +286,7 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
 .case-table-rows>tbody>tr.case-row{cursor:pointer}
 .case-table-rows>tbody>tr.case-row:hover{background:#f7f1e8}
 .case-table-rows td{vertical-align:middle}
-.case-id{white-space:nowrap}.case-id .number-link{font-size:15px;font-weight:650}
+.case-id{white-space:nowrap}.case-code{white-space:nowrap;font-size:14px;font-weight:600}.case-id small.case-id-code{display:none}.case-id .number-link{font-size:15px;font-weight:650}
 .case-id small,.case-when small{display:block;margin-top:3px;font-size:11.5px;color:#8a7768}
 .case-when .mono{font-weight:500}
 .case-badges{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -313,6 +313,7 @@ label.chat-row{grid-template-columns:auto minmax(0,1fr)}.chat-row:hover,.chat-ro
  .case-table-rows>tbody>tr.case-row>td{display:block;min-width:0;width:auto;padding:0!important;border:0!important;max-width:none;white-space:normal}
  .case-table-rows>tbody>tr.case-row>td[data-label]::before{content:attr(data-label);display:block;font-size:11px;color:#8a7768;margin-bottom:2px}
  .case-table-rows>tbody>tr.case-row>td.case-id{order:1}
+ .case-table-rows>tbody>tr.case-row>td.case-code{display:none}.case-table-rows>tbody>tr.case-row>td.case-id small.case-id-code{display:block}
  .case-table-rows>tbody>tr.case-row>td.case-remaining{order:2;justify-self:end;text-align:end}
  .case-table-rows>tbody>tr.case-row>td.party{order:3;grid-column:1/-1;padding-block:8px!important;border-block:1px solid #eee5d8!important}
  .case-table-rows>tbody>tr.case-row>td.case-when{order:4}

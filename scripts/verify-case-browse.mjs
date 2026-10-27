@@ -109,11 +109,12 @@ assert.equal(entityLink.category,'telecom'); assert.equal(entityLink.clientEntit
 
 // Column sorting: empty values last in both directions, numbers numerically, ties newest first.
 {const mk=(id,extra)=>({...emptyCase(),id,...extra});
- const rows=[mk('a',{autoNumber:'900',client:'بنك',lawyer:'سالم',date:'2026-01-01'}),mk('b',{autoNumber:'1000',client:'أمانة',lawyer:'',date:'2026-03-01'}),mk('c',{autoNumber:'',client:'',lawyer:'أحمد',date:'2026-02-01'})];
+ const rows=[mk('a',{autoNumber:'900',code:'12',client:'بنك',lawyer:'سالم',date:'2026-01-01'}),mk('b',{autoNumber:'1000',code:'9',client:'أمانة',lawyer:'',date:'2026-03-01'}),mk('c',{autoNumber:'',client:'',lawyer:'أحمد',date:'2026-02-01'})];
  const ids=(sort,rem)=>sortCases(rows,sort,rem).map(c=>c.id).join('');
  assert.equal(ids(DEFAULT_CASE_SORT),'bca','Default: newest judgment first');
  assert.equal(ids({key:'number',dir:1}),'abc','Auto numbers sort numerically; empty last');
  assert.equal(ids({key:'number',dir:-1}),'bac','Empty stays last when descending');
+ assert.equal(ids({key:'code',dir:1}),'bac','Codes sort numerically; a case without a code goes last');
  assert.equal(ids({key:'lawyer',dir:1}),'cab');
  const rem={a:-40,b:3,c:null};assert.equal(ids({key:'remaining',dir:1},c=>rem[c.id]),'abc','Unknown remaining days go last');
  assert.equal(rows.map(c=>c.id).join(''),'abc','The input list is not reordered');}

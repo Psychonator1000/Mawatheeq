@@ -116,7 +116,7 @@ export function partyMatches(records:CaseRecord[],clients:ClientEntity[],query:s
  });
 }
 
-export type CaseSortKey = 'date' | 'number' | 'client' | 'remaining' | 'lawyer';
+export type CaseSortKey = 'date' | 'number' | 'code' | 'client' | 'remaining' | 'lawyer';
 export type CaseSort = { key: CaseSortKey; dir: 1 | -1 };
 export const DEFAULT_CASE_SORT: CaseSort = { key: 'date', dir: -1 };
 /** Sorts a case list by one column. Empty values always go last; ties keep the newest judgment first. */
@@ -124,6 +124,7 @@ export function sortCases(records: CaseRecord[], sort: CaseSort, remaining: (c: 
   const key = (c: CaseRecord): string | number | null => {
     switch (sort.key) {
       case 'number': { const n = String(c.autoNumber || '').trim(); return n ? (/^\d+$/.test(n) ? Number(n) : n) : null; }
+      case 'code': { const n = String(c.code || '').trim(); return n ? (/^\d+$/.test(n) ? Number(n) : n) : null; }
       case 'client': return normalizeSearch(c.client || c.clientGroup) || null;
       case 'remaining': return remaining(c);
       case 'lawyer': return normalizeSearch(c.lawyer) || null;
