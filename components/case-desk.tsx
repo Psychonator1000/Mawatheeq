@@ -94,7 +94,7 @@ function Roll(p:Props){
  // Laid out like «رول الأحكام»: what is previewed is what prints, each sitting a band with every value under its name.
  const html=rollCardsHtml('رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to||from)}`,days.map(d=>[formatDate(d),rows.filter(r=>r.date===d).map(r=>({code:ref(r.c),client:clientName(r.c)||'—',role:String(r.c.role||''),opponent:r.c.opponent||'—',lawyer:String(r.c.lawyer||''),
   facts:[['الجلسة السابقة',r.last?.date?formatDate(String(r.last.date)):'—'],['تاريخ الجلسة',formatDate(r.date)],['الجلسة القادمة',ROLL_BLANK],['الساعة',r.time||'—'],['المحكمة',r.court||'—',r.venue!=='المحكمة'?r.venue:''],['الرقم الآلي',String(r.c.autoNumber||'')],['رقم القضية',String(r.c.caseNumber||'')],['آخر قرار',String(r.last?.decision||'')],['المطلوب',r.required]] as [string,string,string?][],
-  writeIn:['قرار الجلسة']}))]),formatDate(todayISO()),p.printedBy,true,'جلسة');
+  writeIn:['قرار الجلسة','منطوق الحكم']}))]),formatDate(todayISO()),p.printedBy,true,'جلسة');
  return <Panel title="مواعيد الجلسات (رول)" note="الجلسات القادمة حسب آخر ترحيل لكل قضية، مجمعة باليوم.">
   <div className="roll-top desk-roll-top"><div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/>{law.select}</div>
    <div className="roll-count" role="status"><b>{rows.length}</b><span>جلسة ستُطبع</span></div></div>

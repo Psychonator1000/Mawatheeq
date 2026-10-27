@@ -24,8 +24,9 @@ export function Field({label,value,onChange,wide=false,multiline=false,placehold
 const OTHER='أخرى…';
 /** A fixed list with «أخرى…» for a value not on it. A saved value that is not on the list stays as typed text. */
 export function PickOrType({label,value,onChange,options,wide=false,empty='غير محدد',hint}:{label:string;value:string;onChange:(s:string)=>void;options:string[];wide?:boolean;empty?:string;hint?:string}){
- const known=options.includes(value);const [typing,setTyping]=useState(!!value&&!known);
- return <div className={'field pick-or-type '+(wide?'wide':'')}><label className="field"><span>{label}</span><Choice label={label} empty={empty} value={typing?OTHER:known?value:''} onChange={v=>{if(v===OTHER){setTyping(true);onChange('');return}setTyping(false);onChange(v)}} options={[...options,OTHER]}/></label>
+ // A value written elsewhere (an import, the old register) shows as written; the text box opens only from «أخرى…».
+ const known=options.includes(value);const [typing,setTyping]=useState(false);
+ return <div className={'field pick-or-type '+(wide?'wide':'')}><label className="field"><span>{label}</span><Choice label={label} empty={empty} value={typing?OTHER:value} onChange={v=>{if(v===OTHER){setTyping(true);onChange('');return}setTyping(false);onChange(v)}} options={[...options,...(value&&!known&&!typing?[value]:[]),OTHER]}/></label>
   {typing&&<input aria-label={label+' (كتابة)'} value={value} onChange={e=>onChange(e.target.value)} placeholder={hint||'اكتب القيمة'} autoFocus={!value}/>}</div>}
 export {default as DateField} from './date-picker';
 export function Badge({value}:{value:string}){const tone=['لصالحنا','جاهز للتنفيذ','لا يوجد'].includes(value)?'green':['غير صالحنا','انتهت المهلة','جنح'].includes(value)?'red':/بانتظار|غير مؤكد|بيانات|خمسة/.test(value)?'amber':'wine';return <span className={'tag '+tone}>{value||'غير محدد'}</span>}

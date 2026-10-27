@@ -14,7 +14,7 @@ import { Field, Empty, api } from './shared';
 import { CONTACT_ROLES, suggestions } from '@/lib/choices';
 import PageNavigation from './page-navigation';
 import EntityCollections from './departments/entity-collections';
-import {SelectList} from './filter-select';
+import {FilterBox,SelectList} from './filter-select';
 
 type EditorProps = {
   entity: ClientEntity; clients: ClientEntity[]; records?: CaseRecord[]; canMerge?: boolean; readOnly?: boolean;
@@ -96,12 +96,15 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
   </RecordWindow>;
 }
 
-export function ClientSelect({ clients, value, onChange, onCreate }: { clients: ClientEntity[]; value: string; onChange: (id: string) => void; onCreate?: () => void }) {
-  const [search, setSearch] = useState('');
-  const options = clients.filter(c => c.id === value || normalizeSearch([c.name, ...c.aliases].join(' ')).includes(normalizeSearch(search))).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
-  return <div className="field wide client-selector"><div className="client-section-heading"><span>الموكل / الجهة</span>{onCreate&&<button type="button" className="text-link" onClick={onCreate}><Plus size={14}/> موكل جديد</button>}</div>
-    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث عن ملف الموكل الموجود أولاً" aria-label="بحث عن موكل"/>
-    <SelectList value={value} onChange={e => onChange(e.target.value)} aria-label="الموكل / الجهة"><option value="">اختر الموكل</option>{options.map(c => <option key={c.id} value={c.id}>{c.name}{c.needsReview ? ' · يحتاج مراجعة' : ''}{clients.some(x => x.id !== c.id && x.name === c.name) ? ` · ${c.id.slice(0,8)}` : ''}</option>)}</SelectList>
+export function ClientSelect({ clients, value, onChange, onCreate, onManage, disabled = false }: { clients: ClientEntity[]; value: string; onChange: (id: string) => void; onCreate?: () => void; onManage?: () => void; disabled?: boolean }) {
+  const options = useMemo(() => [...clients].sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c => ({ value: c.id, label: c.name + (clients.some(x => x.id !== c.id && x.name === c.name) ? ` · ${c.id.slice(0,8)}` : ''),
+    hint: c.needsReview ? 'يحتاج مراجعة' : undefined, terms: c.aliases.join(' ') })), [clients]);
+  const current = clients.find(c => c.id === value);
+  return <div className="field wide client-selector"><div className="client-select-head"><span>الموكل / الجهة</span>
+    {current?.needsReview && <span className="tag amber" title="تبقى صيغة الموكل الأصلية محفوظة في السجل.">ملف يحتاج مراجعة</span>}
+    <span className="client-select-links">{onManage && current && <button type="button" className="text-link" onClick={onManage}>إدارة الملف والأشخاص</button>}
+    {onCreate && <button type="button" className="text-link" onClick={onCreate}><Plus size={14}/> موكل جديد</button>}</span></div>
+    <FilterBox label="الموكل / الجهة" value={value} onChange={onChange} options={options} empty="اختر الموكل" placeholder="اكتب اسم الموكل للبحث" disabled={disabled}/>
   </div>;
 }
 

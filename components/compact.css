@@ -716,3 +716,16 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 :root:root .case-window>.detail-actions{padding:8px 14px}
 :root:root .stage-banner{padding:3px 10px}
 @media(max-width:760px){:root:root .case-window{grid-template-columns:1fr}}
+/* Case file, «الملف والأطراف»: fixed rows. Numbers, role and opponent; then the client (two columns) and the person following it; then the person concerned. */
+:root:root .case-window .form-grid.parties-grid{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start}
+.parties-grid>.client-selector{grid-column:span 2!important;min-width:0}
+.parties-grid>.wide{grid-column:1/-1}
+.client-select-head{display:flex;align-items:center;gap:8px;height:1.45em;margin:0;line-height:1.45;font-size:13px;color:#725f50;white-space:nowrap}
+.client-select-head .tag{font-size:10.5px;padding:0 7px;line-height:1.45;margin:0}
+.client-select-links{display:flex;gap:12px;margin-inline-start:auto}.client-select-links .text-link{font-size:12.5px;white-space:nowrap}
+.client-selector .filter-select-box input{text-overflow:ellipsis}
+.parties-grid .field>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:900px){:root:root .case-window .form-grid.parties-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){:root:root .case-window .form-grid.parties-grid{grid-template-columns:1fr}.parties-grid>.client-selector{grid-column:auto!important}.client-select-head{flex-wrap:wrap}}
+:root:root .case-window .form-grid.judgment-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:700px){:root:root .case-window .form-grid.judgment-grid{grid-template-columns:1fr}}

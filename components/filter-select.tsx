@@ -3,7 +3,7 @@ import {createPortal} from 'react-dom';
 import {ChevronDown} from 'lucide-react';
 import {normalizeSearch} from '@/lib/case-browse';
 
-export type FilterOption = { value: string; label: string; hint?: string };
+export type FilterOption = { value: string; label: string; hint?: string; terms?: string };
 
 /**
  * Where an open list is drawn: in the window, dialog or page that holds its box, not inside the box, so table scroll
@@ -44,7 +44,7 @@ export function FilterBox({label,value,onChange,options,empty,placeholder='اك�
  useEffect(()=>{if(!open)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape'&&e.target===input.current){e.stopPropagation();e.preventDefault();setOpen(false);setQuery('')}};
   window.addEventListener('keydown',close,true);return()=>window.removeEventListener('keydown',close,true)},[open]);
  const current=options.find(o=>o.value===value)??(value===''&&empty!==undefined?{value:'',label:empty}:undefined);
- const shown=useMemo(()=>{const q=normalizeSearch(query);const list=q?options.filter(o=>normalizeSearch(o.label+' '+(o.hint||'')).includes(q)):options;
+ const shown=useMemo(()=>{const q=normalizeSearch(query);const list=q?options.filter(o=>normalizeSearch(o.label+' '+(o.hint||'')+' '+(o.terms||'')).includes(q)):options;
   return [...(empty!==undefined&&!q&&!options.some(o=>o.value==='')?[{value:'',label:empty}]:[]),...list].slice(0,300)},[options,query,empty]);
  const pick=(o:FilterOption)=>{if(o.value!==value)onChange(o.value);setOpen(false);setQuery('')};
  function onKey(e:React.KeyboardEvent<HTMLInputElement>){
