@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState} from 'react';
 import {Printer,CheckSquare,Square,FileStack} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
-import {departmentPages,type CaseSummary,type CollectionData,type CollectionRecord} from '@/lib/departments';
+import {departmentPages,departmentCases,type CaseSummary,type CollectionData,type CollectionRecord} from '@/lib/departments';
 import {missingDocumentFields} from '@/lib/collection-documents';
 import {generateWord} from '@/lib/document-tools';
 import {mergeWord} from '@/lib/word-merge';
@@ -25,7 +25,7 @@ export default function BatchPrint({canExport}:{canExport:boolean}){
  const [records,setRecords]=useState<CollectionRecord[]|null>(null),[cases,setCases]=useState<CaseSummary[]>([]),[error,setError]=useState(''),[version,setVersion]=useState(0);
  const [kinds,setKinds]=useState<'bundle'|'claim'|'both'>('bundle'),[search,setSearch]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[show,setShow]=useState<'ready'|'all'>('ready');
  const [selected,setSelected]=useState<Set<string>>(new Set()),[progress,setProgress]=useState<{done:number;total:number}|null>(null),[skipped,setSkipped]=useState<{name:string;reason:string}[]>([]);
- useEffect(()=>{let active=true;Promise.all([departmentPages<CollectionRecord>('collections','records_page'),departmentPages<CaseSummary>('collections','cases_page')]).then(([r,c])=>{if(active){setRecords(r.filter(x=>x.kind==='file'));setCases(c);setError('')}}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[version]);
+ useEffect(()=>{let active=true;Promise.all([departmentPages<CollectionRecord>('collections','records_page'),departmentCases('collections')]).then(([r,c])=>{if(active){setRecords(r.filter(x=>x.kind==='file'));setCases(c);setError('')}}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[version]);
  const wanted:Kind[]=kinds==='both'?['bundle','claim']:[kinds];
  const rows=useMemo<Row[]>(()=>(records||[]).filter(r=>!r.archived).map(r=>{const c=cases.find(x=>x.id===r.caseId);return {record:r,reviewed:!!r.review&&r.review.recordRevision===r.revision&&r.review.caseRevision===c?.revision,missing:{claim:missingDocumentFields(r.payload,'claim'),bundle:missingDocumentFields(r.payload,'bundle')}}}),[records,cases]);
  const ready=(row:Row)=>row.reviewed&&wanted.every(k=>!row.missing[k].length);

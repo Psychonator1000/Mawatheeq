@@ -32,6 +32,15 @@ export async function departmentPages<T>(workspace:Department,action:string,data
  const rows:T[]=[];
  for(let offset=0;;offset+=size){const page=await departmentRequest<T[]>(action,{...data,workspace,offset});rows.push(...page);if(page.length<size)return rows;}
 }
+/**
+ * The cases a department screen may link to, 2000 at a time. A server without the larger batches answers 500 at a
+ * time; a full batch of either size means there may be more.
+ */
+export async function departmentCases(workspace:Department):Promise<CaseSummary[]> {
+ const rows:CaseSummary[]=[];
+ for(let offset=0;;){const page=await departmentRequest<CaseSummary[]>('cases_page',{workspace,offset,limit:2000});rows.push(...page);offset+=page.length;
+  if(!page.length||(page.length<2000&&page.length%500))return rows;}
+}
 export function newDepartmentRecord<P>(workspace:DepartmentRecord['workspace'],kind:DepartmentRecord['kind'],payload:P):DepartmentRecord<P> {
  return {id:crypto.randomUUID(),workspace,kind,caseId:'',subjectId:'',payload,revision:0,archived:false,review:null,createdAt:'',updatedAt:'',createdBy:'',updatedBy:''};
 }

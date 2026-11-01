@@ -4,12 +4,13 @@ import {ChatSlot,PaperSlot} from '../chat-slot';
 import {RefreshCw,Mail} from 'lucide-react';
 import MailBell from '../mail/mail-bell';
 import {OPEN_MAIL_EVENT,takePendingMail,useMailAvailable,useMailCounts} from '@/lib/mail';
-import {departmentPages,WORKSPACES,type Department,type CaseSummary} from '@/lib/departments';
+import {departmentCases,WORKSPACES,type Department,type CaseSummary} from '@/lib/departments';
 import type {Permissions} from '@/lib/permissions';
 import {officeRequest} from '@/lib/local-auth';
 import {officePages} from '@/lib/office-api';
 import type {OfficeContext,WorkItem} from '@/lib/office';
 import {Toaster} from '../ui/sonner';
+import {readSnapshot,writeSnapshot} from '@/lib/boot-cache';
 import {EditorDialog,StatusMessage} from './shared';
 import {clientName} from '@/lib/clients';
 // Departments load on demand.
@@ -27,7 +28,10 @@ export default function DepartmentWorkspace({workspace,access}:{workspace:Depart
  const [cases,setCases]=useState<CaseSummary[]>([]),[context,setContext]=useState<OfficeContext|null>(null),[work,setWork]=useState<WorkItem[]>([]);
  const [version,setVersion]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selected,setSelected]=useState<CaseSummary|null>(null);
  useEffect(()=>{let active=true;setLoading(true);setError('');
-  Promise.all([workspace==='hr'?[]:departmentPages<CaseSummary>(workspace,'cases_page'),workspace==='secretary'?officeRequest<OfficeContext>('context'):null,workspace==='secretary'?officePages<WorkItem>('work_page'):[]]).then(([c,ctx,w])=>{if(active){setCases(c);setContext(ctx);setWork(w)}}).catch(e=>{if(active){setCases([]);setWork([]);setError(e.message)}}).finally(()=>{if(active)setLoading(false)});
+  // The last copy of the case list shows at once while the server's copy loads (not for the secretary desk, which also waits on its work list).
+  let fresh=false;
+  if(workspace!=='hr'&&workspace!=='secretary')void readSnapshot<CaseSummary[]>('dept-cases:'+workspace).then(c=>{if(active&&c&&!fresh){setCases(c);setLoading(false)}});
+  Promise.all([workspace==='hr'?[]:departmentCases(workspace),workspace==='secretary'?officeRequest<OfficeContext>('context'):null,workspace==='secretary'?officePages<WorkItem>('work_page'):[]]).then(([c,ctx,w])=>{fresh=true;if(active){setCases(c);setContext(ctx);setWork(w);if(workspace!=='hr')void writeSnapshot('dept-cases:'+workspace,c)}}).catch(e=>{if(active){setCases([]);setWork([]);setError(e.message)}}).finally(()=>{if(active)setLoading(false)});
   return()=>{active=false};
  },[workspace,version]);
  const refresh=()=>setVersion(v=>v+1),meta=WORKSPACES[workspace];
