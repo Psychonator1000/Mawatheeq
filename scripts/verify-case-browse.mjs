@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { emptyCase } from '../lib/domain.ts';
-import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT } from '../lib/case-browse.ts';
+import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT, nextCaseCode, caseDuplicates } from '../lib/case-browse.ts';
 import { suggestions, weekdayOf, CLIENT_ROLES } from '../lib/choices.ts';
 import { fils, kwd, kwdPlain, position, dueStatements, FILE_STATUSES, mapCollectionSheet, ALL_FILE_STATUSES, civilIdValid, debtorKey, roundRobin } from '../lib/collections.ts';
 import { custodyOf, isOverdue, nextNumber, code39, code39Ready, code39Svg, daysBetween, MOVEMENTS } from '../lib/archive.ts';
@@ -226,3 +226,18 @@ assert.ok(FILE_STATUSES.includes('تحصيل ودي'));
   assert.equal(workflowOf(g), 'study'); assert.equal(workflowOf({ workflow: 'other' }), ''); assert.equal(isFiled(h), false); assert.equal(isFiled(a), true);
 }
 console.log('Passed archive custody (latest posted movement, cancelled skipped, overdue, Code 39); collections money, import mapping, civil ID check, debtor grouping, round-robin, login suggestions, cases desk (posting, errors, sittings, judgments, stays, contracts, workflows) and follow-up helpers.');
+
+// One code sequence for new cases; a case entered again is found before it is saved.
+{const mk=(id,extra)=>({...emptyCase(),id,...extra});
+ assert.equal(nextCaseCode([mk('a',{code:'5206'}),mk('b',{code:'167',insurance:true}),mk('c',{code:'R0812'}),mk('d',{code:''})]),'5207','The next code follows the highest number, whatever the register');
+ assert.equal(nextCaseCode([]),'1');
+ const old=mk('old',{code:'1803',autoNumber:'250974390',client:'شركة المنار',opponent:'سلمان الرشيدي',subject:'اقرار دين'});
+ const level=mk('lvl',{code:'1803',autoNumber:'250974390',client:'شركة المنار',opponent:'سلمان الرشيدي',subject:'اقرار دين'});
+ const ins=mk('ins',{code:'1803',insurance:true,client:'بوبيان',opponent:'خصم',subject:'تعويض'});
+ const again=mk('new',{code:'3475',autoNumber:'250974390',client:'شركه المنار',opponent:'سلمان الرشيدي',subject:'اقرار دين'});
+ const found=caseDuplicates(again,[old,ins]);
+ assert.deepEqual(found.map(f=>[f.record.id,f.reasons]),[['old',['الرقم الآلي نفسه','الموكل والخصم والموضوع أنفسهم']]],'Same number, or same parties and subject (spelling aside)');
+ assert.deepEqual(caseDuplicates(mk('n2',{code:'1803'}),[old,ins]).map(f=>f.record.id),['old'],'The same code within the same register');
+ assert.deepEqual(caseDuplicates(old,[old,level,ins],r=>r.autoNumber===old.autoNumber&&r.code===old.code),[],'Records of the same case at another level are not duplicates');
+ assert.deepEqual(caseDuplicates(mk('n3',{client:'شركة المنار',opponent:'سلمان الرشيدي'}),[old]),[],'Parties alone are not enough without a subject');}
+console.log('Passed one code sequence and duplicate detection.');

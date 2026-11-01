@@ -138,3 +138,36 @@ export function sortCases(records: CaseRecord[], sort: CaseSort, remaining: (c: 
     return (b.c.date || '').localeCompare(a.c.date || '');
   }).map(x => x.c);
 }
+
+/**
+ * The next office code: one after the highest numeric code. Every new case takes it, insurance cases included, so the
+ * office has one sequence; the «قضية تأمين» mark still sets insurance cases apart. (The old insurance registers kept
+ * their own lower numbers, which stay as they are.)
+ */
+export function nextCaseCode(records: Pick<CaseRecord, 'code'>[]) {
+  let max = 0;
+  for (const r of records) { const code = String(r.code || '').trim(); if (/^\d{1,9}$/.test(code)) max = Math.max(max, Number(code)); }
+  return String(max + 1);
+}
+
+export type CaseDuplicate = { record: CaseRecord; reasons: string[] };
+/**
+ * Cases that look like the one about to be saved: the same automatic number, the same code (within the same register,
+ * main or insurance), or the same client, opponent and subject. Records of the same case at another court level share
+ * its number and code; `same` lists those so they are not reported.
+ */
+export function caseDuplicates(c: CaseRecord, records: CaseRecord[], same: (r: CaseRecord) => boolean = () => false): CaseDuplicate[] {
+  const auto = String(c.autoNumber || '').trim(), code = String(c.code || '').trim();
+  const key = (r: CaseRecord) => [r.client || r.clientGroup, r.opponent, r.subject].map(x => normalizeSearch(String(x || ''))).join('|');
+  const mine = key(c), complete = [c.client || c.clientGroup, c.opponent, c.subject].every(x => normalizeSearch(String(x || '')));
+  const out: CaseDuplicate[] = [];
+  for (const r of records) {
+    if (r.id === c.id || same(r)) continue;
+    const reasons: string[] = [];
+    if (auto && String(r.autoNumber || '').trim() === auto) reasons.push('الرقم الآلي نفسه');
+    if (code && String(r.code || '').trim() === code && Boolean(r.insurance) === Boolean(c.insurance)) reasons.push('الكود نفسه');
+    if (complete && key(r) === mine) reasons.push('الموكل والخصم والموضوع أنفسهم');
+    if (reasons.length) out.push({ record: r, reasons });
+  }
+  return out;
+}
