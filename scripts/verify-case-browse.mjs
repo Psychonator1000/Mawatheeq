@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { emptyCase } from '../lib/domain.ts';
-import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT, nextCaseCode, caseDuplicates } from '../lib/case-browse.ts';
+import { EMPTY_CASE_FILTERS, matchesCaseFilters, monthlyCaseCounts, caseMonthHash, monthFromHash, monthLabel, caseFiltersHash, caseLinkFilters, caseMonthFilters, needsAutoNumber, sortCases, DEFAULT_CASE_SORT, nextCaseCode, caseDuplicates, codeFirst } from '../lib/case-browse.ts';
 import { suggestions, weekdayOf, CLIENT_ROLES } from '../lib/choices.ts';
 import { fils, kwd, kwdPlain, position, dueStatements, FILE_STATUSES, mapCollectionSheet, ALL_FILE_STATUSES, civilIdValid, debtorKey, roundRobin } from '../lib/collections.ts';
 import { custodyOf, isOverdue, nextNumber, code39, code39Ready, code39Svg, daysBetween, MOVEMENTS } from '../lib/archive.ts';
@@ -240,4 +240,9 @@ console.log('Passed archive custody (latest posted movement, cancelled skipped, 
  assert.deepEqual(caseDuplicates(mk('n2',{code:'1803'}),[old,ins]).map(f=>f.record.id),['old'],'The same code within the same register');
  assert.deepEqual(caseDuplicates(old,[old,level,ins],r=>r.autoNumber===old.autoNumber&&r.code===old.code),[],'Records of the same case at another level are not duplicates');
  assert.deepEqual(caseDuplicates(mk('n3',{client:'شركة المنار',opponent:'سلمان الرشيدي'}),[old]),[],'Parties alone are not enough without a subject');}
-console.log('Passed one code sequence and duplicate detection.');
+{const mk=(id,code,autoNumber)=>({...emptyCase(),id,code,autoNumber});
+ const list=[mk('a','5206','213260980'),mk('b','3260','1'),mk('c','326','2'),mk('d','1326','3')];
+ assert.deepEqual(codeFirst(list,'326').map(c=>c.id),['c','b','a','d'],'The exact code first, then codes that begin with it, then the rest in order');
+ assert.deepEqual(codeFirst(list,'٣٢٦').map(c=>c.id),['c','b','a','d'],'Arabic digits too');
+ assert.deepEqual(codeFirst(list,'شركة').map(c=>c.id),['a','b','c','d'],'Words keep the order');}
+console.log('Passed one code sequence, duplicate detection and code-first search.');

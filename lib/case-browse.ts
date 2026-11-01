@@ -171,3 +171,14 @@ export function caseDuplicates(c: CaseRecord, records: CaseRecord[], same: (r: C
   }
   return out;
 }
+
+/**
+ * A number typed in the search puts the case with that code first, then codes that begin with it; a number also appears
+ * inside many automatic and case numbers, so the code itself would otherwise be lost in the list. Order is kept otherwise.
+ */
+export function codeFirst<T extends Pick<CaseRecord, 'code'>>(records: T[], search: string): T[] {
+  const q = normalizeSearch(search);
+  if (!/^[a-z]?\d+$/i.test(q)) return records;
+  const rank = (r: T) => { const code = normalizeSearch(r.code); return code === q ? 0 : code.startsWith(q) ? 1 : 2; };
+  return records.map((r, i) => ({ r, i, k: rank(r) })).sort((a, b) => a.k - b.k || a.i - b.i).map(x => x.r);
+}
