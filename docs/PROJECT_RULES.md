@@ -100,3 +100,19 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 
 - Every disabled button or blocked action says why, what to fill and where (which tab or field), in Arabic. Use `components/needs.tsx`: `<Needs items={[...]}/>` beside the button, or the `needs` prop of `RecordWindow`, which also explains a blocked Ctrl+S save instead of ignoring it. A button disabled only while a request is running needs no reason.
 - Fields a document still needs are marked where they are entered (red outline and «مطلوب لإنشاء…»), counted on their tab, and linked from the document button, as in the collections file.
+
+## Working agreements (owner, October–November 2026)
+
+- Never name the office's previous case program anywhere: code, interface, documents or commit messages. Never mention AI anywhere in the app or the repository.
+- Commits are authored as `Psychonator1000 <cephalonuyanra@gmail.com>` with no co-author or session lines. Push straight to `main` only after the full validation suite passes (TypeScript, lint with no errors, themes, every `test:*` script, the browser workflows, the UI audit and crawl, the production build); report the change live only after the GitHub Pages run succeeds.
+- Database changes: test the migration against the local database first, then apply it directly through the Supabase connection, verify it took effect, and tell the owner. The owner no longer copies SQL by hand. Anything that deletes or edits case data still needs the owner's explicit yes first, with a backup of every touched record taken beforehand.
+- Interface: compact first. Everything fits one screen with no sideways scrolling; tables fit their panel; long pages scroll inside their panel. Arabic wording follows correct grammar, including number agreement (avoid «2 موكلاً»; prefer «عدد الموكلين: 2»).
+- The old register reports (kept privately by the owner, never committed) are the reference for case data: codes run from case 1; insurance cases keep their own register's codes and are marked «قضية تأمين»; client names follow the owner's naming rules (telecom companies by their English names, English names without brackets, no «*», no «مقفلة») with correct Arabic spelling.
+- New cases take one office code sequence, insurance included (the next number after the highest code); saving a new case, or changing its number or code, first checks for the same automatic number, the same code, or the same client, opponent and subject.
+- Case lists load light (judgments, recent entries, last sessions); a case's whole history is read when it is opened or saved, and the database refuses a light copy. Backups and exports read every case whole.
+
+## Open items
+
+- The owner's team is still deciding the remaining sections of the register clean-up list (duplicate court-level records, sessions added from rolls, recent judgments missing from the registers, client names written several ways, related client files). The list itself is kept privately by the owner; do not act on those sections until the owner gives the team's answers.
+- Two client files were deliberately kept out of a company merge; ask the owner before merging them.
+- The «ملخص الموكلين» person grouping depends on people listed inside client files; the owner fills these in.
