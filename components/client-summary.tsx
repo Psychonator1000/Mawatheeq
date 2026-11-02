@@ -7,16 +7,22 @@ import type {ClientEntity} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
 import {STATUS_COLUMNS,EXTRA_GROUPS,personGroups,summarize,type ExtraGroup,type SummaryRow,type StatusKey} from '@/lib/client-summary';
 import {judgmentRollHtml,printHtml} from '@/lib/print';
+import {clientRollHtml} from '@/lib/client-roll';
 import {Empty} from './shared';
 
 const EXTRAS_KEY='mawatheeq.clientSummary.extras';
 const readExtras=():ExtraGroup[]=>{try{const v=JSON.parse(localStorage.getItem(EXTRAS_KEY)||'null');return Array.isArray(v)?v.filter(x=>EXTRA_GROUPS.some(([k])=>k===x)):['sessions','judgments']}catch{return ['sessions','judgments']}};
-const EXTRA_COLUMNS:Record<ExtraGroup,[string,(r:SummaryRow)=>string|number][]>={
- sessions:[['جلسات ٧ أيام',r=>r.next7],['جلسات ٣٠ يوماً',r=>r.next30],['أقرب جلسة',r=>r.nextDate?formatDate(r.nextDate):'']],
- judgments:[['لصالحنا',r=>r.won],['غير صالحنا',r=>r.lost],['ضمن مهلة الطعن',r=>r.appealOpen]],
- contracts:[['بلا عقد',r=>r.noContract],['الأتعاب (د.ك)',r=>r.fees?r.fees.toLocaleString('en-US',{maximumFractionDigits:3}):'']],
- lawyers:[['المحامون',r=>r.lawyers.slice(0,3).map(([n,c])=>`${n} (${c})`).join('، ')]],
+// Each extra group: its columns, with a short label under the group's heading, a kind (number, date, text) and a value.
+type Col={label:string;kind:'num'|'date'|'text'|'money';get:(r:SummaryRow)=>string|number};
+const EXTRA_COLUMNS:Record<ExtraGroup,Col[]>={
+ sessions:[{label:'خلال ٧ أيام',kind:'num',get:r=>r.next7},{label:'خلال ٣٠ يوماً',kind:'num',get:r=>r.next30},{label:'أقرب جلسة',kind:'date',get:r=>r.nextDate?formatDate(r.nextDate):''}],
+ judgments:[{label:'لصالحنا',kind:'num',get:r=>r.won},{label:'ضدنا',kind:'num',get:r=>r.lost},{label:'ضمن مهلة الطعن',kind:'num',get:r=>r.appealOpen}],
+ contracts:[{label:'بلا عقد',kind:'num',get:r=>r.noContract},{label:'الأتعاب (د.ك)',kind:'money',get:r=>r.fees?r.fees.toLocaleString('en-US',{maximumFractionDigits:3}):''}],
+ lawyers:[{label:'المحامون',kind:'text',get:r=>r.lawyers.slice(0,3).map(([n,c])=>`${n} (${c})`).join('، ')}],
 };
+const WIDTH={num:62,date:96,money:96,text:220};
+// «متداول» heads its three court levels; the other statuses stand alone.
+const OPEN_LEVEL:Partial<Record<StatusKey,string>>={open1:'أول درجة',open2:'استئناف',open3:'تمييز'};
 const PAGE=40;
 
 /**
@@ -24,7 +30,7 @@ const PAGE=40;
  * files (an owner of several companies) head their files with totals; the rest of the clients follow in one table.
  */
 export default function ClientSummary({records,clients,rules,printedBy,canExport}:{records:CaseRecord[];clients:ClientEntity[];rules:Rules;printedBy:string;canExport:boolean}){
- const [mode,setMode]=useState<'people'|'all'>('people'),[q,setQ]=useState(''),[extras,setExtrasRaw]=useState<ExtraGroup[]>(readExtras),[shown,setShown]=useState(PAGE);
+ const [picked,setPicked]=useState<Set<string>>(()=>new Set()),[mode,setMode]=useState<'people'|'all'>('people'),[q,setQ]=useState(''),[extras,setExtrasRaw]=useState<ExtraGroup[]>(readExtras),[shown,setShown]=useState(PAGE);
  const setExtras=(next:ExtraGroup[])=>{setExtrasRaw(next);try{localStorage.setItem(EXTRAS_KEY,JSON.stringify(next))}catch{/* the choice still holds for this visit */}};
  const today=todayISO();
  const byClient=useMemo(()=>{const m=new Map<string,CaseRecord[]>();for(const c of records){const id=c.clientEntityId;if(!id)continue;const l=m.get(id);if(l)l.push(c);else m.set(id,[c])}return m},[records]);
@@ -37,28 +43,50 @@ export default function ClientSummary({records,clients,rules,printedBy,canExport
  // Only the statuses some client in view has, so the table stays narrow.
  const viewRows=mode==='people'?groups.map(g=>g.row):all.map(x=>x.row);
  const cols=STATUS_COLUMNS.filter(([k])=>viewRows.some(r=>r.counts[k]));
- const extraCols=EXTRA_GROUPS.filter(([k])=>extras.includes(k)).flatMap(([k])=>EXTRA_COLUMNS[k]);
+ const extraGroups=EXTRA_GROUPS.filter(([k])=>extras.includes(k)).map(([k,l])=>({key:k,label:l,cols:EXTRA_COLUMNS[k]}));
+ const extraCols=extraGroups.flatMap(g=>g.cols);
  const grand=rowOf(all.map(x=>x.c.id));
- // Shade each count against the largest in its column, so the heavy files stand out.
- const max=Object.fromEntries(STATUS_COLUMNS.map(([k])=>[k,Math.max(1,...all.map(x=>x.row.counts[k]))])) as Record<StatusKey,number>;
- const cells=(r:SummaryRow,strong=false)=><>{cols.map(([k])=>{const v=r.counts[k];return <td key={k} className={'num'+(v?'':' zero')} style={v&&!strong?{['--heat' as string]:String(Math.min(1,v/max[k]))}:undefined}>{v||'·'}</td>})}
-  <td className="num total">{r.total}</td>{extraCols.map(([label,get])=>{const v=get(r);return <td key={label} className={typeof v==='number'?'num'+(v?'':' zero'):'text'}>{v===0?'·':v||'—'}</td>})}</>;
- const head=<tr><th className="name">الموكل</th>{cols.map(([k,l])=><th key={k} className="num"><span className={'dot s-'+k}/>{l}</th>)}<th className="num">الإجمالي</th>{extraCols.map(([l])=><th key={l} className="num">{l}</th>)}</tr>;
+ const openCols=cols.filter(([k])=>OPEN_LEVEL[k]),firstOpen=cols.findIndex(([k])=>OPEN_LEVEL[k]);
+ const show=(v:string|number)=>v===0||v===''?'':v;
+ const cells=(r:SummaryRow)=><>{cols.map(([k])=><td key={k} className="num">{show(r.counts[k])}</td>)}
+  <td className="num total">{r.total}</td>{extraGroups.map(g=>g.cols.map((c,i)=><td key={g.key+c.label} className={(c.kind==='text'?'text':'num')+(i===0?' group-start':'')}>{show(c.get(r))}</td>))}</>;
+ // Two heading rows: groups above (حالة القضايا، متداول، each extra group), their columns below; a lone column spans both.
+ const head=(select:React.ReactNode)=><>
+  <tr><th rowSpan={2} className="pick">{select}</th><th rowSpan={2} className="name">الموكل</th>
+   {cols.map(([k,l],i)=>OPEN_LEVEL[k]?(i===firstOpen?<th key="open" colSpan={openCols.length} className="grp"><span className="dot s-open1"/>متداول</th>:null):<th key={k} rowSpan={2} className="num"><span className={'dot s-'+k}/>{l}</th>)}
+   <th rowSpan={2} className="num total">الإجمالي</th>
+   {extraGroups.map(g=>g.cols.length===1?<th key={g.key} rowSpan={2} className="grp group-start">{g.label}</th>:<th key={g.key} colSpan={g.cols.length} className="grp group-start">{g.label}</th>)}</tr>
+  <tr>{openCols.map(([k])=><th key={k} className="num sub"><span className={'dot s-'+k}/>{OPEN_LEVEL[k]}</th>)}
+   {extraGroups.filter(g=>g.cols.length>1).map(g=>g.cols.map((c,i)=><th key={g.key+c.label} className={'num sub'+(i===0?' group-start':'')}>{c.label}</th>))}</tr></>;
+ const colgroup=<colgroup><col style={{width:36}}/><col style={{width:230}}/>{cols.map(([k])=><col key={k} style={{width:WIDTH.num}}/>)}<col style={{width:WIDTH.num+8}}/>{extraCols.map(c=><col key={c.label} style={{width:WIDTH[c.kind]}}/>)}</colgroup>;
+ const tableWidth=36+230+cols.length*WIDTH.num+WIDTH.num+8+extraCols.reduce((n,c)=>n+WIDTH[c.kind],0);
  function print(){
   if(!canExport)return;
-  const headers=['الموكل',...cols.map(([,l])=>l),'الإجمالي',...extraCols.map(([l])=>l)];
-  const line=(name:string,r:SummaryRow)=>[name,...cols.map(([k])=>String(r.counts[k]||'')),String(r.total),...extraCols.map(([,g])=>String(g(r)||''))].map(v=>[v||'—',''] as [string,string]);
-  const body:[string,[string,string][][]][]=mode==='people'?groups.map(g=>[`${g.person} · ${g.row.total} قضية`,[...g.clients.map(c=>line(c.name,rowOf([c.id]))),line('الإجمالي',g.row)]]):[['',[...all.map(x=>line(x.c.name,x.row)),line('الإجمالي',grand)]]];
-  if(!printHtml(judgmentRollHtml('ملخص الموكلين',mode==='people'?'حسب الأشخاص المرتبطين بأكثر من ملف':`عدد الموكلين: ${all.length}`,headers,body,formatDate(today),printedBy,[16,...cols.map(()=>5),5,...extraCols.map(([l])=>l==='المحامون'?14:6)])))toast.error('اسمح بالنوافذ المنبثقة للطباعة.');
+  const headers=['الموكل',...cols.map(([k,l])=>OPEN_LEVEL[k]?'متداول · '+OPEN_LEVEL[k]:l),'الإجمالي',...extraGroups.flatMap(g=>g.cols.map(c=>g.cols.length>1?`${g.label}: ${c.label}`:c.label))];
+  const line=(name:string,r:SummaryRow)=>[name,...cols.map(([k])=>String(r.counts[k]||'')),String(r.total),...extraCols.map(c=>String(show(c.get(r))))].map(v=>[v||'—',''] as [string,string]);
+  // Ticked clients only, when some are ticked; otherwise the whole view.
+  const only=picked.size?(id:string)=>picked.has(id):()=>true;
+  const body:[string,[string,string][][]][]=picked.size?[['',(()=>{const ids=[...new Set([...groups.flatMap(g=>g.clients.map(c=>c.id)),...all.map(x=>x.c.id)])].filter(only);const list=ids.map(id=>clients.find(c=>c.id===id)!).filter(Boolean);return [...list.map(c=>line(c.name,rowOf([c.id]))),...(list.length>1?[line('الإجمالي',rowOf(ids))]:[])]})()]]
+   :mode==='people'?groups.map(g=>[`${g.person} · ${g.row.total} قضية`,[...g.clients.map(c=>line(c.name,rowOf([c.id]))),line('الإجمالي',g.row)]]):[['',[...all.map(x=>line(x.c.name,x.row)),line('الإجمالي',grand)]]];
+  if(!printHtml(judgmentRollHtml('ملخص الموكلين',picked.size?`الموكلون المحددون: ${picked.size}`:mode==='people'?'حسب الأشخاص المرتبطين بأكثر من ملف':`عدد الموكلين: ${all.length}`,headers,body,formatDate(today),printedBy,[16,...cols.map(()=>5),5,...extraCols.map(c=>c.kind==='text'?14:6)])))toast.error('اسمح بالنوافذ المنبثقة للطباعة.');
  }
- const table=(rows:{key:string;name:string;sub?:string;row:SummaryRow}[],total?:SummaryRow)=><div className="table-wrap sum-table-wrap"><table className="sum-table"><thead>{head}</thead><tbody>
-  {rows.map(x=><tr key={x.key}><th className="name" scope="row">{x.name}{x.sub&&<small>{x.sub}</small>}</th>{cells(x.row)}</tr>)}
-  {total&&<tr className="sum-total"><th className="name" scope="row">الإجمالي</th>{cells(total,true)}</tr>}</tbody></table></div>;
+ // One client's full case roll: every case with its numbers, court, sessions and judgment.
+ const printClient=(c:ClientEntity)=>{if(!canExport)return;const r=rowOf([c.id]);
+  const counts=[...STATUS_COLUMNS.filter(([k])=>r.counts[k]).map(([k,l])=>`${l}: ${r.counts[k]}`),`الإجمالي: ${r.total}`].join('، ');
+  if(!printHtml(clientRollHtml(c.name,byClient.get(c.id)||[],false,printedBy,counts)))toast.error('اسمح بالنوافذ المنبثقة للطباعة.')};
+ const toggle=(ids:string[],on:boolean)=>setPicked(old=>{const next=new Set(old);for(const id of ids){if(on)next.add(id);else next.delete(id)}return next});
+ const table=(rows:{key:string;client:ClientEntity;sub?:string;row:SummaryRow}[],total?:SummaryRow)=>{const ids=rows.map(x=>x.client.id),every=ids.length>0&&ids.every(id=>picked.has(id));
+  return <div className="table-wrap sum-table-wrap"><table className="sum-table" style={{minWidth:tableWidth}}>{colgroup}<thead>{head(<input type="checkbox" aria-label="تحديد كل موكلي الجدول" checked={every} onChange={e=>toggle(ids,e.target.checked)}/>)}</thead><tbody>
+  {rows.map(x=><tr key={x.key} className={'sum-row'+(picked.has(x.client.id)?' picked':'')} title={canExport?'اضغط لطباعة قضايا '+x.client.name+' فقط':undefined}
+   onClick={e=>{if((e.target as HTMLElement).closest('input,button,a'))return;printClient(x.client)}}><td className="pick"><input type="checkbox" aria-label={'تحديد '+x.client.name} checked={picked.has(x.client.id)} onChange={e=>toggle([x.client.id],e.target.checked)}/></td>
+   <th className="name" scope="row"><div className="sum-name"><span title={x.client.name}>{x.client.name}</span>{canExport&&<button type="button" className="sum-row-print" title={'طباعة رول قضايا '+x.client.name} aria-label={'طباعة رول قضايا '+x.client.name} onClick={()=>printClient(x.client)}><Printer size={13}/> طباعة</button>}</div>{x.sub&&<small>{x.sub}</small>}</th>{cells(x.row)}</tr>)}
+  {total&&<tr className="sum-total"><td className="pick"/><th className="name" scope="row">الإجمالي</th>{cells(total)}</tr>}</tbody></table></div>};
  return <section className="panel desk-panel client-summary">
   <div className="sum-toolbar">
    <div className="sum-mode" role="group" aria-label="طريقة العرض"><button type="button" aria-pressed={mode==='people'} onClick={()=>setMode('people')}><Users size={15}/> حسب الأشخاص</button><button type="button" aria-pressed={mode==='all'} onClick={()=>setMode('all')}><Building2 size={15}/> كل الموكلين</button></div>
    <label className="searchbox sum-search"><Search size={16}/><input aria-label="بحث في الملخص" placeholder="ابحث باسم شخص أو موكل…" value={q} onChange={e=>{setQ(e.target.value);setShown(PAGE)}}/></label>
-   {canExport&&<button type="button" className="btn" onClick={print}><Printer size={15}/> طباعة الملخص</button>}
+   {canExport&&<div className="sum-print">{picked.size>0&&<button type="button" className="btn" onClick={()=>setPicked(new Set())}>إلغاء التحديد</button>}
+    <button type="button" className={'btn'+(picked.size?' primary':'')} onClick={print}><Printer size={15}/> {picked.size?`طباعة المحدد (${picked.size})`:'طباعة الملخص'}</button></div>}
   </div>
   <div className="sum-extras" role="group" aria-label="معلومات إضافية في الجدول"><span>أعمدة إضافية:</span>{EXTRA_GROUPS.map(([k,l])=><button type="button" key={k} className="chip" aria-pressed={extras.includes(k)} onClick={()=>setExtras(extras.includes(k)?extras.filter(x=>x!==k):[...extras,k])}>{l}</button>)}</div>
   <div className="sum-legend" aria-hidden>{STATUS_COLUMNS.map(([k,l])=><span key={k}><i className={'dot s-'+k}/>{l}</span>)}</div>
@@ -66,12 +94,12 @@ export default function ClientSummary({records,clients,rules,printedBy,canExport
     <header><div><h3>{g.person}</h3><small>ملفات الموكلين: {g.clients.length}</small></div>
      <dl className="sum-kpis"><div><dt>القضايا</dt><dd>{g.row.total}</dd></div><div><dt>مفتوحة</dt><dd>{g.row.open}</dd></div><div><dt>جلسات ٣٠ يوماً</dt><dd>{g.row.next30}</dd></div><div><dt>ضمن مهلة الطعن</dt><dd>{g.row.appealOpen}</dd></div></dl></header>
     <StatusBar row={g.row}/>
-    {table(g.clients.map(c=>({key:c.id,name:c.name,sub:c.contacts.filter(p=>p.name).length?`الأشخاص المرتبطون: ${c.contacts.filter(p=>p.name).length}`:undefined,row:rowOf([c.id])})),g.row)}
+    {table(g.clients.map(c=>({key:c.id,client:c,sub:c.contacts.filter(p=>p.name).length?`الأشخاص المرتبطون: ${c.contacts.filter(p=>p.name).length}`:undefined,row:rowOf([c.id])})),g.row)}
    </article>):<Empty title="لا أشخاص مرتبطون بأكثر من ملف" text="أضف الأشخاص في ملف كل موكل (الملاك، الممثلون)؛ من يظهر في أكثر من ملف يُجمع هنا تحت اسمه. أو اعرض كل الموكلين."/>)
   :(all.length?<article className="sum-group"><header><div><h3>كل الموكلين</h3><small>عدد الموكلين: {all.length}</small></div>
      <dl className="sum-kpis"><div><dt>القضايا</dt><dd>{grand.total}</dd></div><div><dt>مفتوحة</dt><dd>{grand.open}</dd></div><div><dt>جلسات ٣٠ يوماً</dt><dd>{grand.next30}</dd></div><div><dt>ضمن مهلة الطعن</dt><dd>{grand.appealOpen}</dd></div></dl></header>
     <StatusBar row={grand}/>
-    {table(all.slice(0,shown).map(x=>({key:x.c.id,name:x.c.name,row:x.row})),grand)}
+    {table(all.slice(0,shown).map(x=>({key:x.c.id,client:x.c,row:x.row})),grand)}
     {all.length>shown&&<button type="button" className="btn sum-more" onClick={()=>setShown(s=>s+PAGE)}>عرض المزيد ({all.length-shown} متبقٍ)</button>}
    </article>:<Empty/>)}
  </section>;

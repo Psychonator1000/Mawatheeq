@@ -30,7 +30,8 @@ export function clientRollCards(cases: CaseRecord[], openOnly: boolean): RollCar
     };
   });
 }
-export function clientRollHtml(name: string, cases: CaseRecord[], openOnly: boolean, printedBy = '') {
+/** `summary`, when given, follows the client's name: the counts of «ملخص الموكلين» for this client. */
+export function clientRollHtml(name: string, cases: CaseRecord[], openOnly: boolean, printedBy = '', summary = '') {
   const cards = clientRollCards(cases, openOnly);
-  return rollCardsHtml('رول قضايا الموكل', `${name} · ${openOnly ? 'القضايا المفتوحة' : 'كل القضايا'}`, [['', cards]], formatDate(todayISO()), printedBy, true, 'قضية');
+  return rollCardsHtml('رول قضايا الموكل', `${name} · ${openOnly ? 'القضايا المفتوحة' : 'كل القضايا'}${summary ? ' · ' + summary : ''}`, [['', cards]], formatDate(todayISO()), printedBy, true, 'قضية');
 }
