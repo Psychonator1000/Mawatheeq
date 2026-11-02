@@ -267,5 +267,27 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  const sw=await office(admin.token,'switch_user',{id:d.id});await denied(()=>office(sw.token,'create_member',{username:'via_switch',password:pw}));
  assert.equal((await office(sw.token,'context')).canManage,false);
  const history=await office(admin.token,'access_history',{id:d.id});assert.deepEqual(history[0].after.adminPowers,['chat','staff'],'The audit records the powers');}
+// Light case lists: older sessions stay on the server, the whole case is read on demand, and a light copy is never saved.
+{const day=n=>{const d=new Date();d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+ const old=i=>({id:'old'+i,kind:'جلسة',date:`2020-01-${String(i+1).padStart(2,'0')}`,text:'قديمة '+i,decision:'تأجيل'});
+ const procedures=[...Array.from({length:8},(_,i)=>old(i)),{id:'j1',kind:'حكم / إجراء',date:'2019-05-01',text:'حكم ابتدائي'},{id:'recent',kind:'جلسة',date:day(-10),text:'حديثة'}];
+ await local(admin.token,'save_case',{case:{...visible,id:'heavy-case',code:'HEAVY',clientContactId:'',revision:0,procedures}});
+ const whole=(await local(admin.token,'cases_page',{})).find(r=>r.id==='heavy-case');
+ assert.equal(whole.payload.procedures.length,10,'Without «light» the list is whole');assert.equal('proceduresTrimmed' in whole.payload,false);
+ const light=(await local(admin.token,'cases_page',{light:true})).find(r=>r.id==='heavy-case');
+ assert.deepEqual(light.payload.procedures.map(p=>p.id),['old6','old7','j1','recent'],'Judgments, recent entries and the last three sessions stay, in order');
+ assert.deepEqual([light.payload.proceduresTrimmed,light.payload.proceduresTotal,light.payload.proceduresKept],[true,10,['old6','old7','j1','recent']]);
+ assert.equal((await local(admin.token,'cases_page',{light:true})).find(r=>r.id===visible.id).payload.proceduresTrimmed,undefined,'A short history is left as it is');
+ const changes=await local(admin.token,'cases_changes',{light:true,since:'2000-01-01T00:00:00Z'});assert.equal(changes.rows.find(r=>r.id==='heavy-case').payload.proceduresTrimmed,true,'Changes come light too');
+ await assert.rejects(()=>local(admin.token,'save_case',{case:{...light.payload,id:'heavy-case',revision:light.revision}}),/مختصرة/,'A light copy is never saved');
+ await assert.rejects(()=>local(admin.token,'import_cases',{cases:[light.payload]}),/مختصرة/);
+ const full=await local(admin.token,'case_full',{id:'heavy-case'});assert.equal(full.payload.procedures.length,10,'The whole case on demand');
+ await assert.rejects(()=>local(reader.token,'case_full',{id:'heavy-case'}),'Only cases the reader may see');
+ const {restoreHistory,isTrimmed}=await import('../lib/case-trim.ts');
+ const edited={...light.payload,procedures:[...light.payload.procedures.filter(p=>p.id!=='old7'),{id:'new',kind:'جلسة',date:day(0),text:'جديدة'}]};
+ const back=restoreHistory(edited,full.payload);
+ assert.deepEqual(back.procedures.map(p=>p.id),['old0','old1','old2','old3','old4','old5','old6','j1','recent','new'],'Older entries come back; edits to the shown ones stand');
+ assert.equal(isTrimmed(back),false);assert.equal('proceduresKept' in back,false);
+ const saved=await local(admin.token,'save_case',{case:{...back,id:'heavy-case',revision:light.revision}});assert.equal(saved.revision,light.revision+1);}
 await db.close();
-console.log('Passed permissions: refreshes send only changed cases with a fingerprint of everything visible, several jobs per employee (ordered, audited, granting nothing), delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
+console.log('Passed permissions: light case lists (older sessions on demand, light copies never saved), refreshes send only changed cases with a fingerprint of everything visible, several jobs per employee (ordered, audited, granting nothing), delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');

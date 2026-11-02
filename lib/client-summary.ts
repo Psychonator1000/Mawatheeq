@@ -44,31 +44,50 @@ export type SummaryRow = {
   next7: number; next30: number; nextDate: string; won: number; lost: number; appealOpen: number;
   noContract: number; fees: number; lawyers: [string, number][];
 };
+/** What a number in the summary counts: a file status, the total or open cases, or one of the extra columns. */
+export type Metric = StatusKey | 'total' | 'open' | 'next7' | 'next30' | 'won' | 'lost' | 'appealOpen' | 'noContract' | 'fees';
+export const METRIC_LABELS: Record<Metric, string> = {
+  ...Object.fromEntries(STATUS_COLUMNS) as Record<StatusKey, string>, total: 'كل القضايا', open: 'القضايا المفتوحة',
+  next7: 'جلسات خلال ٧ أيام', next30: 'جلسات خلال ٣٠ يوماً', won: 'أحكام لصالحنا', lost: 'أحكام ضدنا', appealOpen: 'ضمن مهلة الطعن',
+  noContract: 'قضايا مفتوحة بلا عقد', fees: 'قضايا لها أتعاب متفق عليها',
+};
+/** Which of the summary's numbers a case adds to: the one rule behind both the counts and the list behind each count. */
+function metricsOf(c: CaseRecord, rules: Rules, today: string): Set<Metric> {
+  const k = statusOf(c), live = k !== 'closed', out = new Set<Metric>([k, 'total']);
+  if (live) out.add('open');
+  const next = nextSitting(c);
+  if (live && next && next >= today) { const d = daysBetween(today, next) ?? 999; if (d <= 7) out.add('next7'); if (d <= 30) out.add('next30'); }
+  if (c.date) {
+    if (c.outcome === 'لصالحنا') out.add('won'); else if (c.outcome === 'غير صالحنا') out.add('lost');
+    const st = caseState(c, rules, today);
+    if (live && st.remaining !== null && st.remaining > 0) out.add('appealOpen');
+  }
+  if (live && !String(c.contractNumber || '').trim() && !c.contractWaived) out.add('noContract');
+  if (feeOf(c) > 0) out.add('fees');
+  return out;
+}
+const feeOf = (c: CaseRecord) => { const n = Number(String(c.contractFee || '').replace(/[^\d.]/g, '')); return Number.isFinite(n) ? n : 0; };
+
+/** The cases behind one number of the summary, each case once, by code. */
+export function casesFor(records: CaseRecord[], metric: Metric, rules: Rules, today = todayISO()): CaseRecord[] {
+  const code = (c: CaseRecord) => String(c.code || '');
+  return casesOnce(records).filter(c => metricsOf(c, rules, today).has(metric))
+    .sort((a, b) => (/^\d+$/.test(code(a)) && /^\d+$/.test(code(b)) ? Number(code(a)) - Number(code(b)) : code(a).localeCompare(code(b), 'ar')));
+}
+
 export function summarize(records: CaseRecord[], rules: Rules, today = todayISO()): SummaryRow {
   const counts = Object.fromEntries(STATUS_COLUMNS.map(([k]) => [k, 0])) as Record<StatusKey, number>;
   const row: SummaryRow = { counts, total: 0, open: 0, next7: 0, next30: 0, nextDate: '', won: 0, lost: 0, appealOpen: 0, noContract: 0, fees: 0, lawyers: [] };
   const lawyers = new Map<string, number>();
   for (const c of casesOnce(records)) {
-    const k = statusOf(c); counts[k]++; row.total++;
-    const live = k !== 'closed';
-    if (live) row.open++;
+    const m = metricsOf(c, rules, today);
+    counts[statusOf(c)]++; row.total++;
+    for (const k of ['open', 'next7', 'next30', 'won', 'lost', 'appealOpen', 'noContract'] as const) if (m.has(k)) row[k]++;
     const next = nextSitting(c);
-    if (live && next && next >= today) {
-      const d = daysBetween(today, next) ?? 999;
-      if (d <= 7) row.next7++;
-      if (d <= 30) row.next30++;
-      if (!row.nextDate || next < row.nextDate) row.nextDate = next;
-    }
-    if (c.date) {
-      if (c.outcome === 'لصالحنا') row.won++; else if (c.outcome === 'غير صالحنا') row.lost++;
-      const st = caseState(c, rules, today);
-      if (live && st.remaining !== null && st.remaining > 0) row.appealOpen++;
-    }
-    if (live && !String(c.contractNumber || '').trim() && !c.contractWaived) row.noContract++;
-    const fee = Number(String(c.contractFee || '').replace(/[^\d.]/g, ''));
-    if (Number.isFinite(fee)) row.fees += fee;
+    if (next && next >= today && m.has('open') && (!row.nextDate || next < row.nextDate)) row.nextDate = next;
+    row.fees += feeOf(c);
     const l = String(c.lawyer || '').trim();
-    if (l && live) lawyers.set(l, (lawyers.get(l) || 0) + 1);
+    if (l && m.has('open')) lawyers.set(l, (lawyers.get(l) || 0) + 1);
   }
   row.lawyers = [...lawyers].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ar'));
   return row;

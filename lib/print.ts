@@ -213,15 +213,16 @@ export function hearingRollHtml(date: string, rows: RollRow[], printedAt: string
  * «رول الأحكام»: a numbered, grouped list in landscape. Cells are [main text, smaller second line]; the caller chooses
  * the columns. Smaller type is used when many columns are printed so the roll stays on the page width.
  */
-export function judgmentRollHtml(title: string, scope: string, headers: string[], groups: [string, [string, string][][]][], printedAt: string, printedBy: string, widths: number[] = []): string {
+/** `counts`: each group heading and the scope line carry the number of rows as cases (off where rows are not cases). */
+export function judgmentRollHtml(title: string, scope: string, headers: string[], groups: [string, [string, string][][]][], printedAt: string, printedBy: string, widths: number[] = [], counts = true): string {
   const total = groups.reduce((n, [, list]) => n + list.length, 0);
   let index = 0;
   const size = headers.length > 14 ? 9 : headers.length > 10 ? 10 : 11;
   const sum = widths.reduce((n, w) => n + w, 0);
   const cols = sum ? `<colgroup><col style="width:24px">${widths.map(w => `<col style="width:${(w / sum * 100).toFixed(2)}%">`).join('')}</colgroup>` : '';
   const table = (list: [string, string][][]) => `<table class="list roll">${cols}<thead><tr><th>م</th>${headers.map(h => `<th>${escape(h)}</th>`).join('')}</tr></thead><tbody>${list.map(row => `<tr><td class="nowrap">${++index}</td>${row.map(([main, sub]) => `<td>${escape(main)}${sub ? `<br><small>${escape(sub)}</small>` : ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-  const body = groups.map(([label, list]) => `${label ? `<h2>${escape(label)} (${list.length})</h2>` : ''}${table(list)}`).join('');
-  return page(title, `<style>.roll{font-size:${size}px;table-layout:fixed}.roll th{white-space:normal;line-height:1.3}.roll th:first-child,.roll td:first-child{text-align:center;padding-inline:2px}.roll td{overflow-wrap:break-word;word-break:normal;padding:4px 5px}.roll td small{font-size:.9em}.roll thead{display:table-header-group}.roll tr{break-inside:avoid}.roll small{color:#6b5a50}h2{break-after:avoid}</style><header><h1>${escape(title)}</h1><p>${escape(scope)} · ${total} قضية</p></header>${total ? body : '<p>لا توجد قضايا في هذا النطاق.</p>'}${footer(printedAt, printedBy)}`, true);
+  const body = groups.map(([label, list]) => `${label ? `<h2>${escape(label)}${counts ? ` (${list.length})` : ''}</h2>` : ''}${table(list)}`).join('');
+  return page(title, `<style>.roll{font-size:${size}px;table-layout:fixed}.roll th{white-space:normal;line-height:1.3}.roll th:first-child,.roll td:first-child{text-align:center;padding-inline:2px}.roll td{overflow-wrap:break-word;word-break:normal;padding:4px 5px}.roll td small{font-size:.9em}.roll thead{display:table-header-group}.roll tr{break-inside:avoid}.roll small{color:#6b5a50}h2{break-after:avoid}</style><header><h1>${escape(title)}</h1><p>${escape(scope)}${counts ? ` · ${total} قضية` : ''}</p></header>${total ? body : '<p>لا توجد قضايا في هذا النطاق.</p>'}${footer(printedAt, printedBy)}`, true);
 }
 
 /** A simple printable table (file statements, a file's account statement…), escaped, with optional totals rows. */

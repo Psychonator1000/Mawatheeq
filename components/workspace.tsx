@@ -20,6 +20,7 @@ import {clampPage} from '@/lib/pagination';
 import {CaseRecord,Rules,DEFAULT_RULES,caseState,emptyCase,formatDate,todayISO,elapsedDaysLabel,remainingDaysLabel,TYPES,inCaseCategory,newCategoryCase,type CaseCategory} from '@/lib/domain';
 import {Choice,Field,DateField,Badge,Empty,Count,api,saveBlob} from './shared';
 import CaseDetail from './case-detail';
+import {fullCaseRows,isTrimmed} from '@/lib/shared-backend';
 import {RemainingDays} from './case-timing';
 import {sharedBackend} from '@/lib/client-api';
 import OfficeWork from './office-work';
@@ -180,8 +181,11 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
  },[openTick,loading,allRecords]);
  function openFromList(c:CaseRecord,list:CaseRecord[],e:React.MouseEvent){setCaseOrigin(e.clientX,e.clientY);setBrowseIds(list.map(x=>x.id));setEnter('origin');setSelected(c)}
  const caseNav=(()=>{if(!selected)return undefined;const ids=browseIds,i=ids.indexOf(selected.id);if(i<0)return undefined;const find=(id?:string)=>id?records.find(r=>r.id===id):undefined;return {index:i,total:ids.length,prev:find(ids[i-1]),next:find(ids[i+1])}})();
- async function exportXlsx(){if(!access.canExport)return;setBusy(true);try{if(sharedBackend)await localRequest('check_export');const {exportWorkbook}=await import('@/lib/excel');await exportWorkbook(records,rules,clients,view==='deadlines'?reportDate:todayISO());toast.success('تم تنزيل ملف Excel')}catch{toast.error('تعذر تصدير الملف. حاول مرة أخرى.')}finally{setBusy(false)}}
- async function backup(){if(!powers.includes('backup'))return;setBusy(true);try{const extra=sharedBackend?await exportOfficeData():{};const documents=sharedBackend?(await api('/api/documents')).documents:[];saveBlob(new Blob([JSON.stringify({version:3,exportedAt:new Date().toISOString(),rules,cases:records,clients,documents,office:extra,staff:office?.context.members||[]},null,2)],{type:'application/json'}),'Mawatheeq-backup.json');toast.success('تم تنزيل البيانات. ملفات PDF تُنزّل منفصلة من مرفقات القضايا.')}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
+ // A backup or an export carries every session: cases from the light list are read whole first.
+ async function wholeCases(list:CaseRecord[]):Promise<CaseRecord[]>{if(!sharedBackend||!list.some(isTrimmed))return list;const whole=new Map((await fullCaseRows()).map(r=>[r.id,r]));
+  return list.map(c=>{const r=whole.get(c.id);return r?enrichCase({...r.payload,id:r.id,revision:r.revision,archived:r.archived} as CaseRecord,clients):c})}
+ async function exportXlsx(){if(!access.canExport)return;setBusy(true);try{if(sharedBackend)await localRequest('check_export');const {exportWorkbook}=await import('@/lib/excel');await exportWorkbook(await wholeCases(records),rules,clients,view==='deadlines'?reportDate:todayISO());toast.success('تم تنزيل ملف Excel')}catch{toast.error('تعذر تصدير الملف. حاول مرة أخرى.')}finally{setBusy(false)}}
+ async function backup(){if(!powers.includes('backup'))return;setBusy(true);try{const extra=sharedBackend?await exportOfficeData():{};const documents=sharedBackend?(await api('/api/documents')).documents:[];const cases=await wholeCases(allRecords);saveBlob(new Blob([JSON.stringify({version:3,exportedAt:new Date().toISOString(),rules,cases,clients,documents,office:extra,staff:office?.context.members||[]},null,2)],{type:'application/json'}),'Mawatheeq-backup.json');toast.success('تم تنزيل البيانات. ملفات PDF تُنزّل منفصلة من مرفقات القضايا.')}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
  async function importFile(file:File){if(!powers.includes('settings'))return;setBusy(true);try{const {readWorkbook}=await import('@/lib/excel');const data=await readWorkbook(file,true);if(!data.length)throw new Error('لم يُعثر على صفوف أحكام في الملف.');setImportRows({rows:data,file:file.name})}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
 
  function renderCaseTable(data:CaseRecord[],compact=false,sortable=false,empty?:{title:string;text:string}){if(!data.length)return <Empty {...empty}/>;const exec=view==='cases'&&filters.category==='execution';

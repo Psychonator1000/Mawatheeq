@@ -36,7 +36,7 @@ function DeskPageView(p:Props){
   case 'roll':return <Roll {...p}/>;
   case 'followup':return <Followup {...p}/>;
   case 'statements':return <Statements {...p}/>;
-  case 'summary':return <Suspense fallback={<p role="status">جارٍ التحميل…</p>}><ClientSummary records={p.records.filter(c=>!workflowOf(c))} clients={p.clients} rules={p.rules||DEFAULT_RULES} printedBy={p.printedBy} canExport={p.canExport}/></Suspense>;
+  case 'summary':return <Suspense fallback={<p role="status">جارٍ التحميل…</p>}><ClientSummary records={p.records.filter(c=>!workflowOf(c))} clients={p.clients} rules={p.rules||DEFAULT_RULES} printedBy={p.printedBy} canExport={p.canExport} onOpen={p.onOpen}/></Suspense>;
   case 'consultations':return <Consultations {...p}/>;
   case 'judgments':return <Judgments {...p}/>;
   case 'noContract':return <NoContract {...p}/>;

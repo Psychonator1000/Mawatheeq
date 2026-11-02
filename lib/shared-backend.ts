@@ -4,6 +4,8 @@ import { DEFAULT_RULES, type CaseRecord, type Rules } from './domain';
 import { enrichCase, type ClientEntity } from './clients';
 import { canReadCases, type Permissions } from './permissions';
 import { cachedUser, readSnapshot, writeSnapshot } from './boot-cache';
+import { isTrimmed, restoreHistory } from './case-trim';
+export { isTrimmed, restoreHistory };
 
 type StoredRow = { id: string; revision: number; payload: Record<string, unknown>; archived?: boolean; filename?: string; file_key?: string | null; updated_at: string };
 
@@ -12,8 +14,13 @@ function checked<T>({ data, error }: { data: T; error: { message: string } | nul
   return data;
 }
 
-async function allRows(table: string): Promise<StoredRow[]> {
-  const action = table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', page = (offset: number) => localRequest<StoredRow[] | null>(action, { offset }).then(r => r || []);
+/**
+ * Case lists are read «light»: each case keeps its judgments, recent entries and last sessions, and older sessions stay
+ * on the server (the case is marked «proceduresTrimmed»). A case opened or saved is read whole with «case_full».
+ * A database without the light lists answers in full, as before.
+ */
+async function allRows(table: string, light = false): Promise<StoredRow[]> {
+  const action = table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', page = (offset: number) => localRequest<StoredRow[] | null>(action, light ? { offset, light } : { offset }).then(r => r || []);
   // Two pages at a time: one round trip for an office of up to 1,000 records instead of one per page.
   const rows: StoredRow[] = [];
   for (let from = 0; ; from += 1000) {
@@ -58,7 +65,7 @@ async function changedRows(): Promise<{ rows: StoredRow[]; changed: boolean }> {
   if (user !== copyUser) { copyUser = user; copyLoaded = false; caseCopy = null; clientCopy = null; }
   if (!copyLoaded) { copyLoaded = true; caseCopy = await readSnapshot<CaseCopy>('case-rows'); }
   if (caseCopy) {
-    const d = await localRequest<Changes>('cases_changes', { since: caseCopy.asOf });
+    const d = await localRequest<Changes>('cases_changes', { since: caseCopy.asOf, light: true });
     if (!d.more) {
       const byId = new Map(caseCopy.rows.map(r => [r.id, r]));
       for (const r of d.rows) byId.set(r.id, r);
@@ -67,8 +74,8 @@ async function changedRows(): Promise<{ rows: StoredRow[]; changed: boolean }> {
       if (fresh) { caseCopy = { asOf: d.asOf, rows, full: caseCopy.full }; if (d.rows.length) void writeSnapshot('case-rows', caseCopy); return { rows, changed: d.rows.length > 0 }; }
     }
   }
-  const start = await localRequest<Changes>('cases_changes', {});
-  const rows = await allRows('mawatheeq_cases');
+  const start = await localRequest<Changes>('cases_changes', { light: true });
+  const rows = await allRows('mawatheeq_cases', true);
   caseCopy = { asOf: start.asOf, rows, full: Date.now() }; void writeSnapshot('case-rows', caseCopy);
   return { rows, changed: true };
 }
@@ -92,7 +99,7 @@ export async function sharedRequest(path: string, init?: RequestInit): Promise<u
   }
   if (path === '/api/cases' && method === 'POST') {
     const body = JSON.parse(String(init?.body));
-    return { case: await localRequest('save_case', { case: body.case }) };
+    return { case: await localRequest('save_case', { case: await withFullHistory(body.case) }) };
   }
   if (path === '/api/cases' && method === 'PUT') {
     const body = JSON.parse(String(init?.body));
@@ -114,6 +121,19 @@ export async function sharedRequest(path: string, init?: RequestInit): Promise<u
   if (path === '/api/documents' && method === 'POST') return saveDocument(init?.body);
   throw new Error('العملية المطلوبة غير متاحة.');
 }
+
+/** The whole case from the server: every entry of its history. */
+export async function fullCase(id: string): Promise<StoredRow> { return localRequest<StoredRow>('case_full', { id }); }
+/**
+ * A case saved from a light list gets its older sessions back: the entries the list left out are put before the ones
+ * it showed (as they stand now, edited, removed or added). A case read whole goes as it is.
+ */
+export async function withFullHistory(c: Record<string, unknown>): Promise<Record<string, unknown>> {
+  if (!isTrimmed(c)) return c;
+  return restoreHistory(c, (await fullCase(String(c.id))).payload);
+}
+/** Every case whole, for a backup or a full export. */
+export async function fullCaseRows(): Promise<StoredRow[]> { return allRows('mawatheeq_cases'); }
 
 async function saveDocument(body: BodyInit | null | undefined) {
   if (!(body instanceof FormData)) throw new Error('بيانات المستند غير صالحة.');
