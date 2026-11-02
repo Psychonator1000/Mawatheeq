@@ -108,7 +108,7 @@ export default function ClientSummary({records,clients,rules,printedBy,canExport
     {table(all.slice(0,shown).map(x=>({key:x.c.id,client:x.c,row:x.row})),grand,'كل الموكلين')}
     {all.length>shown&&<button type="button" className="btn sum-more" onClick={()=>setShown(s=>s+PAGE)}>عرض المزيد ({all.length-shown} متبقٍ)</button>}
    </article>:<Empty/>)}
- {drill&&<Dialog open onOpenChange={o=>{if(!o)setDrill(null)}}><DialogContent dir="rtl" className="office-dialog roll-dialog sum-drill">
+ {drill&&<Dialog open onOpenChange={o=>{if(!o)setDrill(null)}}><DialogContent dir="rtl" className="office-dialog sum-drill">
    <DialogHeader><DialogTitle>{drill.title}</DialogTitle><DialogDescription>{drill.cases.length} قضية · اضغط القضية لفتحها.</DialogDescription></DialogHeader>
    {canExport&&!!drill.cases.length&&<div className="actions"><button type="button" className="btn" onClick={()=>{if(!printHtml(clientRollHtml(drill.title,drill.cases,false,printedBy)))toast.error('اسمح بالنوافذ المنبثقة للطباعة.')}}><Printer size={15}/> طباعة هذه القضايا</button></div>}
    {drill.cases.length?<div className="table-wrap sum-drill-list"><table className="office-table"><thead><tr><th>الكود</th><th>الرقم الآلي</th><th>الموكل / الخصم</th><th>المحكمة</th><th>آخر قرار</th><th>الجلسة القادمة</th><th>حالة الملف</th></tr></thead>
