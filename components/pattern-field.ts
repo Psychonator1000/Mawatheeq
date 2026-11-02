@@ -174,7 +174,7 @@ export function createPatternSheet() {
           light(ctx, g, layer);
         }
         for (const rp of ripples) {
-          const p = (t - rp.at) / LIFE, r = SPAN * (1 - (1 - p) ** 3), a = GLINT * (1 - p) ** 1.6;
+          const p = Math.min(1, Math.max(0, (t - rp.at) / LIFE)), r = SPAN * (1 - (1 - p) ** 3), a = GLINT * (1 - p) ** 1.6;
           const g = ctx.createRadialGradient(rp.x - dx, rp.y - dy, Math.max(0, r - BAND), rp.x - dx, rp.y - dy, r + BAND);
           g.addColorStop(0, 'rgba(255,248,232,0)'); g.addColorStop(.5, `rgba(255,248,232,${a})`); g.addColorStop(1, 'rgba(255,248,232,0)');
           light(ctx, g, layer);
