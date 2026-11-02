@@ -61,7 +61,7 @@ import RegisterImport from './register-import';
 import {EXCEL_ACCEPT} from '@/lib/excel-files';
 import {DESK_PAGES,postingErrors,workflowOf,type DeskPage} from '@/lib/case-desk';
 const CaseDesk=lazy(()=>import('./case-desk'));
-const DESK_ICONS:Record<DeskPage,React.ElementType>={posting:CalendarClock,postingErrors:TriangleAlert,roll:ClipboardList,followup:CalendarCheck,statements:FileText,consultations:MessagesSquare,judgments:Landmark,noContract:FileX,study:FileSearch,stayed:PauseCircle};
+const DESK_ICONS:Record<DeskPage,React.ElementType>={posting:CalendarClock,postingErrors:TriangleAlert,roll:ClipboardList,followup:CalendarCheck,statements:FileText,consultations:MessagesSquare,judgments:Landmark,noContract:FileX,study:FileSearch,stayed:PauseCircle,summary:ChartNoAxesCombined};
 /** Desk pages opened from the judgments register's own buttons rather than the sidebar. */
 const FROM_REGISTER:DeskPage[]=['roll','judgments','statements'];
 const isDesk=(v:string):v is DeskPage=>DESK_PAGES.some(d=>d[0]===v);
@@ -82,7 +82,7 @@ function Nav({view,go,total,errors,access,owner,mail}:{view:string;go:(s:string)
   {title:'',items:pick(['overview'])},
   {title:'القضايا',items:pick(['cases','study','consultations','stayed','noContract','verification','conflicts'])},
   {title:'الجلسات والمواعيد',items:pick(['work','posting','postingErrors','followup','deadlines'])},
-  {title:'الموكلون والتقارير',items:pick(['clients','analytics'])},
+  {title:'الموكلون والتقارير',items:pick(['clients','summary','analytics'])},
   {title:'بريدي وملفاتي',items:pick(['mail','paper'])},
   {title:'',items:pick(['settings'])}];
  const term=normalizeSearch(q.trim()),hits=term?groups.flatMap(g=>g.items).filter(n=>normalizeSearch(n.label).includes(term)):[];
@@ -200,7 +200,7 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
    <TableCell className="case-status" data-label="الحالة"><div className="case-badges"><Badge value={s.outcome}/><Badge value={exec?s.appeal:s.status}/></div></TableCell>
    {!compact&&<TableCell className="case-lawyer" data-label="المحامي">{c.lawyer||<span className="muted" aria-label="غير مسجل">—</span>}</TableCell>}
   </TableRow>})}</TableBody></Table></div>}
- const deskProps={records:allRecords,clients,work:office?.work||[],members:office?.context.members||[],canEdit:canChangeCase,canCreate:canAdd,canExport:access.canExport,printedBy:office?.context.user.username||'',
+ const deskProps={records:allRecords,clients,rules,work:office?.work||[],members:office?.context.members||[],canEdit:canChangeCase,canCreate:canAdd,canExport:access.canExport,printedBy:office?.context.user.username||'',
   onOpen:(c:CaseRecord)=>{setDeskDialog(null);setEnter('origin');setBrowseIds([]);setSelected(c)},onSaved:(c:CaseRecord)=>setRecords(rs=>rs.some(r=>r.id===c.id)?rs.map(r=>r.id===c.id?c:r):[...rs,c]),onNew:setSelected};
  const bad=active.filter(c=>state(c).outcome==='غير صالحنا').length,unknown=active.length-favorable-bad;
  function renderDistribution(){const f=active.length?favorable/active.length*100:0,b=active.length?bad/active.length*100:0;return <div className="doughnut-area"><div className="doughnut" style={{background:`conic-gradient(var(--brand) 0 ${f}%,#b99973 ${f}% ${f+b}%,#dcd0bf ${f+b}% 100%)`}}><div className="donut-center"><b>{active.length?Math.round(f):0}%</b><span>أحكام لصالحنا</span></div></div><div className="legend">{([['لصالحنا',favorable,'var(--brand)'],['غير صالحنا',bad,'#b99973'],['غير محدد',unknown,'#cdbfab']] as const).map(([label,count,color])=>{const pct=active.length?Math.round(count/active.length*100):0;return <button className="legend-row" key={label} onClick={()=>go('cases',{analysisField:'outcome',analysisValue:label})}><i style={{background:color}}/><span>{label}</span><em className="legend-bar" aria-hidden><s style={{width:pct+'%',background:color}}/></em><b className="mono">{count}</b><small className="mono">{pct}%</small></button>})}</div></div>}

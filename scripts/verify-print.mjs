@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { caseSheetHtml, voucherHtml, statementHtml, judgmentRollHtml, listHtml } from '../lib/print.ts';
+import { clientRollCards, clientRollHtml } from '../lib/client-roll.ts';
 import { filterRoll, sortRoll, groupRoll, rollCell, EMPTY_ROLL_FILTER, ROLL_COLUMNS, DEFAULT_ROLL_COLUMNS } from '../lib/judgment-roll.ts';
 
 const record = {
@@ -72,3 +73,18 @@ console.log('Passed judgment roll printing.');
 {const l=listHtml('إفادات <ملف>','اتصالات',['التاريخ','الإجراء'],[['13/10/2026','<b>اتصال</b>']],'13/10/2026','u',[['الإجمالي','1.000']]);
  assert.ok(!l.includes('<b>اتصال') && l.includes('&lt;b&gt;اتصال') && l.includes('إفادات &lt;ملف&gt;') && l.includes('1.000'),'Printed lists are escaped with totals');}
 console.log('Passed printable lists.');
+
+// «رول قضايا الموكل»: one client's cases by code, open ones only unless asked, each with its sittings and judgment.
+{const base={client:'شركة اختبار',clientEntityName:'شركة اختبار',opponent:'خصم',type:'حكم أول درجة',date:'',outcome:'غير محدد',procedures:[]};
+ const a={...base,id:'a',code:'120',autoNumber:'5',caseNumber:'2026/7',court:'الكلية',procedures:[{id:'s1',kind:'جلسة',date:'2026-09-01',decision:'تأجيل للإعلان',court:'الكلية / 3',followup:'2026-11-20'}]};
+ const b={...base,id:'b',code:'15',legacyStatus:'منتهي',date:'2025-01-02',type:'حكم استئناف',outcome:'لصالحنا'};
+ const c={...base,id:'c',code:'1003',archived:true,insurance:true};
+ assert.deepEqual(clientRollCards([a,b,c],true).map(x=>x.code),['120'],'Open only: finished and archived cases are left out');
+ assert.deepEqual(clientRollCards([a,b,c],false).map(x=>x.code),['15','120','1003'],'All cases, by code number');
+ const f=Object.fromEntries(clientRollCards([a],true)[0].facts);
+ assert.deepEqual([f['الجلسة السابقة'],f['آخر قرار'],f['الجلسة القادمة'],f['المحكمة'],f['الحكم']],['01/09/2026','تأجيل للإعلان','20/11/2026','الكلية / 3','لم يصدر']);
+ assert.equal(Object.fromEntries(clientRollCards([b],false)[0].facts)['الحكم'],'حكم استئناف 02/01/2025 — لصالحنا');
+ assert.equal(Object.fromEntries(clientRollCards([{...a,casePerson:'فارس الحجوج',casePersonRole:'من ملاك الشركة'}],true)[0].facts)['الشخص المعني'],'فارس الحجوج','The person concerned shows when the case names one');
+ assert.ok(!('الشخص المعني' in Object.fromEntries(clientRollCards([a],true)[0].facts)));
+ const html=clientRollHtml('شركة <اختبار>',[a,b],false);assert.ok(html.includes('رول قضايا الموكل')&&html.includes('&lt;اختبار&gt;')&&!html.includes('<اختبار>'),'The roll is titled and escaped');}
+console.log('Passed the client cases roll.');

@@ -117,13 +117,14 @@ export const CONSULTATION_STATUSES: [ConsultationStatus, string][] = [['new', '�
 export const CONSULTATION_TYPES = ['شفهية', 'مكتوبة', 'مراجعة عقد', 'صياغة عقد', 'رأي قانوني', 'أخرى'];
 
 /** The pages of the cases desk, with their sidebar label and a one-line description. */
-export type DeskPage='posting'|'postingErrors'|'roll'|'followup'|'statements'|'consultations'|'judgments'|'noContract'|'study'|'stayed';
+export type DeskPage='posting'|'postingErrors'|'roll'|'followup'|'statements'|'summary'|'consultations'|'judgments'|'noContract'|'study'|'stayed';
 export const DESK_PAGES:[DeskPage,string,string][]=[
  ['posting','ترحيل الجلسات','سجّل قرار كل جلسة وموعد الجلسة التالية.'],
  ['postingErrors','أخطاء الترحيل','جلسات لم تُرحَّل، أو رُحّلت بموعد ناقص أو غير صحيح.'],
  ['roll','مواعيد الجلسات (رول)','جلسات الفترة مرتبة بالتاريخ والمحكمة، جاهزة للطباعة.'],
  ['followup','متابعة الجلسات','الجلسات القادمة وما طلبته المحكمة، والمكلف بحضورها.'],
  ['statements','كشوف القضايا','كشف قضايا موكل أو محامٍ أو محكمة، للطباعة أو الإرسال.'],
+ ['summary','ملخص الموكلين','قضايا كل موكل حسب حالة الملف ودرجة التقاضي، مجمعة تحت الأشخاص المرتبطين بأكثر من ملف.'],
  ['consultations','الاستشارات','طلبات الرأي القانوني ومواعيد الرد عليها.'],
  ['judgments','الأحكام الصادرة','الأحكام الصادرة في فترة بكل درجات التقاضي، بما فيها الدرجات السابقة، للطباعة.'],
  ['noContract','القضايا بدون عقود','قضايا مفتوحة لم يُسجل لها عقد أتعاب.'],

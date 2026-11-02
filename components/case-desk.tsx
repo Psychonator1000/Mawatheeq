@@ -1,7 +1,8 @@
-import {createContext,useContext,useMemo,useState} from 'react';
+import {createContext,lazy,Suspense,useContext,useMemo,useState} from 'react';
 import {Printer,Plus,Save,ArrowUpLeft,AlertTriangle,FileSignature,CheckCircle2} from 'lucide-react';
 import {toast} from 'sonner';
-import {type CaseRecord,emptyCase,formatDate,todayISO,daysBetween} from '@/lib/domain';
+import {type CaseRecord,type Rules,DEFAULT_RULES,emptyCase,formatDate,todayISO,daysBetween} from '@/lib/domain';
+const ClientSummary=lazy(()=>import('./client-summary'));
 import {type ClientEntity,clientName,enrichCase} from '@/lib/clients';
 import {DECISIONS,EXPERT_DECISIONS,sessionProcedure,type Venue} from '@/lib/sessions';
 import {type DeskPage,CONSULTATION_STATUSES,CONSULTATION_TYPES,POSTING_ERRORS,dueForPosting,judgmentsBetween,lastSitting,nextSitting,postingErrors,renewalDeadline,shiftDays,sittingsBetween,stayOf,withoutContract,workflowOf,type ConsultationStatus} from '@/lib/case-desk';
@@ -12,7 +13,7 @@ import {EditorDialog} from './departments/shared';
 import type {Member,WorkItem} from '@/lib/office';
 import {SelectList} from './filter-select';
 
-type Props={page:DeskPage;records:CaseRecord[];clients:ClientEntity[];work:WorkItem[];members:Member[];canEdit:boolean;canCreate:boolean;canExport:boolean;printedBy:string;
+type Props={page:DeskPage;records:CaseRecord[];rules?:Rules;clients:ClientEntity[];work:WorkItem[];members:Member[];canEdit:boolean;canCreate:boolean;canExport:boolean;printedBy:string;
  onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onNew:(c:CaseRecord)=>void;
  /** Shown inside a window that already carries the title and description. */
  bare?:boolean};
@@ -35,6 +36,7 @@ function DeskPageView(p:Props){
   case 'roll':return <Roll {...p}/>;
   case 'followup':return <Followup {...p}/>;
   case 'statements':return <Statements {...p}/>;
+  case 'summary':return <Suspense fallback={<p role="status">جارٍ التحميل…</p>}><ClientSummary records={p.records.filter(c=>!workflowOf(c))} clients={p.clients} rules={p.rules||DEFAULT_RULES} printedBy={p.printedBy} canExport={p.canExport}/></Suspense>;
   case 'consultations':return <Consultations {...p}/>;
   case 'judgments':return <Judgments {...p}/>;
   case 'noContract':return <NoContract {...p}/>;

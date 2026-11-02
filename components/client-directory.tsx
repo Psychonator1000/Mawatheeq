@@ -1,6 +1,8 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Building2, Users, Plus, Search, Save, Trash2, ArrowUpLeft, Merge, LoaderCircle, Phone, MessageCircle } from 'lucide-react';
+import { Building2, Users, Plus, Search, Save, Trash2, ArrowUpLeft, Merge, LoaderCircle, Phone, MessageCircle, Printer } from 'lucide-react';
+import { clientRollCards, clientRollHtml } from '@/lib/client-roll';
+import { printHtml } from '@/lib/print';
 import { phoneLinks } from '@/lib/contact-links';
 import { toast } from 'sonner';
 import RecordWindow, { useListNav, type WindowNav, type Enter } from './record-window';
@@ -25,7 +27,7 @@ type EditorProps = {
 export function ClientEditor({ entity, clients, records = [], canMerge, canCollections=false, readOnly=false, onClose, onSaved, onMerged, onOpenCase, onShowCases, onAddCase, nav, onNavigate, enter }: EditorProps) {
   const contactRoles = useMemo(() => suggestions(clients.flatMap(c => c.contacts), p => p.role, CONTACT_ROLES, 100), [clients]);
   const [draft, setDraft] = useState(entity), [busy, setBusy] = useState(false), [targetId, setTargetId] = useState('');
-  const [casePage, setCasePage] = useState(1);
+  const [casePage, setCasePage] = useState(1), [rollOpenOnly, setRollOpenOnly] = useState(true);
   const linked = records.filter(c => c.clientEntityId === draft.id), target = clients.find(c => c.id === targetId);
   const dirty = JSON.stringify(draft) !== JSON.stringify(entity);
   const duplicate = clients.find(c => c.id !== draft.id && normalizeSearch(c.name) === normalizeSearch(draft.name));
@@ -78,7 +80,9 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
       </section>;
     })}
     {draft.aliases.length > 0 && <details className="client-aliases"><summary>الأسماء والصيغ السابقة المحفوظة ({draft.aliases.length})</summary><ul>{draft.aliases.map(name => <li key={name}>{name}</li>)}</ul></details>}</fieldset>
-    {Boolean(entity.revision) && <><div className="client-section-heading"><h3>قضايا الموكل ({linked.length})</h3></div>
+    {Boolean(entity.revision) && <><div className="client-section-heading"><h3>قضايا الموكل ({linked.length})</h3>
+      {linked.length > 0 && <div className="client-roll-print"><label className="checkbox-line"><input type="checkbox" checked={rollOpenOnly} onChange={e => setRollOpenOnly(e.target.checked)}/> المفتوحة فقط</label>
+        <button type="button" className="btn" onClick={() => { const html = clientRollHtml(draft.name, linked, rollOpenOnly); if (!clientRollCards(linked, rollOpenOnly).length) { toast.info('لا توجد قضايا مفتوحة لهذا الموكل.'); return; } if (!printHtml(html)) toast.error('اسمح بالنوافذ المنبثقة في المتصفح لطباعة الرول.'); }}><Printer size={15}/> طباعة رول قضايا الموكل</button></div>}</div>
       <div className="client-linked-cases">{linked.slice((page - 1) * 10, page * 10).map(c => <button className="client-case-row" key={c.id} onClick={() => { onClose(); onOpenCase?.(c); }} disabled={!onOpenCase}>
         <b>{c.code || 'بدون كود'}</b><span>{c.opponent || 'خصم غير مسجل'}<small>{c.clientContactName && `المتابع: ${c.clientContactName} · `}{c.casePerson && `الشخص المعني: ${c.casePerson} · `}{formatDate(c.date)}{c.archived ? ' · مؤرشف' : ''}</small></span><ArrowUpLeft size={16}/>
       </button>)}</div>

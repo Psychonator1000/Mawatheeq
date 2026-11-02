@@ -733,3 +733,42 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 .dupe-list{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:6px;max-height:260px;overflow:auto}
 .dupe-list li{padding:8px 10px;border:1px solid var(--border,#e4d9cb);border-radius:8px;font-size:13px;line-height:1.6}
 .dupe-list small{display:block;color:var(--muted-foreground,#7a6759);font-size:11.5px}
+.client-roll-print{display:flex;align-items:center;gap:10px;margin-inline-start:auto;flex-wrap:wrap}.client-roll-print .btn{white-space:nowrap}
+/* «ملخص الموكلين» */
+.client-summary{display:grid;gap:12px}
+.client-summary{--s-filing:#d99a2b;--s-open1:#3f8f7a;--s-open2:#3a6fa8;--s-open3:#6c4fa3;--s-follow:#7d8a96;--s-execution:var(--brand,#7a2335);--s-stayed:#c8553d;--s-closed:#b9ada0;--s-other:#d8cfc4}
+.sum-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.sum-mode{display:inline-flex;padding:3px;border:1px solid var(--border,#e4d9cb);border-radius:10px;background:color-mix(in srgb,var(--card,#fff) 70%,transparent)}
+.sum-mode button{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:6px 12px;border-radius:7px;font:inherit;font-size:13px;color:inherit;cursor:pointer}
+.sum-mode button[aria-pressed=true]{background:var(--brand,#7a2335);color:#fff}
+.sum-search{flex:1 1 240px;min-width:200px}
+.sum-extras{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px;color:var(--muted-foreground,#7a6759)}
+.sum-extras .chip{border:1px solid var(--border,#e4d9cb);background:none;border-radius:999px;padding:3px 11px;font:inherit;font-size:12.5px;color:inherit;cursor:pointer}
+.sum-extras .chip[aria-pressed=true]{background:color-mix(in srgb,var(--brand,#7a2335) 12%,transparent);border-color:color-mix(in srgb,var(--brand,#7a2335) 45%,transparent);color:var(--brand,#7a2335);font-weight:600}
+.sum-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--muted-foreground,#7a6759)}
+.sum-legend span{display:inline-flex;align-items:center;gap:5px}
+.client-summary .dot{display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--c);margin-inline-end:5px;vertical-align:middle}
+.client-summary .s-filing{--c:var(--s-filing)}.client-summary .s-open1{--c:var(--s-open1)}.client-summary .s-open2{--c:var(--s-open2)}.client-summary .s-open3{--c:var(--s-open3)}.client-summary .s-follow{--c:var(--s-follow)}.client-summary .s-execution{--c:var(--s-execution)}.client-summary .s-stayed{--c:var(--s-stayed)}.client-summary .s-closed{--c:var(--s-closed)}.client-summary .s-other{--c:var(--s-other)}
+.sum-group{border:1px solid var(--border,#e4d9cb);border-radius:14px;padding:14px 16px;background:var(--card,#fffdf8);display:grid;gap:10px;min-width:0}
+.sum-group>header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.sum-group h3{margin:0;font-size:16px;font-weight:700}.sum-group header small{color:var(--muted-foreground,#7a6759);font-size:12px}
+.sum-kpis{display:flex;flex-wrap:wrap;gap:8px;margin:0}
+.sum-kpis div{min-width:84px;padding:6px 12px;border-radius:10px;background:color-mix(in srgb,var(--brand,#7a2335) 6%,transparent);text-align:center}
+.sum-kpis dt{font-size:11px;color:var(--muted-foreground,#7a6759)}.sum-kpis dd{margin:0;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.sum-bar{display:flex;height:22px;border-radius:7px;overflow:hidden;gap:2px}
+.sum-bar span{background:var(--c);min-width:4px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+.sum-bar .s-closed,.sum-bar .s-other{color:#4a3b30}
+.sum-table-wrap{border:1px solid var(--border,#eee5d8);border-radius:10px}
+.sum-table{width:100%;border-collapse:collapse;font-size:13px}
+.sum-table th,.sum-table td{padding:6px 7px;border-bottom:1px solid var(--border,#eee5d8);white-space:nowrap}
+.sum-table thead th{white-space:normal;line-height:1.35;min-width:58px;vertical-align:bottom;font-size:11.5px;font-weight:600;color:var(--muted-foreground,#7a6759);background:color-mix(in srgb,var(--muted,#f3eadf) 55%,transparent);position:sticky;top:0}
+.sum-table th.name{text-align:start;font-weight:600;white-space:normal;min-width:180px}.sum-table tbody th.name small{display:block;font-weight:400;font-size:11px;color:var(--muted-foreground,#7a6759)}
+.sum-table .num{text-align:center;font-variant-numeric:tabular-nums}
+.sum-table td.num{background:color-mix(in srgb,var(--brand,#7a2335) calc(var(--heat,0) * 16%),transparent)}
+.sum-table td.zero{color:color-mix(in srgb,currentColor 30%,transparent)}
+.sum-table td.total{font-weight:700}
+.sum-table td.text{font-size:12px;white-space:normal;min-width:160px}
+.sum-table .sum-total th,.sum-table .sum-total td{font-weight:700;border-top:2px solid color-mix(in srgb,var(--brand,#7a2335) 35%,transparent);background:color-mix(in srgb,var(--brand,#7a2335) 5%,transparent)}
+.sum-table tbody tr:hover th,.sum-table tbody tr:hover td{background-color:color-mix(in srgb,var(--brand,#7a2335) 7%,transparent)}
+.sum-more{justify-self:center}
+@media(max-width:700px){.sum-kpis div{min-width:70px;padding:5px 8px}.sum-group{padding:12px}}
