@@ -509,10 +509,16 @@ assert.equal(await motion.locator('.ripple-host').count(),0,'Press ripples remov
 assert.equal(await motion.locator('canvas.burst-canvas').count(),1);assert.equal(await motion.locator('.ambient-canvas').isVisible(),true,'The constellation backdrop is drawn');
 // Rows scrolled into view rise in as one piece, then drop the effect class.
 await motion.keyboard.press('Escape');await motion.setViewportSize({width:1280,height:620});await motion.goto(base+'#cases');await motion.reload();await motion.getByRole('button',{name:/فتح القضية/}).first().waitFor({state:'attached'});
+// A short list box, so some of the fixture's few (compact) rows start out of view, as in a real register; the list is
+// shown again so its rows first appear under it.
+await motion.evaluate(()=>{const st=document.createElement('style');st.id='short-list';st.textContent='.list-desk-panel .table-wrap{max-height:150px!important;min-height:0!important}';document.head.append(st)});
+await motion.locator('.nav-button',{hasText:'نظرة عامة'}).first().click();await motion.waitForTimeout(400);
+await motion.locator('.nav-button',{hasText:'سجل الأحكام'}).first().click();await motion.getByRole('button',{name:/فتح القضية/}).first().waitFor({state:'attached'});
 await motion.evaluate(()=>{scrollTo(0,0);window.__flips=new Set();document.addEventListener('animationstart',e=>{if(e.animationName.startsWith('row-rise'))window.__flips.add(e.target.parentElement)})});await motion.waitForTimeout(600);
 {const b=await motion.locator('.list-desk-panel .table-wrap').boundingBox();await motion.mouse.move(b.x+b.width/2,b.y+Math.min(60,b.height/2))}for(let i=0;i<8;i++){await motion.mouse.wheel(0,120);await motion.waitForTimeout(90)}
 await motion.waitForTimeout(250);assert.ok(await motion.evaluate(()=>window.__flips.size)>0,'Rows entering while scrolling rise in');
 await motion.waitForTimeout(2200);assert.equal(await motion.locator('tr.row-reveal').count(),0,'The reveal class is removed after the animation');
+await motion.evaluate(()=>document.getElementById('short-list')?.remove());
 await motion.setViewportSize({width:1280,height:900});
 await motion.mouse.wheel(0,600);await motion.waitForTimeout(1500);
 assert.equal(await motion.evaluate(()=>document.documentElement.hasAttribute('data-scrolling')),false,'Scroll-reactive lag settles after scrolling stops');
