@@ -333,7 +333,7 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();
  await sw.locator('.case-quick').getByRole('button',{name:/تسجيل جلسة/}).click();
  // The circuit is picked from a list of kinds, with its number beside it.
- await sw.getByRole('combobox',{name:'الدائرة'}).click();await page.getByRole('option',{name:'تجاري كلي',exact:true}).click();await sw.getByLabel('رقم الدائرة',{exact:true}).fill('5');await sw.getByLabel('رقم القاعة',{exact:true}).fill('30');
+ await sw.getByRole('combobox',{name:'المحكمة'}).click();await page.getByRole('option',{name:'تجاري كلي',exact:true}).click();await sw.getByLabel('رقم الدائرة',{exact:true}).fill('5');await sw.getByLabel('رقم القاعة',{exact:true}).fill('30');
  await sw.getByRole('combobox',{name:'قرار الجلسة'}).click();await page.getByRole('option',{name:'تأجيل للإعلان',exact:true}).click();
  assert.equal(await sw.getByRole('button',{name:'تسجيل الجلسة'}).isDisabled(),true,'An adjournment needs the next session date');
  await sw.getByRole('button',{name:/^موعد الجلسة القادمة/}).click();await page.locator('.date-popover').getByRole('button',{name:'اليوم',exact:true}).click();
@@ -413,8 +413,9 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  const sheet=[row({34:'رول الجلســـات'}),...block('1','7002','شركة أدوات تجريبية','خصم الأدوات 2',before,'للحكم',soon),...block('2','880000001','موكل من الرول','خصم من الرول',soon,'','')];
  const w=X.utils.book_new();X.utils.book_append_sheet(w,X.utils.aoa_to_sheet(sheet),'Sheet');fs.writeFileSync(artifacts+'/roll.xls',X.write(w,{type:'buffer',bookType:'xls'}));
  await page.evaluate(()=>{location.hash='cases'});await page.getByRole('button',{name:'استيراد القضايا من Excel',exact:true}).waitFor();
- await page.getByRole('button',{name:'استيراد الجلسات من Excel'}).click();const dlg=page.getByRole('dialog',{name:'استيراد الجلسات من Excel'});
- await dlg.getByLabel('ملف رول الجلسات').setInputFiles(artifacts+'/roll.xls');await dlg.getByText(/2 جلسة لـ 2 قضية/).waitFor();
+ await page.getByRole('button',{name:'استيراد الجلسات من Excel'}).waitFor();const dlg=page.getByRole('dialog',{name:'استيراد الجلسات من Excel'});
+ // The button opens the file picker straight away; the preview window opens once a file is chosen.
+ await page.getByLabel('ملف رول الجلسات').setInputFiles(artifacts+'/roll.xls');await dlg.getByText(/2 جلسة لـ 2 قضية/).waitFor();
  const stat=async t=>Number(await dlg.locator('.roll-stats div').filter({hasText:t}).locator('dd').textContent());
  assert.deepEqual([await stat('قضايا موجودة'),await stat('قضايا جديدة'),await stat('جلسات منعقدة'),await stat('جلسات قادمة')],[1,1,1,2],'The preview counts what the roll adds');
  assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).length,3,'The preview writes nothing');
@@ -426,7 +427,7 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  const tool2=after.find(c=>c.id==='tools-case-2').payload;assert.ok(tool2.procedures.some(p=>p.date===before&&p.decision==='حجز للحكم'&&p.followup===soon),'The held session is in the case\'s session log');
  await page.locator('.office-table').getByText('النطق بالحكم · أول درجة · 7002').first().waitFor();
  // The same roll again adds nothing.
- await page.evaluate(()=>{location.hash='cases'});await page.getByRole('button',{name:'استيراد الجلسات من Excel'}).click();await dlg.getByLabel('ملف رول الجلسات').setInputFiles(artifacts+'/roll.xls');await dlg.getByText(/موجود من قبل ولن يتكرر/).waitFor();
+ await page.evaluate(()=>{location.hash='cases'});await page.getByLabel('ملف رول الجلسات').setInputFiles(artifacts+'/roll.xls');await dlg.getByText(/موجود من قبل ولن يتكرر/).waitFor();
  assert.equal(await dlg.getByRole('button',{name:'تطبيق الاستيراد'}).isDisabled(),true,'Nothing new to apply');await page.keyboard.press('Escape');}
 // The lawyer is picked from the office's lawyers, or typed when new; the case list offers it afterwards.
 await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-0/).click();

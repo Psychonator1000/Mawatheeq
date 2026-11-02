@@ -275,3 +275,46 @@ export function invoiceHtml(d: InvoicePrint, printedAt: string, printedBy: strin
 ${d.words ? `<p>${escape(d.words)}</p>` : ''}${d.schedule.length > 1 ? `<table class="list" style="margin-top:12px;width:auto"><thead><tr><th>الدفعة المستحقة في</th><th>المبلغ</th></tr></thead><tbody>${d.schedule.map(([a, b]) => `<tr><td>${escape(dmy(a))}</td><td class="amount">${escape(b)}</td></tr>`).join('')}</tbody></table>` : ''}
 ${d.note ? `<p>${escape(d.note)}</p>` : ''}<div class="signatures"><div>المحاسب</div><div>الختم</div></div>${footer(printedAt, printedBy)}`);
 }
+
+export type SummarySheet = {
+  kpis: [string, string | number][];
+  bar: { label: string; count: number; color: string }[];
+  top: { label: string; colspan?: number; rowspan?: number; color?: string; group?: boolean }[];
+  sub: { label: string; color?: string; group?: boolean }[];
+  rows: { cells: (string | number)[]; heading?: string; total?: boolean }[];
+  widths: number[];
+};
+/**
+ * «ملخص الموكلين» as it looks on screen: the figures, the coloured status bar, and the table with its two heading
+ * rows and status dots, instead of a plain list.
+ */
+export function summarySheetHtml(title: string, scope: string, s: SummarySheet, printedAt: string, printedBy: string): string {
+  const dot = (c?: string) => c ? `<i class="dot" style="background:${escape(c)}"></i>` : '';
+  const all = s.bar.reduce((n, b) => n + b.count, 0) || 1;
+  const sum = s.widths.reduce((n, w) => n + w, 0) || 1;
+  const cols = `<colgroup>${s.widths.map(w => `<col style="width:${(w / sum * 100).toFixed(2)}%">`).join('')}</colgroup>`;
+  const span = s.top.reduce((n, t) => n + (t.colspan || 1), 0);
+  const head = `<thead><tr>${s.top.map(t => `<th${t.colspan ? ` colspan="${t.colspan}"` : ''}${t.rowspan ? ` rowspan="${t.rowspan}"` : ''} class="${t.group ? 'grp' : ''}">${dot(t.color)}${escape(t.label)}</th>`).join('')}</tr>`
+    + (s.sub.length ? `<tr>${s.sub.map(t => `<th class="sub${t.group ? ' grp' : ''}">${dot(t.color)}${escape(t.label)}</th>`).join('')}</tr>` : '') + '</thead>';
+  const body = s.rows.map(r => r.heading ? `<tr class="person"><td colspan="${span}">${escape(r.heading)}</td></tr>`
+    : `<tr${r.total ? ' class="sum"' : ''}>${r.cells.map((c, i) => `<td class="${i ? 'n' : 'name'}">${escape(c === 0 ? '' : c)}</td>`).join('')}</tr>`).join('');
+  const style = `<style>
+.kpis{display:flex;gap:8px;margin:4px 0 10px}.kpis div{flex:0 0 auto;min-width:92px;padding:7px 12px;border-radius:10px;background:#f6efe5;border:1px solid #eadfce}
+.kpis dt{font-size:10px;color:#76645a}.kpis dd{margin:0;font-size:17px;font-weight:700;color:#2a201b;font-variant-numeric:tabular-nums}
+.bar{display:flex;height:16px;border-radius:999px;overflow:hidden;margin:0 0 12px;border:1px solid #eadfce}
+.bar span{display:grid;place-items:center;color:#fff;font-size:9px;font-weight:700;min-width:0;overflow:hidden}
+.sheet{width:100%;table-layout:fixed;font-size:9.5px;border-collapse:separate;border-spacing:0;border:1px solid #e3d8ca;border-radius:10px;overflow:hidden}
+.sheet th,.sheet td{border:0;border-bottom:1px solid #eee5d8;padding:5px 5px;vertical-align:middle;background:none;width:auto}
+.sheet thead th{background:#f8f2ea;color:#4a3a30;font-weight:700;text-align:center;line-height:1.35;border-bottom:1px solid #e3d8ca}
+.sheet thead th.sub{font-weight:600;color:#6b5a50;font-size:.95em}.sheet th.grp{border-inline-start:1px solid #e3d8ca}
+.sheet td.n{text-align:center;font-variant-numeric:tabular-nums}.sheet td.name{font-weight:600}
+.sheet tbody tr:nth-child(even) td{background:#fcf9f4}.sheet tr.sum td{font-weight:700;background:#f3e9dc!important;border-top:2px solid #d9c9b4}
+.sheet tr.person td{background:#efe3d3!important;color:#6e1f33;font-weight:700;font-size:1.05em}
+.sheet thead{display:table-header-group}.sheet tr{break-inside:avoid}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-inline-end:4px;vertical-align:middle}
+</style>`;
+  return page(title, `${style}<header><h1>${escape(title)}</h1><p>${escape(scope)}</p></header>`
+    + `<dl class="kpis">${s.kpis.map(([l, v]) => `<div><dt>${escape(l)}</dt><dd>${escape(v)}</dd></div>`).join('')}</dl>`
+    + (s.bar.length ? `<div class="bar">${s.bar.filter(b => b.count).map(b => `<span style="flex:${b.count / all};background:${escape(b.color)}">${b.count / all > .04 ? b.count : ''}</span>`).join('')}</div>` : '')
+    + `<table class="sheet">${cols}${head}<tbody>${body}</tbody></table>${footer(printedAt, printedBy)}`, true);
+}

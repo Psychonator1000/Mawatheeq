@@ -5,6 +5,7 @@
 // Arabic, and sessions become the app's session entries (each pointing to the next), so the roll and the posting
 // checks read them as if they had been posted here. To be removed with its import tool once the import is done.
 import { emptyCase, type CaseRecord, type Procedure } from './domain.ts';
+import { fullCourtName } from './court-names.ts';
 
 export type LegacyEvent = { kind: 'session' | 'expert' | 'judgment'; level: string; date: string; text: string };
 export type LegacyCase = {
@@ -42,7 +43,7 @@ export function parseRegister(raw: string): { cases: LegacyCase[]; problems: str
       cur.opponent = flip(id ? o.slice(0, id.index) : o); cur.opponentId = id ? id[1] : ''; continue;
     }
     m = /^كود(\d+)الموضوع :(.*?)محكمة \/(.*)$/.exec(l);
-    if (m) { cur.code = m[1]; cur.subject = flip(m[2]); cur.court = flip(m[3]); continue; }
+    if (m) { cur.code = m[1]; cur.subject = flip(m[2]); cur.court = fullCourtName(flip(m[3])).value; continue; }
     m = /^وضع الملف - (.*?)(?: ?دعوى رقم(.*?))?(?: ?ملف رقم(\d*))?\s*$/.exec(l);
     if (m) { cur.status = m[1].trim(); cur.caseNumber = (m[2] || '').trim(); cur.autoNumber = m[3] || ''; continue; }
     m = new RegExp('^(جلسة محكمة|جلسة خبراء|حكم (\\S+?))' + DATE.source + '(.*)$').exec(l);

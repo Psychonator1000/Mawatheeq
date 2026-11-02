@@ -48,11 +48,12 @@ export default function RollImport({onImported}:{onImported:()=>void}){
  const s=done||preview;
  const dates=parsed?parsed.cases.flatMap(c=>c.hearings.map(h=>h.date)).sort():[];
  return <>
-  <button type="button" className="btn" title="ملف Excel لتقرير رول الجلسات من برنامج المحكمة: يسجل الجلسات المنعقدة بقراراتها ويضيف الجلسات القادمة" onClick={()=>{reset();setOpen(true)}}><CalendarPlus size={16}/> استيراد الجلسات من Excel</button>
+  <button type="button" className="btn" title="ملف Excel لتقرير رول الجلسات من برنامج المحكمة: يسجل الجلسات المنعقدة بقراراتها ويضيف الجلسات القادمة" onClick={()=>{reset();input.current?.click()}}><CalendarPlus size={16}/> استيراد الجلسات من Excel</button>
+  <input ref={input} type="file" accept={EXCEL_ACCEPT} hidden aria-label="ملف رول الجلسات" onChange={e=>{const f=e.target.files?.[0];if(f){setOpen(true);void choose(f)}}}/>
   <Dialog open={open} onOpenChange={o=>{if(!busy)setOpen(o)}}><DialogContent className="roll-import" dir="rtl">
    <DialogHeader><DialogTitle>استيراد الجلسات من Excel</DialogTitle>
     <DialogDescription>اختر تقرير «رول الجلسات» كما يُصدر من البرنامج، بأي صيغة Excel (xls أو xlsx أو xlsb أو CSV…). تُطابق القضايا بالرقم الآلي، وتُضاف القضايا غير الموجودة كقضايا متداولة، وتُسجل الجلسات المنعقدة بقراراتها، وتُضاف الجلسات القادمة إلى «المهام والجلسات». تُعرض النتيجة أولاً قبل الحفظ، واستيراد الرول نفسه مرة ثانية لا يكرر شيئاً.</DialogDescription></DialogHeader>
-   <label className="field"><span>ملف الرول</span><input ref={input} type="file" accept={EXCEL_ACCEPT} aria-label="ملف رول الجلسات" disabled={!!busy} onChange={e=>{const f=e.target.files?.[0];if(f)void choose(f)}}/></label>
+   <p className="roll-file"><FileSpreadsheet size={15}/> <b>{file||'—'}</b> <button type="button" className="text-link" disabled={!!busy} onClick={()=>{if(input.current)input.current.value='';input.current?.click()}}>اختيار ملف آخر</button></p>
    {busy&&<p role="status" className="muted"><LoaderCircle className="spin" size={15}/> {busy==='read'?'جارٍ قراءة الملف…':`${busy==='apply'?'جارٍ الحفظ':'جارٍ المطابقة'}… ${progress} / ${cases.length} قضية`}</p>}
    {error&&<p className="notice">{error}</p>}
    {parsed&&s&&<div className="roll-summary">

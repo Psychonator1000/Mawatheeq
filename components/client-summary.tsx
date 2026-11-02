@@ -8,7 +8,9 @@ import {normalizeSearch} from '@/lib/case-browse';
 import {STATUS_COLUMNS,EXTRA_GROUPS,METRIC_LABELS,casesFor,personGroups,summarize,type ExtraGroup,type Metric,type SummaryRow,type StatusKey} from '@/lib/client-summary';
 import {lastSitting,nextSitting} from '@/lib/case-desk';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from './ui/dialog';
-import {judgmentRollHtml,printHtml} from '@/lib/print';
+import {summarySheetHtml,printHtml,type SummarySheet} from '@/lib/print';
+// The status colours of the screen (compact.css «--s-…»), for print.
+const STATUS_COLORS:Record<string,string>={filing:'#d99a2b',open1:'#3f8f7a',open2:'#3a6fa8',open3:'#6c4fa3',follow:'#7d8a96',execution:'#7a2335',stayed:'#c8553d',closed:'#b9ada0',other:'#cfc4b6'};
 import {clientRollHtml} from '@/lib/client-roll';
 import {Empty} from './shared';
 
@@ -66,16 +68,23 @@ export default function ClientSummary({records,clients,rules,printedBy,canExport
  const SHARE={date:'7%',money:'6.5%',text:'13%'} as const;
  const colgroup=<colgroup><col style={{width:30}}/><col style={{width:'17%'}}/>{cols.map(([k])=><col key={k}/>)}<col/>{extraCols.map(c=><col key={c.label} style={c.kind==='num'?undefined:{width:SHARE[c.kind]}}/>)}</colgroup>;
  // The cases in what is printed, each once: the ticked clients, the people's files, or every client.
- const printedCases=()=>rowOf([...new Set(picked.size?[...picked]:mode==='people'?groups.flatMap(g=>g.clients.map(c=>c.id)):all.map(x=>x.c.id))]).total;
  function print(){
   if(!canExport)return;
-  const headers=['الموكل',...cols.map(([k,l])=>OPEN_LEVEL[k]?'متداول · '+OPEN_LEVEL[k]:l),'الإجمالي',...extraGroups.flatMap(g=>g.cols.map(c=>g.cols.length>1?`${g.label}: ${c.label}`:c.label))];
-  const line=(name:string,r:SummaryRow)=>[name,...cols.map(([k])=>String(r.counts[k]||'')),String(r.total),...extraCols.map(c=>String(show(c.get(r))))].map(v=>[v||'—',''] as [string,string]);
-  // Ticked clients only, when some are ticked; otherwise the whole view.
-  const only=picked.size?(id:string)=>picked.has(id):()=>true;
-  const body:[string,[string,string][][]][]=picked.size?[['',(()=>{const ids=[...new Set([...groups.flatMap(g=>g.clients.map(c=>c.id)),...all.map(x=>x.c.id)])].filter(only);const list=ids.map(id=>clients.find(c=>c.id===id)!).filter(Boolean);return [...list.map(c=>line(c.name,rowOf([c.id]))),...(list.length>1?[line('الإجمالي',rowOf(ids))]:[])]})()]]
-   :mode==='people'?groups.map(g=>[`${g.person} · ${g.row.total} قضية`,[...g.clients.map(c=>line(c.name,rowOf([c.id]))),line('الإجمالي',g.row)]]):[['',[...all.map(x=>line(x.c.name,x.row)),line('الإجمالي',grand)]]];
-  if(!printHtml(judgmentRollHtml('ملخص الموكلين',`${picked.size?`الموكلون المحددون: ${picked.size}`:mode==='people'?'حسب الأشخاص المرتبطين بأكثر من ملف':`عدد الموكلين: ${all.length}`} · ${printedCases()} قضية`,headers,body,formatDate(today),printedBy,[16,...cols.map(()=>5),5,...extraCols.map(c=>c.kind==='text'?14:6)],false)))toast.error('اسمح بالنوافذ المنبثقة للطباعة.');
+  const ids=[...new Set(picked.size?[...picked]:mode==='people'?groups.flatMap(g=>g.clients.map(c=>c.id)):all.map(x=>x.c.id))];
+  const whole=rowOf(ids),one=picked.size===1?clients.find(c=>picked.has(c.id)):undefined;
+  const line=(name:string,r:SummaryRow,total=false)=>({total,cells:[name,...cols.map(([k])=>r.counts[k]),r.total,...extraCols.map(c=>show(c.get(r)))]});
+  // Ticked clients only, when some are ticked; otherwise the whole view, by person or by client as on screen.
+  const rows=picked.size?[...ids.map(id=>clients.find(c=>c.id===id)).filter((c):c is ClientEntity=>Boolean(c)).map(c=>line(c.name,rowOf([c.id]))),...(ids.length>1?[line('الإجمالي',whole,true)]:[])]
+   :mode==='people'?groups.flatMap(g=>[{heading:`${g.person} · ${g.row.total} قضية`,cells:[]},...g.clients.map(c=>line(c.name,rowOf([c.id]))),line('الإجمالي',g.row,true)])
+   :[...all.map(x=>line(x.c.name,x.row)),line('الإجمالي',grand,true)];
+  const top:SummarySheet['top']=[{label:'الموكل',rowspan:2},...cols.flatMap(([k,l],i):SummarySheet['top']=>OPEN_LEVEL[k]?(i===firstOpen?[{label:'متداول',colspan:openCols.length,color:STATUS_COLORS.open1,group:true}]:[]):[{label:l,rowspan:2,color:STATUS_COLORS[k]}]),
+   {label:'الإجمالي',rowspan:2},...extraGroups.map(g=>g.cols.length===1?{label:g.label,rowspan:2,group:true}:{label:g.label,colspan:g.cols.length,group:true})];
+  const sub:SummarySheet['sub']=[...openCols.map(([k])=>({label:OPEN_LEVEL[k]||'',color:STATUS_COLORS[k]})),...extraGroups.filter(g=>g.cols.length>1).flatMap(g=>g.cols.map((c,i)=>({label:c.label,group:i===0})))];
+  const widths=[17,...cols.map(()=>4.6),5,...extraCols.map(c=>c.kind==='text'?13:c.kind==='date'?7:c.kind==='money'?6.5:5)];
+  const scope=one?`ملخص قضايا الموكل · ${whole.total} قضية`:`${picked.size?`الموكلون المحددون: ${picked.size}`:mode==='people'?'حسب الأشخاص المرتبطين بأكثر من ملف':`عدد الموكلين: ${all.length}`} · ${whole.total} قضية`;
+  const html=summarySheetHtml(one?one.name:'ملخص الموكلين',scope,{kpis:[['القضايا',whole.total],['مفتوحة',whole.open],['جلسات ٣٠ يوماً',whole.next30],['ضمن مهلة الطعن',whole.appealOpen]],
+   bar:STATUS_COLUMNS.map(([k,l])=>({label:l,count:whole.counts[k],color:STATUS_COLORS[k]})),top,sub,rows,widths},formatDate(today),printedBy);
+  if(!printHtml(html))toast.error('اسمح بالنوافذ المنبثقة للطباعة.');
  }
  // One client's full case roll: every case with its numbers, court, sessions and judgment.
  const printClient=(c:ClientEntity)=>{if(!canExport)return;const r=rowOf([c.id]);

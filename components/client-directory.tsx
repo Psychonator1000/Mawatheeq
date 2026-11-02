@@ -6,6 +6,7 @@ import { printHtml } from '@/lib/print';
 import { phoneLinks } from '@/lib/contact-links';
 import { toast } from 'sonner';
 import RecordWindow, { useListNav, type WindowNav, type Enter } from './record-window';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { CLIENT_KINDS, CLIENT_SECTORS, emptyClient, emptyContact, type ClientEntity } from '@/lib/clients';
 import type { CaseRecord } from '@/lib/domain';
@@ -27,7 +28,7 @@ type EditorProps = {
 export function ClientEditor({ entity, clients, records = [], canMerge, canCollections=false, readOnly=false, onClose, onSaved, onMerged, onOpenCase, onShowCases, onAddCase, nav, onNavigate, enter }: EditorProps) {
   const contactRoles = useMemo(() => suggestions(clients.flatMap(c => c.contacts), p => p.role, CONTACT_ROLES, 100), [clients]);
   const [draft, setDraft] = useState(entity), [busy, setBusy] = useState(false), [targetId, setTargetId] = useState('');
-  const [casePage, setCasePage] = useState(1), [rollOpenOnly, setRollOpenOnly] = useState(true);
+  const [casePage, setCasePage] = useState(1), [rollOpenOnly, setRollOpenOnly] = useState(true), [mergeOpen, setMergeOpen] = useState(false);
   const linked = records.filter(c => c.clientEntityId === draft.id), target = clients.find(c => c.id === targetId);
   const dirty = JSON.stringify(draft) !== JSON.stringify(entity);
   const duplicate = clients.find(c => c.id !== draft.id && normalizeSearch(c.name) === normalizeSearch(draft.name));
@@ -57,7 +58,7 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
     badges={<><span className="tag">{active.length} قضية نشطة</span>{(draft.needsReview || draft.contacts.some(p => p.needsReview)) && <span className="tag amber">يحتاج مراجعة</span>}</>}
     facts={entity.revision ? [['القضايا النشطة', active.length], ['المؤرشفة', linked.length - active.length], ['لصالحنا', active.filter(c => c.outcome === 'لصالحنا').length], ['آخر حكم', latest ? formatDate(latest) : ''], ['الأشخاص', draft.contacts.length || ''], ['المتابع', lead ? lead.name + (lead.role ? ' · ' + lead.role : '') : '']] : undefined}
     pin={lead?.phone ? <ContactActions name={lead.name} phone={lead.phone}/> : undefined}
-    quick={<>{!readOnly && <button type="button" className="btn" onClick={addPerson}><Plus size={16}/> إضافة شخص</button>}{Boolean(entity.revision) && onAddCase && <button type="button" className="btn" onClick={() => { onClose(); onAddCase(entity.id); }}><Plus size={16}/> إضافة قضية</button>}{Boolean(entity.revision) && onShowCases && <button type="button" className="btn" onClick={() => { onClose(); onShowCases(entity.id); }}><ArrowUpLeft size={16}/> عرض في سجل الأحكام</button>}</>}
+    quick={<>{!readOnly && <button type="button" className="btn" onClick={addPerson}><Plus size={16}/> إضافة شخص</button>}{Boolean(entity.revision) && onAddCase && <button type="button" className="btn" onClick={() => { onClose(); onAddCase(entity.id); }}><Plus size={16}/> إضافة قضية</button>}{Boolean(entity.revision) && onShowCases && <button type="button" className="btn" onClick={() => { onClose(); onShowCases(entity.id); }}><ArrowUpLeft size={16}/> عرض في سجل الأحكام</button>}{canMerge && Boolean(entity.revision) && <button type="button" className="btn" onClick={() => setMergeOpen(true)}><Merge size={16}/> دمج ملف مكرر</button>}</>}
     nav={nav} onNavigate={onNavigate} unit="الموكل" enter={enter} dirty={dirty && !readOnly} busy={busy} onSave={readOnly ? undefined : () => void save()} onClose={onClose}
     footer={!readOnly ? <button type="button" className="btn primary" disabled={busy} onClick={save}>{busy ? <LoaderCircle className="spin"/> : <Save/>} حفظ ملف الموكل</button> : undefined}>
     <fieldset className="readonly-fields" disabled={readOnly}><div className="form-grid"><Field label="اسم الموكل / الجهة" value={draft.name} onChange={v => set('name', v)} wide/>
@@ -89,14 +90,14 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
       {linked.length > 10 && <PageNavigation page={page} pages={pages} total={linked.length} onChange={setCasePage}/>}
       {canCollections && <EntityCollections entityId={entity.id}/>}
     </>}
-    {canMerge && entity.revision && <details className="client-merge"><summary><Merge size={16}/> دمج ملف مكرر مع موكل آخر</summary>
-      <p className="subtitle">استخدم الدمج فقط بعد التأكد من أن الملفين يمثلان الجهة نفسها. تُنقل القضايا والأشخاص والصيغ السابقة، وتبقى بيانات القضايا الأصلية محفوظة.</p>
+    {canMerge && Boolean(entity.revision) && <Dialog open={mergeOpen} onOpenChange={setMergeOpen}><DialogContent className="office-dialog client-merge" dir="rtl"><DialogHeader><DialogTitle>دمج ملف مكرر مع موكل آخر</DialogTitle>
+      <DialogDescription>استخدم الدمج فقط بعد التأكد من أن الملفين يمثلان الجهة نفسها. تُنقل القضايا والأشخاص والصيغ السابقة، وتبقى بيانات القضايا الأصلية محفوظة.</DialogDescription></DialogHeader>
       <label className="field"><span>الملف الذي سيبقى</span><SelectList aria-label="الملف الذي سيبقى" value={targetId} onChange={e => setTargetId(e.target.value)}><option value="">اختر الموكل</option>{clients.filter(c => c.id !== entity.id).sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c => <option value={c.id} key={c.id}>{c.name} · {c.id.slice(0,8)}</option>)}</SelectList></label>
       {dirty && <p className="subtitle">احفظ تعديلات الملف ثم افتحه مجدداً قبل الدمج.</p>}
       {target && <AlertDialog><AlertDialogTrigger asChild><button className="btn" disabled={busy || dirty}>مراجعة الدمج</button></AlertDialogTrigger><AlertDialogContent dir="rtl"><AlertDialogHeader><AlertDialogTitle>دمج ملفَي الموكل؟</AlertDialogTitle>
         <AlertDialogDescription>سيُدمج «{entity.name}» داخل «{target.name}». ستُنقل {linked.length} قضية وجميع الأشخاص والصيغ السابقة. يظل اسم الملف الهدف وقطاعه هما المعتمدين.</AlertDialogDescription></AlertDialogHeader>
         <AlertDialogFooter><AlertDialogCancel>إلغاء</AlertDialogCancel><AlertDialogAction onClick={merge}>تأكيد أنهما الجهة نفسها والدمج</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}
-    </details>}
+    </DialogContent></Dialog>}
   </RecordWindow>;
 }
 

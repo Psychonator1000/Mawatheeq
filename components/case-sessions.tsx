@@ -26,7 +26,7 @@ export function SessionTable({sessions,onEdit,onDelete,editingId}:{sessions:Proc
  * Record what happened at a session. The session is saved in the case at once; an adjournment or reserved
  * judgment also schedules the next session in «المهام والجلسات», and the hearing held that day is closed with the decision.
  */
-export default function CaseSessions({c,canEdit,canSchedule,canManage=false,busy,username,assigneeId,work,onRecord,onUpdate,onDone,onJudgment}:{onDone:()=>void;c:CaseRecord;canEdit:boolean;canSchedule:boolean;canManage?:boolean;busy:boolean;username:string;assigneeId:string;work:WorkItem[];onRecord:(p:Procedure)=>Promise<boolean>;onUpdate?:(id:string,p:Procedure|null)=>Promise<boolean>;onJudgment:(date:string)=>void}){
+export default function CaseSessions({courts,c,canEdit,canSchedule,canManage=false,busy,username,assigneeId,work,onRecord,onUpdate,onDone,onJudgment}:{courts?:string[];onDone:()=>void;c:CaseRecord;canEdit:boolean;canSchedule:boolean;canManage?:boolean;busy:boolean;username:string;assigneeId:string;work:WorkItem[];onRecord:(p:Procedure)=>Promise<boolean>;onUpdate?:(id:string,p:Procedure|null)=>Promise<boolean>;onJudgment:(date:string)=>void}){
  const level=LEVEL_TITLE[currentLevel(c)],sessions=(c.procedures||[]).filter(isSession);
  const last=[...sessions].sort((a,b)=>b.date.localeCompare(a.date))[0];
  const blank=():SessionInput=>({date:last?.followup&&last.followup<=todayISO()?last.followup:todayISO(),venue:(last?nextVenue({date:'',venue:(last.venue as Venue)||'المحكمة',court:'',decision:last.decision||'',details:'',nextDate:'',nextTime:'',recordedBy:''}):'المحكمة'),court:last?.court||String(c.court||''),decision:'',details:'',nextDate:'',nextTime:'',recordedBy:username});
@@ -88,7 +88,7 @@ export default function CaseSessions({c,canEdit,canSchedule,canManage=false,busy
    <fieldset disabled={busy||saving}><div className="form-grid">
     <DateField label="تاريخ الجلسة" value={s.date} onChange={v=>set('date',v)}/>
     <div className="field" role="radiogroup" aria-label="جهة الجلسة"><span>الجهة</span><div className="venue-choice">{VENUES.map(v=><label key={v} className="checkbox-line"><input type="radio" name="session-venue" checked={s.venue===v} onChange={()=>{set('venue',v);set('decision','')}}/>{v}</label>)}</div></div>
-    {s.venue==='إدارة الخبراء'?<Field label="مكتب الخبير / الخبير" value={s.court} onChange={v=>set('court',v)} suggestions={suggestions(c.procedures,p=>p.venue===s.venue?p.court:'')}/>:<CircuitField value={s.court} onChange={v=>set('court',v)}/>}
+    {s.venue==='إدارة الخبراء'?<Field label="مكتب الخبير / الخبير" value={s.court} onChange={v=>set('court',v)} suggestions={suggestions(c.procedures,p=>p.venue===s.venue?p.court:'')}/>:<CircuitField label="المحكمة" value={s.court} onChange={v=>set('court',v)} kinds={courts}/>}
     <label className="field"><span>قرار الجلسة</span><Choice label="قرار الجلسة" empty="اختر القرار" value={s.decision} onChange={v=>set('decision',v)} options={options}/></label>
     <Field label="تفاصيل القرار (اختياري)" value={s.details} onChange={v=>set('details',v)} wide/>
     {needsNext&&<><DateField label={d?.next==='judgment'?'موعد النطق بالحكم':'موعد الجلسة القادمة'} value={s.nextDate} onChange={v=>set('nextDate',v)}/><Field label="الوقت (اختياري)" type="time" value={s.nextTime} onChange={v=>set('nextTime',v)}/></>}
