@@ -965,3 +965,29 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
  border-color:color-mix(in srgb,var(--brand,#7a2335) 30%,rgb(255 255 255/.12));box-shadow:0 18px 36px -24px rgb(0 0 0/.7),inset 0 1px 0 rgb(255 255 255/.1)}
 :root:not([data-theme=sky],[data-theme=phantom],[data-theme=yorha],[data-theme=noir],[data-theme=rose]):where([data-mode=dark]) :is([data-slot=input],[data-slot=textarea],[data-slot=select-trigger],.field input:not([type=checkbox]):not([type=radio]),.field select,.field textarea,.searchbox,.date-picker-button){
  background:linear-gradient(180deg,rgb(255 255 255/.1),rgb(255 255 255/.03));border-color:color-mix(in srgb,var(--brand,#7a2335) 35%,rgb(255 255 255/.15));box-shadow:inset 0 1px 0 rgb(255 255 255/.1)}
+/* Classification card: the three flags and the explanation on one line, the notes below. */
+:root .tab-card .flags-grid{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px 22px}
+:root .flags-grid>.tab-flags{grid-column:auto;flex-wrap:nowrap;gap:6px 18px}
+:root .flags-grid>.tab-flags .checkbox-line{white-space:nowrap}
+:root .flags-grid>.subtitle{grid-column:auto;margin:0;font-size:12px;line-height:1.6}
+:root .flags-grid>:not(.tab-flags):not(.subtitle){grid-column:1/-1}
+@media(max-width:760px){:root .tab-card .flags-grid{grid-template-columns:1fr}:root .flags-grid>.tab-flags{flex-wrap:wrap}}
+/* Depth like NieR's: the window behind the cards is a deeper tint, so the white glass cards and fields stand clear of it. */
+:root:not([data-theme=sky],[data-theme=phantom],[data-theme=yorha],[data-theme=noir],[data-theme=rose]) .detail-sheet.case-window{
+ background:
+  linear-gradient(115deg,transparent 30%,rgb(255 255 255/.18) 44%,transparent 58%),
+  radial-gradient(90% 60% at 100% 0%,color-mix(in srgb,var(--brand,#7a2335) 22%,transparent),transparent 60%),
+  radial-gradient(70% 50% at 0% 100%,color-mix(in srgb,var(--brand,#7a2335) 16%,transparent),transparent 65%),
+  linear-gradient(165deg,color-mix(in srgb,var(--card,#fffdf8) 84%,var(--brand,#7a2335) 6%),color-mix(in srgb,var(--card,#fffdf8) 76%,var(--brand,#7a2335) 12%))}
+:root:not([data-theme=sky],[data-theme=phantom],[data-theme=yorha],[data-theme=noir],[data-theme=rose]):not([data-mode=dark]) :is(.tab-card,.panel,.office-card,.client-card,.stat:not(.featured)){
+ box-shadow:0 22px 40px -22px color-mix(in srgb,var(--brand,#7a2335) 60%,rgb(40 20 15/.55)),0 4px 10px -4px rgb(40 20 15/.22),inset 0 1px 0 #fff,inset 0 -1px 0 color-mix(in srgb,var(--brand,#7a2335) 14%,transparent)}
+/* Default themes: every page sits on a deeper tint (as in NieR), so the white glass cards and fields stand out. */
+:root:not([data-theme=sky],[data-theme=phantom],[data-theme=yorha],[data-theme=noir],[data-theme=rose]):not([data-mode=dark]) main.main{
+ background:
+  radial-gradient(80% 50% at 100% 0%,color-mix(in srgb,var(--brand,#7a2335) 14%,transparent),transparent 65%),
+  radial-gradient(70% 60% at 0% 100%,color-mix(in srgb,var(--brand,#7a2335) 10%,transparent),transparent 70%),
+  linear-gradient(180deg,color-mix(in srgb,var(--brand,#7a2335) 7%,rgb(120 100 80/.08)),color-mix(in srgb,var(--brand,#7a2335) 10%,rgb(120 100 80/.12)))}
+:root .tab-card .form-grid.flags-grid{display:flex;flex-wrap:wrap;align-items:center;gap:10px 26px}
+:root .flags-grid>.tab-flags{flex:none}
+:root .flags-grid>.subtitle{flex:1 1 320px;min-width:0}
+:root .flags-grid>:not(.tab-flags):not(.subtitle){flex:1 1 100%}
