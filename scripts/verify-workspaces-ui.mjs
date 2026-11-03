@@ -260,10 +260,10 @@ try{
  {const check=page.getByRole('dialog',{name:/^استلام الملف ARC-00001/});await check.getByLabel('ناقص غير ما سبق',{exact:true}).fill('صورة الحكم');await check.getByRole('button',{name:'عاد ناقصاً'}).click();await check.waitFor({state:'detached'});}
  await page.getByRole('button',{name:/^الملفات/}).click();await page.getByRole('button',{name:/^نواقص مفتوحة/}).click();await page.locator('.archive-table').getByText('ناقص',{exact:true}).waitFor();await page.getByRole('button',{name:/^كل الملفات/}).click();
  await page.getByRole('button',{name:/^ملفاتي الورقية/}).waitFor({state:'detached'});
- // Every case gets a paper file: the cases without one are offered in one step, numbered from their office code.
- await page.getByRole('button',{name:/^الملفات/}).click();await page.locator('.archive-missing').getByText('24').waitFor();await click('إنشاء ملفاتها');
- await page.getByText('أُنشئ 24 ملف ورقي').waitFor({timeout:30000});await page.locator('.archive-missing').waitFor({state:'detached'});
- const papers=(await dept('archive','records_page')).filter(r=>r.kind==='file');assert.equal(papers.length,25,'One paper file per case');assert.ok(papers.some(r=>r.payload.number==='ARC-TEST-0'&&r.caseId==='ui-case-0'),'Numbered from the office code');
+ // Every case gets its paper file by itself, numbered from its office code: nothing is left to create by hand.
+ await page.getByRole('button',{name:/^الملفات/}).click();await page.locator('.archive-table').waitFor();assert.equal(await page.locator('.archive-missing').count(),0,'No case is left without a paper file');
+ {const papers=(await dept('archive','records_page')).filter(r=>r.kind==='file'),cases=await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}']);
+  assert.ok(cases.every(c=>papers.some(r=>r.payload.number==='ARC-'+(c.payload?.code||c.code))),'One paper file per case');assert.ok(papers.some(r=>r.payload.number==='ARC-TEST-0'&&r.caseId==='ui-case-0'),'Numbered from the office code');}
  // import (synthetic): files without a case, an automatic link by court number, then manual links from the file and from the case.
  await rpc('mawatheeq_local_request',[login.token,'save_case',JSON.stringify({case:{id:'ui-case-auto',code:'AUTO-1',autoNumber:'260000001',client:'شركة اختبار الواجهة',clientGroup:'شركة اختبار الواجهة',opponent:'خصم آلي',date:'2026-09-01',type:'حكم أول درجة',outcome:'لصالحنا',procedures:[],revision:0}})]);
  await db.exec('reset role');

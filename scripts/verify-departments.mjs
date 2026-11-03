@@ -282,7 +282,7 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  await assert.rejects(()=>save(archivist,'archive',record('archive','file',{...fileData,number:'ملف'},hidden.id)),/لاتينية/);
  const hf=await save(archivist,'archive',record('archive','file',{...fileData,number:'ARC-00004'},hidden.id));
  const general=await save(archivist,'archive',record('archive','file',{...fileData,number:'ARC-00005',title:'مراسلات إدارية',type:'ملف إداري'}));
- assert.deepEqual((await dept(scoped.token,'archive','records_page')).filter(r=>r.kind==='file').map(r=>r.id),[af.id],'Case scope hides other files');
+ {const seen=(await dept(scoped.token,'archive','records_page')).filter(r=>r.kind==='file');assert.ok(seen.some(r=>r.id===af.id)&&seen.every(r=>r.caseId===visible.id),'Case scope hides other files');}
  assert.equal((await dept(scoped.token,'archive','records_page')).filter(r=>r.kind==='location').length,2,'Locations are shared');
  const mv=(type,extra={})=>record('archive','movement',{type,date:'2026-10-05',holder:'',holderId:'',purpose:'',dueDate:'',locationId:'',notes:'',...extra},visible.id,af.id);
  await assert.rejects(()=>save(archivist,'archive',mv('return')),/حالة الملف/,'A file in the archive cannot be returned');

@@ -46,10 +46,11 @@ const ids = Object.fromEntries((await arc(keeper, 'people')).map(p => [p.usernam
 
 let n = 0;
 const uuid = () => '53000000-0000-4000-8000-' + String(++n).padStart(12, '0');
-const file = (number, caseId) => arc(keeper, 'save_record', { record: { id: uuid(), kind: 'file', caseId, subjectId: '', revision: 0,
+// A case's own file («ARC-» and its code) is made with the case; any other file is added by the archive.
+const file = async (number, caseId) => (await records()).find(r => r.kind === 'file' && r.payload.number === number) || arc(keeper, 'save_record', { record: { id: uuid(), kind: 'file', caseId, subjectId: '', revision: 0,
   payload: { number, title: 'ملف ' + number, type: 'ملف قضية', volume: '', pages: '', locationId: '', originals: 'no', confidential: 'no', intakeDate: '2026-10-01', retentionUntil: '', notes: '' } } });
-const f1 = await file('ARC-H-1', c1.id), f2 = await file('ARC-H-2', c2.id), f3 = await file('ARC-H-3', c2.id);
 const records = async () => arc(keeper, 'records_page');
+const f1 = await file('ARC-H-1', c1.id), f2 = await file('ARC-H-2', c2.id), f3 = await file('ARC-H-3', c2.id);
 const stateOf = async f => { const mv = (await records()).filter(r => r.kind === 'movement' && r.subjectId === f.id && r.payload.status === 'posted').at(-1); return mv ? mv.payload.toState : 'in'; };
 
 // Asking from the case: anyone who opens the case (or another judgment of it) sees its paper file and asks for it.

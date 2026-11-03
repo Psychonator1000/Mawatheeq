@@ -297,7 +297,7 @@ const recentGroup=page.getByRole('dialog',{name:'بحث سريع'}).getByRole('g
 await recentGroup.getByText(/TOOL-0/).waitFor();
 assert.ok(await recentGroup.getByText(/TOOL-2/).isVisible(),'Both recently opened cases are offered');
 await recentGroup.getByText(/TOOL-0/).click();
-const sheet=page.getByRole('dialog').filter({has:page.locator('.case-pin').getByText('TOOL-0')});
+const sheet=page.getByRole('dialog').filter({has:page.locator('.case-pin').getByText('TOOL-0',{exact:true})});
 await sheet.getByLabel('الخصم',{exact:true}).fill('خصم معدل دون حفظ');
 await page.keyboard.press('Escape');
 await page.getByRole('alertdialog').getByText('تغييرات غير محفوظة').waitFor();
@@ -310,7 +310,7 @@ assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"o
 
 // Court levels: moving to appeal closes the first-instance file as a read-only record and starts a fresh one.
 await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-2/).click();
-const lv=page.locator('[data-record-window]');await lv.locator('.case-pin').getByText('TOOL-2').waitFor();
+const lv=page.locator('[data-record-window]');await lv.locator('.case-pin').getByText('TOOL-2',{exact:true}).waitFor();
 await lv.locator('.case-quick').getByRole('button',{name:'نقل إلى الاستئناف'}).click();
 const mv=page.getByRole('dialog',{name:/نقل القضية إلى الاستئناف/});
 assert.equal(await mv.getByRole('button',{name:/نقل إلى الاستئناف وحفظ/}).isDisabled(),true,'Who appealed is required');
@@ -330,7 +330,7 @@ assert.equal(await lv.getByRole('tab',{name:/درجات التقاضي/}).getAtt
 await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
 // Sessions: an adjournment is logged in the case's level, closes today's hearing, schedules the next one (pinned and in the timeline), and the day's roll prints it.
 {await page.keyboard.press('Control+k');const qs=page.getByRole('dialog',{name:'بحث سريع'});await qs.getByRole('combobox').fill('TOOL-1');await qs.getByRole('option',{name:/TOOL-1/}).first().click();
- const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();
+ const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1',{exact:true}).waitFor();
  await sw.locator('.case-quick').getByRole('button',{name:/تسجيل جلسة/}).click();
  // The circuit is picked from a list of kinds, with its number beside it.
  await sw.getByRole('combobox',{name:'نوع الدائرة'}).click();await page.getByRole('option',{name:'تجاري كلي',exact:true}).click();await sw.getByLabel('رقم الدائرة',{exact:true}).fill('5');await sw.getByLabel('رقم القاعة',{exact:true}).fill('30');
@@ -358,7 +358,7 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  assert.ok(roll.includes('رول الجلسات')&&roll.includes('TOOL-1')&&roll.includes('10:30'),'The roll lists the day\'s hearings');}
 // An admin can correct a recorded session (its next hearing follows) or delete it (cancelling the hearing it scheduled).
 {await page.keyboard.press('Control+k');const qs=page.getByRole('dialog',{name:'بحث سريع'});await qs.getByRole('combobox').fill('TOOL-1');await qs.getByRole('option',{name:/TOOL-1/}).first().click();
- const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();
+ const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1',{exact:true}).waitFor();
  await sw.locator('.case-quick').getByRole('button',{name:/تسجيل جلسة/}).click();
  await sw.locator('.session-table').getByRole('button',{name:/^تعديل جلسة/}).click();await sw.getByRole('heading',{name:/تعديل جلسة/}).waitFor();
  assert.equal(await sw.getByLabel('رقم الدائرة',{exact:true}).inputValue(),'5','Editing loads the recorded session');
@@ -378,7 +378,7 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  assert.equal(await row.locator('.hearing-chip').count(),0,'A cancelled hearing no longer shows as the next session in the case list');}
 // Case documents: several files chosen at once, each with a title, category and date; filtered by category, previewed, edited and deleted.
 {await page.keyboard.press('Control+k');const qs=page.getByRole('dialog',{name:'بحث سريع'});await qs.getByRole('combobox').fill('TOOL-1');await qs.getByRole('option',{name:/TOOL-1/}).first().click();
- const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();
+ const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1',{exact:true}).waitFor();
  await sw.getByRole('tab',{name:/^المستندات/}).click();await sw.getByText('لا توجد مستندات مرفوعة لهذه القضية بعد.').waitFor();
  const pdf=Buffer.from('%PDF-1.4 synthetic');
  await sw.getByLabel('اختيار ملفات للقضية').setInputFiles([{name:'مذكرة دفاع.pdf',mimeType:'application/pdf',buffer:pdf},{name:'حافظة مستندات خبرة.pdf',mimeType:'application/pdf',buffer:pdf},
@@ -431,14 +431,14 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  assert.equal(await dlg.getByRole('button',{name:'تطبيق الاستيراد'}).isDisabled(),true,'Nothing new to apply');await page.keyboard.press('Escape');}
 // The lawyer is picked from the office's lawyers, or typed when new; the case list offers it afterwards.
 await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-0/).click();
-const lw=page.locator('[data-record-window]');await lw.locator('.case-pin').getByText('TOOL-0').waitFor();
+const lw=page.locator('[data-record-window]');await lw.locator('.case-pin').getByText('TOOL-0',{exact:true}).waitFor();
 await lw.getByRole('combobox',{name:'المحامي'}).click();await page.getByRole('option',{name:'اسم آخر…'}).click();
 await lw.getByLabel('اسم المحامي',{exact:true}).fill('ا/ محامٍ تجريبي');await page.keyboard.press('Control+s');
 await page.waitForFunction(async()=>true);await lw.locator('.case-facts').getByText('ا/ محامٍ تجريبي').waitFor();
 await page.waitForTimeout(800);assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-0').payload.lawyer,'ا/ محامٍ تجريبي','A new lawyer name is saved');
 await page.keyboard.press('Escape');await lw.waitFor({state:'hidden'});
 await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بحث سريع'}).getByRole('group',{name:'فُتحت مؤخراً'}).getByText(/TOOL-2/).click();
-await lw.locator('.case-pin').getByText('TOOL-2').waitFor();await lw.getByRole('combobox',{name:'المحامي'}).click();await page.getByRole('option',{name:'ا/ محامٍ تجريبي'}).click();
+await lw.locator('.case-pin').getByText('TOOL-2',{exact:true}).waitFor();await lw.getByRole('combobox',{name:'المحامي'}).click();await page.getByRole('option',{name:'ا/ محامٍ تجريبي'}).click();
 assert.equal(await lw.getByLabel('اسم المحامي',{exact:true}).count(),0,'A listed lawyer needs no typing');
 await page.keyboard.press('Control+s');await page.waitForTimeout(800);
 assert.equal((await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}'])).find(c=>c.id==='tools-case-2').payload.lawyer,'ا/ محامٍ تجريبي','The listed lawyer is saved');
@@ -551,7 +551,7 @@ await lively.close();
  await cp.locator('.chat-latest-item.unread',{hasText:'tools_owner'}).click(); // A conversation in the popover opens the window on it
  const cpanel=cp.getByRole('dialog',{name:'المحادثات'});
  await cpanel.locator('.chat-ref').getByText('كود TOOL-0').click();
- await cp.locator('[data-record-window] .case-pin').getByText('TOOL-0').waitFor();assert.equal(await cpanel.count(),0,'Opening a reference shows the case');
+ await cp.locator('[data-record-window] .case-pin').getByText('TOOL-0',{exact:true}).waitFor();assert.equal(await cpanel.count(),0,'Opening a reference shows the case');
  await cp.keyboard.press('Escape');await cp.locator('[data-record-window]').waitFor({state:'hidden'});
  await cp.getByRole('button',{name:/^المحادثات/}).click();await cp.locator('.chat-latest').getByRole('button',{name:'فتح المحادثات'}).click();await cpanel.getByLabel('نص الرسالة').waitFor(); // Reopening returns to the same conversation
  await cpanel.locator('input[type=file]').setInputFiles({name:'memo.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 synthetic')});
