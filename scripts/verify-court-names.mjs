@@ -27,3 +27,12 @@ assert.equal(c.kind, 'المحكمة الكلية - تجاري مدني جزئي
 const picks = courtChoices(['المحكمة الكلية - تجاري مدني جزئي / 30', 'المحكمة الكلية - تجاري مدني جزئي / 4', 'الكليه ت.م.ج/30', 'محكمة الرقعي - تجاري كلي / 1']);
 assert.deepEqual(picks, ['المحكمة الكلية - تجاري مدني جزئي', 'محكمة الرقعي - تجاري كلي']);
 console.log('court names OK');
+// The court and the circuit type are picked apart and stored together.
+const { courtPart, joinCourt, COURT_PLACES } = await import('../lib/court-names.ts');
+assert.deepEqual(courtPart('المحكمة الكلية - تجاري مدني جزئي'), { place: 'المحكمة الكلية', type: 'تجاري مدني جزئي' });
+assert.deepEqual(courtPart('محكمة حولي'), { place: 'محكمة حولي', type: '' });
+assert.deepEqual(courtPart('تجاري كلي'), { place: '', type: 'تجاري كلي' });
+assert.equal(joinCourt('محكمة الرقعي', 'تجاري كلي'), 'محكمة الرقعي - تجاري كلي');
+assert.equal(joinCourt('', 'تجاري كلي'), 'تجاري كلي');
+assert.ok(COURT_PLACES.includes('المحكمة الكلية') && COURT_PLACES.length === new Set(COURT_PLACES).size);
+console.log('court parts OK');

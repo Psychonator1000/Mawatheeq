@@ -102,3 +102,14 @@ export function courtChoices(values: string[], base: readonly string[] = []): st
   for (const b of base) if (!count.has(b)) count.set(b, 0);
   return [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ar')).map(([k]) => k);
 }
+
+/** The courthouses, written in full, to pick from. */
+export const COURT_PLACES = [...new Set(PLACES.map(([, name]) => name))];
+const isPlace = (s: string) => /^(ال)?محكمة\s/.test(s) || COURT_PLACES.includes(s);
+/** A court written «المحكمة - نوع الدائرة» in its two parts; a value with only one of them fills that one. */
+export function courtPart(kind: string): { place: string; type: string } {
+  const k = String(kind || '').trim(), at = k.indexOf(' - ');
+  if (at >= 0) return { place: k.slice(0, at).trim(), type: k.slice(at + 3).trim() };
+  return isPlace(k) ? { place: k, type: '' } : { place: '', type: k };
+}
+export const joinCourt = (place: string, type: string) => [place.trim(), type.trim()].filter(Boolean).join(' - ');

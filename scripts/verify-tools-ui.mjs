@@ -333,7 +333,7 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  const sw=page.locator('[data-record-window]');await sw.locator('.case-pin').getByText('TOOL-1').waitFor();
  await sw.locator('.case-quick').getByRole('button',{name:/تسجيل جلسة/}).click();
  // The circuit is picked from a list of kinds, with its number beside it.
- await sw.getByRole('combobox',{name:'المحكمة'}).click();await page.getByRole('option',{name:'تجاري كلي',exact:true}).click();await sw.getByLabel('رقم الدائرة',{exact:true}).fill('5');await sw.getByLabel('رقم القاعة',{exact:true}).fill('30');
+ await sw.getByRole('combobox',{name:'نوع الدائرة'}).click();await page.getByRole('option',{name:'تجاري كلي',exact:true}).click();await sw.getByLabel('رقم الدائرة',{exact:true}).fill('5');await sw.getByLabel('رقم القاعة',{exact:true}).fill('30');
  await sw.getByRole('combobox',{name:'قرار الجلسة'}).click();await page.getByRole('option',{name:'تأجيل للإعلان',exact:true}).click();
  assert.equal(await sw.getByRole('button',{name:'تسجيل الجلسة'}).isDisabled(),true,'An adjournment needs the next session date');
  await sw.getByRole('button',{name:/^موعد الجلسة القادمة/}).click();await page.locator('.date-popover').getByRole('button',{name:'اليوم',exact:true}).click();

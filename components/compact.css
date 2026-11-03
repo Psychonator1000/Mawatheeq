@@ -979,7 +979,7 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
   radial-gradient(90% 60% at 100% 0%,color-mix(in srgb,var(--brand,#7a2335) 22%,transparent),transparent 60%),
   radial-gradient(70% 50% at 0% 100%,color-mix(in srgb,var(--brand,#7a2335) 16%,transparent),transparent 65%),
   linear-gradient(165deg,color-mix(in srgb,var(--card,#fffdf8) 84%,var(--brand,#7a2335) 6%),color-mix(in srgb,var(--card,#fffdf8) 76%,var(--brand,#7a2335) 12%))}
-:root:not([data-theme=sky],[data-theme=phantom],[data-theme=yorha],[data-theme=noir],[data-theme=rose]):not([data-mode=dark]) :is(.tab-card,.panel,.office-card,.client-card,.stat:not(.featured)){
+:root:not([data-theme=sky],[data-theme=phantom],[data-theme=yorha],[data-theme=noir],[data-theme=rose]):not([data-mode=dark]) :is(.tab-card,.panel:not(.sec-agenda),.office-card,.client-card,.stat:not(.featured)){
  box-shadow:0 22px 40px -22px color-mix(in srgb,var(--brand,#7a2335) 60%,rgb(40 20 15/.55)),0 4px 10px -4px rgb(40 20 15/.22),inset 0 1px 0 #fff,inset 0 -1px 0 color-mix(in srgb,var(--brand,#7a2335) 14%,transparent)}
 /* Default themes: every page sits on a deeper tint (as in NieR), so the white glass cards and fields stand out. */
 :root:not([data-theme=sky],[data-theme=phantom],[data-theme=yorha],[data-theme=noir],[data-theme=rose]):not([data-mode=dark]) main.main{
@@ -1012,3 +1012,23 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 .work-desk-body .panel-head{flex-wrap:wrap;gap:10px 16px;align-items:flex-start}
 .work-desk-body .panel-head>.actions,.work-desk-body .panel-head>div:last-child{flex-wrap:wrap;min-width:0}
 .work-desk-body .desk-toolbar,.work-desk-body .department-toolbar{margin-bottom:12px}
+/* Summary headings wrap between words only, never inside one. */
+.sum-table thead th{word-break:keep-all;overflow-wrap:normal;hyphens:none;padding-inline:3px;text-overflow:clip}
+/* Window close button: a clear round button, with its own room so the title never runs under it. */
+:root [data-slot=sheet-content] .sheet-x{top:14px;right:14px;width:34px;height:34px;display:grid;place-items:center;border-radius:999px;opacity:1;z-index:5;
+ color:var(--brand,#7a2335);background:color-mix(in srgb,var(--card,#fffdf8) 85%,#fff);border:1px solid color-mix(in srgb,var(--brand,#7a2335) 28%,transparent);
+ box-shadow:0 4px 12px -6px rgb(40 20 15/.35),inset 0 1px 0 #fff;transition:background .15s,color .15s,transform .15s}
+:root [data-slot=sheet-content] .sheet-x svg{width:18px;height:18px;stroke-width:2.4}
+:root [data-slot=sheet-content] .sheet-x:hover{background:var(--brand,#7a2335);color:#fff;transform:scale(1.06)}
+:root[data-mode=dark] [data-slot=sheet-content] .sheet-x{background:color-mix(in srgb,var(--card) 80%,#fff 8%);color:#fff;border-color:color-mix(in srgb,#fff 20%,transparent)}
+:root .case-window .case-pin-names{padding-inline-start:40px;min-width:0}
+:root .case-window .case-pin-names [data-slot=sheet-title]{overflow-wrap:anywhere;line-height:1.35}
+/* The dark agenda panels: their own shadow only, no light top edge. */
+:root .panel.sec-agenda{box-shadow:0 10px 30px -18px color-mix(in srgb,var(--dept,#7a2335) 70%,#000)!important;background-image:none}
+/* Judgment card with the court in two pickers: eight fields — one line on wide screens, two rows of four otherwise. */
+@media(min-width:901px){:root:root .case-window .form-grid.judgment-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.5fr) minmax(0,.6fr)}:root:root .case-window .form-grid.judgment-grid>:nth-child(7){grid-column:auto}}
+@media(min-width:1500px){:root:root .case-window .form-grid.judgment-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1.45fr) minmax(0,.55fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,.9fr) minmax(0,1fr)}}
+/* Panels that sit inside a desk body are part of the desk card itself: flat, no border, no shadow (they have no padding of
+   their own, so a border would cut against their text). Must outrank the app-wide glass card rule. */
+.work-desk-body>:is(.panel,section):not(.sec-agenda){background:none!important;border:0!important;box-shadow:none!important;border-radius:0}
+.work-desk-body>:is(.panel,section)>.panel-head{padding-top:12px}
