@@ -8,6 +8,11 @@ import {normalizeSearch} from '@/lib/case-browse';
 import {lawyerLabels,matchLawyer,visibleCases} from '@/lib/lawyer-match';
 import PageNavigation from './page-navigation';
 import ViewEditor from './view-editor';
+import {LayoutDashboard,FolderSearch,CalendarDays,BarChart3,FileCheck2,ListChecks,Users2,FileText,type LucideIcon as Ic} from 'lucide-react';
+
+/** Each page as a card: an icon and one line on what it holds. */
+const SECTION_ICONS:Record<Section,Ic>={overview:LayoutDashboard,cases:Scale,clients:Building2,deadlines:CalendarDays,analytics:BarChart3,verification:FileCheck2,work:ListChecks,conflicts:Users2,documents:FileText,secretary:ConciergeBell,collections:HandCoins,accounting:Calculator,hr:Users,archive:Archive};
+const SECTION_HINTS:Record<Section,string>={overview:'أرقام المكتب وأحدث الأحكام',cases:'سجل الأحكام والقضايا بتفاصيلها',clients:'ملفات الموكلين والأشخاص المرتبطين',deadlines:'مواعيد الطعن والمتابعة',analytics:'إحصائيات القضايا ونتائجها',verification:'مطابقة البيانات مع مصادرها',work:'المهام والجلسات اليومية',conflicts:'كشف تعارض المصالح بين الأطراف',documents:'مستندات القضايا وأدلتها',secretary:'الأجندة والمواعيد والمراسلات',collections:'ملفات التحصيل والدفعات',accounting:'الحسابات والفواتير والتقارير',hr:'الموظفون والحضور والرواتب',archive:'الملفات الورقية وأماكنها'};
 
 export const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,traineeLawyer:GraduationCap,counsel:BookOpenCheck,legalResearcher:Library,translator:Languages,sessionsClerk:Gavel,executionClerk:ClipboardList,callCenter:Headset,courier:Car,representative:Briefcase,driver:Truck,officeAdmin:Building2,officeBoy:Coffee,secretary:CalendarClock,receptionist:ConciergeBell,collections:HandCoins,accountant:Calculator,hr:Users,archivist:Archive,dataEntry:Keyboard,developer:Code,networkEngineer:Network,itSupport:Monitor,engineer:Wrench,custom:SlidersHorizontal};
 const same=(a:Section[],b:Section[])=>a.length===b.length&&a.every(s=>b.includes(s));
@@ -100,7 +105,7 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
     {!value.caseIds.length&&<p className="notice">لن تظهر لهذا المستخدم أي قضية حتى تختار له قضايا.</p>}
    </>}
   </fieldset>
-  {[false,true].map(legal=><fieldset className="permission-group" key={String(legal)}><legend>{legal?'أقسام صفحة القضايا (الرئيسية)':'صفحات الأقسام الأخرى'}</legend><div className="permission-sections">{Object.entries(SECTIONS).filter(([id])=>LEGAL_SECTIONS.includes(id as Section)===legal).map(([id,label])=><label className="checkbox-line" key={id}><input type="checkbox" checked={value.sections.includes(id as Section)} disabled={id==='documents'&&value.caseScope!=='all'} onChange={e=>patch({sections:e.target.checked?[...value.sections,id as Section]:value.sections.filter(s=>s!==id)})}/>{label}</label>)}</div>
+  {[false,true].map(legal=><fieldset className="permission-group" key={String(legal)}><legend>{legal?'أقسام صفحة القضايا (الرئيسية)':'صفحات الأقسام الأخرى'}</legend><div className="permission-sections">{Object.entries(SECTIONS).filter(([id])=>LEGAL_SECTIONS.includes(id as Section)===legal).map(([id,label])=>{const on=value.sections.includes(id as Section),off=id==='documents'&&value.caseScope!=='all',Icon=SECTION_ICONS[id as Section];return <label className={'section-card'+(on?' on':'')+(off?' locked':'')} key={id} title={off?'المستندات تتطلب جميع القضايا':SECTION_HINTS[id as Section]}><input type="checkbox" aria-label={label} checked={on} disabled={off} onChange={e=>patch({sections:e.target.checked?[...value.sections,id as Section]:value.sections.filter(s=>s!==id)})}/><span className="section-icon" aria-hidden><Icon size={16}/></span><span className="section-text"><b>{label}</b><small aria-hidden>{SECTION_HINTS[id as Section]}</small></span></label>})}</div>
    <p className="subtitle">صفحات الأقسام الأخرى تتيح ملخص القضية وأدوات القسم فقط، وكل صفحة تعرض القضايا المسموحة فقط. إخفاء قسم لا يحجب حقول القضية المتاحة من قسم آخر. مرفقات القضايا ضمن «التحقق»، و«المستندات والأدلة» تتطلب جميع القضايا.</p>
   </fieldset>)}
   <fieldset className="permission-group"><legend>العمليات المسموحة</legend>

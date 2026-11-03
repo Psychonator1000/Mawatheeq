@@ -1138,3 +1138,69 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
  .permission-preview .ve-cards{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
 }
 @media(max-width:1099.98px){.permission-layout{display:flex;flex-direction:column-reverse;gap:14px}}
+/* Standing rule: no unnecessary spacing anywhere. One tight rhythm for the whole app (6/8/10/12px), so most of each
+   screen shows without scrolling. */
+:root:root .panel{padding:12px 14px}
+:root:root .panel-head{padding:10px 14px 6px;gap:8px 12px;margin-bottom:0}
+:root:root .page-head{margin-bottom:10px;gap:10px}
+:root:root .tab-card{margin-top:6px}
+:root:root .office-summary{margin:8px 0;padding:12px 14px}
+:root:root .office-cards{gap:8px;margin:8px 0}
+:root:root .office-toolbar{padding:10px 12px;gap:8px}
+:root:root .office-form{padding:10px 12px}
+:root:root .permissions-dialog .office-form{padding:0;margin:4px 0 0}
+:root:root .field{gap:4px;margin:6px 0}
+:root:root .form-grid .field{margin:0}
+:root:root .form-grid{gap:8px 12px;margin-bottom:8px}
+:root:root .permission-group{padding:10px 12px!important;margin:8px 0!important}
+:root:root .permission-group>legend{padding:0 6px}
+:root:root .permission-group .subtitle{margin:2px 0 6px;font-size:12px;line-height:1.6}
+:root:root .role-grid{gap:6px}
+:root:root .role-card{padding:6px 10px;gap:6px}
+:root:root .role-summary{gap:6px;margin-top:6px}
+:root:root .power-grid{gap:6px}
+:root:root .power-option{padding:8px 10px;gap:8px}
+:root:root .power-option small{margin-top:1px;line-height:1.55}
+:root:root .permission-toggle{padding:8px 12px;margin:6px 0}
+:root:root .permission-summary{margin:6px 0;padding:6px 10px}
+:root:root .permission-cases{gap:4px}
+:root:root .office-dialog{padding:12px 14px}
+:root:root [data-slot=dialog-header]{gap:2px}
+:root:root [data-slot=dialog-description]{font-size:12.5px;line-height:1.6}
+:root:root .work-desk{padding:10px 12px 6px;gap:8px}
+:root:root .office-history{margin-top:8px}
+:root:root .view-editor-controls{gap:8px}.ve-head .subtitle{font-size:12px}
+/* Dialogs: the close button is the same clear round button as the case window's, on the reading start's opposite
+   side; the title reads from the right, with the person being edited named in it. */
+:root [data-slot=dialog-content] .dialog-x{top:10px;right:12px;width:32px;height:32px;display:grid;place-items:center;border-radius:999px;opacity:1;z-index:60;
+ color:var(--brand,#7a2335);background:color-mix(in srgb,var(--card,#fffdf8) 85%,#fff);border:1px solid color-mix(in srgb,var(--brand,#7a2335) 28%,transparent);
+ box-shadow:0 4px 12px -6px rgb(40 20 15/.35),inset 0 1px 0 #fff;transition:background .15s,color .15s,transform .15s}
+:root :is([dir=rtl] [data-slot=dialog-content],[data-slot=dialog-content][dir=rtl]) .dialog-x{right:auto;left:12px}
+:root [data-slot=dialog-content] .dialog-x svg{width:17px;height:17px;stroke-width:2.4}
+:root [data-slot=dialog-content] .dialog-x:hover{background:var(--brand,#7a2335);color:#fff;transform:scale(1.06)}
+:root[data-mode=dark] [data-slot=dialog-content] .dialog-x{background:color-mix(in srgb,var(--card) 80%,#fff 8%);color:#fff;border-color:color-mix(in srgb,#fff 20%,transparent)}
+:root :is([dir=rtl] [data-slot=dialog-content],[data-slot=dialog-content][dir=rtl]) [data-slot=dialog-header]{text-align:right;padding-inline-end:0;padding-inline-start:40px}
+.person-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.title-person{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 4px;border-radius:999px;background:color-mix(in srgb,var(--brand,#7a2335) 10%,transparent);border:1px solid color-mix(in srgb,var(--brand,#7a2335) 22%,transparent)}
+.title-person b{color:var(--brand,#7a2335);font-weight:700}
+.title-person code{font-size:12px;padding:1px 7px;border-radius:999px;background:color-mix(in srgb,var(--card,#fffdf8) 80%,#fff);color:var(--muted-foreground)}
+/* Pages a account can open: compact cards with an icon and one line each, lit in the brand colour when chosen. */
+:root:root .permission-sections{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px}
+.section-card{position:relative;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:11px;cursor:pointer;
+ border:1px solid color-mix(in srgb,var(--brand,#7a2335) 18%,var(--border,#e4d9cb));
+ background:linear-gradient(180deg,#fff 0%,rgb(255 255 255/.85) 60%,color-mix(in srgb,var(--brand,#7a2335) 4%,#fff));
+ box-shadow:inset 0 1px 0 #fff,0 2px 6px -3px color-mix(in srgb,var(--brand,#7a2335) 30%,transparent);transition:transform .18s ease,border-color .2s,box-shadow .2s,background .2s}
+.section-card:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--brand,#7a2335) 45%,transparent)}
+.section-card input{position:absolute;inset-block-start:7px;inset-inline-end:8px;width:15px;height:15px;margin:0;accent-color:var(--brand,#7a2335)}
+.section-icon{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;color:var(--brand,#7a2335);background:color-mix(in srgb,var(--brand,#7a2335) 10%,#fff);transition:background .2s,color .2s,scale .3s cubic-bezier(.3,1.6,.5,1)}
+.section-text{display:grid;min-width:0;padding-inline-end:18px}.section-text b{font-size:13px;font-weight:650;line-height:1.35}.section-text small{font-size:11px;line-height:1.45;color:var(--muted-foreground)}
+.section-card.on{border-color:var(--brand,#7a2335);background:linear-gradient(180deg,color-mix(in srgb,var(--brand,#7a2335) 7%,#fff),color-mix(in srgb,var(--brand,#7a2335) 12%,#fff));box-shadow:inset 0 0 0 1px var(--brand,#7a2335),0 6px 14px -8px color-mix(in srgb,var(--brand,#7a2335) 60%,transparent)}
+.section-card.on .section-icon{background:linear-gradient(160deg,var(--brand,#7a2335),color-mix(in srgb,var(--brand,#7a2335) 70%,#000));color:#fff;scale:1.06}
+.section-card.locked{opacity:.5;cursor:not-allowed}
+.section-card:has(input:focus-visible){outline:2px solid var(--brand,#7a2335);outline-offset:2px}
+:root[data-mode=dark] .section-card{background:linear-gradient(180deg,rgb(255 255 255/.08),rgb(255 255 255/.03));border-color:color-mix(in srgb,var(--brand,#7a2335) 35%,rgb(255 255 255/.15));box-shadow:inset 0 1px 0 rgb(255 255 255/.08)}
+:root[data-mode=dark] .section-card.on{background:color-mix(in srgb,var(--brand,#7a2335) 30%,transparent)}
+:root[data-mode=dark] .section-icon{background:rgb(255 255 255/.08)}
+:root:root .permission-cases{gap:0;margin-top:6px}
+:root:root .permission-case{padding:5px 10px;gap:8px;align-items:center;line-height:1.45}
+:root:root .permission-case small,:root:root .permission-case span{font-size:12px}
