@@ -230,6 +230,15 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
   p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,jobRole:'lawyer',jobRoles:['lawyer','counsel']}});
   p=await now();assert.deepEqual(p.jobRoles,['lawyer','counsel'],'Earlier jobs combine too');assert.equal(p.jobRole,'lawyer');
   await assert.rejects(async()=>{const q=await now();await office(admin.token,'set_member_access',{id:m.id,revision:q.revision,permissions:{...q,jobRoles:['lawyer','boss']}})},/دور الموظف/,'Unknown jobs in the list are rejected');
+  // What the account sees, down to each field: stored after the jobs, audited, returned to the account; bad values rejected.
+  p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,accountKind:'counsel',view:{'tab:finance':'hide','card:contract':'read','field:contractFee':'hide'}}});
+  p=await now();assert.deepEqual(p.view,{'tab:finance':'hide','card:contract':'read','field:contractFee':'hide'});assert.equal(p.accountKind,'counsel');assert.deepEqual(p.jobRoles,['lawyer','counsel'],'The jobs stay');
+  assert.deepEqual((await office(admin.token,'access_history',{id:m.id}))[0].after.view,p.view,'The audit records the view');
+  assert.deepEqual((await local((await login('role_clerk')).token,'access')).view,p.view,'The account receives its view');
+  for(const bad of [{view:{'tab:finance':'maybe'}},{view:{'drop table':'hide'}},{accountKind:'boss'},{clientEntityIds:['x']}])
+   await assert.rejects(async()=>{const q=await now();await office(admin.token,'set_member_access',{id:m.id,revision:q.revision,permissions:{...q,...bad}})},/راجع/,'Rejected: '+JSON.stringify(bad));
+  p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,view:{}}});
+  p=await now();assert.deepEqual(p.view,{},'Everything shown again');assert.equal(p.accountKind,'counsel','The kind is kept');
   await assert.rejects(async()=>{const q=await now();await office(admin.token,'set_member_access',{id:m.id,revision:q.revision,permissions:{...q,jobRoles:'lawyer'}})},/دور الموظف/);
   p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,jobRole:undefined,jobRoles:[]}});
   p=await now();assert.equal(p.jobRole,undefined,'Jobs can be cleared');assert.equal(p.jobRoles,undefined);}}

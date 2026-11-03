@@ -19,7 +19,7 @@
     "test:shared": "node scripts/verify-shared-backend.mjs",
     "check:pages-config": "node scripts/check-pages-config.mjs",
     "test:local-auth": "node scripts/verify-local-auth.mjs",
-    "test:browse": "node --experimental-strip-types scripts/verify-case-browse.mjs && node --experimental-strip-types scripts/verify-client-summary.mjs && node --experimental-strip-types scripts/verify-court-names.mjs",
+    "test:browse": "node --experimental-strip-types scripts/verify-case-browse.mjs && node --experimental-strip-types scripts/verify-client-summary.mjs && node --experimental-strip-types scripts/verify-court-names.mjs && node --experimental-strip-types scripts/verify-view-map.mjs",
     "test:clients": "node --experimental-strip-types scripts/verify-client-model.mjs",
     "test:excel": "node scripts/verify-excel.mjs",
     "test:roll": "node scripts/verify-roll-import.mjs && node scripts/verify-roll-db.mjs && node --experimental-strip-types scripts/verify-register-import.mjs",

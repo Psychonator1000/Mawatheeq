@@ -107,7 +107,11 @@ try{
  await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-2');await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).check();
  assert.equal(await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).isChecked(),false);
  await page.locator('.permission-summary').getByText('ويفتحها مباشرة',{exact:false}).waitFor();
- await page.screenshot({path:artifacts+'/permission-editor-desktop.png',fullPage:true});await go('حفظ الحساب');await page.getByText('Temporary-synthetic-123',{exact:true}).waitFor();await go('تم');await page.getByRole('cell',{name:'ui_staff',exact:true}).waitFor();
+ await page.screenshot({path:artifacts+'/permission-editor-desktop.png',fullPage:true});
+ // The live preview of what the account sees: one click turns the finance tab read-only, and the label says so.
+ {const ve=page.locator('.view-editor');await ve.scrollIntoViewIfNeeded();await ve.getByRole('button',{name:'المالية: ظاهر',exact:true}).click();
+  await ve.getByRole('button',{name:'المالية: اطلاع فقط',exact:true}).waitFor();await page.screenshot({path:artifacts+'/view-editor.png'});}
+ await go('حفظ الحساب');await page.getByText('Temporary-synthetic-123',{exact:true}).waitFor();await go('تم');await page.getByRole('cell',{name:'ui_staff',exact:true}).waitFor();
  // Changing only the job role keeps the pages; the new title shows in the staff list.
  {const row=page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_staff',exact:true})});await row.getByRole('button',{name:'الدور الوظيفي',exact:true}).click();
   const dlg=page.getByRole('dialog');await dlg.getByRole('checkbox',{name:'مستشار',exact:true}).click();await dlg.getByText('تتغير المسميات فقط',{exact:false}).waitFor();

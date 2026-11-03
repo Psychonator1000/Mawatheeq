@@ -7,6 +7,7 @@ import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
 import {lawyerLabels,matchLawyer,visibleCases} from '@/lib/lawyer-match';
 import PageNavigation from './page-navigation';
+import ViewEditor from './view-editor';
 
 export const ROLE_ICONS:Record<JobRole,LucideIcon>={manager:ShieldCheck,lawyer:Scale,traineeLawyer:GraduationCap,counsel:BookOpenCheck,legalResearcher:Library,translator:Languages,sessionsClerk:Gavel,executionClerk:ClipboardList,callCenter:Headset,courier:Car,representative:Briefcase,driver:Truck,officeAdmin:Building2,officeBoy:Coffee,secretary:CalendarClock,receptionist:ConciergeBell,collections:HandCoins,accountant:Calculator,hr:Users,archivist:Archive,dataEntry:Keyboard,developer:Code,networkEngineer:Network,itSupport:Monitor,engineer:Wrench,custom:SlidersHorizontal};
 const same=(a:Section[],b:Section[])=>a.length===b.length&&a.every(s=>b.includes(s));
@@ -106,5 +107,6 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
    <p className="subtitle">بدون التعديل يصبح الحساب للقراءة فقط. إضافة القضايا وتعديل ملفات الموكلين المشتركة تتطلب جميع القضايا والقسم المختص. إدارة المستخدمين والاعتماد والإعدادات والاستيراد والنسخة الكاملة تُمنح من «صلاحيات الإدارة».</p>
   </fieldset>
   </div>}
+ <ViewEditor value={value} onChange={onChange}/>
  </div>;
 }

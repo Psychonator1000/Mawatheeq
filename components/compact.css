@@ -1032,3 +1032,31 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
    their own, so a border would cut against their text). Must outrank the app-wide glass card rule. */
 .work-desk-body>:is(.panel,section):not(.sec-agenda){background:none!important;border:0!important;box-shadow:none!important;border-radius:0}
 .work-desk-body>:is(.panel,section)>.panel-head{padding-top:12px}
+/* «ما يراه في البرنامج»: the live preview of an account's screen; every item is a toggle. */
+.view-editor{display:grid;gap:10px;margin-top:14px}
+.ve-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}.ve-head h3{margin:0;font-size:15.5px}
+.ve-head .subtitle{display:flex;gap:6px;align-items:center;margin:2px 0 0}
+.ve-legend{display:flex;gap:6px;flex-wrap:wrap}.ve-legend .ve-item{cursor:default}
+.ve-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.ve-row>small{color:var(--muted-foreground);margin-inline-end:4px}
+.ve-preview{display:grid;grid-template-columns:minmax(200px,240px) minmax(0,1fr);gap:12px;align-items:start}
+.ve-side{border-radius:14px;padding:10px;background:linear-gradient(170deg,var(--brand,#7a2335),color-mix(in srgb,var(--brand,#7a2335) 75%,#000));display:grid;gap:8px}
+.ve-group{display:grid;gap:3px}.ve-group>small{color:#f2e3d3aa;font-size:10.5px;padding:2px 6px}
+.ve-case{border-radius:14px;padding:10px;border:1px solid var(--border);background:color-mix(in srgb,var(--card) 90%,var(--brand,#7a2335) 3%);display:grid;gap:10px;min-width:0}
+.ve-tabs{display:flex;flex-wrap:wrap;gap:5px}
+.ve-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.ve-card{border:1px solid var(--border);border-radius:12px;padding:8px;background:var(--card);display:grid;gap:6px;align-content:start}
+.ve-fields{display:flex;flex-wrap:wrap;gap:4px}
+.ve-item{display:inline-flex;align-items:center;justify-content:space-between;gap:6px;border:1px solid var(--border);border-radius:9px;padding:4px 9px;font-size:12px;
+ background:var(--card);color:var(--foreground);cursor:pointer;transition:opacity .15s,background .15s,transform .1s;text-align:start}
+.ve-item:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--brand,#7a2335) 45%,transparent)}
+.ve-page{width:100%;background:transparent;border-color:transparent;color:#fff8ef;font-size:12.5px;padding:5px 8px}
+.ve-page.ve-show{background:color-mix(in srgb,#fff 10%,transparent)}
+.ve-card-title{font-weight:700;border:0;padding:2px 4px;background:none;justify-self:start}
+.ve-field{font-size:11.5px;padding:3px 8px;background:color-mix(in srgb,var(--card) 70%,#fff)}
+.ve-read{border-style:dashed;border-color:color-mix(in srgb,var(--brand,#7a2335) 40%,transparent);background:color-mix(in srgb,var(--brand,#7a2335) 6%,var(--card))}
+.ve-page.ve-read{background:color-mix(in srgb,#fff 6%,transparent);border-color:#ffffff55}
+.ve-hide{opacity:.38;text-decoration:line-through;filter:grayscale(1)}
+.ve-inherited{opacity:.5}.ve-off{opacity:.22;cursor:not-allowed;text-decoration:line-through}
+.ve-card.ve-hide{opacity:.45}.ve-card.ve-hide .ve-item{text-decoration:line-through}
+@media(max-width:760px){.ve-preview{grid-template-columns:1fr}}
+.ve-choice{min-height:32px;padding:4px 12px;font-size:12.5px;gap:6px}

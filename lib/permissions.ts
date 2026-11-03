@@ -16,6 +16,12 @@ export type Permissions = {
   jobRoles?: JobRole[];
   /** Delegated admin powers. The original owner holds all of them; staff hold only those granted. */
   adminPowers?: AdminPower[];
+  /** What the account sees inside the pages it opens, down to each case field (see lib/view-map.ts). */
+  view?: import('./view-map').ViewSettings;
+  /** Staff, lawyer, counsel or the client's own account. */
+  accountKind?: import('./view-map').AccountKind;
+  /** For a client account: the client files whose cases it sees. */
+  clientEntityIds?: string[];
   canEdit: boolean; canExport: boolean; revision: number;
 };
 export const NO_ACCESS: Permissions = { sections: [], caseScope: 'selected', caseIds: [], canEdit: false, canExport: false, revision: 0 };
