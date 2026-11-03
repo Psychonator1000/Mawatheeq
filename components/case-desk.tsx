@@ -1,7 +1,7 @@
 import {createContext,lazy,Suspense,useContext,useMemo,useState} from 'react';
 import {Printer,Plus,Save,ArrowUpLeft,AlertTriangle,FileSignature,CheckCircle2} from 'lucide-react';
 import {toast} from 'sonner';
-import {type CaseRecord,type Rules,DEFAULT_RULES,emptyCase,formatDate,todayISO,daysBetween} from '@/lib/domain';
+import {type CaseRecord,type Rules,DEFAULT_RULES,emptyCase,formatDate,todayISO,daysBetween,caseCode} from '@/lib/domain';
 const ClientSummary=lazy(()=>import('./client-summary'));
 import {type ClientEntity,clientName,enrichCase} from '@/lib/clients';
 import {DECISIONS,EXPERT_DECISIONS,sessionProcedure,type Venue} from '@/lib/sessions';
@@ -20,7 +20,7 @@ type Props={page:DeskPage;records:CaseRecord[];rules?:Rules;clients:ClientEntity
 const Bare=createContext(false);
 
 async function saveCase(c:CaseRecord,clients:ClientEntity[]){const d=await api('/api/cases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case:c})});return enrichCase(d.case,clients)}
-const ref=(c:CaseRecord)=>c.code||c.autoNumber||'بلا كود';
+const ref=(c:CaseRecord)=>caseCode(c)||c.autoNumber||'بلا كود';
 const parties=(c:CaseRecord)=>`${clientName(c)||'—'} ضد ${c.opponent||'—'}`;
 const lawyersOf=(rs:CaseRecord[])=>[...new Set(rs.map(c=>String(c.lawyer||'').trim()).filter(Boolean))].sort();
 function CaseCell({c,onOpen}:{c:CaseRecord;onOpen:(c:CaseRecord)=>void}){return <button type="button" className="desk-case" onClick={()=>onOpen(c)}><b>{ref(c)}</b><small>{parties(c)}</small></button>}

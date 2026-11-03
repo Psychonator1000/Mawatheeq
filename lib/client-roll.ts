@@ -1,4 +1,4 @@
-import { type CaseRecord, formatDate, todayISO } from './domain.ts';
+import { type CaseRecord, caseCode, formatDate, todayISO } from './domain.ts';
 import { lastSitting, nextSitting } from './case-desk.ts';
 import { rollCardsHtml, type RollCard } from './print.ts';
 
@@ -17,7 +17,7 @@ export function clientRollCards(cases: CaseRecord[], openOnly: boolean): RollCar
   return cases.filter(c => !openOnly || !closed(c)).sort(codeOrder).map(c => {
     const last = lastSitting(c), next = nextSitting(c);
     return {
-      code: String(c.code || ''), client: String(c.clientEntityName || c.client || ''), role: String(c.role || ''), opponent: String(c.opponent || ''), lawyer: String(c.lawyer || ''),
+      code: caseCode(c), client: String(c.clientEntityName || c.client || ''), role: String(c.role || ''), opponent: String(c.opponent || ''), lawyer: String(c.lawyer || ''),
       facts: [
         ['الرقم الآلي', String(c.autoNumber || '')], ['رقم القضية', String(c.caseNumber || '')], ['المحكمة', String(last?.court || c.court || '')],
         ['الجلسة السابقة', last?.date ? formatDate(String(last.date)) : ''], ['آخر قرار', String(last?.decision || last?.text || '')],

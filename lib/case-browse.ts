@@ -1,4 +1,4 @@
-import type { CaseRecord } from './domain';
+import { type CaseRecord, caseCode } from './domain.ts';
 import type { ClientEntity } from './clients';
 
 export type CaseFilters = { search: string; year: string; month: string; code: string; client: string; opponent: string; numberStatus: string; category: string; clientEntityId: string; analysisField:string;analysisValue:string };
@@ -69,7 +69,7 @@ export function needsAutoNumber(record: CaseRecord) {
 // Normalizing is the costly part: it runs again only when a record's searchable text changes.
 const haystacks = new WeakMap<CaseRecord, { raw: string; text: string }>();
 function searchText(record: CaseRecord) {
-  const raw = [record.code, record.autoNumber, record.client, record.clientGroup, record.opponent,
+  const raw = [record.code, caseCode(record), record.autoNumber, record.client, record.clientGroup, record.opponent,
     record.caseNumber, record.lawyer, record.ruling, record.clientEntityName, record.clientContactName, record.casePerson,
     ...(Array.isArray(record.stages) ? (record.stages as { caseNumber?: string; autoNumber?: string }[]).flatMap(st => [st.caseNumber, st.autoNumber]) : [])].join(' ');
   const hit = haystacks.get(record);
@@ -124,7 +124,7 @@ export function sortCases(records: CaseRecord[], sort: CaseSort, remaining: (c: 
   const key = (c: CaseRecord): string | number | null => {
     switch (sort.key) {
       case 'number': { const n = String(c.autoNumber || '').trim(); return n ? (/^\d+$/.test(n) ? Number(n) : n) : null; }
-      case 'code': { const n = String(c.code || '').trim(); return n ? (/^\d+$/.test(n) ? Number(n) : n) : null; }
+      case 'code': { const n = String(c.code || '').trim(); return n ? (/^\d+$/.test(n) ? Number(n) + (c.insurance ? 1e9 : 0) : n) : null; } // insurance («ت-») after the base cases
       case 'client': return normalizeSearch(c.client || c.clientGroup) || null;
       case 'remaining': return remaining(c);
       case 'lawyer': return normalizeSearch(c.lawyer) || null;
@@ -177,8 +177,10 @@ export function caseDuplicates(c: CaseRecord, records: CaseRecord[], same: (r: C
  * inside many automatic and case numbers, so the code itself would otherwise be lost in the list. Order is kept otherwise.
  */
 export function codeFirst<T extends Pick<CaseRecord, 'code'>>(records: T[], search: string): T[] {
-  const q = normalizeSearch(search);
-  if (!/^[a-z]?\d+$/i.test(q)) return records;
-  const rank = (r: T) => { const code = normalizeSearch(r.code); return code === q ? 0 : code.startsWith(q) ? 1 : 2; };
+  const q = normalizeSearch(search).replace(/\s+/g, '');
+  // «ت-12» (or «ت12») looks for insurance case 12; a bare number for any case with that code.
+  const ins = /^ت-?(\d+)$/.exec(q), num = ins ? ins[1] : q;
+  if (!/^[a-z]?\d+$/i.test(num)) return records;
+  const rank = (r: T) => { if (ins && !(r as { insurance?: unknown }).insurance) return 2; const code = normalizeSearch(r.code); return code === num ? 0 : code.startsWith(num) ? 1 : 2; };
   return records.map((r, i) => ({ r, i, k: rank(r) })).sort((a, b) => a.k - b.k || a.i - b.i).map(x => x.r);
 }

@@ -80,7 +80,7 @@ console.log('Passed printable lists.');
  const b={...base,id:'b',code:'15',legacyStatus:'منتهي',date:'2025-01-02',type:'حكم استئناف',outcome:'لصالحنا'};
  const c={...base,id:'c',code:'1003',archived:true,insurance:true};
  assert.deepEqual(clientRollCards([a,b,c],true).map(x=>x.code),['120'],'Open only: finished and archived cases are left out');
- assert.deepEqual(clientRollCards([a,b,c],false).map(x=>x.code),['15','120','1003'],'All cases, by code number');
+ assert.deepEqual(clientRollCards([a,b,c],false).map(x=>x.code),['15','120','ت-1003'],'All cases, by code number; an insurance case shows its register number as «ت-N»');
  const f=Object.fromEntries(clientRollCards([a],true)[0].facts);
  assert.deepEqual([f['الجلسة السابقة'],f['آخر قرار'],f['الجلسة القادمة'],f['المحكمة'],f['الحكم']],['01/09/2026','تأجيل للإعلان','20/11/2026','الكلية / 3','لم يصدر']);
  assert.equal(Object.fromEntries(clientRollCards([b],false)[0].facts)['الحكم'],'حكم استئناف 02/01/2025 — لصالحنا');

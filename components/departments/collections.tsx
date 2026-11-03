@@ -13,7 +13,7 @@ import {COLLECTION_FIELDS,missingDocumentFields,missingFieldKeys} from '@/lib/co
 import {ALL_FILE_STATUSES as FILE_STATUSES,CLOSED_STATUSES,STATEMENT_CATEGORIES,STATEMENT_STATUSES,PAYMENT_TYPES,dueStatements,fils,kwd,kwdPlain,position,civilIdValid,debtorKey,roundRobin} from '@/lib/collections';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
-import {emptyCase,formatDate,todayISO,type CaseRecord} from '@/lib/domain';
+import {emptyCase,formatDate,todayISO,type CaseRecord,caseCode} from '@/lib/domain';
 import Needs,{type NeedList} from '../needs';
 import {listHtml,printHtml} from '@/lib/print';
 import {Field,DateField,Empty,saveBlob,Choice,api} from '../shared';
@@ -280,7 +280,7 @@ function MakeCase({file,cases,onClose,onMade}:{file:CollectionRecord;cases:CaseS
   catch(e){toast.error(made?`أُنشئت القضية ${made.code} لكن تعذر ربط الملف بها: ${(e as Error).message}. اربطه من «القضية المرتبطة».`:(e as Error).message)}
   finally{setBusy(false)}}
  async function linkExisting(c:CaseSummary){if(busy)return;setBusy(true);
-  try{const r=await departmentRequest<CollectionRecord>('link_case',{workspace:'collections',id:file.id,revision:file.revision,caseId:c.id});onMade(r,c);toast.success(`رُبط الملف بالقضية ${c.code||c.autoNumber}`)}
+  try{const r=await departmentRequest<CollectionRecord>('link_case',{workspace:'collections',id:file.id,revision:file.revision,caseId:c.id});onMade(r,c);toast.success(`رُبط الملف بالقضية ${caseCode(c)||c.autoNumber}`)}
   catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
  return <EditorDialog title="إنشاء قضية من ملف التحصيل" description="تُفتح قضية في سجل الأحكام بأطراف هذا الملف وتُربط به. للقضية أرقامها: كودها في سجل المكتب ورقمها الآلي في بوابة العدل، وهما غير رقم ملف التحصيل والرقم الآلي لأمر الأداء." busy={busy} onClose={onClose}>
   <dl className="make-case-summary"><div><dt>المدعي (الموكل)</dt><dd>{joinNames(partyNames(p.company,p.plaintiffs))}</dd></div><div><dt>المدعى عليه</dt><dd>{joinNames(partyNames(p.defendant,p.defendants))}</dd></div><div><dt>المطالبة</dt><dd>{p.amount?kwd(fils(p.amount))+' د.ك':'—'}</dd></div><div><dt>رقم ملف التحصيل</dt><dd>{p.code||'—'}</dd></div><div><dt>الرقم الآلي لأمر الأداء</dt><dd>{orderNumbers[0]||'—'}</dd></div></dl>
@@ -303,7 +303,7 @@ function ExistingCase({c,via,fileId,busy,onLink}:{c:CaseSummary;via:'code'|'auto
  useEffect(()=>{let live=true;departmentRequest<CollectionRecord[]>('case_files',{workspace:'collections',caseId:c.id}).then(r=>{if(live)setFiles({caseId:c.id,list:r})}).catch(()=>{if(live)setFiles({caseId:c.id,list:[]})});return()=>{live=false}},[c.id]);
  const list=files?.caseId===c.id?files.list:null,others=(list||[]).filter(f=>f.id!==fileId),linked=(list||[]).some(f=>f.id===fileId);
  return <div className="existing-case wide" role="status">
-  <p><b>{via==='code'?'هذا الكود':'هذا الرقم الآلي'} لقضية موجودة في سجل الأحكام:</b> كود {c.code||'—'}{c.autoNumber?' · الرقم الآلي '+c.autoNumber:''} · {c.clientEntityName||c.client||'—'} ضد {c.opponent||'—'}</p>
+  <p><b>{via==='code'?'هذا الكود':'هذا الرقم الآلي'} لقضية موجودة في سجل الأحكام:</b> كود {caseCode(c)||'—'}{c.autoNumber?' · الرقم الآلي '+c.autoNumber:''} · {c.clientEntityName||c.client||'—'} ضد {c.opponent||'—'}</p>
   {list===null?<small>جارٍ التحقق من ملفات التحصيل المرتبطة بها…</small>:others.length?<><small>ملفات التحصيل المرتبطة بها ({others.length}):</small>
    <ul>{others.map(f=><li key={f.id}><b>ملف {f.payload.code||'بلا رقم'}</b> · {partyLabel(f.payload.company,f.payload.plaintiffs)} ضد {partyLabel(f.payload.defendant,f.payload.defendants)}{f.payload.amount?' · '+kwd(fils(f.payload.amount))+' د.ك':''}{f.payload.fileStatus?' · '+f.payload.fileStatus:''}</li>)}</ul></>
    :<small>لا يرتبط بها أي ملف تحصيل بعد.</small>}

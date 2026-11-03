@@ -246,3 +246,15 @@ console.log('Passed archive custody (latest posted movement, cancelled skipped, 
  assert.deepEqual(codeFirst(list,'٣٢٦').map(c=>c.id),['c','b','a','d'],'Arabic digits too');
  assert.deepEqual(codeFirst(list,'شركة').map(c=>c.id),['a','b','c','d'],'Words keep the order');}
 console.log('Passed one code sequence, duplicate detection and code-first search.');
+// Insurance cases keep their register numbers and are shown «ت-N»; «ت-12» in the search finds insurance case 12 first.
+{
+  const { caseCode } = await import('../lib/domain.ts');
+  const { codeFirst } = await import('../lib/case-browse.ts');
+  assert.equal(caseCode({ code: '12', insurance: true }), 'ت-12');
+  assert.equal(caseCode({ code: '12', insurance: false }), '12');
+  assert.equal(caseCode({ code: '', insurance: true }), '');
+  const list = [{ id: 'b', code: '12' }, { id: 'i', code: '12', insurance: true }];
+  assert.deepEqual(codeFirst(list, 'ت-12').map(r => r.id), ['i', 'b']);
+  assert.deepEqual(codeFirst(list, '12').map(r => r.id), ['b', 'i']);
+  console.log('insurance codes OK');
+}

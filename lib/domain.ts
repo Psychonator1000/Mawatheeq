@@ -43,3 +43,9 @@ export function inCaseCategory(c:CaseRecord,category:string,rules:Rules=DEFAULT_
 export function newCategoryCase(category:CaseCategory,clientEntityId=''):CaseRecord{
  return {...emptyCase(),executionFile:category==='execution',insurance:category==='insurance',telecom:category==='telecom',clientEntityId,clientContactId:'',casePerson:'',casePersonRole:''};
 }
+/**
+ * A case's code as shown: insurance cases keep their own register numbers, so they are shown with «ت-» and never look
+ * like a base case with the same number. The stored code is unchanged.
+ */
+export const INSURANCE_CODE_PREFIX='ت-';
+export function caseCode(c:{code?:unknown;insurance?:unknown}){const k=String(c.code??'').trim();return k&&c.insurance?INSURANCE_CODE_PREFIX+k:k}

@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { CLIENT_KINDS, CLIENT_SECTORS, emptyClient, emptyContact, type ClientEntity } from '@/lib/clients';
 import type { CaseRecord } from '@/lib/domain';
-import { formatDate } from '@/lib/domain';
+import { formatDate,caseCode} from '@/lib/domain';
 import { normalizeSearch } from '@/lib/case-browse';
 import { clampPage } from '@/lib/pagination';
 import { Field, Empty, api } from './shared';
@@ -85,7 +85,7 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
       {linked.length > 0 && <div className="client-roll-print"><label className="checkbox-line"><input type="checkbox" checked={rollOpenOnly} onChange={e => setRollOpenOnly(e.target.checked)}/> المفتوحة فقط</label>
         <button type="button" className="btn" onClick={() => { const html = clientRollHtml(draft.name, linked, rollOpenOnly); if (!clientRollCards(linked, rollOpenOnly).length) { toast.info('لا توجد قضايا مفتوحة لهذا الموكل.'); return; } if (!printHtml(html)) toast.error('اسمح بالنوافذ المنبثقة في المتصفح لطباعة الرول.'); }}><Printer size={15}/> طباعة رول قضايا الموكل</button></div>}</div>
       <div className="client-linked-cases">{linked.slice((page - 1) * 10, page * 10).map(c => <button className="client-case-row" key={c.id} onClick={() => { onClose(); onOpenCase?.(c); }} disabled={!onOpenCase}>
-        <b>{c.code || 'بدون كود'}</b><span>{c.opponent || 'خصم غير مسجل'}<small>{c.clientContactName && `المتابع: ${c.clientContactName} · `}{c.casePerson && `الشخص المعني: ${c.casePerson} · `}{formatDate(c.date)}{c.archived ? ' · مؤرشف' : ''}</small></span><ArrowUpLeft size={16}/>
+        <b>{caseCode(c) || 'بدون كود'}</b><span>{c.opponent || 'خصم غير مسجل'}<small>{c.clientContactName && `المتابع: ${c.clientContactName} · `}{c.casePerson && `الشخص المعني: ${c.casePerson} · `}{formatDate(c.date)}{c.archived ? ' · مؤرشف' : ''}</small></span><ArrowUpLeft size={16}/>
       </button>)}</div>
       {linked.length > 10 && <PageNavigation page={page} pages={pages} total={linked.length} onChange={setCasePage}/>}
       {canCollections && <EntityCollections entityId={entity.id}/>}

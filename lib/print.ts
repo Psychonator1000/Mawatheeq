@@ -1,4 +1,4 @@
-import type { CaseRecord } from './domain';
+import { type CaseRecord, caseCode } from './domain.ts';
 import type { WorkItem } from './office';
 import type { MonthSummary } from './attendance';
 
@@ -30,7 +30,7 @@ export function caseSheetHtml(c: CaseRecord, timing: { label: string; value: str
   const stages = Array.isArray(c.stages) ? c.stages as { level: string; caseNumber: string; court: string; date: string; outcome: string; ruling: string; appealedBy: string; procedures?: { date: string; text: string }[] }[] : [];
   const stageRows = stages.map(st => `<tr><td class="nowrap">${escape(st.level === 'ابتدائي' ? 'أول درجة' : st.level)}</td><td class="nowrap">${escape(st.caseNumber)}</td><td>${escape(st.court)}</td><td class="nowrap">${escape(dmy(st.date))}</td><td>${escape(st.outcome)}</td><td>${escape(st.ruling)}</td><td>${escape(st.appealedBy)}</td><td>${(st.procedures || []).length}</td></tr>`).join('');
   const workRows = open.map(w => `<tr><td class="nowrap">${escape(dmy(w.dueDate))} ${escape(w.dueTime)}</td><td>${escape(w.kind === 'hearing' ? 'جلسة' : 'مهمة')}</td><td>${escape(w.title)}</td><td>${escape(w.location)}</td></tr>`).join('');
-  return page('ملف القضية ' + (c.code || c.autoNumber || ''), `<header><h1>${escape(client || 'ملف قضية')}</h1><p>${escape([c.code, c.autoNumber && 'الرقم الآلي ' + c.autoNumber, c.opponent && 'ضد ' + c.opponent].filter(Boolean).join(' · '))}</p></header>
+  return page('ملف القضية ' + (caseCode(c) || c.autoNumber || ''), `<header><h1>${escape(client || 'ملف قضية')}</h1><p>${escape([c.code, c.autoNumber && 'الرقم الآلي ' + c.autoNumber, c.opponent && 'ضد ' + c.opponent].filter(Boolean).join(' · '))}</p></header>
 ${timingRows ? `<h2>المواعيد المحسوبة</h2><table>${timingRows}</table>` : ''}${body}
 ${stageRows ? `<h2>درجات التقاضي السابقة</h2><table class="list"><tr><th>الدرجة</th><th>رقم القضية</th><th>المحكمة</th><th>تاريخ الحكم</th><th>النتيجة</th><th>المنطوق</th><th>الطاعن</th><th>الإجراءات</th></tr>${stageRows}</table>` : ''}
 ${procedureRows ? `<h2>سجل الإجراءات</h2><table class="list"><tr><th>التاريخ</th><th>الإجراء</th><th>المحامي</th><th>المتابعة</th></tr>${procedureRows}</table>` : ''}
@@ -189,7 +189,7 @@ function rollCard(n: number, c: RollCard): string {
   const facts = c.facts.map(([k, v, sub]) => v === ROLL_BLANK ? `<div><dt>${escape(k)}</dt><dd class="blank"></dd></div>` : `<div${(v || '').length + (sub || '').length > 22 ? ' class="w"' : ''}><dt>${escape(k)}</dt><dd>${escape(v || '—')}${sub ? ` <small>${escape(sub)}</small>` : ''}</dd></div>`).join('');
   return `<article class="rc"><div class="rc-n">${n}</div><div class="rc-main"><div class="rc-head"><span><small>الموكل</small> <b>${escape(c.client || '—')}</b>${c.role ? ` <em>(${escape(c.role)})</em>` : ''}</span><span class="rc-vs">ضد</span><span><small>الخصم</small> <b>${escape(c.opponent || '—')}</b></span>${c.lawyer ? `<span class="rc-lawyer"><small>المستشار</small> <b>أ/ ${escape(c.lawyer.replace(/^\s*[اأإ]\s*[/.]\s*/, ''))}</b></span>` : ''}</div>`
     + `${facts ? `<dl class="rc-facts">${facts}</dl>` : ''}${c.writeIn?.length ? `<div class="rc-write">${c.writeIn.map(w => `<small>${escape(w)}</small><span></span>`).join('')}</div>` : ''}</div>`
-    + `<div class="rc-code"><small>الكود</small><b>${escape(c.code || '—')}</b></div></article>`;
+    + `<div class="rc-code"><small>الكود</small><b>${escape(caseCode(c) || '—')}</b></div></article>`;
 }
 /** A roll of case bands, grouped; used by «رول الأحكام» (cards layout) and the daily hearings roll. */
 export function rollCardsHtml(title: string, scope: string, groups: [string, RollCard[]][], printedAt: string, printedBy: string, landscape = true, unit = 'قضية'): string {

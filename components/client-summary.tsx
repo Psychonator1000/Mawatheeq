@@ -2,7 +2,7 @@
 import {useMemo,useState} from 'react';
 import {Printer,Search,Users,Building2} from 'lucide-react';
 import {toast} from 'sonner';
-import {type CaseRecord,type Rules,formatDate,todayISO} from '@/lib/domain';
+import {type CaseRecord,type Rules,formatDate,todayISO,caseCode} from '@/lib/domain';
 import type {ClientEntity} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
 import {STATUS_COLUMNS,EXTRA_GROUPS,METRIC_LABELS,casesFor,personGroups,summarize,type ExtraGroup,type Metric,type SummaryRow,type StatusKey} from '@/lib/client-summary';
@@ -122,7 +122,7 @@ export default function ClientSummary({records,clients,rules,printedBy,canExport
    {canExport&&!!drill.cases.length&&<div className="actions"><button type="button" className="btn" onClick={()=>{if(!printHtml(clientRollHtml(drill.title,drill.cases,false,printedBy)))toast.error('اسمح بالنوافذ المنبثقة للطباعة.')}}><Printer size={15}/> طباعة هذه القضايا</button></div>}
    {drill.cases.length?<div className="table-wrap sum-drill-list"><table className="office-table"><thead><tr><th>الكود</th><th>الرقم الآلي</th><th>الموكل / الخصم</th><th>المحكمة</th><th>آخر قرار</th><th>الجلسة القادمة</th><th>حالة الملف</th></tr></thead>
     <tbody>{drill.cases.map(c=>{const l=lastSitting(c),n=nextSitting(c);return <tr key={c.id} className={onOpen?'clickable':undefined} onClick={()=>{if(onOpen){setDrill(null);onOpen(c)}}}>
-     <td className="mono"><b>{c.code||'—'}</b></td><td className="mono">{c.autoNumber||'—'}</td><td>{c.clientEntityName||c.client||'—'}<small className="muted" style={{display:'block'}}>ضد {c.opponent||'—'}</small></td>
+     <td className="mono"><b>{caseCode(c)||'—'}</b></td><td className="mono">{c.autoNumber||'—'}</td><td>{c.clientEntityName||c.client||'—'}<small className="muted" style={{display:'block'}}>ضد {c.opponent||'—'}</small></td>
      <td>{String(l?.court||c.court||'—')}</td><td>{String(l?.decision||l?.text||'—')}</td><td className="mono">{n?formatDate(n):'—'}</td><td>{String(c.legacyStatus||(c.archived?'مؤرشف':'—'))}</td></tr>})}</tbody></table></div>:<Empty/>}
   </DialogContent></Dialog>}
  </section>;
