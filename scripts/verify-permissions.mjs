@@ -298,5 +298,45 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  assert.deepEqual(back.procedures.map(p=>p.id),['old0','old1','old2','old3','old4','old5','old6','j1','recent','new'],'Older entries come back; edits to the shown ones stand');
  assert.equal(isTrimmed(back),false);assert.equal('proceduresKept' in back,false);
  const saved=await local(admin.token,'save_case',{case:{...back,id:'heavy-case',revision:light.revision}});assert.equal(saved.revision,light.revision+1);}
+// Client accounts and what an account may see, enforced by the server.
+{
+ const caseOf=async(token,id)=>(await local(token,'case_full',{id})).payload;
+ let cur=await local(admin.token,'case_full',{id:'allowed-case'});
+ await local(admin.token,'save_case',{case:{...cur.payload,contractFee:'500',notes:'internal note',revision:cur.revision,
+  procedures:[{id:'pv-1',kind:'جلسة',date:'2026-01-01',text:'session'},{id:'pv-2',kind:'إجراء',date:'2026-01-02',text:'internal step'}]}});
+ // Asked for every page, all cases, editing and export: a client account gets its own cases, read only, the cases pages only.
+ const cl=await create('client_view',{sections:['overview','cases','accounting','clients'],caseScope:'all',caseIds:[],
+  canEdit:true,canExport:true,adminPowers:['staff'],accountKind:'client',clientEntityIds:[entityId],view:{'field:contractFee':'hide','card:classify':'hide','tab:history':'hide'}}),acc=await local(cl.token,'access');
+ assert.equal(acc.accountKind,'client');assert.equal(acc.canEdit,false);assert.equal(acc.canExport,false);assert.equal(acc.caseScope,'selected');
+ assert.deepEqual([...acc.sections].sort(),['cases','overview']);const own=(await local(admin.token,'cases_page',{offset:0})).filter(r=>r.payload.clientEntityId===entityId).map(r=>r.id).sort();
+ assert.ok(own.includes('allowed-case')&&!own.includes('other-case'));assert.deepEqual([...acc.caseIds].sort(),own,'Exactly the cases of its client file');assert.deepEqual(acc.adminPowers||[],[]);
+ const page=await local(cl.token,'cases_page',{offset:0});
+ assert.deepEqual(page.map(r=>r.id).sort(),own,'Its case list is those cases');
+ const seen=page.find(r=>r.id==='allowed-case').payload;
+ assert.equal(seen.contractFee,undefined,'A hidden field never reaches the client');assert.equal(seen.notes,undefined,'A hidden card never reaches the client');
+ assert.deepEqual(seen.procedures.map(p=>p.id),['pv-1'],'With the history tab hidden, only the sessions');
+ assert.equal((await caseOf(cl.token,'allowed-case')).contractFee,undefined);
+ await assert.rejects(()=>local(cl.token,'case_full',{id:'other-case'}),/غير متاحة/,'Another client\'s case is refused');
+ await assert.rejects(()=>local(cl.token,'save_case',{case:{...seen,opponent:'changed'}}),'A client account cannot save');
+ for(const fn of ['mawatheeq_comment_request','mawatheeq_chat_request','mawatheeq_mail_request','mawatheeq_department_request','mawatheeq_case_file_request'])
+  await assert.rejects(()=>rpc(fn,[cl.token,'list',JSON.stringify({})]),/حساب الموكل/,fn+' refuses a client account');
+ // A new case of the same client file joins the account's cases; moved to another client, it leaves.
+ await local(admin.token,'save_case',{case:{...cur.payload,id:'client-new-case',code:'9901',autoNumber:'990000001',revision:0}});
+ assert.ok((await local(cl.token,'access')).caseIds.includes('client-new-case'),'A new case of the client file is visible');
+ cur=await local(admin.token,'case_full',{id:'client-new-case'});
+ const secondEntity='31000000-0000-4000-8000-000000000099';
+ await client(admin.token,'save',{client:{id:secondEntity,name:'Second Organization',kind:'organization',sector:'other',contacts:[],aliases:[],notes:'',needsReview:false,revision:0}});
+ await local(admin.token,'save_case',{case:{...cur.payload,clientEntityId:secondEntity,clientContactId:'',client:'Second Organization',clientGroup:'Second Organization',revision:cur.revision}});
+ assert.ok(!(await local(cl.token,'access')).caseIds.includes('client-new-case'),'Moved to another client, it is gone');
+ await assert.rejects(()=>office(admin.token,'create_member',{username:'client_none',password:'Fixture-password-123',permissions:{sections:['cases'],caseScope:'all',caseIds:[],canEdit:false,canExport:false,accountKind:'client'}}),/ملف الموكل/,'A client account needs its client file');
+ // Staff with hidden and read-only fields: neither is sent nor changed through a save.
+ const st=await create('locked_staff',{sections:['cases'],caseScope:'all',caseIds:[],canEdit:true,canExport:false,view:{'field:contractFee':'read','field:notes':'hide'}});
+ cur=await local(st.token,'case_full',{id:'allowed-case'});
+ assert.equal(cur.payload.notes,undefined,'Hidden from staff too');assert.equal(cur.payload.contractFee,'500','Read-only is sent');
+ await local(st.token,'save_case',{case:{...cur.payload,contractFee:'999',notes:'overwritten',opponent:'Changed opponent',revision:cur.revision}});
+ const after=(await local(admin.token,'case_full',{id:'allowed-case'})).payload;
+ assert.equal(after.contractFee,'500','A read-only field keeps its value');assert.equal(after.notes,'internal note','A hidden field keeps its value');
+ assert.equal(after.opponent,'Changed opponent','Other fields save normally');
+}
 await db.close();
-console.log('Passed permissions: light case lists (older sessions on demand, light copies never saved), refreshes send only changed cases with a fingerprint of everything visible, several jobs per employee (ordered, audited, granting nothing), delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');
+console.log('Passed permissions: client accounts (own client files only, kept in step, read only, hidden fields never sent, no documents/chat/mail/departments), hidden and read-only fields kept on save, light case lists (older sessions on demand, light copies never saved), refreshes send only changed cases with a fingerprint of everything visible, several jobs per employee (ordered, audited, granting nothing), delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');

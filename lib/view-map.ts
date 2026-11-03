@@ -121,3 +121,10 @@ export const VIEW_TEMPLATES: { id: string; label: string; hint: string; view: Vi
         'ws:secretary', 'ws:collections', 'ws:accounting', 'ws:hr', 'ws:archive']) } },
 ];
 export const DEFAULT_TEMPLATE: Record<AccountKind, string> = { staff: 'all', lawyer: 'all', counsel: 'all', client: 'client' };
+
+/** Parts a client account never has, whatever its view map says: the server refuses them to client accounts. */
+const CLIENT_NEVER = ['tab:files', 'tab:discussion', 'tab:verification', 'tab:finance', 'tab:collections', 'page:paper', 'page:mail', 'ws:secretary', 'ws:collections', 'ws:accounting', 'ws:hr', 'ws:archive'];
+/** The view map the app applies: the account's own, plus what its kind never sees. */
+export function effectiveView(access: { view?: ViewSettings; accountKind?: AccountKind }): ViewSettings {
+  return access.accountKind === 'client' ? { ...(access.view || {}), ...Object.fromEntries(CLIENT_NEVER.map(id => [id, 'hide'])) } : access.view || {};
+}

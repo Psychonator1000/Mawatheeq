@@ -107,6 +107,6 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
    <p className="subtitle">بدون التعديل يصبح الحساب للقراءة فقط. إضافة القضايا وتعديل ملفات الموكلين المشتركة تتطلب جميع القضايا والقسم المختص. إدارة المستخدمين والاعتماد والإعدادات والاستيراد والنسخة الكاملة تُمنح من «صلاحيات الإدارة».</p>
   </fieldset>
   </div>}
- <ViewEditor value={value} onChange={onChange}/>
+ <ViewEditor value={value} onChange={onChange} records={records}/>
  </div>;
 }

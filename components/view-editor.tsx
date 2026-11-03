@@ -1,6 +1,9 @@
 import {Eye,EyeOff,Lock,MousePointerClick,UserRound,Briefcase,Scale,BookOpenCheck} from 'lucide-react';
 import {ACCOUNT_KINDS,DEFAULT_TEMPLATE,VIEW_ITEMS,VIEW_TEMPLATES,cycleMode,setMode,viewMode,type AccountKind,type ViewItem,type ViewMode,type ViewSettings} from '@/lib/view-map';
 import type {Permissions} from '@/lib/permissions';
+import type {CaseRecord} from '@/lib/domain';
+import {useMemo,useState} from 'react';
+import {normalizeSearch} from '@/lib/case-browse';
 
 const KIND_ICONS:Record<AccountKind,typeof Eye>={staff:Briefcase,lawyer:Scale,counsel:BookOpenCheck,client:UserRound};
 const MODE_LABEL:Record<ViewMode,string>={show:'ظاهر',read:'اطلاع فقط',hide:'مخفي'};
@@ -13,7 +16,11 @@ const groups=[...new Set(pages.map(p=>p.group||''))];
  * click turns it from shown to read-only to hidden and back. Hidden items stay in place, greyed, so they can be turned
  * back on; a page whose section is not granted above is shown off and cannot be turned on here.
  */
-export default function ViewEditor({value,onChange}:{value:Permissions;onChange:(v:Permissions)=>void}){
+export default function ViewEditor({value,onChange,records=[]}:{value:Permissions;onChange:(v:Permissions)=>void;records?:CaseRecord[]}){
+ // The client files on the cases, with how many cases each has: a client account sees the cases of the files ticked here.
+ const files=useMemo(()=>{const m=new Map<string,{name:string;n:number}>();for(const c of records){const id=String(c.clientEntityId||'');if(!id)continue;const f=m.get(id)||{name:String(c.clientEntityName||c.client||''),n:0};f.n++;m.set(id,f)}
+  return [...m].map(([id,f])=>({id,...f})).sort((a,b)=>b.n-a.n)},[records]);
+ const [fileSearch,setFileSearch]=useState('');
  const view:ViewSettings=value.view||{},kind:AccountKind=value.accountKind||'staff';
  const set=(next:ViewSettings)=>onChange({...value,view:next});
  const granted=(i:ViewItem)=>!i.section||value.sections.includes(i.section as Permissions['sections'][number]);
@@ -40,6 +47,12 @@ export default function ViewEditor({value,onChange}:{value:Permissions;onChange:
      {item(c,'ve-card-title')}<div className="ve-fields">{fieldsOf(c.id).map(f=>item(f,'ve-field'))}</div></div>})}</div>
    </div>
   </div>
-  {kind==='client'&&<p className="notice">حساب الموكل للاطلاع فقط، ويرى قضايا ملف الموكل المرتبط به فقط. ما تخفيه هنا لا يُرسل إلى جهازه أصلاً.</p>}
+  {kind==='client'&&<div className="ve-client">
+   <p className="notice">حساب الموكل للاطلاع فقط، ويرى قضايا ملفات الموكل المختارة هنا فقط، وتنضم إليه قضاياها الجديدة تلقائياً. ما تخفيه أعلاه لا يُرسل إلى جهازه أصلاً.</p>
+   <label className="field"><span>ملف الموكل الذي يرى قضاياه</span><input value={fileSearch} onChange={e=>setFileSearch(e.target.value)} placeholder="ابحث باسم الموكل"/></label>
+   <div className="ve-files">{files.filter(f=>!fileSearch||normalizeSearch(f.name).includes(normalizeSearch(fileSearch))||(value.clientEntityIds||[]).includes(f.id)).slice(0,40).map(f=>{const on=(value.clientEntityIds||[]).includes(f.id);
+    return <label key={f.id} className={'checkbox-line'+(on?' on':'')}><input type="checkbox" checked={on} onChange={e=>onChange({...value,clientEntityIds:e.target.checked?[...(value.clientEntityIds||[]),f.id]:(value.clientEntityIds||[]).filter(x=>x!==f.id)})}/> {f.name} <small>({f.n} قضية)</small></label>})}</div>
+   {!(value.clientEntityIds||[]).length&&<p className="notice">اختر ملف موكل واحداً على الأقل قبل الحفظ.</p>}
+  </div>}
  </section>;
 }
