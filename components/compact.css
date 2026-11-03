@@ -1068,3 +1068,5 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 /* The close button stays above the side column (whose animated parts paint over it otherwise). */
 :root [data-slot=sheet-content] .sheet-x{z-index:60!important}
 :root .case-window>.case-pin{isolation:isolate}
+/* The case tab bar is a rounded pill: keep it inside the pane so the window edge and the scroll edge never cut its ends. */
+:root:root .case-window>.case-main .detail-tabs{margin:-6px 0 0;top:-10px;border-radius:12px;border:1px solid #e4d9cb}
