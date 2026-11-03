@@ -22,7 +22,7 @@ const icons={legal:Scale,secretary:CalendarDays,collections:Files,accounting:Wal
 // Staff accounts and permissions are an admin page of their own, not part of any workspace.
 const TEAM={name:'فريق المكتب',description:'الموظفون وأعمالهم وصفحاتهم وقضاياهم وصلاحيات الإدارة'};
 export default function WorkspaceHub({access,owner}:{access:Permissions;owner:boolean}) {
- const allowed:HubId[]=[...(Object.keys(WORKSPACES) as WorkspaceId[]).filter(id=>owner||(id==='legal'?access.sections.some(s=>LEGAL_SECTIONS.includes(s))||isAdmin(powersOf(access)):access.sections.includes(id))),
+ const allowed:HubId[]=[...(Object.keys(WORKSPACES) as WorkspaceId[]).filter(id=>owner||(id==='legal'?access.sections.some(s=>LEGAL_SECTIONS.includes(s))||isAdmin(powersOf(access)):access.sections.includes(id)&&access.view?.['ws:'+id]!=='hide')),
   ...(owner||canManageStaff(powersOf(access))?['team' as const]:[])];
  // An account with a single page opens it directly, without the chooser.
  const only=allowed.length===1?allowed[0]:null;

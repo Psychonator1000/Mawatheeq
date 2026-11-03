@@ -50,8 +50,8 @@ export function canEditClients(access: Permissions) { return access.canEdit && a
 export function canCreateCases(access: Permissions) { return access.canEdit && access.caseScope === 'all' && access.sections.includes('cases'); }
 /** The workspaces (top-level pages) an account opens, in the order of the workspace chooser. */
 export const WORKSPACE_LABELS = { legal: 'القضايا (الصفحة الرئيسية)', secretary: 'السكرتارية', collections: 'التحصيل', accounting: 'المحاسبة', hr: 'الموارد البشرية', archive: 'الأرشيف' } as const;
-export function workspacesOf(access: Pick<Permissions, 'sections'>) {
-  return (Object.keys(WORKSPACE_LABELS) as (keyof typeof WORKSPACE_LABELS)[]).filter(id => id === 'legal' ? access.sections.some(s => LEGAL_SECTIONS.includes(s)) : access.sections.includes(id as Section));
+export function workspacesOf(access: Pick<Permissions, 'sections'> & { view?: Permissions['view'] }) {
+  return (Object.keys(WORKSPACE_LABELS) as (keyof typeof WORKSPACE_LABELS)[]).filter(id => id === 'legal' ? access.sections.some(s => LEGAL_SECTIONS.includes(s)) : access.sections.includes(id as Section) && access.view?.['ws:' + id] !== 'hide');
 }
 /** One-click page sets for new staff. Case scope and edit/export choices are kept as they are. */
 export const PAGE_PRESETS: [string, Section[]][] = [
