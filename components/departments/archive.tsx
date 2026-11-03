@@ -72,11 +72,13 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
  const views:[View,string,LucideIcon,number?][]=[['files','الملفات',BookCopy],...(access.canEdit?[['dispatch','كشف التسليم',ClipboardList] as [View,string,LucideIcon]]:[]),['custody','العهدة',ArrowLeftRight,out.length],['requests','الطلبات',Inbox,pending.length],['locations','خريطة الحفظ',MapPin],['log','سجل الحركة',History]];
  const newFile=()=>setEditing(newDepartmentRecord('archive','file',blankFile(nextNumber(files))) as unknown as ArchiveFile);
  // Every case has a paper file in the archive: one per office code, whichever of its judgments it is linked to.
- const missing=useMemo(()=>{const covered=new Set(files.map(f=>caseOf(f.caseId)?.code).filter(Boolean));const seen=new Set<string>();
-  return cases.filter(c=>!c.archived&&c.code&&!covered.has(c.code)&&!seen.has(c.code)&&seen.add(c.code))},[files,cases]);// eslint-disable-line react-hooks/exhaustive-deps
+ // An insurance case keeps its register number, so insurance case 12 and base case 12 are two files: «ARC-T12» and «ARC-12».
+ const fileKey=(c:CaseSummary)=>(c.insurance?'T':'')+c.code;
+ const missing=useMemo(()=>{const covered=new Set(files.map(f=>{const c=caseOf(f.caseId);return c?.code?fileKey(c):''}).filter(Boolean));const seen=new Set<string>();
+  return cases.filter(c=>!c.archived&&c.code&&!covered.has(fileKey(c))&&!seen.has(fileKey(c))&&seen.add(fileKey(c)))},[files,cases]);// eslint-disable-line react-hooks/exhaustive-deps
  const [making,setMaking]=useState(0);
  async function createMissing(){const taken=new Set(files.map(f=>f.payload.number.toLowerCase()));let made=0;setMaking(1);
-  try{for(const c of missing){let number=/^[A-Za-z0-9-]{1,30}$/.test(c.code)?'ARC-'+c.code:'';if(!number||taken.has(number.toLowerCase())){let i=1;do number='ARC-X'+String(i++).padStart(5,'0');while(taken.has(number.toLowerCase()))}
+  try{for(const c of missing){let number=/^[A-Za-z0-9-]{1,30}$/.test(c.code)?'ARC-'+fileKey(c):'';if(!number||taken.has(number.toLowerCase())){let i=1;do number='ARC-X'+String(i++).padStart(5,'0');while(taken.has(number.toLowerCase()))}
     taken.add(number.toLowerCase());
     await save({...newDepartmentRecord('archive','file',{...blankFile(number),title:[clientName(c),c.opponent].filter(Boolean).join(' ضد ').slice(0,300)||'ملف قضية '+c.code,intakeDate:'',notes:'أُدرج لكل قضية في السجل'}),caseId:c.id});made++;setMaking(made+1)}
    toast.success(`أُنشئ ${made} ملف ورقي`)}catch(e){toast.error(`أُنشئ ${made} ملف ثم توقف: ${(e as Error).message}`)}finally{setMaking(0);reload()}}

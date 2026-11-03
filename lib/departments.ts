@@ -11,7 +11,7 @@ export const WORKSPACES = {
  hr:{name:'الموارد البشرية',description:'ملفات الموظفين والإجازات'},
  archive:{name:'الأرشيف',description:'الملفات الورقية: أماكن حفظها وعهدتها وطلباتها'},
 };
-export type CaseSummary = Pick<CaseRecord,'id'|'code'|'autoNumber'|'client'|'clientGroup'|'clientEntityName'|'opponent'|'revision'|'archived'>;
+export type CaseSummary = Pick<CaseRecord,'id'|'code'|'autoNumber'|'client'|'clientGroup'|'clientEntityName'|'opponent'|'revision'|'archived'> & { insurance?: boolean };
 export type DepartmentRecord<P=Record<string,string>> = {
  id:string;workspace:Exclude<Department,'secretary'>;kind:'file'|'entry'|'employee'|'leave'|'statement'|'payment'|'location'|'movement'|'request';
  caseId:string;subjectId:string;payload:P;revision:number;archived:boolean;createdAt:string;updatedAt:string;createdBy:string;updatedBy:string;
