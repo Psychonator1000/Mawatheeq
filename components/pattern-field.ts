@@ -31,7 +31,7 @@ function ring(points: [number, number][]) {
 }
 
 /** Elements that are windows onto the sheet: large panels, and small keys whose ::before is taken by their sheen. */
-export const PATTERN_PANELS = '.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured,.ledger-balance,.payroll-totals>div';
+export const PATTERN_PANELS = '.sec-agenda.panel,[data-sidebar=sidebar],.stat.featured,.ledger-balance,.payroll-totals>div,.ve-side';
 export const PATTERN_KEYS = '.btn.primary,.case-category.active';
 export const PATTERNED = PATTERN_PANELS + ',' + PATTERN_KEYS;
 // How far the still pattern shifts toward the mouse (compact.css uses the same number).

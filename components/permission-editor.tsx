@@ -63,7 +63,9 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
     <p className="subtitle">إذا كُتب اسم المحامي بأكثر من صيغة في القضايا، حدد كل الصيغ. القضايا تُتاح حسب خانة «المحامي» في كل قضية.</p>
    </div>;}
  const scopeText=value.caseScope==='all'?`جميع القضايا (${records.length})`:byLawyer?`قضاياه فقط (${ownCount})`:value.caseIds.length?`${value.caseIds.length} قضية مختارة`:'بلا قضايا';
- return <div className="permission-editor">
+ return <div className="permission-layout">
+ <aside className="permission-preview"><ViewEditor value={value} onChange={onChange} records={records} part="preview"/></aside>
+ <div className="permission-editor">
   <fieldset className="permission-group role-step"><legend>الدور الوظيفي</legend>
    <p className="subtitle">اختر عملاً واحداً أو أكثر (مثلاً مدير ومحامٍ)؛ تُجمع الصفحات المقترحة لكل الأعمال المختارة. «مخصص» يُختار وحده.</p>
    <div className="role-grid" role="group" aria-label="الدور الوظيفي">{JOB_ROLES.map(r=>{const Icon=ROLE_ICONS[r.id];const on=roles.includes(r.id);return <button type="button" role="checkbox" aria-checked={on} key={r.id} className={'role-card'+(on?' on':'')} onClick={()=>pickRole(r.id)} title={r.hint}><Icon size={18} aria-hidden/><b>{r.label}</b>{on&&roles.length>1&&roles[0]===r.id&&<small>الأساسي</small>}</button>})}</div>
@@ -107,6 +109,7 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
    <p className="subtitle">بدون التعديل يصبح الحساب للقراءة فقط. إضافة القضايا وتعديل ملفات الموكلين المشتركة تتطلب جميع القضايا والقسم المختص. إدارة المستخدمين والاعتماد والإعدادات والاستيراد والنسخة الكاملة تُمنح من «صلاحيات الإدارة».</p>
   </fieldset>
   </div>}
- <ViewEditor value={value} onChange={onChange} records={records}/>
+ <ViewEditor value={value} onChange={onChange} records={records} part="controls"/>
+ </div>
  </div>;
 }

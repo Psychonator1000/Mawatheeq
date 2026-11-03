@@ -8,10 +8,10 @@ import './motion.css';
 import './themes.generated.css';
 import './themes.css';
 
-const RIPPLE='.btn,.icon-btn,.nav-button,.office-card,.stat,.workspace-option,.client-card,.person-card,.calendar-add,.account-menu-item,.notice-item,.choice,.my-work-item,.back-to-top,.text-link,.number-link,.legend-row,[role=tab],.att-cell,.chip-toggle,.rail-mark,.device-card';
+const RIPPLE='.btn,.icon-btn,.nav-button,.office-card,.stat,.workspace-option,.client-card,.person-card,.calendar-add,.account-menu-item,.notice-item,.choice,.my-work-item,.back-to-top,.text-link,.number-link,.legend-row,[role=tab],.att-cell,.chip-toggle,.rail-mark,.device-card,.ve-item';
 const STRONG='.btn.primary,.back-to-top,.workspace-option,.stat.featured';
 const MAGNETIC='.btn.primary,.icon-btn,.back-to-top,.quick-search-trigger';
-const GLOW='.panel,.office-card,.client-card,.person-card,.my-work-item,.device-card,.att-stat,[data-sidebar=sidebar],.stat.featured';
+const GLOW='.panel,.office-card,.client-card,.person-card,.my-work-item,.device-card,.att-stat,[data-sidebar=sidebar],.stat.featured,.ve-side,.ve-card';
 const INTERACTIVE='a,button,[role=button],[role=tab],input,select,textarea,label,summary';
 // Rows, cards and list items that sweep in from the scroll direction each time they enter the screen.
 const REACTIVE='.office-card,.client-card,.person-card,.collection-card,.device-card,.att-stat,.stat,.my-work-item,.agenda-item,.notice-list li,.timeline-item,.doc-row,.quick-card,.legend-row,.bar-item,.calendar-day,.comment-list li,.department-metrics>div,.holiday-list li,.bridge-list li,.evidence-row,.help-block,.empty-state,.page-navigation,.pagination';
