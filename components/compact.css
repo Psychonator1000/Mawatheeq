@@ -1179,7 +1179,7 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 :root [data-slot=dialog-content] .dialog-x svg{width:17px;height:17px;stroke-width:2.4}
 :root [data-slot=dialog-content] .dialog-x:hover{background:var(--brand,#7a2335);color:#fff;transform:scale(1.06)}
 :root[data-mode=dark] [data-slot=dialog-content] .dialog-x{background:color-mix(in srgb,var(--card) 80%,#fff 8%);color:#fff;border-color:color-mix(in srgb,#fff 20%,transparent)}
-:root :is([dir=rtl] [data-slot=dialog-content],[data-slot=dialog-content][dir=rtl]) [data-slot=dialog-header]{text-align:right;padding-inline-end:0;padding-inline-start:40px}
+:root :is([dir=rtl] [data-slot=dialog-content],[data-slot=dialog-content][dir=rtl]) [data-slot=dialog-header]{text-align:right;padding-inline-start:0;padding-inline-end:46px}
 .person-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .title-person{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 4px;border-radius:999px;background:color-mix(in srgb,var(--brand,#7a2335) 10%,transparent);border:1px solid color-mix(in srgb,var(--brand,#7a2335) 22%,transparent)}
 .title-person b{color:var(--brand,#7a2335);font-weight:700}
@@ -1204,3 +1204,25 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 :root:root .permission-cases{gap:0;margin-top:6px}
 :root:root .permission-case{padding:5px 10px;gap:8px;align-items:center;line-height:1.45}
 :root:root .permission-case small,:root:root .permission-case span{font-size:12px}
+/* Save sits in the fixed title bar, always in reach. */
+:root .permissions-dialog>[data-slot=dialog-header]{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:center}
+:root .permissions-dialog>[data-slot=dialog-header]>:not(.dialog-save){grid-column:1}
+:root .permissions-dialog .dialog-save{grid-column:2;grid-row:1/span 2;align-self:center;white-space:nowrap;min-height:34px;padding:6px 14px}
+@media(max-width:640px){:root .permissions-dialog>[data-slot=dialog-header]{grid-template-columns:1fr}:root .permissions-dialog .dialog-save{grid-column:1;grid-row:auto;justify-self:start;margin-top:6px}}
+/* The preview never scrolls as a whole: it fills the height beside the choices, only the red sidebar list scrolls,
+   and the case window is laid out to fit. */
+@media(min-width:1100px){
+ .permission-preview{height:calc(92dvh - 104px);max-height:none;overflow:hidden;display:flex;flex-direction:column;padding:4px 2px 8px}
+ .permission-preview>.view-editor{flex:1;min-height:0;display:flex;flex-direction:column}
+ .permission-preview .ve-preview-head{flex:none;margin-bottom:6px}
+ .permission-preview .ve-preview{flex:1;min-height:0;grid-template-rows:minmax(0,1fr);align-items:stretch;gap:10px}
+ .permission-preview .ve-side{min-height:0;padding:0;display:flex}
+ .permission-preview .ve-side-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px;display:grid;gap:6px;align-content:start;scrollbar-width:thin;scrollbar-color:rgb(255 255 255/.35) transparent;overscroll-behavior:contain}
+ .permission-preview .ve-case{min-height:0;overflow:hidden;align-content:start;gap:8px;padding:8px}
+ .permission-preview .ve-tabs{gap:4px}
+ .permission-preview .ve-cards{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px}
+ .permission-preview .ve-card{padding:6px;gap:4px}
+ .permission-preview .ve-field,.permission-preview .ve-tab{padding:2px 7px;font-size:11px}
+ .permission-preview .ve-page{padding:4px 8px;font-size:12px}
+}
+.ve-side-scroll{display:grid;gap:8px}

@@ -51,8 +51,8 @@ export default function ViewEditor({value,onChange,records=[],part='all'}:{value
   <div className="ve-preview-head"><b>معاينة حيّة لما يراه</b>
 <div className="ve-legend"><span className="ve-item ve-show">ظاهر</span><span className="ve-item ve-read">اطلاع فقط <Lock size={12}/></span><span className="ve-item ve-hide">مخفي <EyeOff size={12}/></span></div></div>
   <div className="ve-preview">
-   <aside className="ve-side" aria-label="القائمة الجانبية">{groups.map(g=><div key={g||'top'} className="ve-group">{g&&<small>{g}</small>}{pages.filter(p=>(p.group||'')===g).map(p=>item(p,'ve-page'))}</div>)}
-    <div className="ve-group"><small>مساحات العمل الأخرى</small>{spaces.map(s=>item(s,'ve-page',false))}</div></aside>
+   <aside className="ve-side" aria-label="القائمة الجانبية"><div className="ve-side-scroll">{groups.map(g=><div key={g||'top'} className="ve-group">{g&&<small>{g}</small>}{pages.filter(p=>(p.group||'')===g).map(p=>item(p,'ve-page'))}</div>)}
+    <div className="ve-group"><small>مساحات العمل الأخرى</small>{spaces.map(s=>item(s,'ve-page',false))}</div></div></aside>
    <div className="ve-case" aria-label="نافذة القضية">
     <div className="ve-tabs">{tabs.map(t=>item(t,'ve-tab'))}</div>
     <div className="ve-cards">{cards.map(c=>{const mode=viewMode(view,c.id);return <div key={c.id} className={'ve-card ve-'+mode}>
