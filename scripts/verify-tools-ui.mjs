@@ -146,7 +146,7 @@ await search.getByText('TOOL-2 · شركة أدوات تجريبية').waitFor()
 await page.keyboard.press('Enter');
 await page.locator('.case-pin').getByText('خصم الأدوات 2').waitFor();
 // The case file keeps company, opponent, case number and progress pinned while the rest scrolls.
-{const pin=page.locator('.case-pin');assert.ok(await pin.getByText('2026/302').isVisible(),'case number in the pinned header');assert.equal(await pin.locator('.progress-steps .step').count(),3);
+{const pin=page.locator('.case-pin');assert.ok(await pin.getByText('2026/302').isVisible(),'case number in the pinned header');await pin.locator('.progress-steps .step').first().waitFor();assert.equal(await pin.locator('.progress-steps .step').count(),3);
  await page.waitForTimeout(700);const before=await pin.boundingBox();
  await page.locator('.case-main').evaluate(e=>e.scrollTo(0,e.scrollHeight));await page.waitForTimeout(200);
  const box=await pin.boundingBox();assert.ok(before&&box&&Math.abs(box.y-before.y)<2,'the case essentials stay in place while the fields scroll');assert.ok(await pin.getByText('شركة أدوات تجريبية').isVisible());

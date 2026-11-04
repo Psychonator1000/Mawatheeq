@@ -1260,3 +1260,14 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .roll-rules-actions{display:flex;gap:14px}
 @media(max-width:700px){.roll-rule{grid-template-columns:1fr auto}.roll-rule-values{grid-column:1/-1}}
 :root .roll-rules-toggle{white-space:nowrap}
+/* Paint-first placeholders while the case window fills in (one frame): soft bars shaped like the content. */
+.case-pin-wait,.case-main-wait{display:grid;gap:8px;padding:6px 0}
+.case-pin-wait i,.case-main-wait i{display:block;height:34px;border-radius:10px;background:color-mix(in srgb,var(--brand,#7a2335) 6%,var(--card,#fffdf8))}
+.case-main-wait{padding:6px 2px}.case-main-wait i:first-child{height:38px}.case-main-wait i:nth-child(2){height:180px}.case-main-wait i:nth-child(3){height:140px}
+.case-pin-wait i:nth-child(2){height:60px}
+/* Roll filter: stays inside its panel, and its pickers' lists are not cut by the panel's edges. */
+:root .panel:has(.roll-rules-panel){overflow:visible}
+:root .roll-rules-panel{box-sizing:border-box;width:100%;max-width:100%;min-width:0}
+:root .roll-rule{grid-template-columns:minmax(120px,170px) auto minmax(0,1fr) auto}
+:root .roll-rule>*{min-width:0}
+:root .roll-rule-values input{min-width:90px}
