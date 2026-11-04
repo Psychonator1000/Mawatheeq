@@ -7,7 +7,18 @@ const analysisFields=['type','outcome','status','appeal','appealRecorded'];
 export const MONTH_NAMES = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 // Search normalization is independent of the legal-rule normalization in domain.ts.
+// The same short words (a search term, a client's name) are normalized over and over across thousands of cases.
+const normalized = new Map<string, string>();
 export function normalizeSearch(value: unknown) {
+  if (typeof value === 'string' && value.length < 120) {
+    const hit = normalized.get(value);
+    if (hit !== undefined) return hit;
+    if (normalized.size > 20000) normalized.clear();
+    const out = normalizeSearchText(value); normalized.set(value, out); return out;
+  }
+  return normalizeSearchText(value);
+}
+function normalizeSearchText(value: unknown) {
   return String(value ?? '').normalize('NFKC')
     .replace(/[٠-٩]/g, c => String(c.charCodeAt(0) - 0x660))
     .replace(/[۰-۹]/g, c => String(c.charCodeAt(0) - 0x6f0))
@@ -68,7 +79,10 @@ export function needsAutoNumber(record: CaseRecord) {
 
 // Normalizing is the costly part: it runs again only when a record's searchable text changes.
 const haystacks = new WeakMap<CaseRecord, { raw: string; text: string }>();
+// A case's text is fixed for that case object (a changed case is a new object), so it is looked up before being built.
 function searchText(record: CaseRecord) {
+  const known = haystacks.get(record);
+  if (known) return known.text;
   const raw = [record.code, caseCode(record), record.autoNumber, record.client, record.clientGroup, record.opponent,
     record.caseNumber, record.lawyer, record.ruling, record.clientEntityName, record.clientContactName, record.casePerson,
     ...(Array.isArray(record.stages) ? (record.stages as { caseNumber?: string; autoNumber?: string }[]).flatMap(st => [st.caseNumber, st.autoNumber]) : [])].join(' ');

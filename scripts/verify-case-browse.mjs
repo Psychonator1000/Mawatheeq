@@ -95,8 +95,8 @@ assert.deepEqual(many.slice((parsePage('٢٧', 40) - 1) * 20, parsePage('٢٧', 
 console.log('Passed: independent year/month filters, legacy date links, combined Arabic filters, chart-to-list counts, missing-number links, numbered pages and Arabic jumps.');
 
 // A representative does not determine entity identity; matching IDs do.
-records[0].clientEntityId='entity-a'; records[1].clientEntityId='entity-b';
-records[0].clientEntityName='شركة جديدة'; records[0].clientContactName='موظف اختبار';
+// Cases are replaced, never edited in place (the app relies on this to remember each case's search text).
+records[0]={...records[0],clientEntityId:'entity-a',clientEntityName:'شركة جديدة',clientContactName:'موظف اختبار'}; records[1]={...records[1],clientEntityId:'entity-b'};
 assert.deepEqual(find({clientEntityId:'entity-a'}),['current']);
 assert.deepEqual(find({clientEntityId:'entity-b'}),['previous-year']);
 assert.deepEqual(find({client:'جديدة'}),['current']);

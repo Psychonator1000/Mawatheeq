@@ -1,4 +1,5 @@
 'use client';
+import { normalizeSearch } from '@/lib/case-browse';
 import { useId, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import type { ClientEntity } from '@/lib/clients';
@@ -11,7 +12,7 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
   records: CaseRecord[]; clients: ClientEntity[]; filters: CaseFilters; onChange: (key: keyof CaseFilters, value: string) => void;
   onClear: () => void; hasFilters: boolean; total: number;
 }) {
-  const clientList = useId(), opponentList = useId(), codeList = useId();
+  const opponentList = useId(), codeList = useId();
   // The detailed fields fold away until asked for, and stay open while one of them is set.
   const [open, setOpen] = useState(false), set = [filters.year, filters.month, filters.code, filters.clientEntityId, filters.opponent].filter(Boolean).length;
   const options = useMemo(() => {
@@ -19,10 +20,18 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
     return {
       years: unique([...records.map(c => caseMonth(c.date).slice(0, 4)), filters.year]).reverse(),
       codes: unique(records.map(c => c.code)),
-      clients: unique(records.flatMap(c => [c.client, c.clientGroup])),
       opponents: unique(records.map(c => c.opponent)),
     };
   }, [records, filters.year]);
+  // Typing suggestions: only the entries matching what is typed (at most 30). Listing every code and opponent put
+  // some 14,000 hidden elements on the page, which the browser restyled on every click.
+  const hints = (values: string[], typed: string) => { const t = normalizeSearch(typed); if (!t) return []; const out: string[] = [];
+    for (const v of values) { if (normalizeSearch(v).includes(t)) { out.push(v); if (out.length >= 30) break; } } return out; };
+  const codeHints = useMemo(() => hints(options.codes, filters.code), [options.codes, filters.code]);
+  const opponentHints = useMemo(() => hints(options.opponents, filters.opponent), [options.opponents, filters.opponent]);
+  // The client choices, sorted and with same-named files told apart, once per change of the client list.
+  const clientOptions = useMemo(() => { const named = new Map<string, number>(); for (const c of clients) named.set(c.name, (named.get(c.name) || 0) + 1);
+    return [...clients].sort((a, b) => arCompare(a.name, b.name)).map(c => ({ id: c.id, label: c.name + ((named.get(c.name) || 0) > 1 ? ' · ' + c.id.slice(0, 8) : '') })); }, [clients]);
   return <div className="case-filters">
     {(open || set > 0) && <div className="case-filter-grid">
       <label className="field"><span>سنة الحكم</span><SelectList aria-label="سنة الحكم" value={filters.year} onChange={e => onChange('year', e.target.value)}>
@@ -32,12 +41,11 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
         <option value="">كل الأشهر</option>{MONTH_NAMES.map((month, index) => <option key={month} value={String(index + 1).padStart(2, '0')}>{month}</option>)}
       </SelectList></label>
       <label className="field"><span>الكود</span><input value={filters.code} list={codeList} placeholder="الكود أو جزء منه" onChange={e => onChange('code', e.target.value)}/></label>
-      <label className="field"><span>الموكل / الجهة</span><SelectList aria-label="الموكل / الجهة" value={filters.clientEntityId} onChange={e => onChange('clientEntityId',e.target.value)}><option value="">كل الموكلين</option>{[...clients].sort((a,b)=>arCompare(a.name,b.name)).map(c=><option key={c.id} value={c.id}>{c.name}{clients.some(x=>x.id!==c.id&&x.name===c.name)?' · '+c.id.slice(0,8):''}</option>)}</SelectList></label>
+      <label className="field"><span>الموكل / الجهة</span><SelectList aria-label="الموكل / الجهة" value={filters.clientEntityId} onChange={e => onChange('clientEntityId',e.target.value)}><option value="">كل الموكلين</option>{clientOptions.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</SelectList></label>
       <label className="field"><span>الخصم</span><input value={filters.opponent} list={opponentList} placeholder="اسم الخصم أو جزء منه" onChange={e => onChange('opponent', e.target.value)}/></label>
     </div>}
-    <datalist id={codeList}>{options.codes.map(value => <option key={value} value={value}/>)}</datalist>
-    <datalist id={clientList}>{options.clients.map(value => <option key={value} value={value}/>)}</datalist>
-    <datalist id={opponentList}>{options.opponents.map(value => <option key={value} value={value}/>)}</datalist>
+    <datalist id={codeList}>{codeHints.map(value => <option key={value} value={value}/>)}</datalist>
+    <datalist id={opponentList}>{opponentHints.map(value => <option key={value} value={value}/>)}</datalist>
     <div className="case-filter-summary"><div className="actions">
       <button type="button" className={'btn more-filters' + (set ? ' on' : '')} aria-expanded={open || set > 0} onClick={() => setOpen(o => !o)}>تصفية متقدمة{set ? ` (${set})` : ''}</button>
       {filters.numberStatus === 'missing' && <button type="button" className="tag amber" onClick={() => onChange('numberStatus', '')}
