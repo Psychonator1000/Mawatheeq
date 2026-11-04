@@ -475,7 +475,7 @@ await page.keyboard.press('Escape');
 // HR shows approved leave used this year and request lengths.
 await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'تغيير مساحة العمل',exact:true}).click();
 await page.getByRole('button',{name:'فتح الموارد البشرية'}).click();
-await page.locator('.people-table').getByRole('columnheader',{name:`إجازات ${leaveYear}`}).waitFor();await page.locator('.people-table td').getByText('3 يوم',{exact:true}).waitFor();
+await page.locator('.people-table').locator('th').filter({hasText:`إجازات ${leaveYear}`}).waitFor();await page.locator('.people-table td').getByText('3 يوم',{exact:true}).waitFor();
 await page.getByRole('button',{name:/^الإجازات/}).click();
 await page.getByText('3 يوم',{exact:true}).waitFor();
 await page.screenshot({path:artifacts+'/hr.png'});

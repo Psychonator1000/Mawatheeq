@@ -1271,3 +1271,6 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 :root .roll-rule{grid-template-columns:minmax(120px,170px) auto minmax(0,1fr) auto}
 :root .roll-rule>*{min-width:0}
 :root .roll-rule-values input{min-width:90px}
+
+/* The overview chart fills its box; the box's own size (not the chart's) decides the height, so they cannot push each other. */
+.monthly-chart{position:relative}.monthly-chart>.chart-fill{position:absolute;inset:0}

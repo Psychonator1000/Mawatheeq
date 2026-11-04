@@ -8,6 +8,15 @@ import { caseMonth, MONTH_NAMES, type CaseFilters } from '@/lib/case-browse';
 import {SelectList} from './filter-select';
 import {arCompare,arNumericCompare} from '@/lib/domain';
 
+const unique = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => arNumericCompare(a, b));
+// The lists behind the filter fields, worked out once per list of cases: the bar is rebuilt on every page switch,
+// and sorting thousands of codes and names each time held the switch up.
+const optionCache = new WeakMap<CaseRecord[], { years: string[]; codes: string[]; opponents: string[] }>();
+export function baseOptions(records: CaseRecord[]) {
+  let o = optionCache.get(records);
+  if (!o) { o = { years: unique(records.map(c => caseMonth(c.date).slice(0, 4))).reverse(), codes: unique(records.map(c => c.code)), opponents: unique(records.map(c => c.opponent)) }; optionCache.set(records, o); }
+  return o;
+}
 export default function CaseFilterFields({ records, clients, filters, onChange, onClear, hasFilters, total }: {
   records: CaseRecord[]; clients: ClientEntity[]; filters: CaseFilters; onChange: (key: keyof CaseFilters, value: string) => void;
   onClear: () => void; hasFilters: boolean; total: number;
@@ -15,14 +24,8 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
   const opponentList = useId(), codeList = useId();
   // The detailed fields fold away until asked for, and stay open while one of them is set.
   const [open, setOpen] = useState(false), set = [filters.year, filters.month, filters.code, filters.clientEntityId, filters.opponent].filter(Boolean).length;
-  const options = useMemo(() => {
-    const unique = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => arNumericCompare(a,b));
-    return {
-      years: unique([...records.map(c => caseMonth(c.date).slice(0, 4)), filters.year]).reverse(),
-      codes: unique(records.map(c => c.code)),
-      opponents: unique(records.map(c => c.opponent)),
-    };
-  }, [records, filters.year]);
+  const options = useMemo(() => { const base = baseOptions(records);
+    return filters.year && !base.years.includes(filters.year) ? { ...base, years: unique([...base.years, filters.year]).reverse() } : base; }, [records, filters.year]);
   // Typing suggestions: only the entries matching what is typed (at most 30). Listing every code and opponent put
   // some 14,000 hidden elements on the page, which the browser restyled on every click.
   const hints = (values: string[], typed: string) => { const t = normalizeSearch(typed); if (!t) return []; const out: string[] = [];

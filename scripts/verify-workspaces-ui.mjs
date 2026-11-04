@@ -183,7 +183,7 @@ try{
   await jan.getByRole('button',{name:'إعادة فتح',exact:true}).click();await jan.getByText('مفتوح',{exact:true}).waitFor();}
  await click('سجل التغييرات');await page.getByRole('row').filter({hasText:'إعادة فتح شهر'}).first().waitFor();
  await page.getByRole('row').filter({hasText:'حد ائتمان'}).getByRole('button',{name:'قبل وبعد',exact:true}).first().click();
- {const v=page.getByRole('dialog');await v.getByRole('columnheader',{name:'قبل',exact:true}).waitFor();await screen('books-change');await v.getByRole('button',{name:'إغلاق',exact:true}).last().click();}
+ {const v=page.getByRole('dialog');await v.locator('th').filter({hasText:/^قبل$/}).waitFor();await screen('books-change');await v.getByRole('button',{name:'إغلاق',exact:true}).last().click();}
  await click('صلاحيات الاعتماد');await page.getByRole('checkbox',{name:/تفعيل الاعتماد/}).waitFor();await screen('books-approval-rules');
  await switchTo('الموارد البشرية');await page.getByText('@ui_owner',{exact:true}).waitFor();await click('موظف جديد');await field('الرقم الوظيفي','EMP-UI-1');await field('اسم الموظف','موظف واجهة تجريبي');await field('المسمى الوظيفي','مساعد');await field('القسم','السكرتارية');await pickToday('تاريخ الانضمام');await click('حفظ سجل الموارد البشرية');await page.locator('.people-table').getByText('موظف واجهة تجريبي',{exact:true}).waitFor();
  await screen('hr-desktop');await click('الإجازات');await click('طلب إجازة جديد');

@@ -116,6 +116,9 @@ export function loadAppearance(): Appearance {
     };
   } catch { return { ...DEFAULT_APPEARANCE }; }
 }
+// Set by the page: puts the current theme's stylesheet in place before anything below reads a theme colour.
+let themeStylesHook: (() => void) | undefined;
+export function onThemeChange(hook: () => void) { themeStylesHook = hook; }
 export function applyAppearance(a: Appearance) {
   const root = document.documentElement;
   const view = resolveTheme(a);
@@ -123,6 +126,7 @@ export function applyAppearance(a: Appearance) {
   root.dataset.follower = a.follower; root.dataset.cursor = a.cursor; root.dataset.pattern = a.pattern;
   if (liteMode(a)) root.dataset.perf = 'lite'; else delete root.dataset.perf;
   if (view.mode) root.dataset.mode = view.mode; else delete root.dataset.mode;
+  themeStylesHook?.();
   if (a.cursor === 'themed') applyThemedCursor(view.theme, view.dark); else { root.style.removeProperty('--cursor-arrow'); root.style.removeProperty('--cursor-hand'); }
 }
 const svgUrl = (svg: string, x: number, y: number, fallback: string) => `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${x} ${y}, ${fallback}`;
