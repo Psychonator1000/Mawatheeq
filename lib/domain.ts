@@ -6,7 +6,16 @@ export const EXECUTION_NOTES=['تم عمل اجراءات التنفيذ','لم 
 export const TYPES=['حكم أول درجة','حكم استئناف','حكم تمييز','إشكال','يحتاج مراجعة'];
 export type Rules={first:number;appeal:number;objection:number;execution:number;warning:number};
 export const DEFAULT_RULES:Rules={first:30,appeal:60,objection:15,execution:30,warning:5};
-export const todayISO=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuwait',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+// Today in Kuwait. Building a date formatter is slow, and this is asked for every case on every redraw, so one
+// formatter is kept and the answer is reused for a second.
+const kuwaitDay=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuwait',year:'numeric',month:'2-digit',day:'2-digit'});
+let dayCache={at:0,value:''};
+export const todayISO=()=>{const now=Date.now();if(now-dayCache.at>1000||!dayCache.value)dayCache={at:now,value:kuwaitDay.format(new Date(now))};return dayCache.value};
+// Sorters built once: «a.localeCompare(b,'ar')» builds a new sorter on every comparison, which is slow over thousands of cases.
+const arCollator=new Intl.Collator('ar'),arNumericCollator=new Intl.Collator('ar',{numeric:true}),enNumericCollator=new Intl.Collator('en',{numeric:true});
+export const arCompare=(a:string,b:string)=>arCollator.compare(a,b);
+export const arNumericCompare=(a:string,b:string)=>arNumericCollator.compare(a,b);
+export const enNumericCompare=(a:string,b:string)=>enNumericCollator.compare(a,b);
 export const formatDate=(s:string)=>/^\d{4}-\d{2}-\d{2}/.test(s)?s.slice(0,10).split('-').reverse().join('/'):(s||'—');
 export const normalize=(s:unknown)=>String(s??'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[\u064B-\u065Fـ]/g,'').replace(/\s+/g,' ').trim();
 export function validDate(s:string){return /^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s}
@@ -14,7 +23,14 @@ export function addDays(s:string,n:number){if(!validDate(s))return '';const d=ne
 export function daysBetween(from:string,to:string){return validDate(from)&&validDate(to)?Math.round((Date.parse(to+'T12:00:00Z')-Date.parse(from+'T12:00:00Z'))/86400000):null}
 export function elapsedDaysLabel(days:number|null){return days===null?'غير محدد':days<0?`الحكم بعد ${Math.abs(days)} يوم`:`${days} يوم`}
 export function remainingDaysLabel(days:number|null,final=false){return final?'نهائي':days===null?'غير محدد':days<0?`انتهت منذ ${Math.abs(days)} يوم`:days===0?'اليوم':`${days} يوم`}
+/** A case's state, remembered per case: the same case, rules and day give the same answer without working it out again. */
+const stateCache=new WeakMap<CaseRecord,{r:Rules;today:string;value:ReturnType<typeof computeCaseState>}>();
 export function caseState(c:CaseRecord,r:Rules=DEFAULT_RULES,today=todayISO()){
+ const hit=stateCache.get(c);
+ if(hit&&hit.r===r&&hit.today===today)return hit.value;
+ const value=computeCaseState(c,r,today);stateCache.set(c,{r,today,value});return value;
+}
+function computeCaseState(c:CaseRecord,r:Rules,today:string){
  const type=c.type==='حكم ابتدائي'?'حكم أول درجة':c.type;
  const days=type==='حكم أول درجة'?r.first:type==='حكم استئناف'?r.appeal:type==='حكم تمييز'?0:type==='إشكال'?r.objection:null;
  const outcome=c.outcome?.startsWith('غير صالح')?'غير صالحنا':c.outcome?.startsWith('لصالحنا')?'لصالحنا':'غير محدد';

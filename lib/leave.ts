@@ -1,3 +1,4 @@
+import {arCompare} from './domain.ts';
 type Leave = { subjectId: string; payload: Record<string, string> };
 const valid = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
 const day = (d: string) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 864e5;
@@ -19,5 +20,5 @@ export function leaveUsed(leaves: Leave[], employeeId: string, year: number) {
     const type = (l.payload.type || '').trim() || 'غير محدد';
     byType.set(type, (byType.get(type) || 0) + days); total += days;
   }
-  return { total, byType: [...byType].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ar')) };
+  return { total, byType: [...byType].sort((a, b) => b[1] - a[1] || arCompare(a[0],b[0])) };
 }

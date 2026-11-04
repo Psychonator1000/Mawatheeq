@@ -5,6 +5,7 @@ import type { ClientEntity } from '@/lib/clients';
 import type { CaseRecord } from '@/lib/domain';
 import { caseMonth, MONTH_NAMES, type CaseFilters } from '@/lib/case-browse';
 import {SelectList} from './filter-select';
+import {arCompare,arNumericCompare} from '@/lib/domain';
 
 export default function CaseFilterFields({ records, clients, filters, onChange, onClear, hasFilters, total }: {
   records: CaseRecord[]; clients: ClientEntity[]; filters: CaseFilters; onChange: (key: keyof CaseFilters, value: string) => void;
@@ -14,7 +15,7 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
   // The detailed fields fold away until asked for, and stay open while one of them is set.
   const [open, setOpen] = useState(false), set = [filters.year, filters.month, filters.code, filters.clientEntityId, filters.opponent].filter(Boolean).length;
   const options = useMemo(() => {
-    const unique = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ar', { numeric: true }));
+    const unique = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => arNumericCompare(a,b));
     return {
       years: unique([...records.map(c => caseMonth(c.date).slice(0, 4)), filters.year]).reverse(),
       codes: unique(records.map(c => c.code)),
@@ -31,7 +32,7 @@ export default function CaseFilterFields({ records, clients, filters, onChange, 
         <option value="">كل الأشهر</option>{MONTH_NAMES.map((month, index) => <option key={month} value={String(index + 1).padStart(2, '0')}>{month}</option>)}
       </SelectList></label>
       <label className="field"><span>الكود</span><input value={filters.code} list={codeList} placeholder="الكود أو جزء منه" onChange={e => onChange('code', e.target.value)}/></label>
-      <label className="field"><span>الموكل / الجهة</span><SelectList aria-label="الموكل / الجهة" value={filters.clientEntityId} onChange={e => onChange('clientEntityId',e.target.value)}><option value="">كل الموكلين</option>{[...clients].sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c=><option key={c.id} value={c.id}>{c.name}{clients.some(x=>x.id!==c.id&&x.name===c.name)?' · '+c.id.slice(0,8):''}</option>)}</SelectList></label>
+      <label className="field"><span>الموكل / الجهة</span><SelectList aria-label="الموكل / الجهة" value={filters.clientEntityId} onChange={e => onChange('clientEntityId',e.target.value)}><option value="">كل الموكلين</option>{[...clients].sort((a,b)=>arCompare(a.name,b.name)).map(c=><option key={c.id} value={c.id}>{c.name}{clients.some(x=>x.id!==c.id&&x.name===c.name)?' · '+c.id.slice(0,8):''}</option>)}</SelectList></label>
       <label className="field"><span>الخصم</span><input value={filters.opponent} list={opponentList} placeholder="اسم الخصم أو جزء منه" onChange={e => onChange('opponent', e.target.value)}/></label>
     </div>}
     <datalist id={codeList}>{options.codes.map(value => <option key={value} value={value}/>)}</datalist>

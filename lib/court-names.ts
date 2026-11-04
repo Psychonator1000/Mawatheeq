@@ -1,3 +1,4 @@
+import {arCompare} from './domain.ts';
 // Court names written out in full. The old register wrote «الكليه ت.م.ج/30»: the courthouse, its circuit in
 // abbreviations and the circuit number in one string, sometimes with stray English letters. Here it becomes
 // «المحكمة الكلية - تجاري مدني جزئي / 30»: courthouse, full circuit name, and the number after the slash
@@ -100,7 +101,7 @@ export function courtChoices(values: string[], base: readonly string[] = []): st
     count.set(kind, (count.get(kind) || 0) + 1);
   }
   for (const b of base) if (!count.has(b)) count.set(b, 0);
-  return [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ar')).map(([k]) => k);
+  return [...count].sort((a, b) => b[1] - a[1] || arCompare(a[0],b[0])).map(([k]) => k);
 }
 
 /** The courthouses, written in full, to pick from. */

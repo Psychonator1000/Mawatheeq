@@ -13,9 +13,10 @@ import {OfficeSelect} from '../office-shared';
 import {EditorDialog} from './shared';
 import Needs from '../needs';
 import RemoveCabinet from './archive-cabinet-remove';
+import {enNumericCompare} from '@/lib/domain';
 
 const save=<T,>(record:DepartmentRecord<T>)=>departmentRequest<DepartmentRecord<T>>('save_record',{workspace:'archive',record});
-const byCode=(a:ArchiveLocation,b:ArchiveLocation)=>a.payload.code.localeCompare(b.payload.code,'en',{numeric:true});
+const byCode=(a:ArchiveLocation,b:ArchiveLocation)=>enNumericCompare(a.payload.code,b.payload.code);
 const slotName=(l:ArchiveLocation)=>[l.payload.shelf&&(/^\d/.test(l.payload.shelf)?'رف '+l.payload.shelf:l.payload.shelf),l.payload.box&&'صندوق '+l.payload.box].filter(Boolean).join(' · ')||l.payload.code;
 type Cabinet={name:string;slots:ArchiveLocation[]};
 // A room's cabinets stand in columns; a column holds one cabinet or several stacked one under another.
@@ -140,7 +141,7 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
  const hits=term.length<1?[]:files.filter(f=>normalizeSearch([f.payload.number,f.payload.title,caseCode(f.caseId)].join(' ')).includes(term)).map(f=>({f,r:rank(f)})).sort((a,b)=>a.r-b.r).map(x=>x.f).slice(0,8);
  const lit=found&&cu(found).state==='in'?cu(found).locationId:'',awaits=found&&cu(found).state!=='in'?cu(found).locationId:'',slot=locations.find(l=>l.id===picked)||null;
  const show=(f:ArchiveFile)=>{setFound(f);setQ('');const id=cu(f).locationId;if(id){setPicked(id);requestAnimationFrame(()=>document.getElementById('slot-'+id)?.scrollIntoView({block:'center',behavior:'smooth'}))}};
- const sheet=(l:ArchiveLocation)=>printHtml(listHtml('كشف جرد '+l.payload.code,locationLabel(l),['✓','رقم الأرشيف','الملف','القضية','النوع','الحالة'],files.filter(f=>cu(f).locationId===l.id).sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true})).map(f=>{const c=cu(f);return ['☐',f.payload.number,f.payload.title,caseRef(f),f.payload.type,c.state==='in'?'في المكان':CUSTODY_STATES[c.state]+': '+c.holder]}),formatDate(todayISO()),''));
+ const sheet=(l:ArchiveLocation)=>printHtml(listHtml('كشف جرد '+l.payload.code,locationLabel(l),['✓','رقم الأرشيف','الملف','القضية','النوع','الحالة'],files.filter(f=>cu(f).locationId===l.id).sort((a,b)=>enNumericCompare(a.payload.number,b.payload.number)).map(f=>{const c=cu(f);return ['☐',f.payload.number,f.payload.title,caseRef(f),f.payload.type,c.state==='in'?'في المكان':CUSTODY_STATES[c.state]+': '+c.holder]}),formatDate(todayISO()),''));
  return <section className="panel archive-map"><div className="panel-head"><div><h2>خريطة الحفظ</h2><p className="panel-note">أين يُحفظ كل ملف: الغرفة ثم الخزانة ثم الدرج أو الرف. ابحث عن ملف ليضيء مكانه، أو اختر درجاً لترى ما فيه وتضع فيه الملفات.</p></div>
   <div className="actions archive-head-actions">
    {canEdit&&<button className="btn primary" onClick={()=>setCabinet(true)}><PackagePlus size={17}/> خزانة جديدة بأدراجها</button>}{onAdd&&<button className="btn" onClick={onAdd}><Plus size={17}/> مكان حفظ جديد</button>}</div></div>
@@ -171,7 +172,7 @@ export default function ArchiveMap({locations,files,custody:stored,cases,canEdit
 function SlotPanel({slot,slots,onMove,onUnplace,dragging,onGrab,files,custody,cases,canEdit,canPrint,caseRef,onClose,onEdit,onStocktake,onPrint,onChanged}:{slots:ArchiveLocation[];onMove:(f:ArchiveFile,l:ArchiveLocation)=>Promise<void>;onUnplace:(f:ArchiveFile)=>Promise<void>;dragging:string;onGrab:(f:ArchiveFile,e:React.PointerEvent<HTMLElement>)=>void;slot:ArchiveLocation;files:ArchiveFile[];custody:Map<string,Custody>;cases:CaseSummary[];canEdit:boolean;canPrint:boolean;caseRef:(f:ArchiveFile)=>string;onClose:()=>void;onEdit:()=>void;onStocktake:()=>void;onPrint:()=>void;onChanged:()=>void}){
  const [scan,setScan]=useState(''),[busy,setBusy]=useState(false),[placed,setPlaced]=useState<string[]>([]),[moving,setMoving]=useState('');
  const cu=(f:ArchiveFile)=>custody.get(f.id)!;
- const here=files.filter(f=>cu(f).locationId===slot.id||(placed.includes(f.id)&&!cu(f).locationId)).sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true}));
+ const here=files.filter(f=>cu(f).locationId===slot.id||(placed.includes(f.id)&&!cu(f).locationId)).sort((a,b)=>enNumericCompare(a.payload.number,b.payload.number));
  async function place(){const v=scan.trim().toUpperCase();if(!v)return;
   let list=files.filter(f=>f.payload.number.toUpperCase()===v||f.payload.number.toUpperCase()==='ARC-'+v);
   if(!list.length){const ids=new Set(cases.filter(c=>c.code&&c.code.toUpperCase()===v).map(c=>c.id));list=files.filter(f=>ids.has(f.caseId))}

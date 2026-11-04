@@ -1,12 +1,13 @@
 import { type CaseRecord, caseCode, formatDate, todayISO } from './domain.ts';
 import { lastSitting, nextSitting } from './case-desk.ts';
 import { rollCardsHtml, type RollCard } from './print.ts';
+import {arCompare} from './domain.ts';
 
 /** Finished in the old register («منتهي»), or archived in the app. */
 const closed = (c: CaseRecord) => Boolean(c.archived) || /^منته/.test(String(c.legacyStatus || '').trim());
 const codeOrder = (a: CaseRecord, b: CaseRecord) => {
   const x = String(a.code || ''), y = String(b.code || '');
-  return (/^\d+$/.test(x) && /^\d+$/.test(y) ? Number(x) - Number(y) : x.localeCompare(y, 'ar')) || String(a.autoNumber || '').localeCompare(String(b.autoNumber || ''));
+  return (/^\d+$/.test(x) && /^\d+$/.test(y) ? Number(x) - Number(y) : arCompare(x,y)) || String(a.autoNumber || '').localeCompare(String(b.autoNumber || ''));
 };
 
 /**

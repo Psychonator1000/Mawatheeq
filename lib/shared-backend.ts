@@ -49,6 +49,7 @@ async function allClients(action: 'list' | 'lookup') {
 type CaseCopy = { asOf: string; rows: StoredRow[]; full: number };
 type Changes = { asOf: string; count: number; fingerprint: string; more: boolean; rows: StoredRow[] };
 let caseCopy: CaseCopy | null = null, copyLoaded = false, copyUser = '';
+let lastCases: { rows: StoredRow[]; directory: unknown; rulesKey: string; result: unknown } | null = null;
 async function fingerprint(rows: StoredRow[]) {
   if (!globalThis.crypto?.subtle) return null;
   const text = [...rows].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).map(r => `${r.id}:${r.revision}`).join(',');
@@ -62,11 +63,16 @@ async function caseRows(): Promise<{ rows: StoredRow[]; changed: boolean }> {
 async function changedRows(): Promise<{ rows: StoredRow[]; changed: boolean }> {
   // Signing in as someone else (or switching to a staff account) starts from that account's own copy.
   const user = cachedUser()?.id || '';
-  if (user !== copyUser) { copyUser = user; copyLoaded = false; caseCopy = null; clientCopy = null; }
+  if (user !== copyUser) { copyUser = user; copyLoaded = false; caseCopy = null; clientCopy = null; lastCases = null; }
   if (!copyLoaded) { copyLoaded = true; caseCopy = await readSnapshot<CaseCopy>('case-rows'); }
   if (caseCopy) {
     const d = await localRequest<Changes>('cases_changes', { since: caseCopy.asOf, light: true });
     if (!d.more) {
+      // Nothing changed: keep the very same list, so the screen has nothing to redo.
+      if (!d.rows.length && caseCopy.rows.length === d.count) {
+        const print = await fingerprint(caseCopy.rows);
+        if (print ? print === d.fingerprint : Date.now() - caseCopy.full < 600000) { caseCopy = { ...caseCopy, asOf: d.asOf }; return { rows: caseCopy.rows, changed: false }; }
+      }
       const byId = new Map(caseCopy.rows.map(r => [r.id, r]));
       for (const r of d.rows) byId.set(r.id, r);
       const rows = [...byId.values()], print = await fingerprint(rows);
@@ -94,8 +100,13 @@ export async function sharedRequest(path: string, init?: RequestInit): Promise<u
     const canRead = canReadCases(access);
     const [cases, settings] = await Promise.all([canRead ? caseRows() : { rows: [], changed: false }, rules]);
     const directory = canRead ? await clientList(access.sections.includes('clients') ? 'list' : 'lookup', cases.changed) : { clients: [], canMerge: false };
-    const rows = cases.rows;
-    return { ...directory, cases: rows.map(row => enrichCase({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived } as CaseRecord, directory.clients)), rules: settings || DEFAULT_RULES };
+    const rows = cases.rows, rulesKey = JSON.stringify(settings || DEFAULT_RULES);
+    // Unchanged cases, clients and rules give back the previous answer itself: the workspace sees the same object and
+    // skips redrawing and re-saving 7,000 cases on every refresh, which kept slow computers busy for seconds.
+    if (lastCases && lastCases.rows === rows && lastCases.directory === directory && lastCases.rulesKey === rulesKey) return lastCases.result;
+    const result = { ...directory, cases: rows.map(row => enrichCase({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived } as CaseRecord, directory.clients)), rules: settings || DEFAULT_RULES };
+    if (canRead) lastCases = { rows, directory, rulesKey, result };
+    return result;
   }
   if (path === '/api/cases' && method === 'POST') {
     const body = JSON.parse(String(init?.body));

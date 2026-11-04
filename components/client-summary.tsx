@@ -13,6 +13,7 @@ import {summarySheetHtml,printHtml,type SummarySheet} from '@/lib/print';
 const STATUS_COLORS:Record<string,string>={filing:'#d99a2b',open1:'#3f8f7a',open2:'#3a6fa8',open3:'#6c4fa3',follow:'#7d8a96',execution:'#7a2335',stayed:'#c8553d',closed:'#b9ada0',other:'#cfc4b6'};
 import {clientRollHtml} from '@/lib/client-roll';
 import {Empty} from './shared';
+import {arCompare} from '@/lib/domain';
 
 const EXTRAS_KEY='mawatheeq.clientSummary.extras';
 const readExtras=():ExtraGroup[]=>{try{const v=JSON.parse(localStorage.getItem(EXTRAS_KEY)||'null');return Array.isArray(v)?v.filter(x=>EXTRA_GROUPS.some(([k])=>k===x)):['sessions','judgments']}catch{return ['sessions','judgments']}};
@@ -42,7 +43,7 @@ export default function ClientSummary({records,clients,rules,printedBy,canExport
  const term=normalizeSearch(q);
  const groups=useMemo(()=>personGroups(withCases).map(g=>({...g,row:rowOf(g.clients.map(c=>c.id))}))
   .filter(g=>!term||normalizeSearch(g.person+' '+g.clients.map(c=>c.name).join(' ')).includes(term)).sort((a,b)=>b.row.total-a.row.total),[withCases,rowOf,term]);
- const all=useMemo(()=>withCases.map(c=>({c,row:rowOf([c.id])})).filter(x=>!term||normalizeSearch([x.c.name,...x.c.aliases,...x.c.contacts.map(p=>p.name)].join(' ')).includes(term)).sort((a,b)=>b.row.total-a.row.total||a.c.name.localeCompare(b.c.name,'ar')),[withCases,rowOf,term]);
+ const all=useMemo(()=>withCases.map(c=>({c,row:rowOf([c.id])})).filter(x=>!term||normalizeSearch([x.c.name,...x.c.aliases,...x.c.contacts.map(p=>p.name)].join(' ')).includes(term)).sort((a,b)=>b.row.total-a.row.total||arCompare(a.c.name,b.c.name)),[withCases,rowOf,term]);
  // Only the statuses some client in view has, so the table stays narrow.
  const viewRows=mode==='people'?groups.map(g=>g.row):all.map(x=>x.row);
  const cols=STATUS_COLUMNS.filter(([k])=>viewRows.some(r=>r.counts[k]));

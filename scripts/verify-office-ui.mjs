@@ -78,7 +78,7 @@ try{
  await roll.getByRole('button',{name:'الأعمدة المعتادة'}).click();
  await roll.getByRole('button',{name:'إغلاق',exact:true}).first().click();await page.locator('.pick-bar').getByRole('button',{name:'إلغاء التحديد'}).click();
  await page.setViewportSize({width:390,height:844});await page.locator('tbody tr.case-row').first().scrollIntoViewIfNeeded();await page.screenshot({path:artifacts+'/case-list-mobile.png'});await page.setViewportSize({width:1440,height:1000});
- await go('إضافة قضية');const sheet=page.getByRole('dialog');await sheet.getByLabel('كود المكتب',{exact:true}).fill('NEW-FORM');await sheet.getByLabel('الرقم الآلي',{exact:true}).fill('9000');
+ await go('إضافة قضية');const sheet=page.getByRole('dialog');await sheet.getByRole('button',{name:'تعديل الكود',exact:true}).click();await sheet.getByLabel('كود المكتب',{exact:true}).fill('NEW-FORM');await sheet.getByLabel('الرقم الآلي',{exact:true}).fill('9000');
  // The existing client selector is a native select.
  await sheet.getByLabel('الموكل / الجهة',{exact:true}).selectOption({index:1});
  await sheet.getByLabel('الخصم',{exact:true}).fill('طرف جديد دون مرفق');await sheet.getByLabel('منطوق الحكم',{exact:true}).fill('إدخال يدوي تجريبي');

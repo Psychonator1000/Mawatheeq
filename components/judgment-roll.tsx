@@ -9,6 +9,7 @@ import {MONTH_NAMES} from '@/lib/case-browse';
 import {formatDate,todayISO,type CaseRecord} from '@/lib/domain';
 import {Field,DateField} from './shared';
 import {SelectList} from './filter-select';
+import {arCompare} from '@/lib/domain';
 
 type Scope='shown'|'selected'|'all';
 const PREVIEW=150;
@@ -19,7 +20,7 @@ const savedLayout=():Layout=>{try{return localStorage.getItem(LAYOUT_KEY)==='tab
 const toCard=(r:RollCase,columns:RollColumn[]):RollCard=>({code:r.code,client:r.client,role:r.role,opponent:r.opponent,lawyer:columns.includes('lawyer')?r.lawyer:'',
  facts:columns.filter(c=>!['code','client','opponent','lawyer'].includes(c)).map(c=>{const [main,sub]=rollCell(r,c);return [ROLL_COLUMNS.find(x=>x[0]===c)![1],main,sub] as [string,string,string]})});
 const savedColumns=():RollColumn[]=>{try{const v=JSON.parse(localStorage.getItem(COLUMNS_KEY)||'null');return Array.isArray(v)&&v.length?v.filter((c:string)=>ROLL_COLUMNS.some(x=>x[0]===c)):DEFAULT_ROLL_COLUMNS}catch{return DEFAULT_ROLL_COLUMNS}};
-const distinct=(rows:RollCase[],get:(r:RollCase)=>string)=>[...new Set(rows.map(get).map(v=>v.trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+const distinct=(rows:RollCase[],get:(r:RollCase)=>string)=>[...new Set(rows.map(get).map(v=>v.trim()).filter(Boolean))].sort((a,b)=>arCompare(a,b));
 
 /** «رول الأحكام»: choose the cases (shown, ticked or all), narrow them with filters, pick columns, then preview and print. */
 export default function JudgmentRoll({shown,selected,all,shownLabel,toRow,printedBy,canPrint,onClose}:{shown:CaseRecord[];selected:CaseRecord[];all:CaseRecord[];shownLabel:string;toRow:(c:CaseRecord)=>RollCase;printedBy:string;canPrint:boolean;onClose:()=>void}) {

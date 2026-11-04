@@ -22,6 +22,7 @@ import DispatchSheet from './archive-dispatch';
 import ClearLog,{LastClear,useLogClears} from './archive-log-clear';
 import ReturnCheck from './archive-return';
 import ArchiveMap from './archive-map';
+import {enNumericCompare} from '@/lib/domain';
 
 type View='files'|'dispatch'|'custody'|'requests'|'locations'|'log';
 const PER_PAGE=25;
@@ -56,7 +57,7 @@ export default function ArchiveRoom({cases,access}:{cases:CaseSummary[];access:P
  const filtered=files.filter(f=>(show==='all'||(show==='archived'?f.archived:!f.archived))&&(!state||(state==='overdue'?isOverdue(cu(f),today):state==='retention'?retentionDue(f,today):state==='lost'?f.payload.lost==='yes':state==='missing'?!!openMissing(f.id,movements):state==='awaiting'?handoverOf(cu(f))==='awaiting-receipt':state==='reported'?handoverOf(cu(f))==='return-reported':cu(f).state===state))
   &&(!place||cu(f).locationId===place)&&(!type||f.payload.type===type)
   &&normalizeSearch([f.payload.number,f.payload.title,f.payload.type,caseRef(f),parties(f),cu(f).holder,f.payload.notes].join(' ')).includes(normalizeSearch(search)))
-  .sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true}));
+  .sort((a,b)=>enNumericCompare(a.payload.number,b.payload.number));
  const pages=Math.max(1,Math.ceil(filtered.length/PER_PAGE)),current=Math.min(page,pages);
  const {nav,step,enter,openItem}=useListNav(filtered,editing,setEditingRaw);
  const setEditing=(f:ArchiveFile|null,p:Preset|null=null)=>{setPreset(p);openItem(f)};
@@ -295,7 +296,7 @@ function LocationEditor({initial,onClose,onSaved}:{initial:ArchiveLocation;onClo
 
 /** Inventory of one location: tick the files found on the shelf; each ticked file gets an audit movement, the rest are listed as missing. */
 function Stocktake({location,files,custody,caseRef,canPrint,onClose,onDone}:{location:ArchiveLocation;files:ArchiveFile[];custody:Map<string,Custody>;caseRef:(f:ArchiveFile)=>string;canPrint:boolean;onClose:()=>void;onDone:()=>void}) {
- const expected=files.filter(f=>custody.get(f.id)!.state==='in'&&custody.get(f.id)!.locationId===location.id).sort((a,b)=>a.payload.number.localeCompare(b.payload.number,'en',{numeric:true}));
+ const expected=files.filter(f=>custody.get(f.id)!.state==='in'&&custody.get(f.id)!.locationId===location.id).sort((a,b)=>enNumericCompare(a.payload.number,b.payload.number));
  const away=files.filter(f=>custody.get(f.id)!.state!=='in');
  const [found,setFound]=useState<Set<string>>(()=>new Set()),[scan,setScan]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const missing=expected.filter(f=>!found.has(f.id)),today=todayISO();

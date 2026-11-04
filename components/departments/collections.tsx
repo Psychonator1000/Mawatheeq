@@ -26,6 +26,7 @@ import RecordWindow,{useListNav,type WindowNav,type Enter} from '../record-windo
 import CopyChip from '../copy-chip';
 import CircuitField from '../circuit-field';
 import {useBooksAvailable} from '@/lib/books-api';
+import {arCompare} from '@/lib/domain';
 
 const QuickInvoice=lazy(()=>import('./books-outside').then(m=>({default:m.QuickInvoice})));
 
@@ -64,7 +65,7 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  const active=files.filter(r=>!r.archived),today=todayISO();
  const totals=active.reduce((t,r)=>{const p=pos(r);return {total:t.total+p.total,paid:t.paid+p.paid,remaining:t.remaining+Math.max(0,p.remaining)}},{total:0,paid:0,remaining:0});
  const due=dueStatements(allStatements,today).filter(s=>active.some(f=>f.id===s.subjectId));
- const opponents=useMemo(()=>[...new Set([...files.flatMap(r=>partyNames(r.payload.defendant,r.payload.defendants)),...cases.map(c=>(c.opponent||'').trim()).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ar')),[files,cases]);
+ const opponents=useMemo(()=>[...new Set([...files.flatMap(r=>partyNames(r.payload.defendant,r.payload.defendants)),...cases.map(c=>(c.opponent||'').trim()).filter(Boolean)])].sort((a,b)=>arCompare(a,b)),[files,cases]);
  const companies=suggestions(files,r=>r.payload.company),assignees=suggestions(files,r=>r.payload.assignedTo),batches=suggestions(files,r=>r.payload.batchNumber),tags=suggestions(files.flatMap(r=>[r.payload.tag1,r.payload.tag2,r.payload.tag3,r.payload.tag4]),v=>v);
  const fileOf=(id:string)=>files.find(f=>f.id===id);
  const views=<div className="work-chips" role="group" aria-label="أقسام التحصيل">{([['files','ملفات التحصيل'],['due',`المتابعات المستحقة${due.length?` (${due.length})`:''}`],['payments','التحصيلات'],['print','طباعة جماعية']] as [View,string][]).map(([id,l])=><button key={id} className={'work-chip'+(view===id?' on':'')} aria-pressed={view===id} onClick={()=>setView(id)}>{l}</button>)}</div>;

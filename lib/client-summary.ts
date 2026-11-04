@@ -5,6 +5,7 @@ import { type ClientEntity } from './clients.ts';
 import { currentLevel } from './case-stages.ts';
 import { nextSitting } from './case-desk.ts';
 import { normalizeSearch } from './case-browse.ts';
+import {arCompare} from './domain.ts';
 
 export const STATUS_COLUMNS = [
   ['filing', 'تحت الرفع'], ['open1', 'متداول · أول درجة'], ['open2', 'متداول · استئناف'], ['open3', 'متداول · تمييز'],
@@ -89,7 +90,7 @@ export function summarize(records: CaseRecord[], rules: Rules, today = todayISO(
     const l = String(c.lawyer || '').trim();
     if (l && m.has('open')) lawyers.set(l, (lawyers.get(l) || 0) + 1);
   }
-  row.lawyers = [...lawyers].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ar'));
+  row.lawyers = [...lawyers].sort((a, b) => b[1] - a[1] || arCompare(a[0],b[0]));
   return row;
 }
 

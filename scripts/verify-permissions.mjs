@@ -338,5 +338,11 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  assert.equal(after.contractFee,'500','A read-only field keeps its value');assert.equal(after.notes,'internal note','A hidden field keeps its value');
  assert.equal(after.opponent,'Changed opponent','Other fields save normally');
 }
+// The office code is fixed: an editor keeps it, only an admin changes it.
+{const coder=await create('code_editor',{sections:['cases'],caseScope:'all',caseIds:[],canEdit:true,canExport:false});
+ let lockCase=await local(admin.token,'save_case',{case:{...visible,id:'lock-case',code:'LOCK-1',opponent:'Lock Opponent',revision:0}});
+ await assert.rejects(()=>local(coder.token,'save_case',{case:{...lockCase,code:'LOCK-2'}}),e=>e.code==='42501','An editor cannot change the office code');
+ lockCase=await local(coder.token,'save_case',{case:{...lockCase,opponent:'Lock Opponent 2'}});assert.equal(lockCase.code,'LOCK-1','Saving with the same code still works');
+ lockCase=await local(admin.token,'save_case',{case:{...lockCase,code:'LOCK-9'}});assert.equal(lockCase.code,'LOCK-9','An admin changes the code');}
 await db.close();
 console.log('Passed permissions: client accounts (own client files only, kept in step, read only, hidden fields never sent, no documents/chat/mail/departments), hidden and read-only fields kept on save, light case lists (older sessions on demand, light copies never saved), refreshes send only changed cases with a fingerprint of everything visible, several jobs per employee (ordered, audited, granting nothing), delegated admin powers (grant only held powers, no self/owner/stronger targets, area limits, switched sessions powerless, audited), job roles incl. counsel/call centre/courier/sessions/office/execution/archive (label only, audited), lawyer-name scope (future and reassigned cases, spelling variants, no takeover), admin-only account management, atomic deny-default creation, selected/future cases, hidden sections, read-only writes, client/contact redaction, evidence/history/work isolation, direct API/storage bypass denial, audited revisioned grants and session/password revocation, owner-only account renames, direct passwords, display names and audited switching to staff accounts.');

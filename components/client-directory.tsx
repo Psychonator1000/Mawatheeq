@@ -18,6 +18,7 @@ import { CONTACT_ROLES, suggestions } from '@/lib/choices';
 import PageNavigation from './page-navigation';
 import EntityCollections from './departments/entity-collections';
 import {FilterBox,SelectList} from './filter-select';
+import {arCompare} from '@/lib/domain';
 
 type EditorProps = {
   entity: ClientEntity; clients: ClientEntity[]; records?: CaseRecord[]; canMerge?: boolean; readOnly?: boolean;
@@ -92,7 +93,7 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
     </>}
     {canMerge && Boolean(entity.revision) && <Dialog open={mergeOpen} onOpenChange={setMergeOpen}><DialogContent className="office-dialog client-merge" dir="rtl"><DialogHeader><DialogTitle>دمج ملف مكرر مع موكل آخر</DialogTitle>
       <DialogDescription>استخدم الدمج فقط بعد التأكد من أن الملفين يمثلان الجهة نفسها. تُنقل القضايا والأشخاص والصيغ السابقة، وتبقى بيانات القضايا الأصلية محفوظة.</DialogDescription></DialogHeader>
-      <label className="field"><span>الملف الذي سيبقى</span><SelectList aria-label="الملف الذي سيبقى" value={targetId} onChange={e => setTargetId(e.target.value)}><option value="">اختر الموكل</option>{clients.filter(c => c.id !== entity.id).sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c => <option value={c.id} key={c.id}>{c.name} · {c.id.slice(0,8)}</option>)}</SelectList></label>
+      <label className="field"><span>الملف الذي سيبقى</span><SelectList aria-label="الملف الذي سيبقى" value={targetId} onChange={e => setTargetId(e.target.value)}><option value="">اختر الموكل</option>{clients.filter(c => c.id !== entity.id).sort((a,b)=>arCompare(a.name,b.name)).map(c => <option value={c.id} key={c.id}>{c.name} · {c.id.slice(0,8)}</option>)}</SelectList></label>
       {dirty && <p className="subtitle">احفظ تعديلات الملف ثم افتحه مجدداً قبل الدمج.</p>}
       {target && <AlertDialog><AlertDialogTrigger asChild><button className="btn" disabled={busy || dirty}>مراجعة الدمج</button></AlertDialogTrigger><AlertDialogContent dir="rtl"><AlertDialogHeader><AlertDialogTitle>دمج ملفَي الموكل؟</AlertDialogTitle>
         <AlertDialogDescription>سيُدمج «{entity.name}» داخل «{target.name}». ستُنقل {linked.length} قضية وجميع الأشخاص والصيغ السابقة. يظل اسم الملف الهدف وقطاعه هما المعتمدين.</AlertDialogDescription></AlertDialogHeader>
@@ -102,7 +103,7 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
 }
 
 export function ClientSelect({ clients, value, onChange, onCreate, onManage, disabled = false }: { clients: ClientEntity[]; value: string; onChange: (id: string) => void; onCreate?: () => void; onManage?: () => void; disabled?: boolean }) {
-  const options = useMemo(() => [...clients].sort((a,b)=>a.name.localeCompare(b.name,'ar')).map(c => ({ value: c.id, label: c.name + (clients.some(x => x.id !== c.id && x.name === c.name) ? ` · ${c.id.slice(0,8)}` : ''),
+  const options = useMemo(() => [...clients].sort((a,b)=>arCompare(a.name,b.name)).map(c => ({ value: c.id, label: c.name + (clients.some(x => x.id !== c.id && x.name === c.name) ? ` · ${c.id.slice(0,8)}` : ''),
     hint: c.needsReview ? 'يحتاج مراجعة' : undefined, terms: c.aliases.join(' ') })), [clients]);
   const current = clients.find(c => c.id === value);
   return <div className="field wide client-selector"><div className="client-select-head"><span>الموكل / الجهة</span>
@@ -122,7 +123,7 @@ export default function ClientDirectory({ clients, records, canMerge, canCollect
 }) {
   const [search, setSearch] = useState(''), [reviewOnly, setReviewOnly] = useState(false), [page, setPage] = useState(1), [selected, setSelectedRaw] = useState<ClientEntity | null>(null);
   const counts = useMemo(() => { const map = new Map<string, number>(); for (const c of records) if (!c.archived && c.clientEntityId) map.set(c.clientEntityId, (map.get(c.clientEntityId) || 0) + 1); return map; }, [records]);
-  const filtered = clients.filter(c => (!reviewOnly || c.needsReview || c.contacts.some(p => p.needsReview)) && normalizeSearch([c.name, ...c.aliases, ...c.contacts.map(p=>p.name)].join(' ')).includes(normalizeSearch(search))).sort((a,b)=>(counts.get(b.id)||0)-(counts.get(a.id)||0)||a.name.localeCompare(b.name,'ar'));
+  const filtered = clients.filter(c => (!reviewOnly || c.needsReview || c.contacts.some(p => p.needsReview)) && normalizeSearch([c.name, ...c.aliases, ...c.contacts.map(p=>p.name)].join(' ')).includes(normalizeSearch(search))).sort((a,b)=>(counts.get(b.id)||0)-(counts.get(a.id)||0)||arCompare(a.name,b.name));
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE)), current = clampPage(page, pages);
   const { nav, step, enter, openItem: setSelected } = useListNav(filtered, selected, setSelectedRaw);
   return <><div className="list-desk"><div className="page-head"><div><div className="eyebrow">MAWATHEEQ / CLIENTS</div><h1>الموكلون</h1><p className="subtitle">ملف مستقل لكل جهة أو فرد، يجمع الأشخاص المرتبطين به وقضاياه.</p></div>{!readOnly&&<button className="btn primary" onClick={()=>setSelected(emptyClient())}><Plus/> إضافة موكل</button>}</div>

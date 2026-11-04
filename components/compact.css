@@ -1226,3 +1226,10 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
  .permission-preview .ve-page{padding:4px 8px;font-size:12px}
 }
 .ve-side-scroll{display:grid;gap:8px}
+/* The office code: fixed, read like a label; an admin's pencil beside it opens it for change. */
+.code-field .code-row{display:flex;align-items:center;gap:6px}
+.code-field .code-value{flex:1;min-width:0;display:flex;align-items:center;min-height:34px;padding:0 10px;border-radius:9px;font-weight:700;letter-spacing:.3px;
+ background:color-mix(in srgb,var(--brand,#7a2335) 6%,var(--card,#fffdf8));border:1px dashed color-mix(in srgb,var(--brand,#7a2335) 28%,transparent);color:var(--foreground)}
+.code-field .code-row input{flex:1;min-width:0}
+.code-field .code-edit{flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:9px}
+.code-field .code-edit[aria-pressed=true]{background:var(--brand,#7a2335);color:#fff}
