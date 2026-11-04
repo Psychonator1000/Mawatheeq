@@ -79,3 +79,6 @@ export function undoLastMove(c: CaseRecord): CaseRecord {
 
 /** Every case number the case has carried, for search and the pinned summary. */
 export const allCaseNumbers = (c: CaseRecord) => [...stagesOf(c).map(x => x.caseNumber), s(c.caseNumber)].filter(Boolean);
+
+/** «Both parties appealed» is shown as «طاعن ومطعون ضده»; the stored value stays «الطرفان». */
+export const appealedByLabel = (v: string) => (v === 'الطرفان' ? 'طاعن ومطعون ضده' : v);

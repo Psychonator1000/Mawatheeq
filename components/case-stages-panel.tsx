@@ -10,15 +10,15 @@ import {OfficeSelect} from './office-shared';
 import Needs from './needs';
 
 /** Close the current level and open the next one: the new level gets its own case number and court. */
-export function MoveStageDialog({c,busy,onClose,onMove}:{c:CaseRecord;busy:boolean;onClose:()=>void;onMove:(d:MoveDetails)=>void}){
+export function MoveStageDialog({c,busy,onClose,onMove,onFinish}:{c:CaseRecord;busy:boolean;onClose:()=>void;onMove:(d:MoveDetails)=>void;onFinish?:(d:MoveDetails)=>void}){
  const from=currentLevel(c),to=nextLevel(c);
  const [d,setD]=useState<MoveDetails>({caseNumber:'',autoNumber:String(c.autoNumber||''),court:'',appealedBy:'',movedOn:todayISO(),note:''});
  const set=(k:keyof MoveDetails,v:string)=>setD(x=>({...x,[k]:v}));
  if(!to)return null;
  return <Dialog open onOpenChange={v=>{if(!v&&!busy)onClose()}}><DialogContent dir="rtl" className="office-dialog move-stage-dialog"><DialogHeader><DialogTitle>نقل القضية إلى {LEVEL_TITLE[to]}</DialogTitle>
-  <DialogDescription>يُغلق ملف {LEVEL_TITLE[from]} ويُحفظ بكل بياناته وإجراءاته كما هو الآن، ولا يمكن تعديله بعد ذلك إلا من مسؤول المكتب. تبدأ {LEVEL_TITLE[to]} بسجل إجراءات جديد.</DialogDescription></DialogHeader>
+  <DialogDescription>النقل إلى {LEVEL_TITLE[to]} مرحلة تالية فقط: يُغلق سجل {LEVEL_TITLE[from]} كما هو الآن (لا يعدّله إلا مسؤول المكتب)، وتبدأ {LEVEL_TITLE[to]} بسجل إجراءات جديد. أما «حفظ القضية» فيُنهي القضية، ويكون فقط إذا كان الحكم لصالحنا.</DialogDescription></DialogHeader>
   <form onSubmit={e=>{e.preventDefault();if(d.appealedBy)onMove(d)}}><fieldset disabled={busy}><div className="form-grid">
-   <OfficeSelect label="من طعن في الحكم؟" value={d.appealedBy} onChange={v=>set('appealedBy',v)} empty="اختر" options={[['الخصم','الخصم'],['نحن','نحن (الموكل)'],['الطرفان','الطرفان']]}/>
+   <OfficeSelect label="من طعن في الحكم؟" value={d.appealedBy} onChange={v=>set('appealedBy',v)} empty="اختر" options={[['الخصم','الخصم'],['نحن','نحن (الموكل)'],['الطرفان','طاعن ومطعون ضده']]}/>
    <DateField label="تاريخ الطعن / النقل" value={d.movedOn} onChange={v=>set('movedOn',v)}/>
    <Field label={'رقم القضية في '+LEVEL_TITLE[to]} value={d.caseNumber} onChange={v=>set('caseNumber',v)} placeholder="يمكن إضافته لاحقاً"/>
    <Field label="الرقم الآلي" value={d.autoNumber} onChange={v=>set('autoNumber',v)}/>
@@ -26,7 +26,7 @@ export function MoveStageDialog({c,busy,onClose,onMove}:{c:CaseRecord;busy:boole
    <Field label="ملاحظة النقل (اختياري)" value={d.note} onChange={v=>set('note',v)} multiline wide/>
   </div>{c.date?null:<p className="notice">لم يُسجل تاريخ حكم {LEVEL_TITLE[from]}. يمكنك النقل الآن، لكن يُفضل تسجيل الحكم أولاً ليبقى في سجل الدرجة.</p>}
   <Needs items={[!d.appealedBy&&'اختر «من طعن في الحكم؟»']}/>
-  <div className="actions"><button type="submit" className="btn primary" disabled={busy||!d.appealedBy}>نقل إلى {LEVEL_TITLE[to]} وحفظ الملف</button><button type="button" className="btn" onClick={onClose}>إلغاء</button></div></fieldset></form>
+  <div className="actions"><button type="submit" className="btn primary" disabled={busy||!d.appealedBy}>نقل إلى {LEVEL_TITLE[to]}</button>{onFinish&&(()=>{const ours=String(c.outcome||'').startsWith('لصالحنا');return <button type="button" className="btn" disabled={busy||!ours} title={ours?'إنهاء القضية لأن الحكم لصالحنا':'«حفظ القضية» يكون فقط إذا كان الحكم لصالحنا'} onClick={()=>onFinish(d)}>حفظ القضية</button>})()}<button type="button" className="btn" onClick={onClose}>إلغاء</button></div></fieldset></form>
  </DialogContent></Dialog>;
 }
 

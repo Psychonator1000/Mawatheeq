@@ -1248,3 +1248,15 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 :root:root .case-window>.case-pin .case-pin-top{gap:6px}
 :root:root .case-window .case-nav{margin-top:0}
 @media (max-height:940px){:root:root .case-window .case-keys{display:none}}
+/* Roll advanced filter: the button sits with the dates; the rules open full width under them, one compact line each. */
+.desk-toolbar{flex-wrap:wrap}
+.roll-rules-toggle{align-self:flex-end;min-height:34px;padding:4px 12px}
+.roll-rules-panel{margin:8px 0;display:grid;gap:6px;padding:8px 10px;border-radius:12px;border:1px solid color-mix(in srgb,var(--brand,#7a2335) 18%,var(--border,#e4d9cb));background:color-mix(in srgb,var(--card,#fffdf8) 85%,#fff)}
+.roll-rule{display:grid;grid-template-columns:150px auto minmax(0,1fr) auto;gap:8px;align-items:center}
+.roll-rule-mode{display:flex;gap:4px}
+.roll-rule-values{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:0}
+.roll-rule-values input{flex:1;min-width:140px;min-height:32px;border:1px solid var(--border,#e4d9cb);border-radius:8px;padding:4px 8px}
+.roll-rule-values .tag{gap:4px}.roll-rule-values .tag button{border:0;background:none;color:inherit;font-weight:700;padding:0 2px}
+.roll-rules-actions{display:flex;gap:14px}
+@media(max-width:700px){.roll-rule{grid-template-columns:1fr auto}.roll-rule-values{grid-column:1/-1}}
+:root .roll-rules-toggle{white-space:nowrap}

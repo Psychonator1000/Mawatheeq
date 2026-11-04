@@ -313,9 +313,9 @@ await page.keyboard.press('Control+k');await page.getByRole('dialog',{name:'بح
 const lv=page.locator('[data-record-window]');await lv.locator('.case-pin').getByText('TOOL-2',{exact:true}).waitFor();
 await lv.locator('.case-quick').getByRole('button',{name:'نقل إلى الاستئناف'}).click();
 const mv=page.getByRole('dialog',{name:/نقل القضية إلى الاستئناف/});
-assert.equal(await mv.getByRole('button',{name:/نقل إلى الاستئناف وحفظ/}).isDisabled(),true,'Who appealed is required');
+assert.equal(await mv.getByRole('button',{name:/^نقل إلى الاستئناف$/}).isDisabled(),true,'Who appealed is required');
 await mv.getByLabel('من طعن في الحكم؟',{exact:true}).selectOption('الخصم');await mv.getByLabel('رقم القضية في الاستئناف',{exact:true}).fill('2026/77 مدني استئناف');await mv.getByLabel('المحكمة / الدائرة',{exact:true}).fill('محكمة الاستئناف · الدائرة 3');
-await mv.getByRole('button',{name:/نقل إلى الاستئناف وحفظ/}).click();await mv.waitFor({state:'hidden'});
+await mv.getByRole('button',{name:/^نقل إلى الاستئناف$/}).click();await mv.waitFor({state:'hidden'});
 const closedLevel=lv.locator('.stage-card.closed');await closedLevel.getByText('2026/302').waitFor();
 assert.ok(await closedLevel.getByText('الخصم',{exact:true}).isVisible(),'The closed level records who appealed');
 assert.ok(await closedLevel.getByText('tools_owner',{exact:true}).isVisible(),'The server records who closed the level');

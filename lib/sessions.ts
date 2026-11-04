@@ -7,6 +7,9 @@ export const VENUES = ['المحكمة', 'إدارة الخبراء'] as const;
 export type Venue = typeof VENUES[number];
 export type Decision = { label: string; next: 'session' | 'judgment' | 'none'; experts?: boolean; judgment?: boolean };
 export const DECISIONS: Decision[] = [
+  { label: 'أول جلسة', next: 'session' },
+  { label: 'أول جلسة استئناف', next: 'session' },
+  { label: 'أول جلسة تمييز', next: 'session' },
   { label: 'تأجيل للإعلان', next: 'session' },
   { label: 'تأجيل للاطلاع والرد', next: 'session' },
   { label: 'تأجيل لتقديم مستندات', next: 'session' },

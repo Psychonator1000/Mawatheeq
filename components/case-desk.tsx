@@ -12,6 +12,7 @@ import {OfficeSelect} from './office-shared';
 import {EditorDialog} from './departments/shared';
 import type {Member,WorkItem} from '@/lib/office';
 import {SelectList} from './filter-select';
+import {ROLL_FIELDS,ROLL_MODES,passesRollRules,rollOptions,type RollField,type RollItem,type RollMode,type RollRule} from '@/lib/roll-filter';
 
 type Props={page:DeskPage;records:CaseRecord[];rules?:Rules;clients:ClientEntity[];work:WorkItem[];members:Member[];canEdit:boolean;canCreate:boolean;canExport:boolean;printedBy:string;
  onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onNew:(c:CaseRecord)=>void;
@@ -89,17 +90,41 @@ function PostingErrors(p:Props){
  </Panel>;
 }
 function useLawyerFilter(records:CaseRecord[]){const [lawyer,setLawyer]=useState('');const options=lawyersOf(records);return {lawyer,match:(c:CaseRecord)=>!lawyer||String(c.lawyer||'').trim()===lawyer,select:options.length>0&&<OfficeSelect label="المستشار" value={lawyer} onChange={setLawyer} options={[['','كل المستشارين'],...options.map(l=>[l,l] as [string,string])]}/>}}
+/** «تصفية متقدمة» for the rolls: print only, or all except, chosen clients, opponents, lawyers, courts or roles. */
+function useRollRules(items:RollItem[]){
+ const [open,setOpen]=useState(false),[rules,setRules]=useState<RollRule[]>([]),[typed,setTyped]=useState<Record<string,string>>({});
+ const active=rules.filter(r=>r.values.length).length;
+ const patch=(id:string,v:Partial<RollRule>)=>setRules(rs=>rs.map(r=>r.id===id?{...r,...v}:r));
+ const add=()=>{setOpen(true);setRules(rs=>[...rs,{id:crypto.randomUUID(),field:'client',mode:'except',values:[]}])};
+ const button=<button type="button" className={'btn roll-rules-toggle'+(active?' primary':'')} aria-expanded={open} onClick={()=>{if(!rules.length)add();else setOpen(o=>!o)}}>تصفية متقدمة{active?` (${active})`:''}</button>;
+ const panel=open&&<div className="roll-rules-panel">
+   {rules.map(r=>{const opts=rollOptions(items,r.field).filter(v=>!r.values.includes(v)),q=typed[r.id]||'',hits=q?opts.filter(v=>v.includes(q)).slice(0,30):[];
+    const take=(v:string)=>{if(!v.trim())return;patch(r.id,{values:[...r.values,v.trim()]});setTyped(t=>({...t,[r.id]:''}))};
+    return <div className="roll-rule" key={r.id}>
+     <SelectList aria-label="الحقل" value={r.field} onChange={e=>patch(r.id,{field:e.target.value as RollField,values:[]})}>{ROLL_FIELDS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</SelectList>
+     <div className="roll-rule-mode" role="group" aria-label="طريقة التصفية">{ROLL_MODES.map(([m,l])=><button type="button" key={m} className={'chip-toggle'+(r.mode===m?' on':'')} aria-pressed={r.mode===m} onClick={()=>patch(r.id,{mode:m as RollMode})}>{l}</button>)}</div>
+     <div className="roll-rule-values">{r.values.map(v=><span className="tag" key={v}>{v}<button type="button" aria-label={'إزالة '+v} onClick={()=>patch(r.id,{values:r.values.filter(x=>x!==v)})}>×</button></span>)}
+      <input aria-label={'اختر '+(ROLL_FIELDS.find(f=>f[0]===r.field)?.[1]||'')} list={'roll-rule-'+r.id} value={q} placeholder="اكتب واختر…" onChange={e=>{const v=e.target.value;if(opts.includes(v))take(v);else setTyped(t=>({...t,[r.id]:v}))}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();take(hits[0]||q)}}}/>
+      <datalist id={'roll-rule-'+r.id}>{hits.map(v=><option key={v} value={v}/>)}</datalist></div>
+     <button type="button" className="icon-btn" aria-label="حذف الشرط" onClick={()=>setRules(rs=>rs.filter(x=>x.id!==r.id))}>×</button>
+    </div>})}
+   <div className="roll-rules-actions"><button type="button" className="text-link" onClick={add}>+ إضافة شرط</button>{rules.length>0&&<button type="button" className="text-link" onClick={()=>{setRules([]);setOpen(false)}}>مسح التصفية</button>}</div>
+  </div>;
+ return {button,panel,match:(i:RollItem)=>passesRollRules(i,rules)};
+}
 function Roll(p:Props){
  const [from,setFrom]=useState(todayISO()),[to,setTo]=useState(shiftDays(todayISO(),6)),law=useLawyerFilter(p.records);
- const rows=sittingsBetween(p.records,from,to||from).filter(s=>law.match(s.c));
+ const inRange=sittingsBetween(p.records,from,to||from).filter(s=>law.match(s.c)),adv=useRollRules(inRange);
+ const rows=inRange.filter(adv.match);
  const days=[...new Set(rows.map(r=>r.date))];
  // Laid out like «رول الأحكام»: what is previewed is what prints, each sitting a band with every value under its name.
  const html=rollCardsHtml('رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to||from)}`,days.map(d=>[formatDate(d),rows.filter(r=>r.date===d).map(r=>({code:ref(r.c),client:clientName(r.c)||'—',role:String(r.c.role||''),opponent:r.c.opponent||'—',lawyer:String(r.c.lawyer||''),
   facts:[['الجلسة السابقة',r.last?.date?formatDate(String(r.last.date)):'—'],['تاريخ الجلسة',formatDate(r.date)],['الجلسة القادمة',ROLL_BLANK],['الساعة',r.time||'—'],['المحكمة',r.court||'—',r.venue!=='المحكمة'?r.venue:''],['الرقم الآلي',String(r.c.autoNumber||'')],['رقم القضية',String(r.c.caseNumber||'')],['آخر قرار',String(r.last?.decision||'')],['المطلوب',r.required]] as [string,string,string?][],
   writeIn:['قرار الجلسة','منطوق الحكم']}))]),formatDate(todayISO()),p.printedBy,true,'جلسة');
  return <Panel title="مواعيد الجلسات (رول)" note="الجلسات القادمة حسب آخر ترحيل لكل قضية، مجمعة باليوم.">
-  <div className="roll-top desk-roll-top"><div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/>{law.select}</div>
+  <div className="roll-top desk-roll-top"><div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/>{law.select}{adv.button}</div>
    <div className="roll-count" role="status"><b>{rows.length}</b><span>جلسة ستُطبع</span></div></div>
+  {adv.panel}
   {!rows.length?<Empty title="لا جلسات في هذه الفترة"/>:<iframe className="roll-preview" title="معاينة رول الجلسات" sandbox="" srcDoc={html}/>}
   <div className="actions roll-actions">{p.canExport?<button className="btn primary" disabled={!rows.length} onClick={()=>{if(!printHtml(html))toast.error('اسمح بالنوافذ المنبثقة للطباعة.')}}><Printer size={15}/> طباعة الرول ({rows.length})</button>:<p className="subtitle">الطباعة غير متاحة لحسابك؛ اطلبها من مسؤول المكتب.</p>}</div>
  </Panel>;

@@ -2,7 +2,7 @@
 // court level, plus its scheduled and finished hearings and tasks. Built from data the case file already holds.
 import type { CaseRecord, Procedure } from './domain';
 import type { WorkItem } from './office';
-import { LEVELS, LEVEL_TITLE, currentLevel, stagesOf, type Level } from './case-stages';
+import { LEVELS, LEVEL_TITLE, appealedByLabel, currentLevel, stagesOf, type Level } from './case-stages';
 import { isSession } from './sessions';
 
 export type TimelineKind = 'session' | 'procedure' | 'judgment' | 'level' | 'hearing' | 'task';
@@ -22,7 +22,7 @@ export function buildTimeline(c: CaseRecord, work: WorkItem[], today: string): T
     if (s.date) out.push({ id: 'j-' + s.id, date: s.date, kind: 'judgment', level: s.level, title: `${s.type || 'حكم'}${s.outcome && s.outcome !== 'غير محدد' ? ' · ' + s.outcome : ''}`, detail: [s.caseNumber && 'رقم ' + s.caseNumber, s.ruling].filter(Boolean).join(' · ') || undefined });
     const to: Level | undefined = stages[i + 1]?.level ?? (LEVELS[LEVELS.indexOf(s.level) + 1] as Level | undefined);
     const moved = s.movedOn || (s.closedAt || '').slice(0, 10);
-    if (moved) out.push({ id: 'l-' + s.id, date: moved, kind: 'level', level: to || s.level, title: `انتقال إلى ${to ? LEVEL_TITLE[to] : 'الدرجة التالية'}`, detail: [s.appealedBy && 'الطاعن: ' + s.appealedBy, s.note].filter(Boolean).join(' · ') || undefined, who: s.closedBy });
+    if (moved) out.push({ id: 'l-' + s.id, date: moved, kind: 'level', level: to || s.level, title: `انتقال إلى ${to ? LEVEL_TITLE[to] : 'الدرجة التالية'}`, detail: [s.appealedBy && (s.appealedBy === 'الطرفان' ? appealedByLabel(s.appealedBy) : 'الطاعن: ' + s.appealedBy), s.note].filter(Boolean).join(' · ') || undefined, who: s.closedBy });
   });
   const level = currentLevel(c);
   for (const p of c.procedures || []) if (p.date) out.push(fromProcedure(p, level));

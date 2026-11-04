@@ -31,5 +31,6 @@ export default defineConfig({
     'process.env.NEXT_PUBLIC_BASE_PATH': JSON.stringify(base.replace(/\/$/, '')),
   },
   css: { postcss: path.join(projectRoot, 'postcss.config.mjs') },
-  build: { outDir: path.join(projectRoot, 'dist-pages'), emptyOutDir: true },
+  // PROFILE_MAPS=1 adds source maps for profiling a production build; published builds stay without them.
+  build: { outDir: path.join(projectRoot, 'dist-pages'), emptyOutDir: true, sourcemap: process.env.PROFILE_MAPS === '1' },
 });
