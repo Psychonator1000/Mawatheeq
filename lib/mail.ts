@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { backend, loadBackend } from './supabase-client';
 import { mailRequest, sessionToken } from './local-auth';
 import type { WorkspaceId } from './departments';
+import { userIdle } from './live';
 
 export type MailWorkspace = WorkspaceId;
 export type MailRight = 'inbox' | 'sent' | 'send';
@@ -148,7 +149,7 @@ export function framedHtml(html: string, images: boolean) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base target="_blank"><style>body{font-family:Tahoma,Arial,sans-serif;font-size:14px;line-height:1.6;margin:12px;color:#222;background:#fff;word-wrap:break-word}img{max-width:100%;height:auto}</style></head><body>${body}</body></html>`;
 }
 
-// One poller per window, shared by the bell and the page tabs: fetch mail every minute (and on returning to the window), then read the counts.
+// One poller per window, shared by the bell and the page tabs: fetch mail every two minutes while someone uses the window (and on returning to it), then read the counts.
 let counts: MailCounts | null = null, timer = 0, stopChange: (() => void) | null = null;
 const subscribers = new Set<(c: MailCounts | null) => void>();
 async function readCounts() { try { counts = await mailRequest<MailCounts>('counts'); subscribers.forEach(fn => fn(counts)); } catch { /* keep the last counts */ } }
@@ -159,10 +160,10 @@ export function useMailCounts(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     subscribers.add(setValue);
-    if (subscribers.size === 1) { tick(); timer = window.setInterval(tick, 60000); window.addEventListener('focus', tick); stopChange = onMailChanged(() => void readCounts()); }
+    if (subscribers.size === 1) { tick(); const next = () => { timer = window.setTimeout(() => { if (!userIdle()) tick(); next(); }, 120000); }; next(); window.addEventListener('focus', tick); stopChange = onMailChanged(() => void readCounts()); }
     return () => {
       subscribers.delete(setValue);
-      if (!subscribers.size) { clearInterval(timer); window.removeEventListener('focus', tick); stopChange?.(); stopChange = null; }
+      if (!subscribers.size) { clearTimeout(timer); window.removeEventListener('focus', tick); stopChange?.(); stopChange = null; }
     };
   }, [enabled]);
   return value;

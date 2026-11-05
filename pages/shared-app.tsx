@@ -13,6 +13,7 @@ import { restoreSession, signIn, signOut, changePassword, localRequest, sessionE
 import type { Permissions } from '@/lib/permissions';
 import { cachedUser, cachedAccess, rememberUser, rememberAccess } from '@/lib/boot-cache';
 import BrandLogo from '@/components/brand-logo';
+import { userIdle } from '@/lib/live';
 
 /** After leaving a staff account, the owner lands back on the staff list they switched from. */
 function backToStaffList() { sessionStorage.setItem(workspaceStorageKey, 'legal'); history.replaceState(null, '', '#settings'); }
@@ -54,7 +55,7 @@ export default function SharedApp() {
     window.addEventListener(sessionEvent, onRefresh);
     window.addEventListener('storage', onStorage);
     window.addEventListener('focus', onRefresh);
-    const timer = window.setInterval(() => { if (!document.hidden) onRefresh(); }, 60000);
+    const timer = window.setInterval(() => { if (!document.hidden && !userIdle()) onRefresh(); }, 120000);
     return () => {
       active = false;
       clearInterval(timer);

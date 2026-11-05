@@ -7,8 +7,8 @@ import { loadBackend } from './supabase-client';
  * hears it refreshes that part at once, fetching through its own permissions; the ping carries only which part
  * changed, never the content. The timed checks stay as the fallback when the channel is unavailable.
  */
-export type LiveTopic = 'chat' | 'paper' | 'comments';
-export const LIVE_EVENT: Record<LiveTopic, string> = { chat: 'mawatheeq-live-chat', paper: 'mawatheeq-paper-files', comments: 'mawatheeq-live-comments' };
+export type LiveTopic = 'chat' | 'paper' | 'comments' | 'cases' | 'office';
+export const LIVE_EVENT: Record<LiveTopic, string> = { chat: 'mawatheeq-live-chat', paper: 'mawatheeq-paper-files', comments: 'mawatheeq-live-comments', cases: 'mawatheeq-live-cases', office: 'mawatheeq-live-office' };
 
 let channel: RealtimeChannel | null = null, ready = false;
 const queued = new Set<LiveTopic>();
@@ -34,6 +34,27 @@ async function send(topic: LiveTopic) {
   try { await channel?.send({ type: 'broadcast', event: 'changed', payload: { topic } }); } catch { /* the timed checks still catch up */ }
 }
 
+/**
+ * How long to wait before the next timed check. While the live channel is connected, changes arrive by ping and the
+ * timed check is only a safety net, so it runs rarely; without the channel (the office server, test browsers) the
+ * shorter interval keeps things current. A window nobody has used for ten minutes skips its checks until someone
+ * comes back to it, which spares the database the work of copies left open on idle screens.
+ */
+export function pollEvery(fallbackMs: number, liveMs: number) { return ready ? liveMs : fallbackMs; }
+const IDLE_MS = 10 * 60 * 1000;
+let lastInput = Date.now();
+export const userIdle = () => Date.now() - lastInput > IDLE_MS;
+if (typeof window !== 'undefined') {
+  const seen = () => {
+    const wasIdle = userIdle(); lastInput = Date.now();
+    // Coming back to an idle window catches up at once, the same way returning to the window does.
+    if (wasIdle) window.dispatchEvent(new Event('focus'));
+  };
+  for (const type of ['pointerdown', 'keydown', 'wheel', 'touchstart']) window.addEventListener(type, seen, { passive: true, capture: true });
+  let moved = 0;
+  window.addEventListener('pointermove', () => { const now = Date.now(); if (now - moved > 5000) { moved = now; seen(); } }, { passive: true });
+}
+
 /** Tell everyone else that this part changed; this copy refreshes itself too. */
 export function pingLive(topic: LiveTopic) {
   dispatchEvent(new Event(LIVE_EVENT[topic]));
@@ -46,7 +67,11 @@ const READS: Record<string, string[]> = {
   mawatheeq_comment_request: ['list', 'mentions', 'feed', 'search', 'mentionable'],
 };
 /** Which part a successful request changed, if others should hear about it. */
+const CASE_WRITES = ['save_case', 'import_cases', 'import_register', 'import_roll', 'import_workbook', 'save_rules', 'save_document'];
+const OFFICE_READS = ['context', 'access_history', 'work_history', 'case_file'];
 export function liveTopicOf(endpoint: string, action: string, data: Record<string, unknown>): LiveTopic | null {
+  if (endpoint === 'mawatheeq_local_request') return CASE_WRITES.includes(action) ? 'cases' : null;
+  if (endpoint === 'mawatheeq_office_request') return OFFICE_READS.includes(action) || /_page$|_history$|^export/.test(action) ? null : 'office';
   if (endpoint === 'mawatheeq_chat_request') return READS[endpoint].includes(action) ? null : 'chat';
   if (endpoint === 'mawatheeq_comment_request') return READS[endpoint].includes(action) || action === 'mark_mentions_read' ? null : 'comments';
   if (endpoint === 'mawatheeq_department_request' && data.workspace === 'archive')

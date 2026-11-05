@@ -8,7 +8,7 @@ import {backend} from '@/lib/supabase-client';
 import {requestOpen} from '@/lib/open-record';
 import {useChatSlot} from './chat-slot';
 import {Popover,PopoverContent,PopoverTrigger} from './ui/popover';
-import {LIVE_EVENT,startLive} from '@/lib/live';
+import {LIVE_EVENT,pollEvery,startLive} from '@/lib/live';
 import {CHAT_WITH_EVENT,FILE_TYPES,MAX_FILE,bodyParts,chatTime,conversationName,fileSize,refToken,triggerRefs,typedTrigger,type ChatConversation,type ChatMessage,type ChatPerson,type ChatRef,type ChatSummary} from '@/lib/chat';
 
 const FAST=5000,SLOW=30000,HIDDEN=60000;
@@ -29,7 +29,7 @@ export default function Chat({userId}:{userId:string}){
   lastUnread.current=total}catch(e){if(missing(e))setAvailable(false)}},[userId]);
  // A colleague's message arrives at once over the live channel; the timed check is the fallback.
  useEffect(()=>{void startLive()},[]);
- useEffect(()=>{let timer=0;const tick=()=>{void refresh();timer=window.setTimeout(tick,document.hidden?HIDDEN:open?FAST:SLOW)};tick();const wake=()=>{clearTimeout(timer);tick()};addEventListener('focus',wake);addEventListener(LIVE_EVENT.chat,wake);return()=>{clearTimeout(timer);removeEventListener('focus',wake);removeEventListener(LIVE_EVENT.chat,wake)}},[refresh,open]);
+ useEffect(()=>{let timer=0;const tick=()=>{void refresh();timer=window.setTimeout(tick,document.hidden?HIDDEN:open?pollEvery(FAST,20000):pollEvery(SLOW,120000))};tick();const wake=()=>{clearTimeout(timer);tick()};addEventListener('focus',wake);addEventListener(LIVE_EVENT.chat,wake);return()=>{clearTimeout(timer);removeEventListener('focus',wake);removeEventListener(LIVE_EVENT.chat,wake)}},[refresh,open]);
  // Escape closes the panel when focus is in it or nowhere in particular (not while a case file or dialog has focus).
  const panel=useRef<HTMLElement>(null);
  useEffect(()=>{if(!open)return;const key=(e:KeyboardEvent)=>{const a=document.activeElement;if(e.key==='Escape'&&!e.defaultPrevented&&(!a||a===document.body||panel.current?.contains(a))){e.preventDefault();setOpen(false)}};addEventListener('keydown',key);return()=>removeEventListener('keydown',key)},[open]);
@@ -131,8 +131,8 @@ function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeav
   const top=fresh.at(-1)?.id||0;if(top>lastId.current){lastId.current=top;if(conv.isMember)void chatRequest('read',{conversationId:conv.id,lastId:top}).then(onChanged)}
   setLoaded(true)}catch(e){toast.error((e as Error).message)}},[conv.id,conv.isMember,onChanged]);
  useEffect(()=>{lastId.current=0;void load(true);
-  // Edits and deletions of recent messages are picked up by a full reload every 30 seconds.
-  let n=0;const t=window.setInterval(()=>{if(!document.hidden)void load(++n%6===0)},FAST);const live=()=>void load(false);addEventListener(LIVE_EVENT.chat,live);return()=>{clearInterval(t);removeEventListener(LIVE_EVENT.chat,live)}},[load]);
+  // Edits and deletions of recent messages are picked up by a full reload every sixth check.
+  let n=0;let t=0;const tick=()=>{if(!document.hidden)void load(++n%6===0);t=window.setTimeout(tick,pollEvery(FAST,20000))};t=window.setTimeout(tick,pollEvery(FAST,20000));const live=()=>void load(false);addEventListener(LIVE_EVENT.chat,live);return()=>{clearTimeout(t);removeEventListener(LIVE_EVENT.chat,live)}},[load]);
  useEffect(()=>{const el=scroller.current;if(el)el.scrollTop=el.scrollHeight},[messages.length]);
  useEffect(()=>{if(!trigger){setSuggest([]);return}const t=window.setTimeout(()=>{void chatRequest<ChatRef[]>('search',{q:trigger.query||(trigger.char==='@'?'ا':'')}).then(r=>{setSuggest(triggerRefs(trigger.char,r).slice(0,8));setPick(0)}).catch(()=>setSuggest([]))},trigger.query?220:0);return()=>clearTimeout(t)},[trigger]);
  function onType(v:string){setText(v);const caret=input.current?.selectionStart??v.length;setTrigger(typedTrigger(v,caret));setRefs(r=>r.filter(x=>v.includes(refToken(x))))}

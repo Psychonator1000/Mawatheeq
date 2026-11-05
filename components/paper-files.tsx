@@ -5,6 +5,7 @@ import {FolderOpen,CheckCircle2,Undo2,X} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
 import {PAPER_FILES_EVENT,REQUEST_STATUSES,daysBetween,type DeskFile,type HeldFile,type MyPaperFiles,type MyRequest} from '@/lib/archive';
+import {pollEvery} from '@/lib/live';
 import {formatDate,todayISO} from '@/lib/domain';
 import {usePaperSlot} from './chat-slot';
 import {Popover,PopoverContent,PopoverTrigger} from './ui/popover';
@@ -38,7 +39,7 @@ export default function PaperFiles({userId}:{userId:string}){
     if(before&&before!==r.status&&(r.status==='ready'||r.status==='declined'))toast.message(`طلب الملف ${r.number}: ${REQUEST_STATUSES[r.status]}`,{description:r.decisionNote||undefined})}
   }catch(e){if(missing(e))setAvailable(false)}
  },[]);
- useEffect(()=>{let timer=0;const tick=()=>{void refresh();timer=window.setTimeout(tick,document.hidden?HIDDEN:FAST)};tick();
+ useEffect(()=>{let timer=0;const tick=()=>{void refresh();timer=window.setTimeout(tick,document.hidden?HIDDEN:pollEvery(FAST,180000))};tick();
   const wake=()=>{clearTimeout(timer);tick()};addEventListener('focus',wake);addEventListener(PAPER_FILES_EVENT,wake);
   return()=>{clearTimeout(timer);removeEventListener('focus',wake);removeEventListener(PAPER_FILES_EVENT,wake)}},[refresh,userId]);
  const slot=usePaperSlot();
