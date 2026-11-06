@@ -59,7 +59,9 @@ try{
  await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await click('فتح مساحة العمل');
  await click('فتح القضايا');await page.locator('.nav-section',{hasText:'الجلسات والمواعيد'}).waitFor();
  assert.equal(await count('سجل الأحكام','3'),'3','Cases under study stay out of the judgments register');
- assert.equal(await count('أخطاء الترحيل','1'),'1','One posting error in the sidebar');
+ // On a Friday or Saturday the hearing set for today is also flagged as a weekend date, a second error.
+ {const weekend=[5,6].includes(new Date(today+'T12:00:00Z').getUTCDay()),n=weekend?'2':'1';
+ assert.equal(await count('أخطاء الترحيل',n),n,'One posting error in the sidebar (two on a weekend day)');}
 
  await nav('ترحيل الجلسات');const row=page.locator('tr',{hasText:'DESK-DUE'});await row.waitFor();
  await row.getByLabel('قرار جلسة DESK-DUE').selectOption('شطب الدعوى');await row.getByRole('button',{name:'ترحيل'}).click();

@@ -19,17 +19,24 @@ function checked<T>({ data, error }: { data: T; error: { message: string } | nul
  * on the server (the case is marked «proceduresTrimmed»). A case opened or saved is read whole with «case_full».
  * A database without the light lists answers in full, as before.
  */
-async function allRows(table: string, light = false): Promise<StoredRow[]> {
+async function allRows(table: string, light = false, expected?: Promise<number>): Promise<StoredRow[]> {
   const action = table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', page = (offset: number) => localRequest<StoredRow[] | null>(action, light ? { offset, light } : { offset }).then(r => r || []);
-  // Two pages at a time: one round trip for an office of up to 1,000 records instead of one per page.
-  const rows: StoredRow[] = [];
-  for (let from = 0; ; from += 1000) {
-    const [a, b] = await Promise.all([page(from), page(from + 500)]);
-    rows.push(...a);
-    if (a.length < 500) return rows;
-    rows.push(...b);
-    if (b.length < 500) return rows;
-  }
+  // Four pages at a time, each asked for as soon as one returns, so a slow database answers several at once instead
+  // of one round after another. Pages are read until one comes back short; once the number of records is known, no
+  // page past the end is asked for (a full last page still asks for the one after it).
+  const pages: StoredRow[][] = [];
+  let next = 0, end = Infinity, limit = Infinity;
+  void expected?.then(n => { limit = Math.floor(n / 500) + 1; }, () => undefined);
+  const worker = async () => {
+    for (;;) {
+      const i = next; if (i >= end || i >= limit) return;
+      next++;
+      const rows = await page(i * 500); pages[i] = rows;
+      if (rows.length < 500) end = Math.min(end, i + 1); else if (i + 1 >= limit) limit = i + 2;
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  return pages.slice(0, end).flat();
 }
 
 async function allClients(action: 'list' | 'lookup') {
@@ -80,8 +87,9 @@ async function changedRows(): Promise<{ rows: StoredRow[]; changed: boolean }> {
       if (fresh) { caseCopy = { asOf: d.asOf, rows, full: caseCopy.full }; if (d.rows.length) void writeSnapshot('case-rows', caseCopy); return { rows, changed: d.rows.length > 0 }; }
     }
   }
-  const start = await localRequest<Changes>('cases_changes', { light: true });
-  const rows = await allRows('mawatheeq_cases', true);
+  // The marker of «now» and the pages are asked for together; the marker also says how many pages to queue.
+  const marker = localRequest<Changes>('cases_changes', { light: true });
+  const [start, rows] = await Promise.all([marker, allRows('mawatheeq_cases', true, marker.then(d => d.count))]);
   caseCopy = { asOf: start.asOf, rows, full: Date.now() }; void writeSnapshot('case-rows', caseCopy);
   return { rows, changed: true };
 }
@@ -98,8 +106,12 @@ export async function sharedRequest(path: string, init?: RequestInit): Promise<u
     const rules = localRequest<Rules | null>('rules'); rules.catch(() => undefined);
     const access = await localRequest<Permissions>('access');
     const canRead = canReadCases(access);
+    // The client list is read alongside the cases (not after them); it is read again only if cases changed and the
+    // copy it gave predates this refresh.
+    const clientAction = access.sections.includes('clients') ? 'list' : 'lookup', asked = Date.now();
+    const early = canRead ? clientList(clientAction, false) : null; early?.catch(() => undefined);
     const [cases, settings] = await Promise.all([canRead ? caseRows() : { rows: [], changed: false }, rules]);
-    const directory = canRead ? await clientList(access.sections.includes('clients') ? 'list' : 'lookup', cases.changed) : { clients: [], canMerge: false };
+    const directory = !early ? { clients: [], canMerge: false } : cases.changed && (clientCopy?.at ?? 0) < asked ? await clientList(clientAction, true) : await early;
     const rows = cases.rows, rulesKey = JSON.stringify(settings || DEFAULT_RULES);
     // Unchanged cases, clients and rules give back the previous answer itself: the workspace sees the same object and
     // skips redrawing and re-saving 7,000 cases on every refresh, which kept slow computers busy for seconds.
