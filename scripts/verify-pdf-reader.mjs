@@ -35,7 +35,23 @@ for(const [n,w] of [['1','دينار كويتي واحد'],['2','ديناران 
 const cancelled=new AbortController();cancelled.abort();
 await assert.rejects(()=>readPDFPages({numPages:1},()=>{},()=>{},()=>{},cancelled.signal),e=>e.name==='AbortError');
 for(const name of ['jbig2.wasm','jbig2_nowasm_fallback.js','openjpeg.wasm'])assert.ok(fs.statSync('public/ocr/pdfjs/wasm/'+name).size>0);
-console.log('Passed: localized labels, Arabic digits, date formats, invalid dates, empty/garbled text, filename code, cancellation, decoder assets.');
+// A scanned payment-order bundle (synthetic): one copy of the amount loses its digits, the order number loses its slash,
+// the receipt's second date loses a digit under its underline, the receipt number's zero reads as O, and the debtor's
+// name picks up stray Latin letters in one copy.
+{const scan=['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاختبار للاتصالات','ضد: خالد سالم aml pl الجنسية : الكويت الرقم المدنى: 290010100123',
+ 'يدين الطالب المقدم ضده بمبلغ: 0 دك بموجب كشف حساب رقم 1234567890','مبلغ: 512.25 د.ك فقط','أمر أداء رقم 20259612345','نأمر المقدم ضده : خالد سالم عبدالله','مبلغ : 512.25 د.ك فقط',
+ 'الصفحة 2','2026/2025','FO123456','251234567','25612345','2025-04-23','12.806','512.250 دك','رسوم قضائية','2025-04-3','14:37:01'].join('\n');
+ const f=extractFields(scan,'order.pdf');
+ assert.equal(Number(f.amount),512.25,'The amount most copies agree on, not a copy that lost its digits');
+ assert.equal(f.orderNumber,'612345/2025','An order number read without its slash');
+ assert.equal(f.receiptFee,'12.806','The fee is the smaller sum on the receipt');
+ assert.equal(f.receiptDate,'2025-04-23','A fully written receipt date wins over one that lost a digit');
+ assert.equal(f.receiptNumber,'F0123456','A receipt number whose zero was read as O');
+ assert.equal(f.defendant,'خالد سالم عبدالله','A clean copy of the name replaces one with stray letters');
+ assert.equal(f.account,'1234567890','The statement number');
+ const noSlash=extractFields(scan.replace('أمر أداء رقم 20259612345','أمر أداء رقم'),'order.pdf');
+ assert.equal(noSlash.orderNumber,'612345/2025','The order number from the receipt\'s case number');}
+console.log('Passed: localized labels, Arabic digits, date formats, invalid dates, empty/garbled text, filename code, cancellation, decoder assets, scanned payment orders (voted amount, order number, receipt fee, date and number, clean debtor name, statement number).');
 
 const source=process.argv[2];
 if(source){

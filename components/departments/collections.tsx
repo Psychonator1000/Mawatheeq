@@ -3,6 +3,7 @@ import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf,suggestions} from '@/lib/choices
 import {Plus,FileCheck2,Scale,Link2,Trash2,UserPlus,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
 import BatchPrint from './batch-print';
 import CollectionImport from './collection-import';
+import OrderImport from './order-import';
 import {suggestedEvidence} from '@/lib/document-tools';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
@@ -99,7 +100,7 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  </section></div>
  <section className="panel work-desk">
   <div className="work-desk-head"><h2>التحصيل</h2>{views}
-   {view==='files'&&<div className="actions">{access.canExport&&<button className="btn" onClick={()=>void exportCsv('collections','Mawatheeq-collections',[['الكود','الموكل','الخصم','حالة الملف','الباتش','المسؤول','المطالبة','المسدد','الباقي','المراجعة'],...filtered.map(r=>{const p=pos(r);return [r.payload.code,r.payload.company,r.payload.defendant,r.payload.fileStatus||'',r.payload.batchNumber||'',r.payload.assignedTo||'',kwdPlain(p.total),kwdPlain(p.paid),kwdPlain(p.remaining),reviewed(r)?'راجعت البيانات الحالية':'تحتاج مراجعة']})]).catch(e=>toast.error(e.message))}>تصدير القائمة</button>}{access.canEdit&&access.caseScope==='all'&&<CollectionImport files={files} onDone={reload}/>}{access.canEdit&&<button className="btn primary" onClick={()=>setEditing(newDepartmentRecord('collections','file',{...blankDocument(),sourceReference:'',notes:''}))}><Plus size={17}/> ملف تحصيل جديد</button>}</div>}</div>
+   {view==='files'&&<div className="actions">{access.canExport&&<button className="btn" onClick={()=>void exportCsv('collections','Mawatheeq-collections',[['الكود','الموكل','الخصم','حالة الملف','الباتش','المسؤول','المطالبة','المسدد','الباقي','المراجعة'],...filtered.map(r=>{const p=pos(r);return [r.payload.code,r.payload.company,r.payload.defendant,r.payload.fileStatus||'',r.payload.batchNumber||'',r.payload.assignedTo||'',kwdPlain(p.total),kwdPlain(p.paid),kwdPlain(p.remaining),reviewed(r)?'راجعت البيانات الحالية':'تحتاج مراجعة']})]).catch(e=>toast.error(e.message))}>تصدير القائمة</button>}{access.canEdit&&access.caseScope==='all'&&<CollectionImport files={files} onDone={reload}/>}{access.canEdit&&<OrderImport files={files} clients={clients} onDone={reload}/>}{access.canEdit&&<button className="btn primary" onClick={()=>setEditing(newDepartmentRecord('collections','file',{...blankDocument(),sourceReference:'',notes:''}))}><Plus size={17}/> ملف تحصيل جديد</button>}</div>}</div>
   {view==='due'&&<div className="work-desk-body"><DueList due={due} fileOf={fileOf} onOpen={open} canPrint={access.canExport}/></div>}
   {view==='payments'&&<div className="work-desk-body"><PaymentsList payments={allPayments} fileOf={fileOf} onOpen={open} canPrint={access.canExport}/></div>}
   {view==='print'&&<div className="work-desk-body"><BatchPrint canExport={access.canExport}/></div>}

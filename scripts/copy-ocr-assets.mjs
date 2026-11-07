@@ -7,3 +7,8 @@ for(const directory of ['wasm','cmaps','standard_fonts']){
  fs.cpSync(path.join(pdfRoot,directory),path.join('public/ocr/pdfjs',directory),{recursive:true});
 }
 console.log('PDF image decoders, character maps, and standard fonts are local.');
+// The PDF.js worker calls Map.getOrInsertComputed, which older browsers lack: a small module adds it first, then loads
+// the worker itself (imports run in order). The app points PDF.js at this file.
+fs.writeFileSync('public/ocr/map-compat.mjs',"(()=>{for(const C of [Map,WeakMap]){const p=C.prototype;\n if(typeof p.getOrInsert!=='function')Object.defineProperty(p,'getOrInsert',{configurable:true,writable:true,value(key,value){if(this.has(key))return this.get(key);this.set(key,value);return value}});\n if(typeof p.getOrInsertComputed!=='function')Object.defineProperty(p,'getOrInsertComputed',{configurable:true,writable:true,value(key,make){if(this.has(key))return this.get(key);const value=make(key);this.set(key,value);return value}});}})();"+'\n');
+fs.writeFileSync('public/ocr/pdf.worker.compat.mjs',"import './map-compat.mjs';\nimport './pdf.worker.min.mjs';\n");
+console.log('PDF worker compatibility patch written.');

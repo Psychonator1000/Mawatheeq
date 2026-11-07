@@ -13,7 +13,7 @@
     "postinstall": "node scripts/copy-ocr-assets.mjs",
     "setup:ocr": "node scripts/copy-ocr-assets.mjs",
     "check": "tsc --noEmit",
-    "test:pdf": "node scripts/verify-pdf-reader.mjs",
+    "test:pdf": "node scripts/verify-pdf-reader.mjs && node --experimental-strip-types scripts/verify-order-import.mjs",
     "test:domain": "node --experimental-strip-types scripts/verify-domain.mjs",
     "build:pages": "node scripts/build-pages.mjs",
     "test:shared": "node scripts/verify-shared-backend.mjs",

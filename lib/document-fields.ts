@@ -71,6 +71,18 @@ export function amountInWords(amount:string){
 }
 
 /** Match document labels and page context, never a saved/example case. */
+/** The value that occurs most often (the first such on a tie), compared as numbers when they are numbers. */
+function topValue(values:string[]){
+  const key=(v:string)=>/^\d+(?:\.\d+)?$/.test(v)?String(Number(v)):v,count=new Map<string,number>();
+  for(const v of values)count.set(key(v),(count.get(key(v))||0)+1);
+  let best='',n=0;for(const v of values){const c=count.get(key(v))!;if(c>n){best=v;n=c}}return best;
+}
+/** The court receipt's two sums (each with three decimals): the judicial fee and the claim value. */
+function receiptValues(receipt:string){
+  const values=[...new Set(Array.from(receipt.matchAll(/(?:^|[\s:])(\d+[.,٫]\d{3})(?=\s|د|$)/g),m=>money(m[1])))].map(Number).filter(v=>v>0);
+  if(values.length!==2)return {fee:'',claim:''};
+  const [fee,claim]=values.sort((a,b)=>a-b);return {fee:fee.toFixed(3),claim:claim.toFixed(3)};
+}
 export function extractFields(raw:string,filename=''):DocumentData {
   const original=cleanDocumentText(raw),text=matchText(raw),d=blankDocument();
   const get=(r:RegExp)=>tidy(text.match(r)?.[1]||'');
@@ -92,14 +104,32 @@ export function extractFields(raw:string,filename=''):DocumentData {
   const defendantPattern=/(?:^|\n)\s*(?:ضد|المدعى عليه|المدعي عليه|المطلوب ضده|المعلن إليه|المعلن اليه|المقدم ضده)\s*[:/\-]\s*([^\n:0-9]{5,100})/;
   d.defendant=tidy(originalOrder.match(defendantPattern)?.[1]?.split(/الجنسية|الجنسيه|الرقم|مواليد/)[0]||'');
   if(!d.defendant)d.defendant=tidy(original.match(/(?:اسم\s*المشترك|المعلن إليه|المطلوب ضده)\s*[:/\-]?\s*([^\n\d]{5,80})/)?.[1]||'');
+  // A name read with stray Latin letters is replaced by a clean reading of the same name elsewhere in the order.
+  if(!d.defendant||/[a-z]/i.test(d.defendant)){
+    const clean=[originalOrder.match(/نأمر\s*المقدم\s*(?:ضده|ده)\s*:\s*([^\n:0-9]{5,100})/)?.[1],original.match(/الطرف\s*الثان[يى]\s*[:\-]?\s*([^\n:0-9]{5,100})/)?.[1]].map(v=>tidy(v||'')).find(v=>v&&!/[a-z]/i.test(v));
+    if(clean)d.defendant=clean;
+  }
   d.civilId=selectNumber(order,/الرقم\s*المد[نتم][يى]\s*[:\-]?\s*([23]\d{11})\b/g)||selectNumber(text,/(?<!\d)([23]\d{11})(?!\d)/g);
   d.account=selectNumber(statement+'\n'+order+'\n'+text,/(?:حساب|عقد|العقد|الحساب)\s*(?:رقم)?\s*[:\-]?\s*(\d{1,4}[.]\d{6,12})\b/g)||get(/\b(1\.\d{7,10})\b/);
+  if(!d.account)d.account=selectNumber(order+'\n'+text,/كشف\s*حساب\s*رقم\s*[:\-]?\s*(\d{8,12})\b/g);
   d.phone=tidy((statement||text).match(/(?:رقم\s*(?:الاشتراك|الخط)|خط\s*الاشتراك|الهاتف\s*النقال)\s*[:\-]?\s*([569]\d{7})\b/)?.[1]||'');
-  const amounts=[...order.matchAll(/(?:مبلغ|بمبلغ|المديونية|قيمة\s*الدعوي)[^\d\n]{0,30}(\d+(?:[,٬]\d{3})*[.٫]\d{3}|\d+,\d{3}|\d+(?=\s*(?:د\.?ك|دينار)))(?![\d.,٫])/g)].map(m=>money(m[1]));
-  d.amount=amounts.sort((a,b)=>amounts.filter(v=>v===b).length-amounts.filter(v=>v===a).length)[0]||'';
+  const amounts=[...order.matchAll(/(?:مبلغ|بمبلغ|المديونية|قيمة\s*الدعوي)[^\d\n]{0,30}(\d+(?:[,٬]\d{3})*[.٫]\d{1,3}|\d+,\d{3}|\d+(?=\s*(?:د\.?ك|دينار)))(?![\d.,٫])/g)].map(m=>money(m[1]));
+  // The amount is written several times and a scan can lose digits in one copy («0», «1»): the value most copies agree
+  // on wins, amounts with fils before bare whole numbers, and the court receipt's claim value counts as one more copy.
+  const claim=receiptValues(receipt).claim;
+  const voted=[...amounts.filter(v=>v.includes('.')),...(claim?[claim]:[])];
+  d.amount=topValue(voted.length?voted:amounts)||'';
   d.amountWords=amountInWords(d.amount);
   const orderMatch=order.match(/امر\s*(?:ال)?اداء\s*(?:رقم)?\s*[:\-]?\s*(\d{1,8})\s*[/\\]\s*(\d{1,8})/);
   if(orderMatch){const [,a,b]=orderMatch;if(/^20\d{2}$/.test(b))d.orderNumber=`${a}/${b}`;else if(/^20\d{2}$/.test(a))d.orderNumber=`${b}/${a}`;}
+  // A scan can drop the slash or add a stray digit («20257526614», «523048 20257»): the number and the year are taken
+  // from what follows «اداء رقم»; failing that, from the case number on the court receipt (25523032 → 523032/2025).
+  if(!d.orderNumber){
+    const line=(order.match(/اداء\s*رقم\s*[:\-]?\s*([\d\s/\\]{6,24})/)?.[1]||'').replace(/[^\d]+/g,' ').trim();
+    const year=line.match(/20\d{2}/)?.[0],num=line.split(' ').map(t=>t.length>=10&&t.startsWith('20')?t.slice(-6):t).find(t=>/^\d{5,7}$/.test(t)&&!/^20\d{2}\d?$/.test(t));
+    if(year&&num)d.orderNumber=`${num}/${year}`;
+  }
+  if(!d.orderNumber){const c=receipt.match(/(?:^|\n)\s*(\d{2})(\d{6})\s*(?:المحكم|\n)/);if(c)d.orderNumber=`${c[2]}/20${c[1]}`;}
   const court=order.match(/محكمة\s*(العاصمة|الاحمدي|الجهراء|حولي|الفروانية|مبارك الكبير)\s*الجزئية/);
   d.court=court?`جزئي ${court[1]}`:get(/(جزئي\s*(?:العاصمة|الاحمدي|الجهراء|حولي|الفروانية|مبارك الكبير))/);
   const nationality=tidy(order.match(/الجنسي[ةه]\s*[:\-]?\s*([^\n:]{2,30}?)(?=\s*الرقم|\n)/)?.[1]||'');
@@ -122,11 +152,14 @@ export function extractFields(raw:string,filename=''):DocumentData {
   d.rejectedDate=datesIn(refused)[0]||'';
   // A complete date stamp on the signed order page is distinct from the demand date.
   if(!d.rejectedDate){const stamp=order.match(/\b\d{1,2}\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s+20\d{2}\b/i);if(stamp&&/امر\s*اداء/.test(order)&&/رفض|مرفوض/.test(text))d.rejectedDate=parseDocumentDate(stamp[0]);}
-  d.receiptNumber=tidy(receipt.match(/\b(F\d{6,12})\b/i)?.[1]||'');
-  const receiptDates=datesIn(receipt);
-  d.receiptDate=datesIn(after(receipt,/(?:^|\n)\s*التاريخ\s*[:\-]?\s*\n/,100))[0]||receiptDates.at(-1)||'';
-  d.receiptFee=money(tidy(receipt.match(/(?:المبلغ\s*[:\-]?\s*\n?)(\d+[.,٫]\d{3})/)?.[1]||''));
-  if(!d.receiptFee){const values=[...new Set(Array.from(receipt.matchAll(/(?:^|\n)\s*(\d+[.,٫]\d{3})\s*(?:د[. ]?ك)?\s*(?=\n|$)/g),m=>money(m[1])).filter(v=>v!==d.amount))];if(values.length===1)d.receiptFee=values[0];}
+  // «F» then digits; a scan may read the first zero as the letter O.
+  d.receiptNumber=tidy(receipt.match(/\b(F[0O]\d{5,11})\b/i)?.[1]||'').toUpperCase().replace(/^F[O]/,'F0');
+  // The receipt prints the date twice; a copy under an underline can lose a digit («2025-04-3»): fully written dates
+  // are preferred, then the one most copies agree on.
+  const written=Array.from(receipt.matchAll(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g),m=>m[0]),full=written.filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&parseDocumentDate(v));
+  d.receiptDate=parseDocumentDate(topValue(full)||'')||datesIn(after(receipt,/(?:^|\n)\s*التاريخ\s*[:\-]?\s*\n/,100))[0]||datesIn(receipt).at(-1)||'';
+  // The fee and the claim value are the two sums on the receipt; the fee is the smaller.
+  d.receiptFee=receiptValues(receipt).fee||money(tidy(receipt.match(/(?:المبلغ\s*[:\-]?\s*\n?)(\d+[.,٫]\d{3})/)?.[1]||''));
   d.orderAuto=selectNumber(receipt,/رقم\s*ال[اأا]?ل[يى]\s*[:\-]?\s*(\d{9})\b/g)||tidy(receipt.match(/(?:^|\n)\s*(\d{9})\s*(?=\n|$)/)?.[1]||'');
   d.companyRegister=tidy(statement.match(/C\.?\s*R\.?\s*[:\-]?\s*(\d{3,10})\b/i)?.[1]||'');
   return d;

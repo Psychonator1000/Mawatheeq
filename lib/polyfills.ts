@@ -12,6 +12,15 @@ if (typeof crypto !== 'undefined' && typeof crypto.randomUUID !== 'function') {
   });
 }
 
+// The PDF reader calls Map.getOrInsertComputed, which browsers only recently gained; without it every scanned page
+// came back empty. The same patch runs inside the reader's background worker (see scripts/copy-ocr-assets.mjs).
+type Store={has(k:unknown):boolean;get(k:unknown):unknown;set(k:unknown,v:unknown):unknown};
+for(const C of [Map,WeakMap]){
+  const p=C.prototype as unknown as Record<string,unknown>;
+  if(typeof p.getOrInsert!=='function')Object.defineProperty(p,'getOrInsert',{configurable:true,writable:true,value(this:Store,key:unknown,value:unknown){if(this.has(key))return this.get(key);this.set(key,value);return value}});
+  if(typeof p.getOrInsertComputed!=='function')Object.defineProperty(p,'getOrInsertComputed',{configurable:true,writable:true,value(this:Store,key:unknown,make:(k:unknown)=>unknown){if(this.has(key))return this.get(key);const value=make(key);this.set(key,value);return value}});
+}
+
 /** Copy text, falling back to a hidden text area where the clipboard API is unavailable (plain http). */
 export async function copyText(text: string): Promise<void> {
   if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);

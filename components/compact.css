@@ -1281,3 +1281,14 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .roll-rule-mode{flex-wrap:wrap}
 @media(max-width:700px){.roll-rule-range{grid-column:1/-1}}
 @media(max-width:700px){:root .roll-rule{grid-template-columns:minmax(0,1fr) auto;gap:6px}:root .roll-rule>.icon-btn{grid-row:1;grid-column:2}:root .roll-rule-mode,:root .roll-rule-values,:root .roll-rule-range{grid-column:1/-1}:root .roll-rule-mode .chip-toggle{white-space:nowrap;padding:3px 9px}:root .roll-rules-hint{margin-inline-start:0;flex-basis:100%}:root .roll-rules-actions{flex-wrap:wrap}}
+/* Collection files from payment-order PDFs: one card per order, its fields in a tight grid, doubtful fields marked. */
+.order-import{display:grid;gap:8px;max-height:min(62vh,640px);overflow:auto;padding-inline-end:4px}
+.order-card{border:1px solid var(--border);border-radius:12px;padding:8px 10px;background:var(--card)}
+.order-card.skipped{opacity:.7}
+.order-card-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.order-card-head b{font-size:13px;margin-inline-end:auto}
+.order-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 8px;margin-top:6px}
+.order-fields .field{gap:2px;margin:0}.order-fields .field span{font-size:11px}.order-fields .field.wide{grid-column:span 2}
+.order-fields input,.order-fields select{min-height:30px;padding:3px 8px;font-size:13px}
+.order-fields .needs-check input{border-color:#d97706;background:color-mix(in srgb,#f59e0b 12%,var(--card))}
+.order-fields .needs-check span::after{content:' · راجع';color:#b45309;font-weight:600}
+@media(max-width:700px){.order-fields .field.wide{grid-column:1/-1}}

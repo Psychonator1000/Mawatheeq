@@ -19,16 +19,18 @@ function interruptible<T>(promise:Promise<T>,signal:AbortSignal,milliseconds=120
 }
 
 // The same renderer/OCR pipeline is used by the browser and the source-PDF regression check.
-export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCanvasElement,getWorker:(progress:(value:number)=>void)=>Promise<Worker>,onProgress:Progress,signal:AbortSignal){
+// `maxPages` reads only the first pages, for bundles whose data is at the front (a payment order's first four pages).
+export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCanvasElement,getWorker:(progress:(value:number)=>void)=>Promise<Worker>,onProgress:Progress,signal:AbortSignal,maxPages=Infinity){
   if(pdf.numPages>100)throw new Error('الحد الأقصى 100 صفحة لكل ملف.');
   const pages:PDFPageText[]=[];let worker:Worker|undefined;
   let ocrProgress:((value:number)=>void)=()=>{};
   let renderTask:ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']>|undefined;
   const cancel=()=>{renderTask?.cancel();if(worker)void worker.terminate().catch(()=>{});};
   signal.addEventListener('abort',cancel,{once:true});
+  const total=Math.min(pdf.numPages,maxPages);
   try{
-    for(let i=1;i<=pdf.numPages;i++){
-      check(signal);onProgress((i-1)/pdf.numPages*100,`قراءة الصفحة ${i} من ${pdf.numPages}`);
+    for(let i=1;i<=total;i++){
+      check(signal);onProgress((i-1)/total*100,`قراءة الصفحة ${i} من ${total}`);
       const page=await interruptible(pdf.getPage(i),signal);
       let canvas:HTMLCanvasElement|undefined;
       try{
@@ -50,13 +52,13 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
           renderTask=page.render({canvasContext:ctx,viewport,canvas,background:'#ffffff'});
           await interruptible(renderTask.promise,signal);
           await worker.setParameters({tessedit_pageseg_mode:'3' as PSM,preserve_interword_spaces:'0',user_defined_dpi:String(Math.round(scale*72))});
-          onProgress((i-.75)/pdf.numPages*100,`قراءة النص المصوّر في الصفحة ${i} من ${pdf.numPages}`);
-          ocrProgress=p=>onProgress((i-.75+.4*p)/pdf.numPages*100,`قراءة النص المصوّر في الصفحة ${i} من ${pdf.numPages}`);
+          onProgress((i-.75)/total*100,`قراءة النص المصوّر في الصفحة ${i} من ${total}`);
+          ocrProgress=p=>onProgress((i-.75+.4*p)/total*100,`قراءة النص المصوّر في الصفحة ${i} من ${total}`);
           let result=await interruptible(worker.recognize(canvas,{rotateAuto:true}),signal);
           text=cleanDocumentText(result.data.text);confidence=result.data.confidence;
           if((confidence<50||!assessText(text).usable)&&text.length<4000){
-            onProgress((i-.35)/pdf.numPages*100,`تحسين قراءة الصفحة ${i} من ${pdf.numPages}`);
-            ocrProgress=p=>onProgress((i-.35+.3*p)/pdf.numPages*100,`تحسين قراءة الصفحة ${i} من ${pdf.numPages}`);
+            onProgress((i-.35)/total*100,`تحسين قراءة الصفحة ${i} من ${total}`);
+            ocrProgress=p=>onProgress((i-.35+.3*p)/total*100,`تحسين قراءة الصفحة ${i} من ${total}`);
             await worker.setParameters({tessedit_pageseg_mode:'11' as PSM});
             const retry=await interruptible(worker.recognize(canvas,{rotateAuto:true}),signal);
             const a=assessText(text),b=assessText(retry.data.text);
@@ -75,8 +77,8 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
               renderTask=page.render({canvas:small,canvasContext:small.getContext('2d')!,viewport:scanView,background:'#ffffff'});
               await interruptible(renderTask.promise,signal);
               ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(small,0,0,canvas.width,canvas.height);
-              onProgress((i-.3)/pdf.numPages*100,`تدقيق الأرقام والتواريخ في الصفحة ${i}`);
-              ocrProgress=p=>onProgress((i-.3+.25*p)/pdf.numPages*100,`تدقيق الأرقام والتواريخ في الصفحة ${i}`);
+              onProgress((i-.3)/total*100,`تدقيق الأرقام والتواريخ في الصفحة ${i}`);
+              ocrProgress=p=>onProgress((i-.3+.25*p)/total*100,`تدقيق الأرقام والتواريخ في الصفحة ${i}`);
               await worker.reinitialize('eng');
               await worker.setParameters({tessedit_pageseg_mode:'11' as PSM,user_defined_dpi:String(Math.round(scale*72))});
               const numbers=await interruptible(worker.recognize(canvas,{rotateAuto:true}),signal,45000);
@@ -94,16 +96,17 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
         if(worker){await worker.terminate().catch(()=>{});worker=undefined;}
         pages.push({page:i,text:'',method:'ocr',warning:`تعذرت قراءة هذه الصفحة؛ راجع الأصل. ${e instanceof Error?e.message:''}`});
       }finally{ocrProgress=()=>{};if(canvas)canvas.width=canvas.height=0;page.cleanup();renderTask=undefined;}
-      onProgress(i/pdf.numPages*100,`اكتملت الصفحة ${i} من ${pdf.numPages}`);
+      onProgress(i/total*100,`اكتملت الصفحة ${i} من ${total}`);
     }
     check(signal);return pages;
   }finally{signal.removeEventListener('abort',cancel);if(worker)await worker.terminate().catch(()=>{});}
 }
 
-export async function extractPDF(file:File,onProgress:Progress,signal:AbortSignal){
+export async function extractPDF(file:File,onProgress:Progress,signal:AbortSignal,maxPages=Infinity){
   check(signal);onProgress(0,'تجهيز قارئ PDF واللغة العربية…');
   const pdfjs=await import('pdfjs-dist');
-  pdfjs.GlobalWorkerOptions.workerSrc=assetUrl('/ocr/pdf.worker.min.mjs');
+  // The worker is loaded through a small patch for browsers without Map.getOrInsertComputed.
+  pdfjs.GlobalWorkerOptions.workerSrc=assetUrl('/ocr/pdf.worker.compat.mjs');
   const task=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),useSystemFonts:true,
     wasmUrl:assetUrl('/ocr/pdfjs/wasm/'),cMapUrl:assetUrl('/ocr/pdfjs/cmaps/'),standardFontDataUrl:assetUrl('/ocr/pdfjs/standard_fonts/'),
     // Do not silently discard a damaged/unsupported scanned image layer.
@@ -115,7 +118,7 @@ export async function extractPDF(file:File,onProgress:Progress,signal:AbortSigna
     return await readPDFPages(pdf,()=>document.createElement('canvas'),async progress=>{
       const {createWorker}=await import('tesseract.js');
       return createWorker(['ara','eng'],1,{workerPath:assetUrl('/ocr/worker.min.js'),corePath:assetUrl('/ocr'),langPath:assetUrl('/ocr'),logger:m=>{if(m.status==='recognizing text')progress(m.progress);}});
-    },onProgress,signal);
+    },onProgress,signal,maxPages);
   }catch(e){
     if(signal.aborted)throw aborted();
     if(e instanceof Error&&e.name==='PasswordException')throw new Error('الملف محمي بكلمة مرور. ارفع نسخة غير محمية.');
