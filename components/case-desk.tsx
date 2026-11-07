@@ -12,7 +12,7 @@ import {OfficeSelect} from './office-shared';
 import {EditorDialog} from './departments/shared';
 import type {Member,WorkItem} from '@/lib/office';
 import {SelectList} from './filter-select';
-import {ROLL_FIELDS,ROLL_MODES,passesRollRules,rollOptions,type RollField,type RollItem,type RollMode,type RollRule} from '@/lib/roll-filter';
+import {NUMBER_FIELDS,ROLL_FIELDS,modesFor,passesRollRules,rollOptions,ruleActive,splitValues,type RollField,type RollItem,type RollMode,type RollRule} from '@/lib/roll-filter';
 
 type Props={page:DeskPage;records:CaseRecord[];rules?:Rules;clients:ClientEntity[];work:WorkItem[];members:Member[];canEdit:boolean;canCreate:boolean;canExport:boolean;printedBy:string;
  onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onNew:(c:CaseRecord)=>void;
@@ -93,22 +93,33 @@ function useLawyerFilter(records:CaseRecord[]){const [lawyer,setLawyer]=useState
 /** «تصفية متقدمة» for the rolls: print only, or all except, chosen clients, opponents, lawyers, courts or roles. */
 function useRollRules(items:RollItem[]){
  const [open,setOpen]=useState(false),[rules,setRules]=useState<RollRule[]>([]),[typed,setTyped]=useState<Record<string,string>>({});
- const active=rules.filter(r=>r.values.length).length;
+ const active=rules.filter(ruleActive).length;
  const patch=(id:string,v:Partial<RollRule>)=>setRules(rs=>rs.map(r=>r.id===id?{...r,...v}:r));
  const add=()=>{setOpen(true);setRules(rs=>[...rs,{id:crypto.randomUUID(),field:'client',mode:'except',values:[]}])};
  const button=<button type="button" className={'btn roll-rules-toggle'+(active?' primary':'')} aria-expanded={open} onClick={()=>{if(!rules.length)add();else setOpen(o=>!o)}}>تصفية متقدمة{active?` (${active})`:''}</button>;
  const panel=open&&<div className="roll-rules-panel">
-   {rules.map(r=>{const opts=rollOptions(items,r.field).filter(v=>!r.values.includes(v)),q=typed[r.id]||'',hits=q?opts.filter(v=>v.includes(q)).slice(0,30):[];
-    const take=(v:string)=>{if(!v.trim())return;patch(r.id,{values:[...r.values,v.trim()]});setTyped(t=>({...t,[r.id]:''}))};
+   {rules.map(r=>{const label=ROLL_FIELDS.find(f=>f[0]===r.field)?.[1]||'',num=NUMBER_FIELDS.includes(r.field),ranged=r.mode==='range'||r.mode==='outside';
+    const opts=rollOptions(items,r.field).filter(v=>!r.values.includes(v)),q=typed[r.id]||'',hits=q?opts.filter(v=>v.includes(q)).slice(0,30):[];
+    // Several values at once: typed with commas (numbers also with spaces) or pasted as a list.
+    const take=(text:string)=>{const vs=splitValues(text,r.field).filter(v=>!r.values.includes(v));if(vs.length)patch(r.id,{values:[...r.values,...vs]});setTyped(t=>({...t,[r.id]:''}))};
+    const changeField=(field:RollField)=>patch(r.id,{field,values:[],from:'',to:'',mode:!NUMBER_FIELDS.includes(field)&&(r.mode==='range'||r.mode==='outside')?'only':r.mode});
     return <div className="roll-rule" key={r.id}>
-     <SelectList aria-label="الحقل" value={r.field} onChange={e=>patch(r.id,{field:e.target.value as RollField,values:[]})}>{ROLL_FIELDS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</SelectList>
-     <div className="roll-rule-mode" role="group" aria-label="طريقة التصفية">{ROLL_MODES.map(([m,l])=><button type="button" key={m} className={'chip-toggle'+(r.mode===m?' on':'')} aria-pressed={r.mode===m} onClick={()=>patch(r.id,{mode:m as RollMode})}>{l}</button>)}</div>
-     <div className="roll-rule-values">{r.values.map(v=><span className="tag" key={v}>{v}<button type="button" aria-label={'إزالة '+v} onClick={()=>patch(r.id,{values:r.values.filter(x=>x!==v)})}>×</button></span>)}
-      <input aria-label={'اختر '+(ROLL_FIELDS.find(f=>f[0]===r.field)?.[1]||'')} list={'roll-rule-'+r.id} value={q} placeholder="اكتب واختر…" onChange={e=>{const v=e.target.value;if(opts.includes(v))take(v);else setTyped(t=>({...t,[r.id]:v}))}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();take(hits[0]||q)}}}/>
-      <datalist id={'roll-rule-'+r.id}>{hits.map(v=><option key={v} value={v}/>)}</datalist></div>
+     <SelectList aria-label="الحقل" value={r.field} onChange={e=>changeField(e.target.value as RollField)}>{ROLL_FIELDS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</SelectList>
+     <div className="roll-rule-mode" role="group" aria-label="طريقة التصفية">{modesFor(r.field).map(([m,l])=><button type="button" key={m} className={'chip-toggle'+(r.mode===m?' on':'')} aria-pressed={r.mode===m} onClick={()=>patch(r.id,{mode:m as RollMode})}>{l}</button>)}</div>
+     {ranged?<div className="roll-rule-range">
+       <label><span>من</span><input aria-label={label+' من'} inputMode="numeric" list={'roll-rule-'+r.id} value={r.from||''} placeholder={r.field==='code'?'مثال: 100':'من'} onChange={e=>patch(r.id,{from:e.target.value})}/></label>
+       <label><span>إلى</span><input aria-label={label+' إلى'} inputMode="numeric" list={'roll-rule-'+r.id} value={r.to||''} placeholder={r.field==='code'?'مثال: 250':'إلى'} onChange={e=>patch(r.id,{to:e.target.value})}/></label>
+       <datalist id={'roll-rule-'+r.id}>{rollOptions(items,r.field).slice(0,200).map(v=><option key={v} value={v}/>)}</datalist></div>
+     :<div className="roll-rule-values">{r.values.map(v=><span className="tag" key={v}>{v}<button type="button" aria-label={'إزالة '+v} onClick={()=>patch(r.id,{values:r.values.filter(x=>x!==v)})}>×</button></span>)}
+      <input aria-label={(r.mode==='contains'?'نص يحتويه ':'اختر ')+label} list={r.mode==='contains'?undefined:'roll-rule-'+r.id} value={q} placeholder={r.mode==='contains'?'اكتب جزءاً من القيمة…':num?'اكتب رقماً أو عدة أرقام…':'اكتب واختر…'}
+       onChange={e=>{const v=e.target.value;if(r.mode!=='contains'&&opts.includes(v))take(v);else setTyped(t=>({...t,[r.id]:v}))}}
+       onPaste={e=>{const text=e.clipboardData.getData('text');if(splitValues(text,r.field).length>1){e.preventDefault();take(text)}}}
+       onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();take(r.mode==='contains'||num||!hits[0]?q:hits[0])}}}
+       onBlur={()=>{if(q.trim()&&(num||r.mode==='contains'))take(q)}}/>
+      {r.mode!=='contains'&&<datalist id={'roll-rule-'+r.id}>{hits.map(v=><option key={v} value={v}/>)}</datalist>}</div>}
      <button type="button" className="icon-btn" aria-label="حذف الشرط" onClick={()=>setRules(rs=>rs.filter(x=>x.id!==r.id))}>×</button>
     </div>})}
-   <div className="roll-rules-actions"><button type="button" className="text-link" onClick={add}>+ إضافة شرط</button>{rules.length>0&&<button type="button" className="text-link" onClick={()=>{setRules([]);setOpen(false)}}>مسح التصفية</button>}</div>
+   <div className="roll-rules-actions"><button type="button" className="text-link" onClick={add}>+ إضافة شرط</button>{rules.length>0&&<button type="button" className="text-link" onClick={()=>{setRules([]);setOpen(false)}}>مسح التصفية</button>}<span className="roll-rules-hint">تُجمع الشروط معاً. للأرقام: افصل بينها بفاصلة أو مسافة، أو الصق قائمة.</span></div>
   </div>;
  return {button,panel,match:(i:RollItem)=>passesRollRules(i,rules)};
 }

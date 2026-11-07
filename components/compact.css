@@ -1274,3 +1274,10 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 
 /* The overview chart fills its box; the box's own size (not the chart's) decides the height, so they cannot push each other. */
 .monthly-chart{position:relative}.monthly-chart>.chart-fill{position:absolute;inset:0}
+
+/* Advanced roll filter: a from/to pair for ranges of codes and numbers, and a short hint under the rules. */
+.roll-rule-range{flex:1 1 220px;display:flex;gap:8px;align-items:center;min-width:0}.roll-rule-range label{display:flex;align-items:center;gap:6px;flex:1 1 0;min-width:0}.roll-rule-range span{font-size:12px;color:var(--muted-foreground)}.roll-rule-range input{flex:1 1 auto;min-width:0;min-height:32px;padding:4px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card);font:inherit}
+.roll-rules-hint{font-size:12px;color:var(--muted-foreground);margin-inline-start:auto}
+.roll-rule-mode{flex-wrap:wrap}
+@media(max-width:700px){.roll-rule-range{grid-column:1/-1}}
+@media(max-width:700px){:root .roll-rule{grid-template-columns:minmax(0,1fr) auto;gap:6px}:root .roll-rule>.icon-btn{grid-row:1;grid-column:2}:root .roll-rule-mode,:root .roll-rule-values,:root .roll-rule-range{grid-column:1/-1}:root .roll-rule-mode .chip-toggle{white-space:nowrap;padding:3px 9px}:root .roll-rules-hint{margin-inline-start:0;flex-basis:100%}:root .roll-rules-actions{flex-wrap:wrap}}
