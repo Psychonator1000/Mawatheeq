@@ -137,20 +137,20 @@ export default function MotionLayer() {
    setSpot(dist<120?best:null);clearTimeout(spotTimer);spotTimer=window.setTimeout(()=>setSpot(null),900);
   };
   const rowObserver=new IntersectionObserver(entries=>{
-   const scrolling=performance.now()-lastScrollAt<450&&motionAllowed();let n=0;
+   const scrolling=performance.now()-lastScrollAt<450&&motionAllowed();
    for(const e of entries){const row=e.target as HTMLElement;
     if(!e.isIntersecting){visibleRows.delete(row);continue}
     visibleRows.add(row);
     if(revealed.has(row))continue;
     revealed.add(row);
-    if(scrolling){row.style.setProperty('--sr-delay',Math.min(n++,6)*80+'ms');row.classList.toggle('row-up',scrollDir==='up');row.classList.add('row-reveal')}
+    if(scrolling){row.classList.toggle('row-up',scrollDir==='up');row.classList.add('row-reveal')}
    }
   });
   // Lists that scroll inside their panel (the one-screen pages) reveal rows the same way the page used to.
   const innerTops=new WeakMap<Element,number>();
   const onInnerScroll=(e:Event)=>{const el=e.target;if(!(el instanceof HTMLElement))return;const top=el.scrollTop,prev=innerTops.get(el)??top;innerTops.set(el,top);
    if(top!==prev){scrollDir=top>prev?'down':'up';lastScrollAt=performance.now();if(!spotFrame)spotFrame=requestAnimationFrame(spot)}};
-  const onRowRevealEnd=(e:AnimationEvent)=>{const el=e.target as HTMLElement;const row=e.animationName==='row-glow'?el:e.animationName==='sr-fade'&&el===el.parentElement?.lastElementChild?el.parentElement:null;if(row?.classList.contains('row-reveal'))row.classList.remove('row-reveal','row-up')};
+  const onRowRevealEnd=(e:AnimationEvent)=>{const el=e.target as HTMLElement;const row=e.animationName==='row-glow'?el:e.animationName.startsWith('row-rise')&&el===el.parentElement?.lastElementChild&&!el.parentElement?.matches(':is(.case-table,.office-table)>tbody>tr')?el.parentElement:null;if(row?.classList.contains('row-reveal'))row.classList.remove('row-reveal','row-up')};
   document.addEventListener('animationend',onRowRevealEnd);
   const watchedRows=new WeakSet<Element>();
   const watched=new WeakSet<Element>();
