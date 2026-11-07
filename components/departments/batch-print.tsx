@@ -27,7 +27,7 @@ export default function BatchPrint({canExport}:{canExport:boolean}){
  const [selected,setSelected]=useState<Set<string>>(new Set()),[progress,setProgress]=useState<{done:number;total:number}|null>(null),[skipped,setSkipped]=useState<{name:string;reason:string}[]>([]);
  useEffect(()=>{let active=true;Promise.all([departmentPages<CollectionRecord>('collections','records_page'),departmentCases('collections')]).then(([r,c])=>{if(active){setRecords(r.filter(x=>x.kind==='file'));setCases(c);setError('')}}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[version]);
  const wanted:Kind[]=kinds==='both'?['bundle','claim']:[kinds];
- const rows=useMemo<Row[]>(()=>(records||[]).filter(r=>!r.archived).map(r=>{const c=cases.find(x=>x.id===r.caseId);return {record:r,reviewed:!!r.review&&r.review.recordRevision===r.revision&&r.review.caseRevision===c?.revision,missing:{claim:missingDocumentFields(r.payload,'claim'),bundle:missingDocumentFields(r.payload,'bundle')}}}),[records,cases]);
+ const rows=useMemo<Row[]>(()=>(records||[]).filter(r=>!r.archived).map(r=>{const c=cases.find(x=>x.id===r.caseId);return {record:r,reviewed:!!r.review&&r.review.recordRevision===r.revision&&(r.review.caseRevision??null)===(c?.revision??null),missing:{claim:missingDocumentFields(r.payload,'claim'),bundle:missingDocumentFields(r.payload,'bundle')}}}),[records,cases]);
  const ready=(row:Row)=>row.reviewed&&wanted.every(k=>!row.missing[k].length);
  const visible=rows.filter(row=>(show==='all'||ready(row))&&(!from||row.record.payload.hearingDate>=from)&&(!to||row.record.payload.hearingDate<=to)&&normalizeSearch([row.record.payload.code,row.record.payload.company,row.record.payload.defendant,row.record.payload.lawsuitNumber].join(' ')).includes(normalizeSearch(search)))
   .sort((a,b)=>(a.record.payload.hearingDate||'9999').localeCompare(b.record.payload.hearingDate||'9999')||(a.record.payload.code||'').localeCompare(b.record.payload.code||''));
@@ -35,7 +35,8 @@ export default function BatchPrint({canExport}:{canExport:boolean}){
  const allChosen=visible.filter(ready).length>0&&visible.filter(ready).every(row=>selected.has(row.record.id));
  const toggle=(id:string)=>setSelected(s=>{const n=new Set(s);if(n.has(id))n.delete(id);else n.add(id);return n});
  const toggleAll=()=>setSelected(allChosen?new Set():new Set(visible.filter(ready).map(row=>row.record.id)));
- const reason=(row:Row)=>!row.reviewed?'يحتاج مراجعة المصدر':wanted.map(k=>row.missing[k].length?`${KINDS[k].label}: ينقص ${row.missing[k].slice(0,3).join('، ')}${row.missing[k].length>3?'…':''}`:'').filter(Boolean).join(' · ');
+ // Everything still needed at once (the review and each paper's missing fields), so the file is completed in one visit.
+ const reason=(row:Row)=>[!row.reviewed?'يحتاج مراجعة المصدر':'',...wanted.map(k=>row.missing[k].length?`${KINDS[k].label}: ينقص ${row.missing[k].slice(0,4).join('، ')}${row.missing[k].length>4?` و${row.missing[k].length-4} غيرها`:''}`:'')].filter(Boolean).join(' · ');
 
  async function run(){
   if(!chosen.length)return;

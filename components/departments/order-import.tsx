@@ -4,6 +4,7 @@ import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
 import {type CollectionRecord,newDepartmentRecord} from '@/lib/departments';
 import {type DocumentData} from '@/lib/document-fields';
+import {normalizeSearch} from '@/lib/case-browse';
 import {ORDER_FIELDS,fieldsToCheck,guessClient,orderPayload,pagesText} from '@/lib/order-import';
 import {EditorDialog} from './shared';
 
@@ -46,11 +47,15 @@ export default function OrderImport({files,clients,onDone}:{files:CollectionReco
  async function create(){
   setSaving(true);const failed:string[]=[];let made=0;
   for(const i of ready){
-   try{await departmentRequest('save_record',{workspace:'collections',record:newDepartmentRecord('collections','file',orderPayload(i.data!,{clientEntityId:i.client,source:'أمر أداء (PDF): '+i.file.name}))});made++;patch(i.id,{skip:true})}
+   // The client's own details (civil and commercial register numbers, e-mail) are the same on every file: they come
+   // from the latest file of the same client, so nobody types them again.
+   const prev=[...files].filter(f=>!f.archived&&(i.client?f.payload.clientEntityId===i.client:normalizeSearch(f.payload.company)===normalizeSearch(i.data!.company))&&(f.payload.companyCivil||f.payload.companyRegister)).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''))[0];
+   const data={...i.data!,...(prev?{companyCivil:i.data!.companyCivil||prev.payload.companyCivil||'',companyRegister:i.data!.companyRegister||prev.payload.companyRegister||'',email:i.data!.email||prev.payload.email||''}:{})};
+   try{await departmentRequest('save_record',{workspace:'collections',record:newDepartmentRecord('collections','file',orderPayload(data,{clientEntityId:i.client,source:'أمر أداء (PDF): '+i.file.name}))});made++;patch(i.id,{skip:true})}
    catch(e){failed.push(`${i.file.name}: ${(e as Error).message}`)}
   }
   setSaving(false);
-  if(made)toast.success(`أُنشئ ${made} ملف تحصيل. افتح كل ملف لطباعة صحيفة الدعوى والحافظة.`);
+  if(made)toast.success(`أُنشئ ${made} ملف تحصيل. أكمل بيانات الدعوى والجلسة وراجع المصدر في كل ملف، ثم اطبعه من «طباعة جماعية».`);
   if(failed.length)toast.error(failed.join(' · '));else{setItems(null);onDone()}
  }
  const close=()=>{stop.current?.abort();setItems(null);if(ready.length===0)onDone()};
