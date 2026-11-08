@@ -88,6 +88,11 @@ await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'b
 await assert.rejects(()=>action(collector,'collections','review_file',file,{caseRevision:visible.revision-1,attested:true}),e=>e.code==='PT409');
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
 await action(collector,'collections','generate',file,{kind:'bundle',outputId:uuid(102)});
+// Papers are prepared before the lawsuit is filed («تحت الرفع»): no lawsuit number, court, circuit or hearing date yet.
+file=await save(collector,'collections',{...file,payload:{...file.payload,lawsuitNumber:'',lawsuitYear:'',hearingCourt:'',hearingCircuit:'',hearingDate:'',hearingDay:''}});
+file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
+await action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(106)});
+await action(collector,'collections','generate',file,{kind:'bundle',outputId:uuid(107)});
 file=await save(collector,'collections',{...file,payload:{...file.payload,phone:''}});
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
 await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(105)}),/phone/);
@@ -318,7 +323,7 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  await assert.rejects(()=>dept(owner.token,'archive','backup_page',{kind:'records'}),/./,'Backups use the existing department backup');
  assert.ok((await dept(owner.token,'collections','backup_page',{kind:'records'})).some(r=>r.workspace==='archive'),'Backups include archive records');}
 const backup=await dept(owner.token,'collections','backup_page',{kind:'outputs'});
-assert.equal(backup.length,2);assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
+assert.equal(backup.length,4,'Two papers from the reviewed file, two prepared before filing');assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
 await office(owner.token,'set_member_access',{id:collector.user.id,revision:collector.member.permissions?.revision||1,permissions:grants([])});
 await assert.rejects(()=>dept(collector.token,'collections','records_page'),e=>e.code==='28000','Grant changes revoke active department sessions');
 await db.close();console.log('Passed departments: collection files with several plaintiffs and defendants, collection files linked to client profiles (picker scope, merged entities refused, review kept, entity files by scope), collection files without a case (all-case scope, unique numbers, imported statuses, linking both ways with statements/payments following, search, many files per case), archive (section, scope, custody state machine, immutable movements cancelled latest first, unique numbers, locations, requests), collection statements/payments (scope, validation, immutable payments with audited cancellation, file review untouched), scoped summaries, shared secretary work, collection review/output snapshots, stale edits, exact money/void trail, HR isolation/leave overlap, account-linked HR files, private grants and session revocation.');

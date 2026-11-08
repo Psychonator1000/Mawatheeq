@@ -98,6 +98,37 @@ export function mapCollectionSheet(header: unknown[], rows: unknown[][], dateOf:
   });
 }
 
+/**
+ * A client's list of payment orders whose lawsuits are to be prepared (one order a row: «المدعى», «المدعى عليه»,
+ * «الرقم المدنى», «رقم العقد», «الرقم الالى», «مبلغ المطالبة», «تاريخ الحكم», «العنوان»). There is no file number yet: a
+ * row is known by its order's automatic number. «تاريخ الحكم» is the date the order was decided (its stamp date).
+ */
+// Headings are compared with the hamza forms and the final «ي/ى» made the same, as these lists spell them both ways.
+const heading = (x: unknown) => String(x ?? '').replace(/\s+/g, ' ').trim().replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي');
+export function isOrderList(header: unknown[]) {
+  const h = header.map(heading);
+  return h.includes(heading('المدعى عليه')) && h.includes(heading('الرقم الالى'));
+}
+export function mapOrderList(header: unknown[], rows: unknown[][], dateOf: (v: unknown) => string, firstRow = 2): ImportedFile[] {
+  const h = header.map(heading);
+  const col = (...names: string[]) => names.map(n => h.indexOf(heading(n))).find(i => i >= 0) ?? -1;
+  const at = (r: unknown[], i: number) => (i < 0 || r[i] == null ? '' : String(r[i]).replace(/\s+/g, ' ').trim());
+  const c = { company: col('المدعى', 'المدعى (الموكل)'), defendant: col('المدعى عليه'), civil: col('الرقم المدنى'), contract: col('رقم العقد'), auto: col('الرقم الالى'),
+    amount: col('مبلغ المطالبة'), decided: col('تاريخ الحكم'), address: col('العنوان') };
+  if (c.defendant < 0 || c.auto < 0) throw new Error('لم يُعثر على عمودي «المدعى عليه» و«الرقم الآلي» في الملف.');
+  const money = (v: string) => { const n = Number(v.replace(/,/g, '')); return Number.isFinite(n) && n > 0 ? (Math.round(n * 1000) / 1000).toFixed(3).replace(/\.?0+$/, '') : ''; };
+  return rows.flatMap((r, n) => {
+    const auto = at(r, c.auto), defendant = at(r, c.defendant);
+    if (!/^\d{6,12}$/.test(auto) || !defendant) return [];
+    const payload: Record<string, string> = {
+      code: '', company: at(r, c.company), defendant, civilId: at(r, c.civil), address: at(r, c.address), amount: money(at(r, c.amount)),
+      account: at(r, c.contract), orderAuto: auto, fileAutoNumber: auto, rejectedDate: c.decided >= 0 ? dateOf(r[c.decided]) : '', notes: '',
+      sourceReference: 'كشف أوامر الأداء، الرقم الآلي ' + auto,
+    };
+    return [{ row: n + firstRow + 1, payload, paid: '', expenses: '', autoNumber: auto }];
+  });
+}
+
 const CIVIL_WEIGHTS = [2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
 /**
  * Whether a Kuwaiti civil ID is well formed: 12 digits, a century digit (2 = 1900s, 3 = 2000s), a real birth date

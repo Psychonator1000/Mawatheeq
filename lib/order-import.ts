@@ -36,7 +36,9 @@ export function guessClient(company: string, clients: { id: string; name: string
   if (!n) return '';
   const same = clients.find(c => normalizeSearch(c.name) === n);
   if (same) return same.id;
-  for (const [arabic, client] of TELECOM) if (arabic.test(company)) { const hit = clients.filter(c => client.test(c.name)); if (hit.length === 1) return hit[0].id; }
+  // «الإتصالات» and «الاتصالات» are the same word; a name may also carry the English one («( Stc)»).
+  const plain = company.replace(/[أإآ]/g, 'ا');
+  for (const [arabic, client] of TELECOM) if (arabic.test(plain) || client.test(company)) { const hit = clients.filter(c => client.test(c.name)); if (hit.length === 1) return hit[0].id; }
   return '';
 }
 
@@ -56,4 +58,17 @@ export function orderEvidence(d: DocumentData): Evidence[] {
 export function orderPayload(d: DocumentData, extra: { clientEntityId?: string; source: string }) {
   const amount = d.amount.trim();
   return { ...blankDocument(), ...d, amount, amountWords: amount ? amountInWords(amount) : '', evidence: orderEvidence(d), clientEntityId: extra.clientEntityId || '', sourceReference: extra.source, notes: '' };
+}
+
+/**
+ * An order read from its PDF completing a file that already exists (one made from the client's list of orders):
+ * only empty fields are filled, nothing typed or checked on the file is overwritten, and the bundle's documents are
+ * listed if the file has none yet.
+ */
+export function fillEmpty<T extends Record<string, unknown> & { evidence?: Evidence[] }>(file: T, read: DocumentData): T {
+  const out: Record<string, unknown> = { ...file };
+  for (const [k, v] of Object.entries(read)) if (k !== 'evidence' && typeof v === 'string' && v.trim() && !String(out[k] ?? '').trim()) out[k] = v;
+  if (read.amount && !String(file.amountWords ?? '').trim()) out.amountWords = amountInWords(String(out.amount || read.amount));
+  if (!file.evidence?.some(e => e.included)) out.evidence = orderEvidence(out as unknown as DocumentData);
+  return out as T;
 }

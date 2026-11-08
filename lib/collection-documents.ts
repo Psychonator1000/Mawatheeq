@@ -6,9 +6,11 @@ export const COLLECTION_FIELDS:[string,[string,string][]][]=[
  ['الإيصال',[['receiptNumber','رقم الإيصال'],['receiptDate','تاريخ الإيصال'],['receiptFee','رسوم الإيصال (د.ك)'],['orderAuto','الرقم الآلي في الإيصال']]],
 ];
 export const COLLECTION_LABELS=Object.fromEntries(COLLECTION_FIELDS.flatMap(([,fields])=>fields));
+// The papers are prepared before the lawsuit is filed («تحت الرفع»): its number, court, circuit and hearing date are
+// written in after filing, so they are not required here (the server checks the same lists).
 const required={
- claim:['company','defendant','civilId','nationality','address','amount','amountWords','account','phone','orderNumber','court','rejectedDate','demandDate','statementDate','companyCivil','companyRegister','hearingCourt','hearingDate','hearingDay','hearingCircuit'],
- bundle:['company','defendant','hearingCourt','hearingDate','hearingCircuit','lawsuitNumber','lawsuitYear'],
+ claim:['company','defendant','civilId','nationality','address','amount','amountWords','account','phone','orderNumber','court','rejectedDate','demandDate','statementDate','companyCivil','companyRegister'],
+ bundle:['company','defendant'],
 };
 /** Empty fields each document still needs, by field key: which documents ask for it. */
 export function missingFieldKeys(data:CollectionData):Map<string,('claim'|'bundle')[]> {
