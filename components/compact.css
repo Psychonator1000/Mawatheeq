@@ -1299,3 +1299,18 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .roll-fields-clear{justify-self:start;align-self:center}
 :root .roll-fields-toggle{align-self:flex-end;min-height:34px;padding:4px 12px;white-space:nowrap}
 @media(max-width:700px){.roll-fields{grid-template-columns:1fr 1fr}.roll-fields .roll-title-field{grid-column:1/-1}}
+/* Review before printing: one bar per file, opened to correct what prints; fields in a tight grid. */
+.print-check{display:grid;gap:6px;max-height:min(60vh,620px);overflow:auto;padding-inline-end:4px}
+.print-check-file{border:1px solid var(--border);border-radius:12px;background:var(--card)}
+.print-check-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;background:none;font:inherit;text-align:start;cursor:pointer}
+.print-check-head span:nth-child(2){margin-inline-end:auto}.print-check-head em{font-style:normal;color:var(--muted-foreground);margin:0 4px}
+.print-check-toggle{font-size:12px;color:var(--brand,#7a2335);font-weight:600}
+.print-check-body{display:grid;gap:8px;padding:0 10px 10px}
+.print-check-body fieldset{border:0;border-top:1px solid var(--border);margin:0;padding:6px 0 0}.print-check-body legend{font-size:12px;font-weight:700;color:var(--brand,#7a2335);padding:0 4px}
+.print-check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px 8px}
+.print-check-grid .field{margin:0;gap:2px}.print-check-grid .field span{font-size:11px}
+.print-check-grid input,.print-check-evidence input{min-height:30px;padding:3px 8px;font-size:13px;border:1px solid var(--border);border-radius:8px;background:var(--card);font-family:inherit;min-width:0}
+.print-check-grid .needs-check input{border-color:#dc2626;background:color-mix(in srgb,#ef4444 8%,var(--card))}
+.print-check-evidence{display:grid;gap:4px}.print-check-evidence .evidence-row{display:grid;grid-template-columns:auto minmax(0,1fr) 140px 64px;gap:6px;align-items:center}
+.print-check-attest{margin:6px 0}
+@media(max-width:700px){.print-check-evidence .evidence-row{grid-template-columns:auto minmax(0,1fr)}.print-check-evidence .evidence-row input[type=date],.print-check-evidence .evidence-row input[type=number]{grid-column:2}}

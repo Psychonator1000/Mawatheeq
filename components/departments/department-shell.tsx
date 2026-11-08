@@ -45,7 +45,7 @@ export default function DepartmentWorkspace({workspace,access}:{workspace:Depart
  {mail?<Suspense fallback={<StatusMessage loading error=""/>}><MailPage key={mail.id} workspace={workspace} focusId={mail.id}/></Suspense>:<><StatusMessage loading={loading} error={error}/>{!loading&&!error&&<Suspense fallback={<StatusMessage loading error=""/>}>
  {!access.canEdit&&<p className="notice">حسابك للقراءة فقط في هذه المساحة.</p>}
  {workspace==='secretary'&&context&&!print&&<Secretary items={work} context={context} records={cases} onChanged={refresh} onOpenCase={setSelected}/>}
- {workspace==='secretary'&&print&&(access.sections.includes('collections')?<BatchPrint canExport={access.canExport}/>:<section className="panel"><h2>طباعة مستندات التحصيل</h2><p className="subtitle">لطباعة الحوافظ والصحف لعدة ملفات دفعة واحدة، يمنح مسؤول المكتب هذا الحساب قسم «التحصيل» وصلاحية التصدير.</p></section>)}
+ {workspace==='secretary'&&print&&(access.sections.includes('collections')?<BatchPrint canExport={access.canExport} canEdit={access.canEdit}/>:<section className="panel"><h2>طباعة مستندات التحصيل</h2><p className="subtitle">لطباعة الحوافظ والصحف لعدة ملفات دفعة واحدة، يمنح مسؤول المكتب هذا الحساب قسم «التحصيل» وصلاحية التصدير.</p></section>)}
  {workspace==='collections'&&<Collections key={version} cases={cases} access={access}/>}
  {workspace==='accounting'&&<Accounting key={version} cases={cases} access={access}/>}
  {workspace==='hr'&&<HR key={version} access={access}/>}

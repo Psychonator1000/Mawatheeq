@@ -90,7 +90,16 @@ try{
  await click('إغلاق الملف');await page.locator('.sec-agenda').getByText('لم يرد على الاتصال').waitFor();await page.getByRole('button',{name:'المتابعات المستحقة (1)'}).click();await page.locator('.work-desk-body').getByText('لم يرد على الاتصال').waitFor();await click('ملفات التحصيل');
  await screen('collections-desktop');assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+2),true,'Collections desk fits the screen');
  await click('طباعة جماعية');await page.locator('.batch-table').getByText('جاهز',{exact:true}).waitFor();await click('الاثنان معاً');await click('تحديد كل الجاهز');
- {const files=[];const onDownload=d=>files.push(d);page.on('download',onDownload);await click('إنشاء ملف الطباعة (1)');for(let i=0;i<60&&files.length<2;i++)await page.waitForTimeout(250);page.off('download',onDownload);assert.equal(files.length,2,'batch print downloads one file per paper type');assert.deepEqual(files.map(d=>d.suggestedFilename().split('-2')[0]).sort(),['Mawatheeq-bundles','Mawatheeq-claims']);}
+ // A last look before printing: the file is opened, a field corrected, and the correction saved and reviewed again.
+ {const files=[];const onDownload=d=>files.push(d);page.on('download',onDownload);await click('إنشاء ملف الطباعة (1)');
+ const check=page.getByRole('dialog');await check.getByRole('heading',{name:'مراجعة قبل الطباعة'}).waitFor();
+ // One chosen file opens by itself.
+ await check.getByLabel('العنوان',{exact:true}).fill('عنوان مصحح قبل الطباعة');
+ assert.equal(await check.getByRole('button',{name:'حفظ وإنشاء ملف الطباعة'}).isDisabled(),true,'A correction needs the source confirmed');
+ await check.getByRole('checkbox',{name:/راجعتُ تعديلات 1 ملف/}).check();await click('حفظ وإنشاء ملف الطباعة');
+ for(let i=0;i<60&&files.length<2;i++)await page.waitForTimeout(250);page.off('download',onDownload);assert.equal(files.length,2,'batch print downloads one file per paper type');assert.deepEqual(files.map(d=>d.suggestedFilename().split('-2')[0]).sort(),['Mawatheeq-bundles','Mawatheeq-claims']);
+ const claim=files.find(d=>d.suggestedFilename().startsWith('Mawatheeq-claims')),chunks=[];for await(const c of await claim.createReadStream())chunks.push(c);
+ const PizZip=(await import('pizzip')).default;assert.ok(new PizZip(Buffer.concat(chunks)).file('word/document.xml').asText().includes('عنوان مصحح قبل الطباعة'),'The correction made before printing is in the printed claim');}
  await screen('collections-batch-desktop');await click('ملفات التحصيل');
  await switchTo('المحاسبة');await page.getByRole('heading',{name:'الدفاتر اليومية',exact:true}).waitFor();await click('دفتر الحركات');await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await field('المبلغ','125.125');await field('مرجع القيد / رقم الإيصال','SYN-FEE-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');await page.getByRole('cell',{name:/SYN-FEE-UI/}).waitFor();
  await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await page.getByLabel('نوع القيد',{exact:true}).selectOption('receipt');await field('المبلغ','25.025');await field('مرجع القيد / رقم الإيصال','SYN-RECEIPT-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');

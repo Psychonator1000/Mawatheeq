@@ -1,7 +1,9 @@
 import {createContext,lazy,Suspense,useContext,useMemo,useState} from 'react';
 import {Printer,Plus,Save,ArrowUpLeft,AlertTriangle,FileSignature,CheckCircle2} from 'lucide-react';
 import {toast} from 'sonner';
-import {type CaseRecord,type Rules,DEFAULT_RULES,emptyCase,formatDate,todayISO,daysBetween,caseCode} from '@/lib/domain';
+import {type CaseRecord,type Rules,DEFAULT_RULES,emptyCase,formatDate,todayISO,daysBetween,caseCode,caseState} from '@/lib/domain';
+import {splitCircuit} from '@/lib/circuits';
+import {currentLevel,LEVEL_TITLE} from '@/lib/case-stages';
 const ClientSummary=lazy(()=>import('./client-summary'));
 import {type ClientEntity,clientName,enrichCase} from '@/lib/clients';
 import {DECISIONS,EXPERT_DECISIONS,sessionProcedure,type Venue} from '@/lib/sessions';
@@ -143,6 +145,18 @@ function useRollFields(items:RollItem[]){
  </div>;
  return {button,panel,match,sort,title:title.trim()};
 }
+/** The facts printed for one sitting on the sessions roll, laid out like the office's long-standing roll. */
+function rollFacts(r:{c:CaseRecord;date:string;time:string;court:string;venue:string;last?:{date?:unknown;decision?:unknown};required:string;staff?:string}):[string,string,string?][]{
+ const c=r.c,sameAsCase=!r.court||r.court===c.court,circuit=splitCircuit(sameAsCase?'':r.court);
+ const courthouse=String(c.court||'')+(r.venue&&r.venue!=='المحكمة'?' · '+r.venue:'');
+ return [
+  ['المحكمة',courthouse||'—'],['الدائرة',circuit.kind||(sameAsCase?'':r.court)||'—'],['رقم الدائرة',circuit.number||'—'],['الغرفة',circuit.room||'—'],['الدور',circuit.floor||'—'],
+  ['درجة القضية',LEVEL_TITLE[currentLevel(c)]],['الرقم الآلي',String(c.autoNumber||'')],['رقم القضية',String(c.caseNumber||'')],
+  ['نوع القضية',circuit.kind.split(' ')[0]||'—'],['حالة القضية',caseState(c).status],['الموضوع',String(c.subject||'—')],
+  ['الجلسة السابقة',r.last?.date?formatDate(String(r.last.date)):'—',String(r.last?.decision||'')],['تاريخ الجلسة',formatDate(r.date),r.time||''],['الجلسة القادمة',ROLL_BLANK],
+  ['المطلوب',r.required],...(r.staff?[['المكلف بالحضور',r.staff] as [string,string]]:[]),
+ ];
+}
 function Roll(p:Props){
  const [from,setFrom]=useState(todayISO()),[to,setTo]=useState(shiftDays(todayISO(),6)),law=useLawyerFilter(p.records);
  // Who attends each sitting, from the hearing assigned in «المهام والجلسات».
@@ -154,7 +168,9 @@ function Roll(p:Props){
  const days=[...new Set(rows.map(r=>r.date))].sort();
  // Laid out like «رول الأحكام»: what is previewed is what prints, each sitting a band with every value under its name.
  const html=rollCardsHtml(fields.title||'رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to||from)}`,days.map(d=>[formatDate(d),rows.filter(r=>r.date===d).map(r=>({code:ref(r.c),client:clientName(r.c)||'—',role:String(r.c.role||''),opponent:r.c.opponent||'—',lawyer:String(r.c.lawyer||''),
-  facts:[['الجلسة السابقة',r.last?.date?formatDate(String(r.last.date)):'—'],['تاريخ الجلسة',formatDate(r.date)],['الجلسة القادمة',ROLL_BLANK],['الساعة',r.time||'—'],['المحكمة',r.court||'—',r.venue!=='المحكمة'?r.venue:''],['الرقم الآلي',String(r.c.autoNumber||'')],['رقم القضية',String(r.c.caseNumber||'')],['آخر قرار',String(r.last?.decision||'')],['المطلوب',r.required]] as [string,string,string?][],
+  // Every detail the office's printed roll has always carried: the courthouse, the circuit and its number, hall and
+  // floor, the case's level, kind and status, its subject, and the previous sitting with the decision taken there.
+  facts:rollFacts(r) as [string,string,string?][],
   writeIn:['قرار الجلسة','منطوق الحكم']}))]),formatDate(todayISO()),p.printedBy,true,'جلسة');
  return <Panel title="مواعيد الجلسات (رول)" note="الجلسات القادمة حسب آخر ترحيل لكل قضية، مجمعة باليوم.">
   <div className="roll-top desk-roll-top"><div className="desk-toolbar"><DateField label="تاريخ الجلسة (من)" value={from} onChange={setFrom}/><DateField label="تاريخ الجلسة (إلى)" value={to} onChange={setTo}/>{law.select}{fields.button}{adv.button}</div>
