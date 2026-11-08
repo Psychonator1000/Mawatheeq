@@ -1,6 +1,6 @@
 // Advanced roll filter: «فقط» keeps only the chosen values, «ما عدا» drops them, rules combine, spelling variants match.
 import assert from 'node:assert/strict';
-import { inRange, passesRollRules, rollOptions, splitValues } from '../lib/roll-filter.ts';
+import { inRange, passesRollRules, rollOptions, rollValue, sortRoll, splitValues } from '../lib/roll-filter.ts';
 const row = (client, opponent, lawyer, court) => ({ c: { client, clientGroup: client, opponent, lawyer, role: 'مدعي' }, court });
 const rows = [row('شركة أ', 'خصم 1', 'أحمد', 'الكلية'), row('شركة ب', 'خصم 2', 'سارة', 'الجزئية'), row('شركة أ', 'خصم 3', 'سارة', 'الكلية')];
 const keep = rules => rows.filter(r => passesRollRules(r, rules)).map(r => r.c.opponent);
@@ -25,4 +25,12 @@ assert.deepEqual(pick([{ id: '1', field: 'code', mode: 'except', values: splitVa
 assert.equal(inRange('ت-120', 'ت-100', 'ت-200'), true, 'An insurance code within an insurance range');
 assert.equal(inRange('120', 'ت-100', 'ت-200'), false, 'An office code is not in an insurance range');
 assert.deepEqual(splitValues('شركة أ، شركة ب', 'client'), ['شركة أ', 'شركة ب'], 'Names split at commas, not at spaces');
-console.log('Passed roll filter: only / all except, combined rules, spelling variants, distinct choices, ranges of codes and numbers, lists and parts of values.');
+// The sessions roll's own fields: completion state, last procedure, assigned staff, and the order of the roll.
+const sit = [{ c: { client: 'ب', code: '20', autoNumber: '3' }, date: '2026-11-01', today: '2026-11-08', last: { decision: 'تأجيل للإعلان', kind: 'جلسة', date: '2026-10-01' }, staff: 'سارة' },
+  { c: { client: 'أ', code: '3', autoNumber: '1' }, date: '2026-11-09', today: '2026-11-08' }];
+assert.deepEqual(sit.map(i => rollValue(i, 'progress')), ['فائتة لم تُرحَّل', 'قادمة'], 'A passed sitting not yet posted, and an upcoming one');
+assert.deepEqual([rollValue(sit[0], 'decision'), rollValue(sit[0], 'kind'), rollValue(sit[0], 'staff')], ['تأجيل للإعلان', 'جلسة', 'سارة']);
+assert.deepEqual(sortRoll(sit, 'code').map(i => i.c.code), ['3', '20'], 'Codes in number order');
+assert.deepEqual(sortRoll(sit, 'client').map(i => i.c.client), ['أ', 'ب'], 'Clients in alphabetical order');
+assert.equal(sortRoll(sit, 'date'), sit, 'The default order is kept');
+console.log('Passed roll filter: only / all except, combined rules, spelling variants, distinct choices, ranges of codes and numbers, lists and parts of values, completion state, last procedure, staff, roll order.');

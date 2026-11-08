@@ -12,7 +12,8 @@ import {OfficeSelect} from './office-shared';
 import {EditorDialog} from './departments/shared';
 import type {Member,WorkItem} from '@/lib/office';
 import {SelectList} from './filter-select';
-import {NUMBER_FIELDS,ROLL_FIELDS,modesFor,passesRollRules,rollOptions,ruleActive,splitValues,type RollField,type RollItem,type RollMode,type RollRule} from '@/lib/roll-filter';
+import {NUMBER_FIELDS,ROLL_FIELDS,ROLL_SORTS,modesFor,passesRollRules,rollOptions,rollValue,ruleActive,sortRoll,splitValues,type RollField,type RollItem,type RollMode,type RollRule,type RollSort} from '@/lib/roll-filter';
+import {normalizeSearch} from '@/lib/case-browse';
 
 type Props={page:DeskPage;records:CaseRecord[];rules?:Rules;clients:ClientEntity[];work:WorkItem[];members:Member[];canEdit:boolean;canCreate:boolean;canExport:boolean;printedBy:string;
  onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onNew:(c:CaseRecord)=>void;
@@ -123,19 +124,42 @@ function useRollRules(items:RollItem[]){
   </div>;
  return {button,panel,match:(i:RollItem)=>passesRollRules(i,rules)};
 }
+// The roll's own fields, each a drop-down of the values in the chosen period: the report title, the client, code,
+// court, case status, assigned staff, last procedure and its type and date, completion state, category and order.
+const ROLL_PICKS:RollField[]=['client','code','court','status','staff','decision','kind','progress','category'];
+function useRollFields(items:RollItem[]){
+ const [open,setOpen]=useState(false),[picked,setPicked]=useState<Partial<Record<RollField,string>>>({}),[procFrom,setProcFrom]=useState(''),[procTo,setProcTo]=useState(''),[sort,setSort]=useState<RollSort>('date'),[title,setTitle]=useState('');
+ const set=Object.values(picked).filter(Boolean).length+(procFrom||procTo?1:0)+(sort!=='date'?1:0)+(title.trim()?1:0);
+ const label=(f:RollField)=>ROLL_FIELDS.find(x=>x[0]===f)?.[1]||f;
+ const match=(i:RollItem)=>ROLL_PICKS.every(f=>!picked[f]||normalizeSearch(rollValue(i,f).trim())===normalizeSearch(picked[f]!))
+  &&(!procFrom&&!procTo||(()=>{const d=String(i.last?.date||'').slice(0,10);return !!d&&(!procFrom||d>=procFrom)&&(!procTo||d<=procTo)})());
+ const button=<button type="button" className={'btn roll-fields-toggle'+(set?' primary':'')} aria-expanded={open} onClick={()=>setOpen(o=>!o)}>{open?'عرض حقول أقل':'عرض حقول أكثر'}{set?` (${set})`:''}</button>;
+ const panel=open&&<div className="roll-fields" role="group" aria-label="حقول الرول">
+  <label className="field roll-title-field"><span>عنوان التقرير</span><input value={title} onChange={e=>setTitle(e.target.value)} placeholder="رول الجلسات"/></label>
+  {ROLL_PICKS.map(f=><label key={f} className="field"><span>{label(f)}</span><SelectList aria-label={label(f)} value={picked[f]||''} onChange={e=>setPicked(v=>({...v,[f]:e.target.value}))}><option value="">الكل</option>{rollOptions(items,f).map(v=><option key={v} value={v}>{v}</option>)}</SelectList></label>)}
+  <DateField label="تاريخ الإجراء (من)" value={procFrom} onChange={setProcFrom}/><DateField label="تاريخ الإجراء (إلى)" value={procTo} onChange={setProcTo}/>
+  <label className="field"><span>ترتيب القضايا في الرول</span><SelectList aria-label="ترتيب القضايا في الرول" value={sort} onChange={e=>setSort(e.target.value as RollSort)}>{ROLL_SORTS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</SelectList></label>
+  {set>0&&<button type="button" className="text-link roll-fields-clear" onClick={()=>{setPicked({});setProcFrom('');setProcTo('');setSort('date');setTitle('')}}>مسح الحقول</button>}
+ </div>;
+ return {button,panel,match,sort,title:title.trim()};
+}
 function Roll(p:Props){
  const [from,setFrom]=useState(todayISO()),[to,setTo]=useState(shiftDays(todayISO(),6)),law=useLawyerFilter(p.records);
- const inRange=sittingsBetween(p.records,from,to||from).filter(s=>law.match(s.c)),adv=useRollRules(inRange);
- const rows=inRange.filter(adv.match);
- const days=[...new Set(rows.map(r=>r.date))];
+ // Who attends each sitting, from the hearing assigned in «المهام والجلسات».
+ const staffOf=(c:CaseRecord,date:string)=>{const w=p.work.find(x=>x.caseId===c.id&&x.kind==='hearing'&&x.dueDate===date&&x.status!=='cancelled'),m=w?.assigneeId?p.members.find(x=>x.id===w.assigneeId):undefined;return m?m.displayName||m.username:''};
+ const today=todayISO();
+ const inRange=sittingsBetween(p.records,from,to||from).filter(s=>law.match(s.c)).map(s=>({...s,staff:staffOf(s.c,s.date),today}));
+ const fields=useRollFields(inRange),adv=useRollRules(inRange);
+ const rows=sortRoll(inRange.filter(r=>fields.match(r)&&adv.match(r)),fields.sort);
+ const days=[...new Set(rows.map(r=>r.date))].sort();
  // Laid out like «رول الأحكام»: what is previewed is what prints, each sitting a band with every value under its name.
- const html=rollCardsHtml('رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to||from)}`,days.map(d=>[formatDate(d),rows.filter(r=>r.date===d).map(r=>({code:ref(r.c),client:clientName(r.c)||'—',role:String(r.c.role||''),opponent:r.c.opponent||'—',lawyer:String(r.c.lawyer||''),
+ const html=rollCardsHtml(fields.title||'رول الجلسات',`من ${formatDate(from)} إلى ${formatDate(to||from)}`,days.map(d=>[formatDate(d),rows.filter(r=>r.date===d).map(r=>({code:ref(r.c),client:clientName(r.c)||'—',role:String(r.c.role||''),opponent:r.c.opponent||'—',lawyer:String(r.c.lawyer||''),
   facts:[['الجلسة السابقة',r.last?.date?formatDate(String(r.last.date)):'—'],['تاريخ الجلسة',formatDate(r.date)],['الجلسة القادمة',ROLL_BLANK],['الساعة',r.time||'—'],['المحكمة',r.court||'—',r.venue!=='المحكمة'?r.venue:''],['الرقم الآلي',String(r.c.autoNumber||'')],['رقم القضية',String(r.c.caseNumber||'')],['آخر قرار',String(r.last?.decision||'')],['المطلوب',r.required]] as [string,string,string?][],
   writeIn:['قرار الجلسة','منطوق الحكم']}))]),formatDate(todayISO()),p.printedBy,true,'جلسة');
  return <Panel title="مواعيد الجلسات (رول)" note="الجلسات القادمة حسب آخر ترحيل لكل قضية، مجمعة باليوم.">
-  <div className="roll-top desk-roll-top"><div className="desk-toolbar"><DateField label="من" value={from} onChange={setFrom}/><DateField label="إلى" value={to} onChange={setTo}/>{law.select}{adv.button}</div>
+  <div className="roll-top desk-roll-top"><div className="desk-toolbar"><DateField label="تاريخ الجلسة (من)" value={from} onChange={setFrom}/><DateField label="تاريخ الجلسة (إلى)" value={to} onChange={setTo}/>{law.select}{fields.button}{adv.button}</div>
    <div className="roll-count" role="status"><b>{rows.length}</b><span>جلسة ستُطبع</span></div></div>
-  {adv.panel}
+  {fields.panel}{adv.panel}
   {!rows.length?<Empty title="لا جلسات في هذه الفترة"/>:<iframe className="roll-preview" title="معاينة رول الجلسات" sandbox="" srcDoc={html}/>}
   <div className="actions roll-actions">{p.canExport?<button className="btn primary" disabled={!rows.length} onClick={()=>{if(!printHtml(html))toast.error('اسمح بالنوافذ المنبثقة للطباعة.')}}><Printer size={15}/> طباعة الرول ({rows.length})</button>:<p className="subtitle">الطباعة غير متاحة لحسابك؛ اطلبها من مسؤول المكتب.</p>}</div>
  </Panel>;

@@ -1292,3 +1292,10 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .order-fields .needs-check input{border-color:#d97706;background:color-mix(in srgb,#f59e0b 12%,var(--card))}
 .order-fields .needs-check span::after{content:' · راجع';color:#b45309;font-weight:600}
 @media(max-width:700px){.order-fields .field.wide{grid-column:1/-1}}
+/* The sessions roll's own fields: a tight grid of drop-downs under the toolbar, the report title across two columns. */
+.roll-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px 10px;align-items:end;margin:6px 0;padding:8px 10px;border:1px solid color-mix(in srgb,var(--brand,#7a2335) 18%,var(--border,#e4d9cb));border-radius:12px;background:color-mix(in srgb,var(--card,#fffdf8) 85%,#fff)}
+.roll-fields .field{margin:0;gap:2px}.roll-fields .field>span{font-size:12px}
+.roll-fields .roll-title-field{grid-column:span 2}.roll-fields .roll-title-field input{min-height:34px;padding:4px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card);font:inherit}
+.roll-fields-clear{justify-self:start;align-self:center}
+:root .roll-fields-toggle{align-self:flex-end;min-height:34px;padding:4px 12px;white-space:nowrap}
+@media(max-width:700px){.roll-fields{grid-template-columns:1fr 1fr}.roll-fields .roll-title-field{grid-column:1/-1}}
