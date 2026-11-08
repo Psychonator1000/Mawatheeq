@@ -1,6 +1,8 @@
 // Collection files from payment-order PDFs: which fields are flagged for checking, which client an order belongs to,
 // and the new file's details (amount in words, the bundle's documents, the source).
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import { fieldsToCheck, fillEmpty, guessClient, orderPayload, pagesText } from '../lib/order-import.ts';
 import { blankDocument } from '../lib/document-fields.ts';
 import { isOrderList, mapOrderList } from '../lib/collections.ts';
@@ -38,4 +40,9 @@ assert.equal(done.defendant, 'خالد سالم');
 assert.deepEqual([done.receiptNumber, done.orderNumber, done.receiptFee], ['F0123456', '612345/2025', '12.806'], 'Empty fields are filled from the order');
 assert.equal(done.evidence.length, 6, 'The bundle documents are listed when the file had none');
 assert.equal(fillEmpty({ ...fromList, evidence: [{ id: 'x', included: true, date: '', description: 'مستند', pages: 1 }] }, good).evidence.length, 1, 'A file\'s own document list is kept');
+// The bundle's heading keeps the party's role at the far edge with a tab, not with spaces that wrap long names.
+{const PizZip = createRequire(import.meta.url)('pizzip'), t = JSON.parse(fs.readFileSync('lib/data/templates.json', 'utf8'));
+ const xml = new PizZip(t.bundle, { base64: true }).file('word/document.xml').asText();
+ assert.ok(xml.includes('{{company}}</w:t><w:tab/><w:t>مدعية') && xml.includes('{{defendant}}</w:t><w:tab/><w:t>مدعى عليه'), 'The roles follow a tab');
+ assert.equal(/\{\{(?:company|defendant)\}\} {5,}/.test(xml), false, 'No run of spaces after a party\'s name');}
 console.log('Passed order import: fields to check, client from the creditor\'s name, new file details and bundle documents, client lists of payment orders, completing files made from a list.');
