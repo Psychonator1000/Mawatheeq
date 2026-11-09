@@ -50,12 +50,13 @@ const key = (name: string) => { const u = read()?.user.id; return u ? u + ':' + 
 /** The last copy of a dataset for the signed-in account, or null. Never throws. */
 export async function readSnapshot<T>(name: string): Promise<T | null> {
   const k = key(name); if (!k || typeof indexedDB === 'undefined') return null;
-  try { const d = await db(); return await new Promise(resolve => { const r = d.transaction(STORE).objectStore(STORE).get(k); r.onsuccess = () => resolve((r.result as T) ?? null); r.onerror = () => resolve(null); }); }
+  try { const d = await db(); return await new Promise(resolve => { const r = d.transaction(STORE).objectStore(STORE).get(k); r.onsuccess = () => { const v = r.result as unknown; try { resolve(v && typeof v === 'object' && typeof (v as { json?: unknown }).json === 'string' ? JSON.parse((v as { json: string }).json) as T : (v as T) ?? null); } catch { resolve(null); } }; r.onerror = () => resolve(null); }); }
   catch { return null; }
 }
 export async function writeSnapshot(name: string, value: unknown) {
   const k = key(name); if (!k || typeof indexedDB === 'undefined') return;
-  try { const d = await db(); d.transaction(STORE, 'readwrite').objectStore(STORE).put(value, k); } catch { /* Next visit loads from the server. */ }
+  // Kept as one piece of text: the browser reads a single string back far faster than thousands of separate records.
+  try { const d = await db(); d.transaction(STORE, 'readwrite').objectStore(STORE).put({ json: JSON.stringify(value) }, k); } catch { /* Next visit loads from the server. */ }
 }
 /** Deletes every stored dataset, or every one but `keep`'s (keys are «user id:name»). */
 async function dropSnapshots(keep = '') {

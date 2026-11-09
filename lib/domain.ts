@@ -18,9 +18,19 @@ export const arNumericCompare=(a:string,b:string)=>arNumericCollator.compare(a,b
 export const enNumericCompare=(a:string,b:string)=>enNumericCollator.compare(a,b);
 export const formatDate=(s:string)=>/^\d{4}-\d{2}-\d{2}/.test(s)?s.slice(0,10).split('-').reverse().join('/'):(s||'—');
 export const normalize=(s:unknown)=>String(s??'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[\u064B-\u065Fـ]/g,'').replace(/\s+/g,' ').trim();
-export function validDate(s:string){return /^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s}
-export function addDays(s:string,n:number){if(!validDate(s))return '';const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
-export function daysBetween(from:string,to:string){return validDate(from)&&validDate(to)?Math.round((Date.parse(to+'T12:00:00Z')-Date.parse(from+'T12:00:00Z'))/86400000):null}
+// A date's day number (days since 1970), worked out once per distinct date: the same few thousand dates are checked
+// again and again across 7,000 cases, and building Date objects each time cost a slow computer over a second.
+const dayNumCache=new Map<string,number|null>();
+function dayNumber(s:string):number|null{
+ let n=dayNumCache.get(s);if(n!==undefined)return n;
+ n=/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s?Math.round(Date.parse(s+'T12:00:00Z')/86400000-0.5):null;
+ if(dayNumCache.size>50000)dayNumCache.clear();dayNumCache.set(s,n);return n;
+}
+export function validDate(s:string){return typeof s==='string'&&dayNumber(s)!==null}
+const isoCache=new Map<number,string>();
+const isoOf=(day:number)=>{let v=isoCache.get(day);if(v===undefined){v=new Date(day*86400000+43200000).toISOString().slice(0,10);if(isoCache.size>50000)isoCache.clear();isoCache.set(day,v)}return v};
+export function addDays(s:string,n:number){const d=dayNumber(s);return d===null?'':isoOf(d+n)}
+export function daysBetween(from:string,to:string){const a=dayNumber(from),b=dayNumber(to);return a===null||b===null?null:b-a}
 export function elapsedDaysLabel(days:number|null){return days===null?'غير محدد':days<0?`الحكم بعد ${Math.abs(days)} يوم`:`${days} يوم`}
 export function remainingDaysLabel(days:number|null,final=false){return final?'نهائي':days===null?'غير محدد':days<0?`انتهت منذ ${Math.abs(days)} يوم`:days===0?'اليوم':`${days} يوم`}
 /** A case's state, remembered per case: the same case, rules and day give the same answer without working it out again. */

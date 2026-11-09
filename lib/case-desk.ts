@@ -11,7 +11,14 @@ export const workflowOf = (c: Pick<CaseRecord, 'workflow'> | Record<string, unkn
 export const isFiled = (c: CaseRecord) => !workflowOf(c);
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
-const valid = (s: unknown): s is string => typeof s === 'string' && ISO.test(s) && !Number.isNaN(Date.parse(s + 'T12:00:00Z'));
+// Checked once per distinct date: the same dates come up again and again across thousands of cases.
+const validSeen = new Map<string, boolean>();
+const valid = (s: unknown): s is string => {
+  if (typeof s !== 'string') return false;
+  let v = validSeen.get(s);
+  if (v === undefined) { v = ISO.test(s) && !Number.isNaN(Date.parse(s + 'T12:00:00Z')); if (validSeen.size > 50000) validSeen.clear(); validSeen.set(s, v); }
+  return v;
+};
 export function shiftDays(s: string, n: number) { if (!valid(s)) return ''; const d = new Date(s + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 /** Friday and Saturday, the weekend in Kuwait, when courts do not sit. */
 export const isWeekend = (s: string) => valid(s) && [5, 6].includes(new Date(s + 'T12:00:00Z').getUTCDay());
