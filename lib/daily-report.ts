@@ -29,9 +29,9 @@ export type ReportPart = Exclude<keyof DailyPayload, 'notes'>;
  * and the fields of each line. Sittings posted and tasks closed from «المهام» come in by themselves.
  */
 export const REPORT_PARTS: { key: ReportPart; title: string; hint: string; add: string; fields: [LineField, string][] }[] = [
-  { key: 'hearings', title: 'الجلسات التي تم حضورها', hint: 'كل جلسة ترحّلها من «المهام» تُضاف هنا بنفسها.', add: 'إضافة جلسة',
+  { key: 'hearings', title: 'الجلسات التي تم حضورها', hint: 'كل جلسة ترحّلها من القائمة تُضاف هنا بنفسها، أو أضفها يدوياً بالزر أدناه.', add: 'إضافة جلسة',
     fields: [['text', 'رقم القضية'], ['court', 'المحكمة / الدائرة'], ['result', 'ما تم في الجلسة / القرار'], ['next', 'الإجراء المطلوب بعد الجلسة']] },
-  { key: 'tasks', title: 'المهام المنجزة', hint: 'كل مهمة تُتمّها من «المهام» تُضاف هنا بنفسها.', add: 'إضافة مهمة', fields: [['text', 'المهمة'], ['result', 'النتيجة']] },
+  { key: 'tasks', title: 'المهام المنجزة', hint: 'كل مهمة تُتمّها من القائمة تُضاف هنا بنفسها، أو أضفها يدوياً بالزر أدناه.', add: 'إضافة مهمة', fields: [['text', 'المهمة'], ['result', 'النتيجة']] },
   { key: 'admin', title: 'الأعمال الإدارية داخل المحاكم', hint: 'مثل الإعلانات، الإيداعات، استخراج الشهادات، متابعة الخبراء، مراجعة التنفيذ أو أقسام المحكمة.', add: 'إضافة عمل إداري',
     fields: [['text', 'العمل المنجز ورقم الملف'], ['result', 'النتيجة أو الإجراء المتخذ']] },
   { key: 'external', title: 'الأعمال والمراجعات الخارجية', hint: 'الوزارات، المخافر، النيابات، الجهات الحكومية وغيرها.', add: 'إضافة مراجعة',
