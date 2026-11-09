@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ChevronRight,ChevronLeft,Check,Save,Send,Printer,Copy,Plus,X,ArrowUpLeft,LoaderCircle,Gavel,ListChecks,CalendarClock,Hourglass} from 'lucide-react';
+import {ChevronRight,ChevronLeft,Check,Save,Send,Printer,Copy,Plus,X,ArrowUpLeft,LoaderCircle,Gavel,ListChecks,CalendarClock,Hourglass,CalendarCheck} from 'lucide-react';
 import {toast} from 'sonner';
 import {type CaseRecord,type Rules,caseCode,formatDate,todayISO} from '@/lib/domain';
 import {type ClientEntity,enrichCase} from '@/lib/clients';
@@ -95,13 +95,15 @@ export default function DayDesk(p:Props){
    {!list?<p role="status" className="day-empty"><LoaderCircle className="spin" size={14}/> جارٍ التحميل…</p>:colleague?<ReportReader r={colleague} printedBy={p.printedBy}/>:<p className="day-empty">لم يكتب تقريراً لهذا اليوم.</p>}</section>;
  // The same head as every other page: the title, one line on the day, and the controls beside it.
  const summary=p.missionsOn?[missions.length?`${missions.length} مهمة`:'لا مهام',done?`${done} منجزة`:'',late?`${late} متأخرة`:''].filter(Boolean).join(' · '):'اكتب ما أنجزته في هذا اليوم';
+ const sub=mode==='perf'?'عمل كل محامٍ في الفترة: التقارير، الجلسات، الأعمال، وما تأخر':mode==='calendar'?monthName(date):mode==='dates'?'من أسبوع مضى إلى ثلاثين يوماً قادمة':`${weekday(date)} ${formatDate(date)} · ${mode==='posting'?`${posting.length} جلسة في المكتب`:summary}`;
+ // A fixed head in every view: the title and its line on one side, the views always in the same place on the other,
+ // and each view's own controls in their own slot, so switching views moves nothing.
  return <div className="day-desk">
-  <div className="page-head"><div><h1>مهام اليوم والتقرير</h1><p className="subtitle">{mode==='perf'?'عمل كل محامٍ في الفترة: التقارير، الجلسات، الأعمال، وما تأخر':mode==='calendar'?monthName(date):mode==='dates'?'من أسبوع مضى إلى ثلاثين يوماً قادمة':`${weekday(date)} ${formatDate(date)} · ${mode==='posting'?`${posting.length} جلسة في المكتب`:summary}`}</p></div>
-   <div className="actions day-actions">
-    {p.missionsOn&&<div className="day-modes" role="tablist" aria-label="العرض">{([['day','اليوم'],...(p.canPost?[['posting','ترحيل الجلسات']]:[]),['dates','المواعيد'],['calendar','التقويم'],...(p.reviewer?[['perf','الأداء']]:[])] as [Mode,string][]).map(([k,l])=><button key={k} role="tab" aria-selected={mode===k} className={'work-chip'+(mode===k?' on':'')} onClick={()=>{void report.flush();setMode(k)}}>{l}</button>)}</div>}
-    {(mode==='day'||mode==='posting')&&<div className="day-nav" role="group" aria-label="اليوم"><button className="icon-btn" aria-label="اليوم السابق" onClick={()=>go(shiftDays(date,-1))}><ChevronRight size={16}/></button>
-     <DateField label="اختر يوماً" value={date} onChange={v=>v&&go(v)}/><button className="icon-btn" aria-label="اليوم التالي" onClick={()=>go(shiftDays(date,1))}><ChevronLeft size={16}/></button>
-     {date!==today&&<button className="btn" onClick={()=>go(today)}>العودة لليوم</button>}</div>}
+  <div className="page-head day-head"><h1>مهام اليوم والتقرير</h1><p className="subtitle" title={sub}>{sub}</p>
+   {p.missionsOn&&<div className="day-modes" role="tablist" aria-label="العرض">{([['day','اليوم'],...(p.canPost?[['posting','ترحيل الجلسات']]:[]),['dates','المواعيد'],['calendar','التقويم'],...(p.reviewer?[['perf','الأداء']]:[])] as [Mode,string][]).map(([k,l])=><button key={k} role="tab" aria-selected={mode===k} className={'work-chip'+(mode===k?' on':'')} onClick={()=>{void report.flush();setMode(k)}}>{l}</button>)}</div>}
+   <div className={'day-controls'+(p.reviewer?'':' solo')}>
+    {(mode==='day'||mode==='posting')&&<div className="day-nav" role="group" aria-label="اليوم">{date!==today&&<button className="btn day-back" aria-label="العودة لليوم" title="العودة لليوم" onClick={()=>go(today)}><CalendarCheck size={15}/><span>العودة لليوم</span></button>}<button className="icon-btn" aria-label="اليوم السابق" onClick={()=>go(shiftDays(date,-1))}><ChevronRight size={16}/></button>
+     <DateField label="اختر يوماً" value={date} onChange={v=>v&&go(v)}/><button className="icon-btn" aria-label="اليوم التالي" onClick={()=>go(shiftDays(date,1))}><ChevronLeft size={16}/></button></div>}
     {p.reviewer&&mode!=='posting'&&mode!=='perf'&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">الفريق (كل التقارير)</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
    </div></div>
   <div className={'day-grid'+(mainCol&&reportCol&&mode!=='perf'?'':' solo')}>{mainCol}{mode!=='perf'&&reportCol}</div>

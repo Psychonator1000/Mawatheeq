@@ -1366,12 +1366,37 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 @media(min-width:1001px){.day-grid.solo .day-report-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));column-gap:28px;align-content:start}
  .day-grid.solo .report-notes{grid-column:1/-1}.day-grid.solo .day-report:not(:has(.team-list)) .day-report-foot{justify-content:flex-start}}
 /* The day's controls sit in the page head's action area, like the buttons of the other pages, and wrap rather than scroll. */
-.day-desk>.page-head{align-items:flex-end}.day-desk>.page-head>.actions.day-actions{flex-wrap:wrap;overflow:visible;align-items:center}
-.day-actions .day-who{min-width:180px}
+/* The day head: a fixed grid in every view. The views sit in the same place whatever is showing, the controls have
+   fixed slots (the day's arrows and date, then whose work), and the line under the title stays on one line, so
+   switching views moves nothing and the page below never jumps. Two rows where the page is narrower, one where it fits. */
+.day-desk{container:day/inline-size}
+.day-desk>.page-head.day-head{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto 36px;grid-template-areas:"title modes" "sub controls";column-gap:16px;row-gap:4px;align-items:center;flex-wrap:nowrap}
+.day-head>h1{grid-area:title;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-head>.subtitle{grid-area:sub;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:start}
+.day-head>.day-modes{grid-area:modes;justify-self:end;width:auto;max-width:100%;overflow-x:auto}
+.day-controls{grid-area:controls;display:grid;grid-template-columns:auto 170px;grid-template-areas:"nav who";column-gap:8px;align-items:center;justify-content:end;justify-self:end;min-width:0}
+.day-controls.solo{grid-template-columns:auto;grid-template-areas:"nav"}
+.day-controls>.day-nav{grid-area:nav;flex-wrap:nowrap}.day-controls>.day-who{grid-area:who;min-width:0;width:170px}
+.day-nav .date-picker,.day-nav .field{width:140px}.day-back{min-height:36px;padding:4px 12px;gap:6px}.day-head .day-who,.day-nav .date-picker-control{min-height:36px;height:36px}
+@container day (min-width:1150px){
+ .day-desk>.page-head.day-head{grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:auto auto;grid-template-areas:"title controls modes" "sub controls modes";row-gap:0}
+ .day-head>.day-modes,.day-controls{align-self:center}
+}
+@container day (max-width:760px){
+ .day-desk>.page-head.day-head{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;grid-template-areas:"title" "sub" "modes" "controls";row-gap:8px}
+ .day-head>.day-modes{justify-self:stretch;width:100%;scrollbar-width:none}.day-head>.day-modes::-webkit-scrollbar{display:none}
+ .day-head>.day-modes .work-chip{flex:1 0 auto;padding:4px 8px}
+ .day-controls{justify-self:stretch;justify-content:stretch;grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "who";row-gap:8px}.day-controls:empty{display:none}
+ .day-controls>.day-who{width:100%}.day-controls>.day-nav{justify-content:flex-start}
+ .day-desk .day-col-head>.day-chips{flex:1 1 100%;order:3}
+ .day-nav .date-picker,.day-nav .field{width:124px}.day-back>span{display:none}.day-back{padding:4px 9px}
+}
+/* The performance table scrolls inside its panel, never the page. */
+.day-missions .day-list:has(>.perf-table){overflow-x:auto}
 /* A day is always chosen: no clear button on its date box. The filter chips scroll sideways before «+ مهمة» is pushed down a line. */
 .day-nav .date-picker-control>.icon-btn{display:none}
-.day-col-head>.day-chips{flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.day-col-head>.day-chips::-webkit-scrollbar{display:none}.day-chips>.work-chip{flex-shrink:0}
-@media(max-width:1000px){.day-col-head>.day-chips{flex-wrap:wrap;overflow:visible}}
+/* The filters wrap rather than hide behind the add button: every count stays in sight. */
+.day-col-head>.day-chips{flex:1 1 auto;min-width:0;flex-wrap:wrap;row-gap:4px;overflow:visible}.day-chips>.work-chip{flex-shrink:0}
 .day-col-head>.day-chips{flex:1 1 0}
 /* The posting form on one line: the next date's box without its caption (the case is named in its accessible label). */
 .mission-form>.field>span:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
