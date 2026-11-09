@@ -1,6 +1,7 @@
 import {Eye,EyeOff,Lock,MousePointerClick,UserRound,Briefcase,Scale,BookOpenCheck} from 'lucide-react';
 import {ACCOUNT_KINDS,DEFAULT_TEMPLATE,VIEW_ITEMS,VIEW_TEMPLATES,cycleMode,setMode,viewMode,type AccountKind,type ViewItem,type ViewMode,type ViewSettings} from '@/lib/view-map';
 import type {Permissions} from '@/lib/permissions';
+type Section=Permissions['sections'][number];
 import type {CaseRecord} from '@/lib/domain';
 import {useMemo,useState} from 'react';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -14,7 +15,7 @@ const groups=[...new Set(pages.map(p=>p.group||''))];
 /**
  * «ما يراه في البرنامج»: the account's screen as it will look, live. Each page, tab, card and field is a button: a
  * click turns it from shown to read-only to hidden and back. Hidden items stay in place, greyed, so they can be turned
- * back on; a page whose section is not granted above is shown off and cannot be turned on here.
+ * back on. A page whose section is not granted is shown off; a click grants it (see `toggle`).
  */
 /** `part` splits the editor so the dialog can keep the preview still beside the scrolling controls. */
 export default function ViewEditor({value,onChange,records=[],part='all'}:{value:Permissions;onChange:(v:Permissions)=>void;records?:CaseRecord[];part?:'all'|'controls'|'preview'}){
@@ -24,13 +25,26 @@ export default function ViewEditor({value,onChange,records=[],part='all'}:{value
  const [fileSearch,setFileSearch]=useState('');
  const view:ViewSettings=value.view||{},kind:AccountKind=value.accountKind||'staff';
  const set=(next:ViewSettings)=>onChange({...value,view:next});
- const granted=(i:ViewItem)=>!i.section||value.sections.includes(i.section as Permissions['sections'][number]);
+ const granted=(i:ViewItem)=>!i.section||value.sections.includes(i.section as Section);
+ // A click on an item that is not granted grants its section and shows that item alone (the section's other pages in
+ // the side list stay hidden until clicked); hiding the last shown page of a section takes the section away, so the
+ // server refuses it too, not only the menu.
+ const toggle=(i:ViewItem,own:ViewMode,readable:boolean)=>{
+  const sec=i.section as Section|undefined,siblings=sec?VIEW_ITEMS.filter(x=>x.section===sec):[],side=(x:ViewItem)=>x.kind==='page'||x.kind==='workspace';
+  if(sec&&!value.sections.includes(sec)){
+   let next=setMode(view,i.id,'show');for(const x of siblings)if(x.id!==i.id&&side(x)&&side(i))next=setMode(next,x.id,'hide');
+   onChange({...value,sections:[...value.sections,sec],view:next});return;
+  }
+  let next=setMode(view,i.id,cycleMode(own,readable));
+  if(sec&&siblings.every(x=>viewMode(next,x.id)==='hide')){for(const x of siblings)next=setMode(next,x.id,'show');onChange({...value,view:next,sections:value.sections.filter(x=>x!==sec)});return}
+  set(next);
+ };
  const item=(i:ViewItem,cls='',readable=true)=>{
   const own=view[i.id]||'show',mode=granted(i)?viewMode(view,i.id):'hide',off=!granted(i);
   const inherited=mode!==own&&!off;
-  return <button type="button" key={i.id} className={'ve-item ve-'+mode+(inherited?' ve-inherited':'')+(off?' ve-off':'')+' '+cls} disabled={off}
-   title={off?'هذا القسم غير ممنوح في الصفحات أعلاه':`${i.label}: ${MODE_LABEL[mode]}${inherited?' (من الأعلى)':''}. اضغط للتغيير`}
-   aria-label={`${i.label}: ${MODE_LABEL[mode]}`} onClick={()=>set(setMode(view,i.id,cycleMode(own,readable)))}>
+  return <button type="button" key={i.id} className={'ve-item ve-'+mode+(inherited?' ve-inherited':'')+(off?' ve-off':'')+' '+cls}
+   title={off?`${i.label}: غير ممنوح. اضغط لمنحه`:`${i.label}: ${MODE_LABEL[mode]}${inherited?' (من الأعلى)':''}. اضغط للتغيير`}
+   aria-label={`${i.label}: ${off?'غير ممنوح':MODE_LABEL[mode]}`} onClick={()=>toggle(i,own,readable)}>
    <span>{i.label}</span>{mode==='read'?<Lock aria-hidden size={12}/>:mode==='hide'?<EyeOff aria-hidden size={12}/>:null}</button>};
  const applyKind=(k:AccountKind)=>{const t=VIEW_TEMPLATES.find(x=>x.id===DEFAULT_TEMPLATE[k]);onChange({...value,accountKind:k,view:t?{...t.view}:view,...(k==='client'?{canEdit:false,canExport:false,caseScope:'selected' as const}:{})})};
  const same=(a:ViewSettings,b:ViewSettings)=>{const ka=Object.keys(a),kb=Object.keys(b);return ka.length===kb.length&&ka.every(k=>a[k]===b[k])};

@@ -55,21 +55,22 @@ async function allClients(action: 'list' | 'lookup') {
  * Any disagreement (a case removed, hidden by a permissions change, or more changes than one answer carries) reads
  * everything again, as does a copy older than ten minutes where the browser cannot compute the fingerprint.
  */
-type CaseCopy = { asOf: string; rows: StoredRow[]; full: number };
+type CaseCopy = { asOf: string; rows: StoredRow[]; full: number; print?: string };
 type Changes = { asOf: string; count: number; fingerprint: string; more: boolean; rows: StoredRow[] };
 let caseCopy: CaseCopy | null = null, copyLoaded = false, copyUser = '';
 let lastCases: { rows: StoredRow[]; directory: unknown; rulesKey: string; result: unknown } | null = null;
+const textTag = (t: string) => { let h = 2166136261; for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619); return (h >>> 0).toString(36) + t.length.toString(36); };
 async function fingerprint(rows: StoredRow[]) {
   if (!globalThis.crypto?.subtle) return null;
   const text = [...rows].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).map(r => `${r.id}:${r.revision}`).join(',');
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
-async function caseRows(): Promise<{ rows: StoredRow[]; changed: boolean }> {
+async function caseRows(): Promise<{ rows: StoredRow[]; changed: boolean; print?: string }> {
   // A database without «cases_changes» yet (before its update is applied) is read in full as before.
   try { return await changedRows(); } catch { return { rows: await allRows('mawatheeq_cases'), changed: true }; }
 }
-async function changedRows(): Promise<{ rows: StoredRow[]; changed: boolean }> {
+async function changedRows(): Promise<{ rows: StoredRow[]; changed: boolean; print?: string }> {
   // Signing in as someone else (or switching to a staff account) starts from that account's own copy.
   const user = cachedUser()?.id || '';
   if (user !== copyUser) { copyUser = user; copyLoaded = false; caseCopy = null; clientCopy = null; lastCases = null; }
@@ -80,20 +81,20 @@ async function changedRows(): Promise<{ rows: StoredRow[]; changed: boolean }> {
       // Nothing changed: keep the very same list, so the screen has nothing to redo.
       if (!d.rows.length && caseCopy.rows.length === d.count) {
         const print = await fingerprint(caseCopy.rows);
-        if (print ? print === d.fingerprint : Date.now() - caseCopy.full < 600000) { caseCopy = { ...caseCopy, asOf: d.asOf }; return { rows: caseCopy.rows, changed: false }; }
+        if (print ? print === d.fingerprint : Date.now() - caseCopy.full < 600000) { caseCopy = { ...caseCopy, asOf: d.asOf, print: print || undefined }; return { rows: caseCopy.rows, changed: false, print: caseCopy.print }; }
       }
       const byId = new Map(caseCopy.rows.map(r => [r.id, r]));
       for (const r of d.rows) byId.set(r.id, r);
       const rows = [...byId.values()], print = await fingerprint(rows);
       const fresh = rows.length === d.count && (print ? print === d.fingerprint : Date.now() - caseCopy.full < 600000);
-      if (fresh) { caseCopy = { asOf: d.asOf, rows, full: caseCopy.full }; if (d.rows.length) void writeSnapshot('case-rows', caseCopy); return { rows, changed: d.rows.length > 0 }; }
+      if (fresh) { caseCopy = { asOf: d.asOf, rows, full: caseCopy.full, print: print || undefined }; if (d.rows.length) void writeSnapshot('case-rows', caseCopy); return { rows, changed: d.rows.length > 0, print: caseCopy.print }; }
     }
   }
   // The marker of «now» and the pages are asked for together; the marker also says how many pages to queue.
   const marker = localRequest<Changes>('cases_changes', { light: true });
   const [start, rows] = await Promise.all([marker, allRows('mawatheeq_cases', true, marker.then(d => d.count))]);
-  caseCopy = { asOf: start.asOf, rows, full: Date.now() }; void writeSnapshot('case-rows', caseCopy);
-  return { rows, changed: true };
+  caseCopy = { asOf: start.asOf, rows, full: Date.now(), print: (await fingerprint(rows)) === start.fingerprint ? start.fingerprint : undefined }; void writeSnapshot('case-rows', caseCopy);
+  return { rows, changed: true, print: caseCopy.print };
 }
 // The client list is small but read with every refresh; it is read again when cases changed or after five minutes.
 let clientCopy: { at: number; action: string; value: { clients: ClientEntity[]; canMerge: boolean } } | null = null;
@@ -112,13 +113,16 @@ export async function sharedRequest(path: string, init?: RequestInit): Promise<u
     // copy it gave predates this refresh.
     const clientAction = access.sections.includes('clients') ? 'list' : 'lookup', asked = Date.now();
     const early = canRead ? clientList(clientAction, false) : null; early?.catch(() => undefined);
-    const [cases, settings] = await Promise.all([canRead ? caseRows() : { rows: [], changed: false }, rules]);
+    const [cases, settings] = await Promise.all([canRead ? caseRows() : { rows: [] as StoredRow[], changed: false, print: undefined as string | undefined }, rules]);
     const directory = !early ? { clients: [], canMerge: false } : cases.changed && (clientCopy?.at ?? 0) < asked ? await clientList(clientAction, true) : await early;
     const rows = cases.rows, rulesKey = JSON.stringify(settings || DEFAULT_RULES);
     // Unchanged cases, clients and rules give back the previous answer itself: the workspace sees the same object and
     // skips redrawing and re-saving 7,000 cases on every refresh, which kept slow computers busy for seconds.
     if (lastCases && lastCases.rows === rows && lastCases.directory === directory && lastCases.rulesKey === rulesKey) return lastCases.result;
-    const result = { ...directory, cases: rows.map(row => enrichCase({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived } as CaseRecord, directory.clients)), rules: settings || DEFAULT_RULES };
+    // What the answer holds, in a few characters: the server's fingerprint of every case and revision, the clients and
+    // the rules. The workspace compares it with the copy it opened with and, when they agree, keeps what is on screen.
+    const stamp = cases.print ? `${cases.print}:${textTag(JSON.stringify(directory))}:${textTag(rulesKey)}` : undefined;
+    const result = { ...directory, stamp, cases: rows.map(row => enrichCase({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived } as CaseRecord, directory.clients)), rules: settings || DEFAULT_RULES };
     if (canRead) lastCases = { rows, directory, rulesKey, result };
     return result;
   }

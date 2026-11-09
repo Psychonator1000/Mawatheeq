@@ -1,6 +1,6 @@
 import type { CaseRecord, caseState } from './domain';
 import type { LocalUser } from './local-auth';
-import type { Permissions } from './permissions';
+import { rolesOf, type Permissions } from './permissions.ts';
 
 export type ReviewScope = 'judgment' | 'announcement';
 export type ReviewStatus = 'unreviewed' | 'verified' | 'outdated' | 'needs_review';
@@ -13,6 +13,16 @@ export type Review = { id:number; caseId:string; scope:ReviewScope; decision:'ve
 export type Change = {id:number;revision:number;before:Record<string,unknown>|null;after:Record<string,unknown>;actor:string|null;createdAt:string};
 export type CaseFile = {evidence:Evidence[];reviews:Review[];latestReviews:Review[];history:Change[]};
 export type Member = LocalUser & { enabled:boolean; permissions?:Permissions; displayName?:string };
+/**
+ * Whether a hearing assigned to this account is shown as «المكلف بالحضور». A hearing always needs an account behind
+ * it, so one whose case lawyer has no account goes to whoever recorded or imported it; that is often the owner, who
+ * does not go to court. Shown: lawyers and counsel, and staff accounts that follow a lawyer's name on the cases.
+ */
+export function attendsCourt(m?: Member) {
+  if (!m) return false;
+  if (rolesOf(m.permissions || {}).some(r => r === 'lawyer' || r === 'counsel')) return true;
+  return m.role !== 'owner' && !!m.permissions?.lawyerNames?.length;
+}
 export type OfficeContext = { members:Member[]; canManage:boolean; user:LocalUser; permissions:Permissions; switchedBy?:string|null };
 export const WORK_STATUSES = {open:'لم تبدأ',in_progress:'قيد العمل',done:'مكتملة',cancelled:'ملغاة'};
 export const WORK_BUCKETS = {overdue:'متأخرة',today:'اليوم',upcoming:'قادمة',closed:'مغلقة',undated:'بلا تاريخ'};

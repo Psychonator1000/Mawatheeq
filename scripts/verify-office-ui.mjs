@@ -135,6 +135,10 @@ try{
  await staffGo('التحليل والإحصائيات');await staff.getByText('تُحسب الأعداد من 1 سجل حكم نشط',{exact:false}).waitFor();await staff.screenshot({path:artifacts+'/restricted-analytics-desktop.png',fullPage:true});
  await staff.setViewportSize({width:390,height:844});await staff.screenshot({path:artifacts+'/restricted-analytics-mobile.png',fullPage:true});assert.equal(await staff.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true);await staff.setViewportSize({width:1360,height:900});
  await page.setViewportSize({width:1440,height:1000});await openTeam();await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_staff',exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
+ // The live preview grants a page by a click, shows it alone in its section, and takes the section away again once all its pages are hidden.
+ const pv=name=>page.getByRole('dialog').getByRole('button',{name,exact:true});
+ await pv('الموكلون: غير ممنوح').click();await pv('الموكلون: ظاهر').waitFor();await pv('ملخص الموكلين: مخفي').waitFor();
+ await pv('الموكلون: ظاهر').click();await pv('الموكلون: اطلاع فقط').click();await pv('الموكلون: غير ممنوح').waitFor();await pv('ملخص الموكلين: غير ممنوح').waitFor();
  await page.getByRole('button',{name:/تعديل التفاصيل/}).click();await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-2');assert.equal(await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).isChecked(),true);await page.getByRole('checkbox',{name:'إتاحة القضية TEST-2',exact:true}).uncheck();
  await page.getByLabel('البحث لاختيار القضايا',{exact:true}).fill('TEST-3');await page.getByRole('checkbox',{name:'إتاحة القضية TEST-3',exact:true}).check();await page.getByRole('checkbox',{name:'السماح بالتعديل في الأقسام المتاحة',exact:true}).check();await go('حفظ الصلاحيات وإنهاء الجلسات');
  await page.getByRole('dialog').waitFor({state:'hidden'});await staff.evaluate(()=>window.dispatchEvent(new Event('focus')));await staff.getByRole('heading',{name:'تسجيل الدخول',exact:true}).waitFor();

@@ -1057,7 +1057,7 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
 .ve-read{border-style:dashed;border-color:color-mix(in srgb,var(--brand,#7a2335) 40%,transparent);background:color-mix(in srgb,var(--brand,#7a2335) 6%,var(--card))}
 .ve-page.ve-read{background:color-mix(in srgb,#fff 6%,transparent);border-color:#ffffff55}
 .ve-hide{opacity:.38;text-decoration:line-through;filter:grayscale(1)}
-.ve-inherited{opacity:.5}.ve-off{opacity:.22;cursor:not-allowed;text-decoration:line-through}
+.ve-inherited{opacity:.5}.ve-off{opacity:.35;cursor:pointer;text-decoration:line-through}.ve-off:hover{opacity:.7}
 .ve-card.ve-hide{opacity:.45}.ve-card.ve-hide .ve-item{text-decoration:line-through}
 @media(max-width:760px){.ve-preview{grid-template-columns:1fr}}
 .ve-choice{min-height:32px;padding:4px 12px;font-size:12.5px;gap:6px}

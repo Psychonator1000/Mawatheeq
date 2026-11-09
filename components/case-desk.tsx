@@ -12,7 +12,7 @@ import {ROLL_BLANK,judgmentRollHtml,printHtml,rollCardsHtml} from '@/lib/print';
 import {Field,DateField,Empty,api} from './shared';
 import {OfficeSelect} from './office-shared';
 import {EditorDialog} from './departments/shared';
-import type {Member,WorkItem} from '@/lib/office';
+import {attendsCourt,type Member,type WorkItem} from '@/lib/office';
 import {SelectList} from './filter-select';
 import {NUMBER_FIELDS,ROLL_FIELDS,ROLL_SORTS,modesFor,passesRollRules,rollOptions,rollValue,ruleActive,sortRoll,splitValues,type RollField,type RollItem,type RollMode,type RollRule,type RollSort} from '@/lib/roll-filter';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -160,7 +160,7 @@ function rollFacts(r:{c:CaseRecord;date:string;time:string;court:string;venue:st
 function Roll(p:Props){
  const [from,setFrom]=useState(todayISO()),[to,setTo]=useState(shiftDays(todayISO(),6)),law=useLawyerFilter(p.records);
  // Who attends each sitting, from the hearing assigned in «المهام والجلسات».
- const staffOf=(c:CaseRecord,date:string)=>{const w=p.work.find(x=>x.caseId===c.id&&x.kind==='hearing'&&x.dueDate===date&&x.status!=='cancelled'),m=w?.assigneeId?p.members.find(x=>x.id===w.assigneeId):undefined;return m?m.displayName||m.username:''};
+ const staffOf=(c:CaseRecord,date:string)=>{const w=p.work.find(x=>x.caseId===c.id&&x.kind==='hearing'&&x.dueDate===date&&x.status!=='cancelled'),m=w?.assigneeId?p.members.find(x=>x.id===w.assigneeId):undefined;return attendsCourt(m)?m!.displayName||m!.username:''};
  const today=todayISO();
  const inRange=sittingsBetween(p.records,from,to||from).filter(s=>law.match(s.c)).map(s=>({...s,staff:staffOf(s.c,s.date),today}));
  const fields=useRollFields(inRange),adv=useRollRules(inRange);
@@ -184,7 +184,7 @@ function Followup(p:Props){
  const today=todayISO(),[span,setSpan]=useState('14'),law=useLawyerFilter(p.records);
  const rows=sittingsBetween(p.records,today,shiftDays(today,Number(span))).filter(s=>law.match(s.c));
  const assigned=(c:CaseRecord,date:string)=>p.work.find(w=>w.caseId===c.id&&w.kind==='hearing'&&w.dueDate===date&&w.status!=='cancelled');
- const who=(w?:WorkItem)=>{const m=w?.assigneeId?p.members.find(x=>x.id===w.assigneeId):undefined;return m?m.displayName||m.username:''};
+ const who=(w?:WorkItem)=>{const m=w?.assigneeId?p.members.find(x=>x.id===w.assigneeId):undefined;return attendsCourt(m)?m!.displayName||m!.username:''};
  const unassigned=rows.filter(r=>!who(assigned(r.c,r.date))).length;
  return <Panel title="متابعة الجلسات" note="ما طلبته المحكمة في الجلسة السابقة ومن يحضر كل جلسة. يُسند الحضور من «المهام والجلسات».">
   <div className="desk-toolbar"><OfficeSelect label="الفترة" value={span} onChange={setSpan} options={[['7','الأسبوع القادم'],['14','أسبوعان'],['30','شهر']]}/>{law.select}<span className="tag">{rows.length} جلسة</span>{unassigned>0&&<span className="tag amber">{unassigned} دون مكلف بالحضور</span>}</div>
