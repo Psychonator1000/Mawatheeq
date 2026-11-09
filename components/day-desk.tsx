@@ -8,7 +8,7 @@ import {lastSitting,shiftDays} from '@/lib/case-desk';
 import {type Member,type WorkItem} from '@/lib/office';
 import {dailyRequest,officeRequest} from '@/lib/local-auth';
 import {printHtml} from '@/lib/print';
-import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emptyReport,memberLabel,missionsFor,passesFilter,readReport,reportCount,reportText,reportsHtml,teamStatus,withDone,
+import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emptyReport,memberLabel,missionsFor,namesPerson,passesFilter,readReport,reportCount,reportText,reportsHtml,teamStatus,withDone,
  type DailyPayload,type Mission,type MissionFilter,type Person,type ReportLine,type StoredReport} from '@/lib/daily-report';
 import {DateField,api} from './shared';
 import {SelectList} from './filter-select';
@@ -35,6 +35,11 @@ export default function DayDesk(p:Props){
  const missions=useMemo(()=>p.missionsOn?missionsFor({records:p.records,work:p.work,members:p.members,rules:p.rules,date,today,person,ownCasesOnly:p.ownCasesOnly&&self,viewerId:p.user.id}):[],
   // eslint-disable-next-line react-hooks/exhaustive-deps -- person follows `who`
   [p.missionsOn,p.records,p.work,p.members,p.rules,date,today,who,p.ownCasesOnly,p.user.id]);
+ const [lateOpen,setLateOpen]=useState(false);
+ // An account that sees every case but is named on none of them gets no sittings: say so, rather than an empty day.
+ const unnamed=useMemo(()=>p.missionsOn&&self&&!p.ownCasesOnly&&!p.records.some(c=>namesPerson(String(c.lawyer||''),me)),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- me follows the members list
+  [p.missionsOn,self,p.ownCasesOnly,p.records,p.members]);
  const shown=missions.filter(m=>passesFilter(m,filter)),late=missions.filter(m=>m.state==='late').length,done=missions.filter(m=>m.state==='done').length;
  const report=useOwnReport(p.canReport&&self,date,today,missions);
  const [list,setList]=useState<{reports:StoredReport[];expected:{userId:string;username:string;displayName:string}[]}|null>(null),[reading,setReading]=useState('');
@@ -45,24 +50,32 @@ export default function DayDesk(p:Props){
  const people=p.members.filter(m=>m.enabled&&m.id!==p.user.id).sort((a,b)=>memberLabel(a).localeCompare(memberLabel(b),'ar'));
  const colleague=!self&&!team?list?.reports.find(r=>r.userId===who&&r.date===date):undefined;
  const missionsCol=p.missionsOn&&<section className="panel day-missions" aria-label="المهام">
-  <div className="day-col-head"><h2>المهام</h2><div className="work-chips" role="group" aria-label="تصفية المهام">{MISSION_FILTERS.map(([k,l])=>{const n=missions.filter(m=>passesFilter(m,k)).length;return <button key={k} className={'work-chip'+(filter===k?' on':'')+(k==='late'?' late':'')} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l}<b>{n}</b></button>})}</div>
+  <div className="day-col-head"><h2>المهام</h2>{missions.length>0&&<div className="work-chips day-chips" role="group" aria-label="تصفية المهام">{MISSION_FILTERS.map(([k,l])=>{const n=missions.filter(m=>passesFilter(m,k)).length;return <button key={k} className={'work-chip'+(filter===k?' on':'')+(k==='late'?' late':'')} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l}<b>{n}</b></button>})}</div>}
    {p.canWork&&<AddTask date={date} members={p.members} assignee={team||self?p.user.id:who} reviewer={p.reviewer} onSaved={p.onWorkChanged}/>}</div>
-  <div className="day-list">{shown.length?shown.map(m=><MissionRow key={m.key} m={m} p={p} showWho={team} onDone={added}/>)
-   :<p className="day-empty">{missions.length?'لا مهام بهذا التصنيف.':date===today?'لا جلسات ولا مهام لهذا اليوم.':'لا جلسات ولا مهام في هذا اليوم.'}</p>}</div>
+  <div className="day-list">{shown.length?<>{(()=>{
+   // A backlog of overdue items folds into one line so the day's own work stays in view; «متأخرة» lists them all.
+   const lateRows=shown.filter(m=>m.state==='late'),fold=filter!=='late'&&lateRows.length>3,row=(m:Mission)=><MissionRow key={m.key} m={m} p={p} showWho={team} onDone={added}/>;
+   if(!fold)return shown.map(row);
+   return <><button type="button" className="late-fold" aria-expanded={lateOpen} onClick={()=>setLateOpen(!lateOpen)}><ChevronLeft size={15} className={lateOpen?'open':''}/> <b>{lateRows.length}</b> متأخرة من الأيام السابقة <span className="muted">{lateOpen?'إخفاء':'عرض'}</span></button>
+    {lateOpen&&lateRows.map(row)}{shown.filter(m=>m.state!=='late').map(row)}</>})()}</>
+   :<p className="day-empty">{missions.length?'لا مهام بهذا التصنيف.':date===today?'لا جلسات ولا مهام لهذا اليوم.':'لا جلسات ولا مهام في هذا اليوم.'}</p>}
+   {unnamed&&<p className="day-hint" role="note">الجلسات تُنسب إلى المحامي المسجل على القضية، ولا توجد قضية باسم «{memberLabel(me)}». ليظهر ما يخصك هنا، يضبط المسؤول «الاسم المعروض» لحسابك كما هو مكتوب في القضايا، أو يكلّفك بحضور الجلسة من «المهام والجلسات».</p>}</div>
  </section>;
  const reportCol=team?<TeamPanel list={list} date={date} reading={reading} onRead={setReading} printedBy={p.printedBy}/>
   :self?(p.canReport?<ReportPanel r={report} date={date} today={today} name={memberLabel(me)} printedBy={p.printedBy}/>:null)
   :<section className="panel day-report" aria-label="تقرير الزميل"><div className="day-col-head"><h2>تقرير {memberLabel(person==='all'?undefined:person)}</h2>{colleague&&<span className={'tag '+(colleague.submittedAt?'green':'amber')}>{colleague.submittedAt?'أُرسل '+clock(colleague.submittedAt):'مسودة'}</span>}</div>
    {!list?<p role="status" className="day-empty"><LoaderCircle className="spin" size={14}/> جارٍ التحميل…</p>:colleague?<ReportReader r={colleague} printedBy={p.printedBy}/>:<p className="day-empty">لم يكتب تقريراً لهذا اليوم.</p>}</section>;
- return <div className="day-desk"><h1 className="sr-only">مهام اليوم والتقرير</h1>
-  <div className="day-bar">
-   <div className="day-nav" role="group" aria-label="اليوم"><button className="icon-btn" aria-label="اليوم السابق" onClick={()=>go(shiftDays(date,-1))}><ChevronRight size={16}/></button>
-    <b className="day-title">{weekday(date)} <span className="mono">{formatDate(date)}</span></b><button className="icon-btn" aria-label="اليوم التالي" onClick={()=>go(shiftDays(date,1))}><ChevronLeft size={16}/></button>
-    {date!==today&&<button className="btn" onClick={()=>go(today)}>اليوم</button>}<DateField label="اختر يوماً" value={date} onChange={v=>v&&go(v)}/></div>
-   {p.reviewer&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">الفريق (كل التقارير)</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
-   {p.missionsOn&&<div className="day-counts"><span className="tag">{missions.length} مهمة</span><span className="tag green">{done} منجزة</span>{late>0&&<span className="tag red">{late} متأخرة</span>}</div>}
-   {p.links&&<div className="day-links">{p.links}</div>}
-  </div>
+ // The same head as every other page: the title, one line on the day, and the controls beside it.
+ const summary=p.missionsOn?[missions.length?`${missions.length} مهمة`:'لا مهام',done?`${done} منجزة`:'',late?`${late} متأخرة`:''].filter(Boolean).join(' · '):'اكتب ما أنجزته في هذا اليوم';
+ return <div className="day-desk">
+  <div className="page-head"><div><h1>مهام اليوم والتقرير</h1><p className="subtitle">{weekday(date)} {formatDate(date)} · {summary}</p></div>
+   <div className="actions day-actions">
+    <div className="day-nav" role="group" aria-label="اليوم"><button className="icon-btn" aria-label="اليوم السابق" onClick={()=>go(shiftDays(date,-1))}><ChevronRight size={16}/></button>
+     <DateField label="اختر يوماً" value={date} onChange={v=>v&&go(v)}/><button className="icon-btn" aria-label="اليوم التالي" onClick={()=>go(shiftDays(date,1))}><ChevronLeft size={16}/></button>
+     {date!==today&&<button className="btn" onClick={()=>go(today)}>اليوم</button>}</div>
+    {p.reviewer&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">الفريق (كل التقارير)</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
+    {p.links}
+   </div></div>
   <div className={'day-grid'+(missionsCol&&reportCol?'':' solo')}>{missionsCol}{reportCol}</div>
  </div>;
 }
@@ -118,7 +131,7 @@ function AddTask({date,members,assignee,reviewer,onSaved}:{date:string;members:M
  async function save(){if(!title.trim())return;setBusy(true);
   try{await officeRequest('save_work',{item:{id:crypto.randomUUID(),revision:0,caseId:'',title:title.trim(),kind:'task',dueDate:date,dueTime:'',assigneeId:to,priority:'normal',status:'open',location:'',notes:'',completionNote:''}});
    toast.success('أُضيفت المهمة');setTitle('');setOpen(false);onSaved()}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
- if(!open)return <button className="btn day-add" onClick={()=>setOpen(true)}><Plus size={15}/> مهمة</button>;
+ if(!open)return <button className="btn day-add" aria-label="إضافة مهمة" title="إضافة مهمة" onClick={()=>setOpen(true)}><Plus size={15}/><span> مهمة</span></button>;
  return <form className="mission-form day-add-form" onSubmit={e=>{e.preventDefault();void save()}}><input autoFocus aria-label="عنوان المهمة" value={title} onChange={e=>setTitle(e.target.value)} placeholder="عنوان المهمة"/>
   {reviewer&&<SelectList aria-label="المسؤول عن المهمة" value={to} onChange={e=>setTo(e.target.value)}>{members.filter(m=>m.enabled).map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
   <button className="btn primary" disabled={busy||!title.trim()}>{busy?<LoaderCircle className="spin" size={15}/>:<Plus size={15}/>} إضافة</button><button type="button" className="icon-btn" aria-label="إلغاء" onClick={()=>setOpen(false)}><X size={15}/></button></form>;
@@ -161,7 +174,7 @@ function ReportPanel({r,date,today,name,printedBy}:{r:OwnReport;date:string;toda
    <div className="actions"><button className="icon-btn" aria-label="نسخ التقرير نصاً" title="نسخ" onClick={copy}><Copy size={15}/></button><button className="icon-btn" aria-label="طباعة التقرير" title="طباعة" onClick={print}><Printer size={15}/></button></div></div>
   {r.error?<p className="day-empty" role="alert">{r.error}</p>:future?<p className="day-empty">لا يُكتب تقرير ليوم لم يأتِ بعد.</p>:<>
   <div className="day-report-body">{REPORT_PARTS.map(([k,title,a,b])=><div key={k} className="report-part" data-part={k}>
-   <div className="report-part-head"><b>{title}</b>{r.payload[k].length>0&&<span className="report-count">{r.payload[k].length}</span>}<button className="icon-btn" aria-label={'إضافة سطر: '+title} disabled={ro} onClick={()=>addLine(k)}><Plus size={14}/></button></div>
+   <div className="report-part-head"><b>{title}</b>{r.payload[k].length>0&&<span className="report-count">{r.payload[k].length}</span>}<button className="part-add" aria-label={'إضافة سطر: '+title} disabled={ro} onClick={()=>addLine(k)}><Plus size={13}/> سطر</button></div>
    {r.payload[k].map((l,i)=><div key={i} className="report-line"><input aria-label={a} placeholder={a} value={l.text} disabled={ro} onChange={e=>setLine(k,i,{text:e.target.value})}/><input aria-label={b} placeholder={b} value={l.result} disabled={ro} onChange={e=>setLine(k,i,{result:e.target.value})}/>
     <button className="icon-btn" aria-label="حذف السطر" disabled={ro} onClick={()=>r.set({...r.payload,[k]:r.payload[k].filter((_,j)=>j!==i)})}><X size={14}/></button></div>)}</div>)}
    <label className="report-part report-notes"><b>ملاحظات</b><textarea rows={2} value={r.payload.notes} disabled={ro} onChange={e=>r.set({...r.payload,notes:e.target.value})} placeholder="ما يجب أن يعرفه المسؤول"/></label></div>

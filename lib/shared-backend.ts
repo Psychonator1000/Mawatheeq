@@ -20,7 +20,9 @@ function checked<T>({ data, error }: { data: T; error: { message: string } | nul
  * A database without the light lists answers in full, as before.
  */
 async function allRows(table: string, light = false, expected?: Promise<number>): Promise<StoredRow[]> {
-  const action = table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', page = (offset: number) => localRequest<StoredRow[] | null>(action, light ? { offset, light } : { offset }).then(r => r || []);
+  const action = table === 'mawatheeq_cases' ? 'cases_page' : 'documents_page', ask = (offset: number) => localRequest<StoredRow[] | null>(action, light ? { offset, light } : { offset }).then(r => r || []),
+    // A page cut off by a busy database is asked once more after a moment before the read gives up.
+    page = (offset: number) => ask(offset).catch(() => new Promise(r => setTimeout(r, 700 + Math.random() * 600)).then(() => ask(offset)));
   // Four pages at a time, each asked for as soon as one returns, so a slow database answers several at once instead
   // of one round after another. Pages are read until one comes back short; once the number of records is known, no
   // page past the end is asked for (a full last page still asks for the one after it).

@@ -380,14 +380,14 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
    that is left and the list inside it takes whatever the notices and headings above it leave, so an extra line above
    (a scope note, a read-only notice, the mail tabs) shortens the list instead of pushing the page past the screen. */
 @media(min-width:1001px){
- .main:has(.list-desk,.overview-desk,.work-desk-grid){height:100dvh;display:flex;flex-direction:column}
- .main:has(.list-desk,.overview-desk,.work-desk-grid)>*{flex-shrink:0}
- .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;overflow:auto;padding-bottom:16px}
- .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace>*{flex-shrink:0}
- .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace>.fade-in{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
- .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace>.fade-in>*{flex-shrink:0}
- .main:has(.list-desk,.overview-desk,.work-desk-grid) .footer-note{display:none}
- .main:has(.list-desk,.overview-desk,.work-desk-grid)>.workspace>.fade-in>:is(.list-desk,.overview-desk,.work-desk-grid){flex:1 1 auto;min-height:0;height:auto}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid,.day-desk){height:100dvh;display:flex;flex-direction:column}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid,.day-desk)>*{flex-shrink:0}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid,.day-desk)>.workspace{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;overflow:auto;padding-bottom:16px}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid,.day-desk)>.workspace>*{flex-shrink:0}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid,.day-desk)>.workspace>.fade-in{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid,.day-desk)>.workspace>.fade-in>*{flex-shrink:0}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid,.day-desk) .footer-note{display:none}
+ .main:has(.list-desk,.overview-desk,.work-desk-grid,.day-desk)>.workspace>.fade-in>:is(.list-desk,.overview-desk,.work-desk-grid,.day-desk){flex:1 1 auto;min-height:0;height:auto}
  .department-shell:has(.desk-page){height:100dvh;min-height:0;display:flex;flex-direction:column}
  .department-shell:has(.desk-page)>*{flex-shrink:0}
  .department-shell:has(.desk-page)>.department-content{flex:1 1 auto;min-height:0;width:100%;display:flex;flex-direction:column;overflow:auto}
@@ -1315,7 +1315,7 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .print-check-attest{margin:6px 0}
 @media(max-width:700px){.print-check-evidence .evidence-row{grid-template-columns:auto minmax(0,1fr)}.print-check-evidence .evidence-row input[type=date],.print-check-evidence .evidence-row input[type=number]{grid-column:2}}
 /* «مهام اليوم والتقرير»: a bar for the day and the person, then the missions and the report side by side, each scrolling inside. */
-.day-desk{display:flex;flex-direction:column;gap:10px;height:calc(100dvh - var(--legal-desk-offset,150px));min-height:460px}
+.day-desk{display:flex;flex-direction:column;gap:0;height:calc(100dvh - var(--legal-desk-offset,150px));min-height:460px}
 .day-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .day-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.day-nav .date-picker,.day-nav .field{margin:0}
 .day-title{font-size:16px;white-space:nowrap}.day-who{min-width:170px}
@@ -1348,8 +1348,34 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .team-list{list-style:none;margin:0;padding:6px 10px;overflow:auto;flex:1 1 auto;min-height:0}.team-list button{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid var(--border);cursor:pointer}
 .team-list button:disabled{cursor:default}.team-list button:not(:disabled):hover{background:color-mix(in srgb,var(--brand) 6%,transparent)}.team-list small{margin-inline-start:auto;color:var(--muted-foreground)}
 .day-back{margin:8px 10px 0;align-self:flex-start;min-height:30px;padding:3px 10px}
-@media(min-width:1001px){.main:has(.day-desk){height:100dvh;display:flex;flex-direction:column}.main:has(.day-desk)>*{flex-shrink:0}.main:has(.day-desk)>.workspace{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding-bottom:12px}
- .main:has(.day-desk)>.workspace>.fade-in{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}.main:has(.day-desk) .day-desk{flex:1 1 auto;height:auto}.main:has(.day-desk) .footer-note{display:none}}
 @media(max-width:1000px){.day-desk{height:auto}.day-grid{grid-template-columns:1fr}.day-list,.day-report-body{max-height:none;overflow:visible}.day-missions,.day-report{overflow:visible}
  .mission-line{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"k m a" "t p a";row-gap:2px}.mission-kind{grid-area:k}.mission-time{grid-area:t}.mission-main{grid-area:m}.mission-place{grid-area:p}.mission-line>:last-child{grid-area:a}}
 .report-count{min-width:20px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--brand) 12%,transparent);font-size:12px;line-height:19px;text-align:center;font-variant-numeric:tabular-nums}
+.late-fold{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:6px;padding:8px 6px;border-bottom:1px solid var(--border);color:#a32e38;font-size:13.5px;cursor:pointer}.late-fold .muted{margin-inline-start:auto;font-size:12.5px}
+.late-fold svg{transition:transform .15s}.late-fold svg.open{transform:rotate(-90deg)}.late-fold:focus-visible{outline:2px solid var(--ring)}
+/* Panels take only the height their content needs and scroll inside once it is longer than the screen. */
+.day-grid{align-items:start;grid-template-rows:minmax(0,1fr)}.day-grid>.panel{max-height:100%}
+@media(max-width:1000px){.day-grid{grid-template-rows:auto}.day-grid>.panel{max-height:none}}
+.day-hint{margin:4px 6px 10px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--brand) 7%,transparent);font-size:13px;line-height:1.7}
+/* The day bar on one line: the date box without its caption (the day is written beside it). */
+.day-nav>.field>span:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.day-nav .date-picker-control{min-height:36px}
+.day-bar{min-height:40px}
+/* «+ سطر» sits right after each heading, not at the far edge. */
+.part-add{all:unset;display:inline-flex;align-items:center;gap:3px;font-size:12.5px;color:var(--brand);padding:2px 8px;border-radius:999px;cursor:pointer}
+.part-add:hover:not(:disabled){background:color-mix(in srgb,var(--brand) 8%,transparent)}.part-add:disabled{opacity:.45;cursor:default}.part-add:focus-visible{outline:2px solid var(--ring)}
+/* A report alone on the page (no missions) lays its parts out in columns instead of stretching each line across the screen. */
+@media(min-width:1001px){.day-grid.solo .day-report-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));column-gap:28px;align-content:start}
+ .day-grid.solo .report-notes{grid-column:1/-1}.day-grid.solo .day-report:not(:has(.team-list)) .day-report-foot{justify-content:flex-start}}
+/* The day's controls sit in the page head's action area, like the buttons of the other pages, and wrap rather than scroll. */
+.day-desk>.page-head{align-items:flex-end}.day-desk>.page-head>.actions.day-actions{flex-wrap:wrap;overflow:visible;align-items:center}
+.day-actions .day-who{min-width:180px}
+/* A day is always chosen: no clear button on its date box. The filter chips scroll sideways before «+ مهمة» is pushed down a line. */
+.day-nav .date-picker-control>.icon-btn{display:none}
+.day-col-head>.day-chips{flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.day-col-head>.day-chips::-webkit-scrollbar{display:none}.day-chips>.work-chip{flex-shrink:0}
+@media(max-width:1000px){.day-col-head>.day-chips{flex-wrap:wrap;overflow:visible}}
+.day-col-head>.day-chips{flex:1 1 0}
+/* The posting form on one line: the next date's box without its caption (the case is named in its accessible label). */
+.mission-form>.field>span:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.mission-form>.field .date-picker-control>.icon-btn{display:none}.mission-form .date-picker-button{height:34px}
+.mission-form>input[type=time]{width:110px;flex:0 0 auto}.mission-form>input:not([type=time]){flex:1 1 140px}.mission-form select{flex:0 1 220px}
+@media(min-width:1001px) and (max-width:1500px){.day-add>span{display:none}.day-add{padding:4px 9px}}

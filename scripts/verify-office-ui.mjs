@@ -156,7 +156,13 @@ try{
  await page.locator('.switch-banner').getByText('salem.ui',{exact:true}).waitFor();await page.evaluate(()=>{location.hash='cases'});await page.getByRole('heading',{name:'سجل الأحكام',exact:true}).waitFor();
  assert.equal(await page.locator('.case-table tbody tr').count(),5,'the lawyer sees only the cases under their name');assert.equal(await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).count(),0);
  await page.screenshot({path:artifacts+'/switched-user-desktop.png'});
+ const ownerKeys=async()=>page.evaluate(()=>new Promise(res=>{const r=indexedDB.open('mawatheeq-cache',1);r.onsuccess=()=>{const q=r.result.transaction('snapshots').objectStore('snapshots').getAllKeys();q.onsuccess=()=>res(q.result.map(String))}}));
+ const before=(await ownerKeys()).filter(k=>k.endsWith(':case-rows'));
  await page.locator('.switch-banner').getByRole('button',{name:'العودة إلى حسابي',exact:true}).click();await page.locator('.switch-banner').waitFor({state:'detached'});
+ // Coming back opens from the owner's saved copy at once: it survived the visit, and the staff account's copy is gone.
+ {let keys=[];for(let i=0;i<40;i++){keys=await ownerKeys();if(keys.filter(k=>k.endsWith(':case-rows')).length===1)break;await page.waitForTimeout(100)}
+  assert.ok(before.length>=1,'both copies existed while switched');assert.equal(keys.filter(k=>k.endsWith(':case-rows')).length,1,'only one account copy left');
+  const owner=await page.evaluate(()=>JSON.parse(localStorage.getItem('mawatheeq.boot.v1')).user.id);assert.ok(keys.some(k=>k===owner+':case-rows'),'the owner\'s copy is kept');}
  await openTeam();
  // The lawyer's account follows his name on the cases: «قضاياه فقط» is selected and new cases are included.
  await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText(/قضاياه فقط: 5 قضية/).waitFor();
