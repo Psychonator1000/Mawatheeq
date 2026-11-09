@@ -155,8 +155,8 @@ begin
  ins_num:=substring(s_compact from '^ت-?(\d+)$'); code_num:=coalesce(ins_num,s_compact);
  if code_num !~* '^[a-z]?\d+$' then code_num:=null; end if;
  with base as (
-  select l.*, c.light, c.revision, c.payload,
-   case when view='deadlines' and rd<>today then mawatheeq_private.case_state(c.payload,r,rd) else l.state end as dstate
+  -- Only what is filtered and sorted on travels through the sort; the cases themselves are read for the page alone.
+  select l.*, case when view='deadlines' and rd<>today then mawatheeq_private.case_state(c.payload,r,rd) else l.state end as dstate
   from mawatheeq_private.case_list l join public.mawatheeq_cases c on c.id=l.id
   where l.workflow='' and l.archived=arch
    and (v_all or (a->'caseIds') ? l.id or (v_names is not null and c.lawyer_norm<>'' and c.lawyer_norm=any(v_names)))
@@ -196,16 +196,18 @@ begin
     when 'remaining' then null else nullif(h.date,'') end as k_t
   from hits h
  ), ordered as (
-  select k.*, row_number() over (order by k.rank, (k.k_kind is null),
+  select k.id, row_number() over (order by k.rank, (k.k_kind is null),
     case when sdir=1 then k.k_kind end asc, case when sdir=1 then k.k_n end asc, case when sdir=1 then k.k_t end collate "C" asc,
     case when sdir=-1 then k.k_kind end desc, case when sdir=-1 then k.k_n end desc, case when sdir=-1 then k.k_t end collate "C" desc,
     k.date collate "C" desc, k.id collate "C" asc) as pos, count(*) over () as n
   from keyed k
  )
- select coalesce(max(n),0)::integer, coalesce(jsonb_agg(jsonb_build_object('id',o.id,
-   'payload',case when jsonb_typeof(v)='object' and v<>'{}'::jsonb then mawatheeq_private.case_for_view(coalesce(o.light,o.payload),v,kind) else coalesce(o.light,o.payload) end,
-   'revision',o.revision,'archived',o.archived,'state',o.state) order by o.pos) filter (where o.pos>off and o.pos<=off+lim),'[]')
-  into total, rows from ordered o;
+ select (select coalesce(max(n),0)::integer from ordered),
+  (select coalesce(jsonb_agg(jsonb_build_object('id',c.id,
+    'payload',case when jsonb_typeof(v)='object' and v<>'{}'::jsonb then mawatheeq_private.case_for_view(coalesce(c.light,c.payload),v,kind) else coalesce(c.light,c.payload) end,
+    'revision',c.revision,'archived',c.archived,'state',l.state) order by o.pos),'[]')
+   from ordered o join public.mawatheeq_cases c on c.id=o.id join mawatheeq_private.case_list l on l.id=o.id where o.pos>off and o.pos<=off+lim)
+  into total, rows;
  return jsonb_build_object('total',total,'rows',rows,'today',today);
 end $$;
 
