@@ -1,6 +1,6 @@
 // «مهام اليوم والتقرير»: whose missions are whose, late and done states, the report filling itself, the team view.
 import assert from 'node:assert/strict';
-import { cleanReport, emptyReport, missionsFor, namesPerson, passesFilter, readReport, reportCount, reportText, reportsHtml, teamStatus, withDone } from '../lib/daily-report.ts';
+import { agendaBetween, datesAhead, passesDates, cleanReport, emptyReport, missionsFor, namesPerson, passesFilter, readReport, reportCount, reportText, reportsHtml, teamStatus, withDone } from '../lib/daily-report.ts';
 const today = '2026-11-09';
 const base = { code: '', autoNumber: '', client: 'شركة', clientGroup: '', opponent: 'خصم', role: '', type: 'حكم أول درجة', ruling: '', outcome: 'غير محدد', appealRecorded: '', appealConfirmation: '', date: '', notes: '', court: 'الكلية', lawyer: '', procedures: [] };
 const sitting = (date, followup, extra = {}) => ({ id: 'p' + date, date, kind: 'جلسة', venue: 'المحكمة', court: 'الكلية', decision: 'تأجيل', text: 'تأجيل', followup, ...extra });
@@ -70,4 +70,14 @@ const reports = [{ userId: 'u1', username: 'ahmad', displayName: 'أحمد عل�
   { userId: 'u2', username: 'sara', displayName: 'سارة', date: today, payload: {}, submittedAt: null, updatedAt: '', revision: 1 },
   { userId: 'u5', username: 'y', displayName: 'يوسف', date: today, payload: {}, submittedAt: null, updatedAt: '', revision: 1 }];
 assert.deepEqual(teamStatus(expected, reports, today).map(t => [t.userId, t.status]), [['u4', 'none'], ['u2', 'draft'], ['u5', 'draft'], ['u1', 'sent']]);
+// «المواعيد»: follow-ups ahead for the person; «التقويم»: each day's sittings and tasks.
+const ahead = datesAhead({ records, work, members, today, person: members[0], viewerId: 'u1' });
+assert.ok(ahead.some(m => m.kind === 'followup' && m.c.id === 'c5'), 'A follow-up set for today is listed');
+assert.ok(ahead.every(m => m.date >= '2026-11-02'), 'Nothing older than a week');
+assert.equal(ahead.filter(m => passesDates(m, 'followup', today)).length, ahead.filter(m => m.kind === 'followup').length);
+const cal = agendaBetween({ records, work, members, today, person: members[1], viewerId: 'u2' }, '2026-11-01', '2026-11-30');
+assert.equal(cal.get(today).hearings, 1, 'Sara: one sitting posted today (c4); c2 is attended by Ahmad');
+assert.equal(cal.get(today).tasks, 2, 'Her two tasks of today');
+assert.equal(cal.get('2026-11-07').tasks, 1, 'The late task on its own day');
+assert.equal(agendaBetween({ records, work, members, today, person: 'all' }, '2026-11-01', '2026-11-30').get(today).hearings, 3, 'The office: c1, c2 due and c4 posted');
 console.log('Passed daily report: missions by person (named lawyer, assigned attendee, own cases), late and done states, filters, the report filling itself once, safe reading, text and print, team status.');

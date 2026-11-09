@@ -1379,3 +1379,19 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .mission-form>.field .date-picker-control>.icon-btn{display:none}.mission-form .date-picker-button{height:34px}
 .mission-form>input[type=time]{width:110px;flex:0 0 auto}.mission-form>input:not([type=time]){flex:1 1 140px}.mission-form select{flex:0 1 220px}
 @media(min-width:1001px) and (max-width:1500px){.day-add>span{display:none}.day-add{padding:4px 9px}}
+/* Pages opened from «مهام اليوم والتقرير» lead back to it: a link in the path and a button above the page. */
+.crumb-link{all:unset;cursor:pointer;color:var(--muted-foreground)}.crumb-link:hover{color:var(--brand);text-decoration:underline}.crumb-link:focus-visible{outline:2px solid var(--ring);border-radius:4px}
+.back-to-day{align-self:flex-start;min-height:32px;padding:4px 12px;margin-bottom:8px;font-size:13px}
+/* The views of «مهام اليوم والتقرير»: one switch, the same compact panels. */
+.day-modes{display:flex;gap:4px;padding:3px;border:1px solid var(--border);border-radius:999px;background:var(--card)}.day-modes .work-chip{border-color:transparent;padding:4px 12px}
+.day-cal{flex:1 1 auto;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(64px,1fr);gap:4px;padding:8px 10px}
+.day-cal-head{font-size:12px;color:var(--muted-foreground);text-align:center;align-self:end;padding-bottom:2px}
+.day-cal-cell{all:unset;box-sizing:border-box;min-width:0;display:flex;flex-direction:column;gap:2px;padding:4px 6px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;overflow:hidden}
+.day-cal-cell:hover{border-color:var(--dept,var(--brand))}.day-cal-cell:focus-visible{outline:2px solid var(--ring)}.day-cal-cell.out{opacity:.45}
+.day-cal-cell.today{border-color:var(--dept,var(--brand));box-shadow:inset 0 0 0 1px var(--dept,var(--brand))}.day-cal-cell.picked{background:color-mix(in srgb,var(--brand) 7%,var(--card))}
+.day-cal-cell>.mono{font-size:12.5px;font-weight:600}.day-cal-counts{display:flex;gap:3px;flex-wrap:wrap}
+.day-cal-counts b{font-size:11px;font-weight:600;padding:0 6px;border-radius:999px;line-height:17px;background:color-mix(in srgb,var(--brand) 12%,transparent)}.day-cal-counts b.k-task{background:#2a6fb01a;color:#235d93}
+.day-cal-cell small{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted-foreground)}.day-cal-cell small.done{text-decoration:line-through}.day-cal-cell small.more{color:var(--brand)}
+@media(max-width:1000px){.day-modes{width:100%;overflow-x:auto}.day-cal{grid-auto-rows:minmax(52px,auto);padding:6px 4px;gap:2px}.day-cal-cell small{display:none}.day-cal-head{font-size:10.5px}}
+.day-cal{grid-template-rows:auto;align-content:stretch}
+@media(max-width:1000px){.day-cal-counts b>span{display:none}.day-cal-counts b{padding:0 5px}}

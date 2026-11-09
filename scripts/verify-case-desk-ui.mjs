@@ -124,6 +124,10 @@ try{
   await p2.screenshot({path:artifacts+'/daily-reporter.png'});await other.close();}
  await page.getByLabel('تقرير من').selectOption('team');const sent=page.locator('.team-list li',{hasText:'ui_reporter'});await sent.getByText('مسودة').waitFor();await sent.getByRole('button').click();await page.getByText('وزارة العدل — شهادة').waitFor();
 
+ // The views of the page: all the day's sittings, the dates ahead, the month — and a day of the month opens that day.
+ await page.getByRole('tab',{name:'ترحيل الجلسات'}).click();await page.getByRole('region',{name:'ترحيل الجلسات'}).locator('.mission',{hasText:'DESK-DUE'}).waitFor();
+ await page.getByRole('tab',{name:'المواعيد'}).click();await page.getByRole('region',{name:'المواعيد'}).waitFor();
+ await page.getByRole('tab',{name:'التقويم'}).click();await page.locator('.day-cal-cell.today').click();await page.getByRole('tab',{name:'اليوم',selected:true}).waitFor();await mission('DESK-DUE').waitFor();
  await page.setViewportSize({width:390,height:844});await screen('posting-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'No horizontal page scroll on phones');
  assert.deepEqual(errors,[],'No page errors');
  console.log('Passed cases desk: posting a sitting, posting errors, stayed cases, roll, contracts, a consultation and filing a case under study.');

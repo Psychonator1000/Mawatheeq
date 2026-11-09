@@ -5,10 +5,10 @@ import {type CaseRecord,type Rules,caseCode,formatDate,todayISO} from '@/lib/dom
 import {type ClientEntity,enrichCase} from '@/lib/clients';
 import {DECISIONS,EXPERT_DECISIONS,sessionProcedure,type Venue} from '@/lib/sessions';
 import {lastSitting,shiftDays} from '@/lib/case-desk';
-import {type Member,type WorkItem} from '@/lib/office';
+import {type Member,type WorkItem,monthGrid,shiftMonth} from '@/lib/office';
 import {dailyRequest,officeRequest} from '@/lib/local-auth';
 import {printHtml} from '@/lib/print';
-import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emptyReport,memberLabel,missionsFor,namesPerson,passesFilter,readReport,reportCount,reportText,reportsHtml,teamStatus,withDone,
+import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emptyReport,memberLabel,missionsFor,namesPerson,datesAhead,DATES_FILTERS,passesDates,agendaBetween,type DatesFilter,type AgendaDay,passesFilter,readReport,reportCount,reportText,reportsHtml,teamStatus,withDone,
  type DailyPayload,type Mission,type MissionFilter,type Person,type ReportLine,type StoredReport} from '@/lib/daily-report';
 import {DateField,api} from './shared';
 import {SelectList} from './filter-select';
@@ -16,10 +16,11 @@ import {SelectList} from './filter-select';
 type Props={records:CaseRecord[];rules?:Rules;clients:ClientEntity[];work:WorkItem[];members:Member[];user:{id:string;username:string};
  /** Missions come from cases and work this account can see; an account holding only the report section has none. */
  missionsOn:boolean;canPost:boolean;canWork:boolean;canReport:boolean;reviewer:boolean;ownCasesOnly:boolean;printedBy:string;
- onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onWorkChanged:()=>void;
- /** Links to the full pages (all tasks and the calendar, the deadlines table), kept out of the way. */
- links?:React.ReactNode};
+ onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onWorkChanged:()=>void};
 const ICONS={hearing:Gavel,task:ListChecks,deadline:Hourglass,followup:CalendarClock};
+type Mode='day'|'posting'|'dates'|'calendar';
+const monthName=(d:string)=>new Intl.DateTimeFormat('ar-KW-u-nu-latn',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(d.slice(0,7)+'-01T12:00:00Z'));
+const WEEKDAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const weekday=(d:string)=>new Intl.DateTimeFormat('ar-KW',{weekday:'long',timeZone:'UTC'}).format(new Date(d+'T12:00:00Z'));
 const clock=(iso?:string|null)=>iso?new Intl.DateTimeFormat('ar-KW',{hour:'numeric',minute:'2-digit'}).format(new Date(iso)):'';
 
@@ -35,7 +36,19 @@ export default function DayDesk(p:Props){
  const missions=useMemo(()=>p.missionsOn?missionsFor({records:p.records,work:p.work,members:p.members,rules:p.rules,date,today,person,ownCasesOnly:p.ownCasesOnly&&self,viewerId:p.user.id}):[],
   // eslint-disable-next-line react-hooks/exhaustive-deps -- person follows `who`
   [p.missionsOn,p.records,p.work,p.members,p.rules,date,today,who,p.ownCasesOnly,p.user.id]);
- const [lateOpen,setLateOpen]=useState(false);
+ const [lateOpen,setLateOpen]=useState(false),[mode,setMode]=useState<Mode>('day'),[datesFilter,setDatesFilter]=useState<DatesFilter>('all');
+ const range={records:p.records,work:p.work,members:p.members,rules:p.rules,today,person,ownCasesOnly:p.ownCasesOnly&&self,viewerId:p.user.id};
+ // «ترحيل الجلسات»: every sitting of the chosen day in the office, to post one after another.
+ const posting=useMemo(()=>mode==='posting'?missionsFor({...range,person:'all',ownCasesOnly:false,date}).filter(m=>m.kind==='hearing'&&m.date===date):[],
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- range follows its parts
+  [mode,p.records,p.work,p.members,p.rules,date,today]);
+ const dates=useMemo(()=>mode==='dates'?datesAhead(range):[],
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- range follows its parts
+  [mode,p.records,p.work,p.members,p.rules,today,who,p.ownCasesOnly,p.user.id]);
+ const grid=useMemo(()=>monthGrid(date.slice(0,7)),[date]);
+ const agenda=useMemo(()=>mode==='calendar'?agendaBetween(range,grid[0],grid[grid.length-1]):new Map<string,AgendaDay>(),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- range follows its parts
+  [mode,grid,p.records,p.work,p.members,who,p.ownCasesOnly,p.user.id]);
  // An account that sees every case but is named on none of them gets no sittings: say so, rather than an empty day.
  const unnamed=useMemo(()=>p.missionsOn&&self&&!p.ownCasesOnly&&!p.records.some(c=>namesPerson(String(c.lawyer||''),me)),
   // eslint-disable-next-line react-hooks/exhaustive-deps -- me follows the members list
@@ -61,6 +74,20 @@ export default function DayDesk(p:Props){
    :<p className="day-empty">{missions.length?'لا مهام بهذا التصنيف.':date===today?'لا جلسات ولا مهام لهذا اليوم.':'لا جلسات ولا مهام في هذا اليوم.'}</p>}
    {unnamed&&<p className="day-hint" role="note">الجلسات تُنسب إلى المحامي المسجل على القضية، ولا توجد قضية باسم «{memberLabel(me)}». ليظهر ما يخصك هنا، يضبط المسؤول «الاسم المعروض» لحسابك كما هو مكتوب في القضايا، أو يكلّفك بحضور الجلسة من «المهام والجلسات».</p>}</div>
  </section>;
+ const rows=(list:Mission[],empty:string)=>list.length?list.map(m=><MissionRow key={m.key} m={m} p={p} showWho={team||mode==='posting'} onDone={added}/>):<p className="day-empty">{empty}</p>;
+ const postingCol=<section className="panel day-missions" aria-label="ترحيل الجلسات"><div className="day-col-head"><h2>ترحيل الجلسات</h2>
+   <span className="tag">{posting.length} جلسة</span>{posting.some(m=>m.state==='done')&&<span className="tag green">{posting.filter(m=>m.state==='done').length} مرحّلة</span>}{posting.some(m=>m.state!=='done')&&<span className="tag amber">{posting.filter(m=>m.state!=='done').length} بانتظار الترحيل</span>}</div>
+  <div className="day-list">{rows(posting,'لا جلسات في هذا اليوم.')}</div></section>;
+ const datesCol=<section className="panel day-missions" aria-label="المواعيد"><div className="day-col-head"><h2>المواعيد</h2>
+   {dates.length>0&&<div className="work-chips day-chips" role="group" aria-label="تصفية المواعيد">{DATES_FILTERS.map(([k,l])=><button key={k} className={'work-chip'+(datesFilter===k?' on':'')+(k==='late'?' late':'')} aria-pressed={datesFilter===k} onClick={()=>setDatesFilter(k)}>{l}<b>{dates.filter(m=>passesDates(m,k,today)).length}</b></button>)}</div>}</div>
+  <div className="day-list">{rows(dates.filter(m=>passesDates(m,datesFilter,today)),dates.length?'لا مواعيد بهذا التصنيف.':'لا مواعيد طعن ولا متابعات من أسبوع مضى إلى ثلاثين يوماً قادمة.')}</div></section>;
+ const calendarCol=<section className="panel day-missions" aria-label="التقويم"><div className="day-col-head"><h2>التقويم</h2><span className="tag">{monthName(date)}</span>
+   <div className="actions"><button className="icon-btn" aria-label="الشهر السابق" onClick={()=>setDate(shiftMonth(date.slice(0,7),-1)+'-01')}><ChevronRight size={16}/></button><button className="icon-btn" aria-label="الشهر التالي" onClick={()=>setDate(shiftMonth(date.slice(0,7),1)+'-01')}><ChevronLeft size={16}/></button></div></div>
+  <div className="day-cal" role="grid" aria-label={'تقويم '+monthName(date)}>{WEEKDAYS.map(d=><div key={d} className="day-cal-head" role="columnheader">{d}</div>)}
+   {grid.map(d=>{const a=agenda.get(d);return <button key={d} type="button" role="gridcell" className={'day-cal-cell'+(d.slice(0,7)!==date.slice(0,7)?' out':'')+(d===today?' today':'')+(d===date?' picked':'')} onClick={()=>{setMode('day');go(d)}} aria-label={formatDate(d)+(a?` · ${a.hearings} جلسة · ${a.tasks} مهمة`:'')}>
+    <span className="mono">{Number(d.slice(8))}</span>{a&&<span className="day-cal-counts">{a.hearings>0&&<b className="k-hearing">{a.hearings}<span> جلسة</span></b>}{a.tasks>0&&<b className="k-task">{a.tasks}<span> مهمة</span></b>}</span>}
+    {a&&a.items.slice(0,2).map((x,i)=><small key={i} className={x.done?'done':''}>{x.title}</small>)}{a&&a.items.length>2&&<small className="more">+{a.items.length-2}</small>}</button>})}</div></section>;
+ const mainCol=mode==='posting'?postingCol:mode==='dates'?datesCol:mode==='calendar'?calendarCol:missionsCol;
  const reportCol=team?<TeamPanel list={list} date={date} reading={reading} onRead={setReading} printedBy={p.printedBy}/>
   :self?(p.canReport?<ReportPanel r={report} date={date} today={today} name={memberLabel(me)} printedBy={p.printedBy}/>:null)
   :<section className="panel day-report" aria-label="تقرير الزميل"><div className="day-col-head"><h2>تقرير {memberLabel(person==='all'?undefined:person)}</h2>{colleague&&<span className={'tag '+(colleague.submittedAt?'green':'amber')}>{colleague.submittedAt?'أُرسل '+clock(colleague.submittedAt):'مسودة'}</span>}</div>
@@ -68,15 +95,15 @@ export default function DayDesk(p:Props){
  // The same head as every other page: the title, one line on the day, and the controls beside it.
  const summary=p.missionsOn?[missions.length?`${missions.length} مهمة`:'لا مهام',done?`${done} منجزة`:'',late?`${late} متأخرة`:''].filter(Boolean).join(' · '):'اكتب ما أنجزته في هذا اليوم';
  return <div className="day-desk">
-  <div className="page-head"><div><h1>مهام اليوم والتقرير</h1><p className="subtitle">{weekday(date)} {formatDate(date)} · {summary}</p></div>
+  <div className="page-head"><div><h1>مهام اليوم والتقرير</h1><p className="subtitle">{mode==='calendar'?monthName(date):mode==='dates'?'من أسبوع مضى إلى ثلاثين يوماً قادمة':`${weekday(date)} ${formatDate(date)} · ${mode==='posting'?`${posting.length} جلسة في المكتب`:summary}`}</p></div>
    <div className="actions day-actions">
-    <div className="day-nav" role="group" aria-label="اليوم"><button className="icon-btn" aria-label="اليوم السابق" onClick={()=>go(shiftDays(date,-1))}><ChevronRight size={16}/></button>
+    {p.missionsOn&&<div className="day-modes" role="tablist" aria-label="العرض">{([['day','اليوم'],...(p.canPost?[['posting','ترحيل الجلسات']]:[]),['dates','المواعيد'],['calendar','التقويم']] as [Mode,string][]).map(([k,l])=><button key={k} role="tab" aria-selected={mode===k} className={'work-chip'+(mode===k?' on':'')} onClick={()=>{void report.flush();setMode(k)}}>{l}</button>)}</div>}
+    {(mode==='day'||mode==='posting')&&<div className="day-nav" role="group" aria-label="اليوم"><button className="icon-btn" aria-label="اليوم السابق" onClick={()=>go(shiftDays(date,-1))}><ChevronRight size={16}/></button>
      <DateField label="اختر يوماً" value={date} onChange={v=>v&&go(v)}/><button className="icon-btn" aria-label="اليوم التالي" onClick={()=>go(shiftDays(date,1))}><ChevronLeft size={16}/></button>
-     {date!==today&&<button className="btn" onClick={()=>go(today)}>اليوم</button>}</div>
-    {p.reviewer&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">الفريق (كل التقارير)</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
-    {p.links}
+     {date!==today&&<button className="btn" onClick={()=>go(today)}>العودة لليوم</button>}</div>}
+    {p.reviewer&&mode!=='posting'&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">الفريق (كل التقارير)</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
    </div></div>
-  <div className={'day-grid'+(missionsCol&&reportCol?'':' solo')}>{missionsCol}{reportCol}</div>
+  <div className={'day-grid'+(mainCol&&reportCol?'':' solo')}>{mainCol}{reportCol}</div>
  </div>;
 }
 

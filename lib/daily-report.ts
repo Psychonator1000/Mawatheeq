@@ -67,18 +67,26 @@ type Input = {
  * come in as late, so nothing slips. A sitting with someone assigned to attend belongs to that person; otherwise to the
  * lawyer named on the case.
  */
+/** Whose a case's sitting on `day` is: the colleague assigned to attend it, else the lawyer named on the case. */
+function ownerOf(work: WorkItem[], members: Member[], person: Person, ownCasesOnly: boolean, viewerId: string) {
+  const all = person === 'all', who = (id?: string) => memberLabel(members.find(m => m.id === id));
+  const attendee = new Map<string, WorkItem>();
+  for (const w of work) if (w.kind === 'hearing' && w.caseId && w.status !== 'cancelled') attendee.set(w.caseId + '|' + w.dueDate, w);
+  return (c: CaseRecord, day: string): { mine: boolean; who: string } => {
+    const w = attendee.get(c.id + '|' + day);
+    if (w) return { mine: all || w.assigneeId === (person as Exclude<Person, 'all'>).id, who: who(w.assigneeId) };
+    const named = members.find(m => namesPerson(String(c.lawyer || ''), m));
+    if (person === 'all') return { mine: true, who: named ? memberLabel(named) : String(c.lawyer || '') };
+    return { mine: namesPerson(String(c.lawyer || ''), person) || (ownCasesOnly && person.id === viewerId && !named), who: memberLabel(person) };
+  };
+}
+
 export function missionsFor({ records, work, members, rules, date, today, person, ownCasesOnly = false, viewerId = '' }: Input): Mission[] {
   const all = person === 'all', isToday = date === today, from = isToday ? shiftDays(date, -14) : date;
   const who = (id?: string) => memberLabel(members.find(m => m.id === id));
   const attendee = new Map<string, WorkItem>();
   for (const w of work) if (w.kind === 'hearing' && w.caseId && w.status !== 'cancelled') attendee.set(w.caseId + '|' + w.dueDate, w);
-  const caseOwner = (c: CaseRecord, day: string): { mine: boolean; who: string } => {
-    const w = attendee.get(c.id + '|' + day);
-    if (w) return { mine: all || w.assigneeId === person.id, who: who(w.assigneeId) };
-    const named = members.find(m => namesPerson(String(c.lawyer || ''), m));
-    if (all) return { mine: true, who: named ? memberLabel(named) : String(c.lawyer || '') };
-    return { mine: namesPerson(String(c.lawyer || ''), person) || (ownCasesOnly && person.id === viewerId && !named), who: memberLabel(person) };
-  };
+  const caseOwner = ownerOf(work, members, person, ownCasesOnly, viewerId);
   const out: Mission[] = [];
   const live = records.filter(c => isFiled(c) && !c.archived);
   for (const c of live) {
@@ -165,4 +173,50 @@ export function reportsHtml(list: { name: string; date: string; payload: DailyPa
 header{border-bottom:2px solid #111;margin-bottom:8px}h1{font-size:18px;margin:0 0 2px}header p{margin:0 0 6px}h2{font-size:13.5px;margin:12px 0 4px}
 table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:4px 6px;text-align:right;vertical-align:top}th{background:#eee}.n{width:26px;text-align:center}
 .notes{white-space:pre-wrap;border:1px solid #888;padding:6px}.empty{color:#666}footer{margin-top:10px;font-size:10.5px;color:#555}</style></head><body>${list.map(one).join('')}<footer>طُبع ${esc(printedAt)} · ${esc(printedBy)}</footer></body></html>`;
+}
+
+type Range = Omit<Input, 'date'>;
+/**
+ * Deadlines and follow-ups from a week back to `days` ahead, for «المواعيد»: appeal deadlines (passed in the last week,
+ * due soon or later in the period) and follow-up dates set on procedures, nearest first.
+ */
+export function datesAhead({ records, work, members, rules, today, person, ownCasesOnly = false, viewerId = '' }: Range, days = 30): Mission[] {
+  const owner = ownerOf(work, members, person, ownCasesOnly, viewerId), from = shiftDays(today, -7), to = shiftDays(today, days), out: Mission[] = [];
+  for (const c of records) {
+    if (!isFiled(c) || c.archived) continue;
+    const s = caseState(c, rules, today), due = String(s.due || '');
+    if (due && due >= from && due <= to && s.alert !== 'تم اتخاذ الإجراء' && s.alert !== 'ملف منتهي' && s.alert !== 'نهائي') {
+      const o = owner(c, today);
+      if (o.mine) out.push({ key: 'd:' + c.id, kind: 'deadline', date: due, time: '', title: ref(c), sub: parties(c), place: due < today ? 'انتهت المهلة' : `يبقى ${s.remaining} يوم`, state: due < today ? 'late' : 'open', result: '', c, who: o.who });
+    }
+    for (const p of c.procedures || []) if (!isSessionEntry(p) && p.kind !== 'قيد الدعوى' && p.followup && p.followup >= from && p.followup <= to) {
+      const o = owner(c, p.followup);
+      if (o.mine) out.push({ key: 'f:' + c.id + ':' + p.id, kind: 'followup', date: p.followup, time: '', title: ref(c), sub: p.text || parties(c), place: '', state: p.followup < today ? 'late' : 'open', result: '', c, who: o.who });
+    }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
+}
+export type DatesFilter = 'all' | 'late' | 'week' | 'deadline' | 'followup';
+export const DATES_FILTERS: [DatesFilter, string][] = [['all', 'الكل'], ['late', 'فائتة'], ['week', 'خلال أسبوع'], ['deadline', 'مواعيد الطعن'], ['followup', 'المتابعات']];
+export const passesDates = (m: Mission, f: DatesFilter, today: string) => f === 'all' || (f === 'late' ? m.state === 'late' : f === 'week' ? m.date >= today && m.date <= shiftDays(today, 7) : m.kind === f);
+
+export type AgendaDay = { hearings: number; tasks: number; done: number; items: { kind: MissionKind; title: string; done: boolean }[] };
+/** Each day's sittings and tasks between two dates, for «التقويم»: sittings due or posted that day, and dated tasks. */
+export function agendaBetween({ records, work, members, person, ownCasesOnly = false, viewerId = '' }: Range, from: string, to: string): Map<string, AgendaDay> {
+  const owner = ownerOf(work, members, person, ownCasesOnly, viewerId), days = new Map<string, AgendaDay>();
+  const day = (d: string) => { let v = days.get(d); if (!v) days.set(d, v = { hearings: 0, tasks: 0, done: 0, items: [] }); return v; };
+  const caseIds = new Set<string>();
+  for (const c of records) {
+    if (!isFiled(c) || c.archived) continue;
+    caseIds.add(c.id);
+    const next = nextSitting(c);
+    if (next && next >= from && next <= to && owner(c, next).mine) { const v = day(next); v.hearings++; v.items.push({ kind: 'hearing', title: ref(c), done: false }); }
+    for (const p of c.procedures || []) if (isSessionEntry(p) && p.date >= from && p.date <= to && owner(c, p.date).mine) { const v = day(p.date); v.hearings++; v.done++; v.items.push({ kind: 'hearing', title: ref(c), done: true }); }
+  }
+  for (const w of work) {
+    if (w.status === 'cancelled' || !w.dueDate || w.dueDate < from || w.dueDate > to || (w.kind === 'hearing' && caseIds.has(w.caseId))) continue;
+    if (person !== 'all' && w.assigneeId !== person.id) continue;
+    const v = day(w.dueDate); v.tasks++; if (w.status === 'done') v.done++; v.items.push({ kind: 'task', title: w.title, done: w.status === 'done' });
+  }
+  return days;
 }
