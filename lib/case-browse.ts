@@ -133,24 +133,33 @@ export function partyMatches(records:CaseRecord[],clients:ClientEntity[],query:s
 export type CaseSortKey = 'date' | 'number' | 'code' | 'client' | 'remaining' | 'lawyer';
 export type CaseSort = { key: CaseSortKey; dir: 1 | -1 };
 export const DEFAULT_CASE_SORT: CaseSort = { key: 'date', dir: -1 };
-/** Sorts a case list by one column. Empty values always go last; ties keep the newest judgment first. */
+/**
+ * Sorts a case list by one column. Empty values always go last; numbers before words; words in the order of their
+ * letters (as the server orders them, so a list read a page at a time from the server is in the same order as here);
+ * ties keep the newest judgment first, then the case's id, so the order never depends on how the cases arrived.
+ */
+export type SortKey = null | { kind: 0; n: number } | { kind: 1; t: string };
+const byUnits = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
+export function caseSortKey(c: CaseRecord, key: CaseSortKey, remaining: (c: CaseRecord) => number | null = () => null): SortKey {
+  const num = (raw: unknown, add = 0): SortKey => { const n = String(raw ?? '').trim(); return !n ? null : /^\d+$/.test(n) ? { kind: 0, n: Number(n) + add } : { kind: 1, t: normalizeSearch(n) }; };
+  const text = (raw: unknown): SortKey => { const t = normalizeSearch(raw); return t ? { kind: 1, t } : null; };
+  switch (key) {
+    case 'number': return num(c.autoNumber);
+    case 'code': return num(c.code, c.insurance ? 1e9 : 0); // insurance («ت-») after the base cases
+    case 'client': return text(c.client || c.clientGroup);
+    case 'remaining': { const r = remaining(c); return r === null || r === undefined ? null : { kind: 0, n: r }; }
+    case 'lawyer': return text(c.lawyer);
+    default: return c.date ? { kind: 1, t: String(c.date) } : null;
+  }
+}
+export function compareSortKeys(a: SortKey, b: SortKey, dir: 1 | -1) {
+  if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
+  if (a.kind !== b.kind) return (a.kind - b.kind) * dir;
+  return (a.kind === 0 ? a.n - (b as { n: number }).n : byUnits(a.t, (b as { t: string }).t)) * dir;
+}
 export function sortCases(records: CaseRecord[], sort: CaseSort, remaining: (c: CaseRecord) => number | null = () => null) {
-  const key = (c: CaseRecord): string | number | null => {
-    switch (sort.key) {
-      case 'number': { const n = String(c.autoNumber || '').trim(); return n ? (/^\d+$/.test(n) ? Number(n) : n) : null; }
-      case 'code': { const n = String(c.code || '').trim(); return n ? (/^\d+$/.test(n) ? Number(n) + (c.insurance ? 1e9 : 0) : n) : null; } // insurance («ت-») after the base cases
-      case 'client': return normalizeSearch(c.client || c.clientGroup) || null;
-      case 'remaining': return remaining(c);
-      case 'lawyer': return normalizeSearch(c.lawyer) || null;
-      default: return c.date || null;
-    }
-  };
-  const keyed = records.map(c => ({ c, k: key(c) }));
-  return keyed.sort((a, b) => {
-    if (a.k === null || b.k === null) { if (a.k !== b.k) return a.k === null ? 1 : -1; }
-    else if (a.k !== b.k) return (typeof a.k === 'number' && typeof b.k === 'number' ? a.k - b.k : String(a.k).localeCompare(String(b.k), 'ar')) * sort.dir;
-    return (b.c.date || '').localeCompare(a.c.date || '');
-  }).map(x => x.c);
+  return records.map(c => ({ c, k: caseSortKey(c, sort.key, remaining) }))
+    .sort((a, b) => compareSortKeys(a.k, b.k, sort.dir) || byUnits(b.c.date || '', a.c.date || '') || byUnits(a.c.id, b.c.id)).map(x => x.c);
 }
 
 /**

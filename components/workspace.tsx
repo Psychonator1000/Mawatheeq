@@ -63,6 +63,7 @@ import RollImport from './roll-import';
 import RegisterImport from './register-import';
 import {EXCEL_ACCEPT} from '@/lib/excel-files';
 import {DESK_PAGES,postingErrors,workflowOf,type DeskPage} from '@/lib/case-desk';
+import {listCases} from '@/lib/case-list';
 const CaseDesk=lazy(()=>import('./case-desk'));
 const DayDesk=lazy(()=>import('./day-desk'));
 const DESK_ICONS:Record<DeskPage,React.ElementType>={posting:CalendarClock,postingErrors:TriangleAlert,roll:ClipboardList,followup:CalendarCheck,statements:FileText,consultations:MessagesSquare,judgments:Landmark,noContract:FileX,study:FileSearch,stayed:PauseCircle,summary:ChartNoAxesCombined};
@@ -194,9 +195,8 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
  const [sort,setSort]=useState<CaseSort>(DEFAULT_CASE_SORT),[picked,setPicked]=useState<Set<string>>(()=>new Set()),[rollOpen,setRollOpen]=useState(false);
  // Cases with an open hearing or task due on the report date, for «متابعات اليوم».
  const dueWork=useMemo(()=>new Set((office?.work||[]).filter(w=>w.caseId&&w.dueDate===reportDate&&w.status!=='done'&&w.status!=='cancelled').map(w=>w.caseId)),[office,reportDate]);
- const filtered=useMemo(()=>{let cs=records.filter(c=>Boolean(c.archived)===archive);if(view==='cases')cs=cs.filter(c=>inCaseCategory(c,filters.category,rules));if(view==='deadlines')cs=cs.filter(c=>{const s=caseState(c,rules,reportDate);return deadlineFilter==='overdue'?s.alert==='انتهت المهلة':deadlineFilter==='soon'?s.alert==='خلال خمسة أيام':c.procedures.some(p=>String(p.followup||'')===reportDate)||dueWork.has(c.id)});return cs.filter(c=>matchesCaseFilters(c,filters)&&(!filters.analysisField||analysisValue(c,caseState(c,rules),filters.analysisField)===filters.analysisValue)&&(!outcome||caseState(c,rules).outcome===outcome)&&(!type||(c.type||'يحتاج مراجعة')===type)&&(!lawyer||c.lawyer===lawyer))},[records,rules,view,archive,reportDate,deadlineFilter,filters,outcome,type,lawyer,dueWork]);
- // Column sort; remaining days follow the page's report date and the execution category's own deadline.
- const sorted=useMemo(()=>codeFirst(sortCases(filtered,sort,c=>{const s=caseState(c,rules,view==='deadlines'?reportDate:undefined);return view==='cases'&&filters.category==='execution'?s.executionRemaining:s.days===0?null:s.remaining}),filters.search),[filtered,sort,rules,view,reportDate,filters.category,filters.search]);
+ // The register's list: the same rules as the server's «cases_list» (lib/case-list.ts), so a page read from either agrees.
+ const sorted=useMemo(()=>listCases(records,rules,{view:view==='deadlines'?'deadlines':'cases',archive,filters,outcome,type,lawyer,deadlineFilter,reportDate,sort},todayISO(),dueWork),[records,rules,view,archive,filters,outcome,type,lawyer,deadlineFilter,reportDate,sort,dueWork]),filtered=sorted;
  // Next scheduled hearing per case, from open hearings dated today or later.
  const nextHearing=useMemo(()=>{const m=new Map<string,WorkItem>(),today=todayISO();for(const w of office?.work||[])if(w.kind==='hearing'&&w.status!=='done'&&w.status!=='cancelled'&&w.caseId&&w.dueDate>=today&&(!m.has(w.caseId)||w.dueDate<m.get(w.caseId)!.dueDate))m.set(w.caseId,w);return m},[office]);
  useEffect(()=>setPage(1),[filters,outcome,type,lawyer,view,archive,deadlineFilter,reportDate,sort]);const pageSize=20,pages=Math.max(1,Math.ceil(filtered.length/pageSize)),currentPage=clampPage(page,pages);
