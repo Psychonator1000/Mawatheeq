@@ -1,0 +1,73 @@
+// «مهام اليوم والتقرير»: whose missions are whose, late and done states, the report filling itself, the team view.
+import assert from 'node:assert/strict';
+import { cleanReport, emptyReport, missionsFor, namesPerson, passesFilter, readReport, reportCount, reportText, reportsHtml, teamStatus, withDone } from '../lib/daily-report.ts';
+const today = '2026-11-09';
+const base = { code: '', autoNumber: '', client: 'شركة', clientGroup: '', opponent: 'خصم', role: '', type: 'حكم أول درجة', ruling: '', outcome: 'غير محدد', appealRecorded: '', appealConfirmation: '', date: '', notes: '', court: 'الكلية', lawyer: '', procedures: [] };
+const sitting = (date, followup, extra = {}) => ({ id: 'p' + date, date, kind: 'جلسة', venue: 'المحكمة', court: 'الكلية', decision: 'تأجيل', text: 'تأجيل', followup, ...extra });
+const c1 = { ...base, id: 'c1', code: '101', lawyer: 'أحمد علي', procedures: [sitting('2026-10-01', today)] };
+const c2 = { ...base, id: 'c2', code: '102', lawyer: 'سارة', procedures: [sitting('2026-10-01', today)] };
+const c3 = { ...base, id: 'c3', code: '103', lawyer: 'احمد علي', procedures: [sitting('2026-10-01', '2026-11-05')] }; // overdue, not posted
+const c4 = { ...base, id: 'c4', code: '104', lawyer: 'سارة', procedures: [sitting('2026-10-01', today), sitting(today, '2026-12-01', { decision: 'حجز للحكم', text: 'حجز للحكم' })] }; // posted today
+const c5 = { ...base, id: 'c5', code: '105', lawyer: 'أحمد علي', procedures: [{ id: 'f', date: '2026-11-01', kind: 'إجراء', text: 'مراجعة الخبير', followup: today }] };
+const records = [c1, c2, c3, c4, c5];
+const members = [{ id: 'u1', username: 'ahmad', displayName: 'أحمد علي', enabled: true }, { id: 'u2', username: 'sara', displayName: 'سارة', enabled: true }];
+const work = [
+  { id: 'w1', revision: 1, caseId: 'c2', title: 'حضور', kind: 'hearing', dueDate: today, dueTime: '09:00', assigneeId: 'u1', priority: 'normal', status: 'open', location: '', notes: '', completionNote: '' },
+  { id: 'w2', revision: 1, caseId: '', title: 'إيداع مذكرة', kind: 'task', dueDate: today, dueTime: '', assigneeId: 'u2', priority: 'normal', status: 'open', location: 'الكلية', notes: '', completionNote: '' },
+  { id: 'w3', revision: 1, caseId: '', title: 'مراجعة الإدارة', kind: 'task', dueDate: '2026-11-07', dueTime: '', assigneeId: 'u2', priority: 'normal', status: 'in_progress', location: '', notes: '', completionNote: '' },
+  { id: 'w4', revision: 1, caseId: '', title: 'تصوير ملف', kind: 'task', dueDate: today, dueTime: '', assigneeId: 'u2', priority: 'normal', status: 'done', location: '', notes: '', completionNote: 'صُوّر' },
+];
+const of = (person, date = today, extra = {}) => missionsFor({ records, work, members, date, today, person, viewerId: typeof person === 'object' ? person.id : '', ...extra });
+const keys = list => list.map(m => m.key).sort();
+
+assert.ok(namesPerson('احمد علي', members[0]) && !namesPerson('سارة', members[0]), 'The lawyer named on a case, spelling variants included');
+const ahmad = of(members[0]);
+// c1 by name, c2 because Ahmad is assigned to attend it (though Sara is its lawyer), c3 late, c5 a follow-up.
+assert.deepEqual(keys(ahmad.filter(m => m.kind === 'hearing')), ['h:c1:' + today, 'h:c2:' + today, 'h:c3:2026-11-05'].sort(), 'Ahmad: his sittings, the one he attends, the late one');
+assert.equal(ahmad.find(m => m.key === 'h:c3:2026-11-05').state, 'late', 'A sitting not posted is late');
+assert.equal(ahmad[0].state, 'late', 'Late missions come first');
+assert.ok(ahmad.some(m => m.kind === 'followup' && m.c.id === 'c5'), 'A follow-up date set on a procedure');
+assert.ok(!ahmad.some(m => m.kind === 'task'), 'Nobody else\'s tasks');
+const sara = of(members[1]);
+assert.ok(!sara.some(m => m.key === 'h:c2:' + today), 'A sitting someone else attends leaves the lawyer\'s list');
+assert.equal(sara.find(m => m.key === 'h:c4:' + today).state, 'done', 'A sitting posted today is done');
+assert.match(sara.find(m => m.key === 'h:c4:' + today).result, /حجز للحكم/);
+assert.deepEqual(sara.filter(m => m.kind === 'task').map(m => [m.key, m.state]).sort(), [['w:w2', 'open'], ['w:w3', 'late'], ['w:w4', 'done']], 'Tasks of the day, late and closed');
+// Another day: no late items carried in, only that day.
+assert.ok(!of(members[1], '2026-11-10').some(m => m.state === 'late'), 'Late items come in on today only');
+// The whole team, and an account seeing only its own cases.
+assert.equal(new Set(of('all').map(m => m.key)).size, of('all').length, 'Each mission once');
+assert.ok(of('all').length >= ahmad.length + sara.length - 1);
+const other = { id: 'u3', username: 'trainee', displayName: 'متدرب' };
+assert.equal(of(other).filter(m => m.kind === 'hearing').length, 0, 'Not named, not assigned: nothing');
+assert.ok(of(other, today, { ownCasesOnly: true, members: [...members, other] }).length === 0, 'Own-cases accounts take only sittings no colleague is named on');
+const mine = missionsFor({ records: [{ ...c1, lawyer: 'محامٍ آخر' }], work: [], members, date: today, today, person: other, ownCasesOnly: true, viewerId: 'u3' });
+assert.equal(mine.length, 1, 'An unnamed sitting of a case given to this account is theirs');
+// Filters.
+assert.deepEqual(['all', 'hearing', 'task', 'dates', 'late'].map(f => sara.filter(m => passesFilter(m, f)).length), [sara.length, sara.filter(m => m.kind === 'hearing').length, 3, 0, 1]);
+
+// The report fills itself with what was done, once, and keeps what was written by hand.
+let r = withDone({ ...emptyReport(), other: [{ text: 'مراجعة', result: '' }] }, sara);
+assert.equal(r.hearings.length, 1, 'The sitting posted today');
+assert.equal(r.tasks.length, 1, 'The task closed today');
+assert.equal(r.other[0].text, 'مراجعة');
+assert.equal(withDone(r, sara), r, 'Nothing added twice');
+r = { ...r, hearings: [] , tasks: r.tasks };
+assert.equal(withDone({ ...r, hearings: [{ key: 'h:c4:' + today, text: 'edited', result: 'x' }] }, sara).hearings.length, 1, 'A line already there (by key) is not added again');
+// Stored payloads are read safely and empty lines are dropped on saving.
+assert.deepEqual(readReport(null), emptyReport());
+assert.deepEqual(readReport({ admin: [{ text: 1, result: null }, 'x'], notes: 5 }).admin, [{ text: '1', result: '' }]);
+const clean = cleanReport({ ...emptyReport(), admin: [{ text: ' ', result: '' }, { text: 'قيد صحيفة', result: 'تم' }], notes: '  ملاحظة ' });
+assert.deepEqual(clean.admin, [{ text: 'قيد صحيفة', result: 'تم' }]);
+assert.equal(reportCount(clean), 2);
+assert.match(reportText(clean, 'سارة', '09/11/2026'), /أعمال إدارية داخل المحاكم:\n1\. قيد صحيفة — تم/);
+const html = reportsHtml([{ name: '<سارة>', date: '09/11/2026', payload: clean, sent: '' }], 'owner', '09/11/2026');
+assert.ok(html.includes('&lt;سارة&gt;') && !html.includes('<سارة>'), 'Printed names are escaped');
+
+// Team view: who sent, who has a draft, who wrote nothing; someone who wrote without being expected still shows.
+const expected = [{ userId: 'u1', username: 'ahmad', displayName: 'أحمد علي' }, { userId: 'u2', username: 'sara', displayName: 'سارة' }, { userId: 'u4', username: 'x', displayName: 'خالد' }];
+const reports = [{ userId: 'u1', username: 'ahmad', displayName: 'أحمد علي', date: today, payload: {}, submittedAt: today + 'T10:00:00Z', updatedAt: '', revision: 2 },
+  { userId: 'u2', username: 'sara', displayName: 'سارة', date: today, payload: {}, submittedAt: null, updatedAt: '', revision: 1 },
+  { userId: 'u5', username: 'y', displayName: 'يوسف', date: today, payload: {}, submittedAt: null, updatedAt: '', revision: 1 }];
+assert.deepEqual(teamStatus(expected, reports, today).map(t => [t.userId, t.status]), [['u4', 'none'], ['u2', 'draft'], ['u5', 'draft'], ['u1', 'sent']]);
+console.log('Passed daily report: missions by person (named lawyer, assigned attendee, own cases), late and done states, filters, the report filling itself once, safe reading, text and print, team status.');

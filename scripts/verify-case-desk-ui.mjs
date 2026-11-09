@@ -19,7 +19,8 @@ create table storage.objects(id uuid primary key default gen_random_uuid(),bucke
 alter table storage.objects enable row level security;grant usage on schema storage to anon,authenticated,service_role;grant select,insert,update,delete on storage.objects to anon,authenticated;`);
 for(const file of fs.readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort())await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
 await db.query("insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values ('ui_owner',extensions.crypt($1,extensions.gen_salt('bf',4)),false)",['Synthetic-password-123']);
-await db.exec("insert into public.mawatheeq_members(user_id,role) select id,'owner' from mawatheeq_private.accounts;set role anon");
+await db.query("insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values ('ui_reporter',extensions.crypt($1,extensions.gen_salt('bf',4)),false)",['Synthetic-password-123']);
+await db.exec("insert into public.mawatheeq_members(user_id,role) select id,case when username='ui_owner' then 'owner' else 'editor' end from mawatheeq_private.accounts;set role anon");
 const rpc=async(name,args)=>(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
 const login=await rpc('mawatheeq_local_login',['ui_owner','Synthetic-password-123']);
 const day=n=>{const d=new Date(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kuwait'}).format(new Date())+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
@@ -32,6 +33,8 @@ const seed=[
  {id:'desk-study',code:'DESK-STUDY',workflow:'study',procedures:[]},
 ];
 for(const c of seed)await rpc('mawatheeq_local_request',[login.token,'save_case',JSON.stringify({case:{autoNumber:'',client:'شركة اختبار المكتب',clientGroup:'شركة اختبار المكتب',opponent:'خصم تجريبي',date:'',type:'',outcome:'',ruling:'',appealConfirmation:'',revision:0,...c}})]);
+const reporterId=(await rpc('mawatheeq_office_request',[login.token,'context','{}'])).members.find(m=>m.username==='ui_reporter').id;
+await rpc('mawatheeq_office_request',[login.token,'set_member_access',JSON.stringify({id:reporterId,revision:0,permissions:{sections:['daily'],caseScope:'selected',caseIds:[],canEdit:true,canExport:false}})]);
 const caseOf=async id=>(await rpc('mawatheeq_local_request',[login.token,'cases_page',JSON.stringify({})])).map(r=>({...r.payload,id:r.id})).find(c=>c.id===id);
 const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
@@ -44,7 +47,7 @@ await page.route('https://office-fixture.supabase.co/**',async route=>{
  const req=route.request();const url=new URL(req.url());
  if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
  const name=url.pathname.split('/').pop();const body=req.postDataJSON();calls.push({name,action:body?.p_action});
- if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
+ if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_department_request','mawatheeq_daily_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
  const args=name==='mawatheeq_local_login'?[body.p_username,body.p_password]:[body.p_token,body.p_action,JSON.stringify(body.p_data||{})];
  try{await route.fulfill({json:await rpc(name,args)})}catch(e){await route.fulfill({status:400,json:{message:e.message,code:e.code||'P0001'}})}
 });
@@ -52,7 +55,9 @@ await page.route('https://office-fixture.supabase.co/**',async route=>{
 await configurePage(page);
 const base='http://127.0.0.1:4175/Mawatheeq/';
 const click=async name=>page.getByRole('button',{name,exact:true}).first().click();
-const nav=async name=>{await page.locator('.nav-button',{hasText:name}).first().click();await page.getByRole('heading',{level:1,name,exact:true}).waitFor()};
+// Pages kept out of the sidebar (reached from «مهام اليوم والتقرير») open by their address.
+const HIDDEN={'ترحيل الجلسات':'posting'};
+const nav=async name=>{if(HIDDEN[name])await page.evaluate(h=>{location.hash=h},HIDDEN[name]);else await page.locator('.nav-button',{hasText:name}).first().click();await page.getByRole('heading',{level:1,name,exact:true}).waitFor()};
 const count=async(label,expected)=>{let n='';for(let i=0;i<50;i++){n=(await page.locator('.nav-button',{hasText:label}).first().innerText()).replace(/\D/g,'');if(n===expected)return n;await page.waitForTimeout(200)}return n};
 const screen=async name=>page.screenshot({path:artifacts+'/'+name+'.png',fullPage:true});
 try{
@@ -94,6 +99,30 @@ try{
  const filed=await caseOf('desk-study');assert.equal(filed.workflow,'','Filing moves the case into the register');assert.equal(filed.procedures.at(-1).followup,today);
  assert.equal(await count('سجل الأحكام','4'),'4');
  await nav('ترحيل الجلسات');await page.locator('tr',{hasText:'DESK-STUDY'}).waitFor();
+
+ // «مهام اليوم والتقرير»: the owner sees the whole team's missions, posts a sitting from the list, and writes a report.
+ await nav('مهام اليوم والتقرير');assert.equal(await page.locator('.nav-section',{hasText:'الجلسات والمواعيد'}).locator('xpath=following-sibling::*[1]').locator('.nav-button').count(),2,'One page for the day, plus posting errors');
+ const mission=code=>page.locator('.mission',{hasText:code});await mission('DESK-STUDY').waitFor();
+ assert.match(await mission('DESK-MISSED').getAttribute('class'),/late/,'A sitting not posted is late');assert.match(await mission('DESK-DUE').getAttribute('class'),/done/,'A sitting posted today is done');
+ await page.getByText('لا أحد مكلف بالتقرير اليومي').waitFor({state:'detached'}).catch(()=>{});await page.locator('.team-list',{hasText:'ui_reporter'}).waitFor();await screen('daily-team');
+ await mission('DESK-STUDY').getByRole('button',{name:'ترحيل'}).click();await page.getByLabel('قرار جلسة DESK-STUDY').selectOption('شطب الدعوى');await mission('DESK-STUDY').getByRole('button',{name:/حفظ في القضية/}).click();
+ await page.getByText('رُحّلت جلسة DESK-STUDY').waitFor();await page.waitForFunction(()=>document.querySelector('.mission:has(.mission-main b)')&&[...document.querySelectorAll('.mission')].some(m=>m.textContent.includes('DESK-STUDY')&&m.classList.contains('done')));
+ assert.equal((await caseOf('desk-study')).procedures.at(-1).decision,'شطب الدعوى','Posted into the case');
+ await page.getByLabel('تقرير من').selectOption('me');const mine=page.getByRole('region',{name:'تقريري اليومي'});await mine.getByText('لم يُحفظ بعد').waitFor();
+ await mine.getByRole('button',{name:'إضافة سطر: أعمال إدارية داخل المحاكم'}).click();await mine.getByPlaceholder('العمل والجهة').fill('قيد صحيفة دعوى');await mine.getByPlaceholder('النتيجة').first().fill('تم القيد');
+ await mine.getByRole('button',{name:'إرسال التقرير'}).click();await page.getByText('أُرسل التقرير').waitFor();await mine.getByText(/^أُرسل /).waitFor();await screen('daily-mine');
+ const stored=(await rpc('mawatheeq_daily_request',[login.token,'mine',JSON.stringify({date:today})])).report;
+ assert.deepEqual(stored.payload.admin,[{text:'قيد صحيفة دعوى',result:'تم القيد'}]);assert.ok(stored.submittedAt,'Sent');
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+2),true,'The day fits one screen');
+ // An account holding only the report section: the report and nothing else, no case at all.
+ {const other=await context.browser().newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});const p2=await other.newPage();await configurePage(p2);
+  await p2.goto(base);await p2.getByLabel('اسم المستخدم',{exact:true}).fill('ui_reporter');await p2.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await p2.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
+  const open=p2.getByRole('button',{name:'فتح القضايا',exact:true});if(await open.count())await open.click();
+  const own=p2.getByRole('region',{name:'تقريري اليومي'});await own.waitFor();assert.equal(await p2.locator('.day-missions').count(),0,'No missions column');
+  assert.deepEqual(await p2.locator('.nav-button').allInnerTexts().then(t=>t.map(x=>x.trim()).filter(x=>/سجل الأحكام|ترحيل|المهام والجلسات/.test(x))),[],'No case pages');
+  await own.getByRole('button',{name:'إضافة سطر: مراجعة جهات أخرى'}).click();await own.getByPlaceholder('الجهة والموضوع').fill('وزارة العدل — شهادة');await own.getByRole('button',{name:'حفظ',exact:true}).click();await own.getByText('مسودة محفوظة').waitFor();
+  await p2.screenshot({path:artifacts+'/daily-reporter.png'});await other.close();}
+ await page.getByLabel('تقرير من').selectOption('team');const sent=page.locator('.team-list li',{hasText:'ui_reporter'});await sent.getByText('مسودة').waitFor();await sent.getByRole('button').click();await page.getByText('وزارة العدل — شهادة').waitFor();
 
  await page.setViewportSize({width:390,height:844});await screen('posting-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'No horizontal page scroll on phones');
  assert.deepEqual(errors,[],'No page errors');

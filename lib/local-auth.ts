@@ -36,6 +36,7 @@ export const commentRequest =<T = unknown>(action: string, data: Record<string, 
 export const chatRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_chat_request', action, data);
 export const caseFileRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_case_file_request', action, data);
 export const departmentRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_department_request', action, data);
+export const dailyRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_daily_request', action, data);
 /** Raised for the books screens: a request sent for approval instead of posted, or a client taken over their credit limit. */
 export const BOOKS_NOTICE = 'mawatheeq-books-notice';
 export type BooksNotice = { kind: 'pending' | 'credit'; message: string };

@@ -9,7 +9,7 @@ import {generatePassword,personName,suggestUsername} from '@/lib/staff-accounts'
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from './ui/dialog';
 
 type Row={label:string;cases:string[];include:boolean;username:string;displayName:string};
-const CASE_SECTIONS=LEGAL_SECTIONS.filter(s=>s!=='documents');
+const CASE_SECTIONS=LEGAL_SECTIONS.filter(s=>s!=='documents'&&s!=='daily');
 
 /** Creates one account per lawyer named on the cases. Each account gets a random password; the owner can switch
  *  into it without the password, and can set a password to hand over when the lawyer signs in alone. */

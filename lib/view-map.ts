@@ -29,6 +29,7 @@ export const VIEW_ITEMS: ViewItem[] = [
   page('noContract', 'القضايا بدون عقود', 'القضايا', 'cases'),
   page('verification', 'التحقق من القضايا', 'القضايا', 'verification'),
   page('conflicts', 'فحص الأطراف', 'القضايا', 'conflicts'),
+  page('daily', 'مهام اليوم والتقرير', 'الجلسات والمواعيد', 'daily'),
   page('work', 'المهام والجلسات', 'الجلسات والمواعيد', 'work'),
   page('posting', 'ترحيل الجلسات', 'الجلسات والمواعيد', 'cases'),
   page('postingErrors', 'أخطاء الترحيل', 'الجلسات والمواعيد', 'cases'),

@@ -2,7 +2,7 @@ export const SECTIONS = {
   overview: 'نظرة عامة', cases: 'سجل الأحكام', clients: 'الموكلون',
   deadlines: 'المواعيد والمتابعة', analytics: 'التحليل والإحصائيات',
   verification: 'التحقق من القضايا', work: 'المهام والجلسات',
-  conflicts: 'فحص الأطراف', documents: 'المستندات والأدلة',
+  conflicts: 'فحص الأطراف', documents: 'المستندات والأدلة', daily: 'التقرير اليومي',
   secretary: 'السكرتارية', collections: 'التحصيل', accounting: 'المحاسبة', hr: 'الموارد البشرية', archive: 'الأرشيف',
 } as const;
 export type Section = keyof typeof SECTIONS;
@@ -28,6 +28,8 @@ export const NO_ACCESS: Permissions = { sections: [], caseScope: 'selected', cas
 export const FULL_ACCESS: Permissions = { ...NO_ACCESS, sections: Object.keys(SECTIONS) as Section[], caseScope: 'all', canEdit: true, canExport: true };
 /** «settings» opens for the owner and for admins holding the staff, settings or backup power. */
 export function canOpen(access: Permissions, section: string, admin = false) {
+  // «مهام اليوم والتقرير» opens for whoever writes a report, has hearings or tasks, or reads the team's reports.
+  if (section === 'daily') return admin || access.sections.some(s => s === 'daily' || s === 'work' || s === 'cases' || s === 'deadlines') || readsAllReports(access.adminPowers || []);
   return section === 'help' || (section === 'settings' ? admin : access.sections.includes(section as Section));
 }
 export type AdminPower = 'staff' | 'reviews' | 'settings' | 'backup' | 'chat';
@@ -44,8 +46,11 @@ export function powersOf(access: Pick<Permissions, 'adminPowers'>, owner = false
 export function isAdmin(powers: AdminPower[]) { return powers.some(p => p === 'settings' || p === 'backup'); }
 /** Admins who open the separate «فريق المكتب» page (accounts, roles and permissions). */
 export function canManageStaff(powers: AdminPower[]) { return powers.includes('staff'); }
-export const LEGAL_SECTIONS: Section[] = ['overview','cases','clients','deadlines','analytics','verification','work','conflicts','documents'];
-export function canReadCases(access: Permissions) { return access.sections.some(s => LEGAL_SECTIONS.includes(s) && s !== 'documents'); }
+export const LEGAL_SECTIONS: Section[] = ['overview','cases','clients','deadlines','analytics','verification','work','conflicts','documents','daily'];
+// «التقرير اليومي» opens the cases workspace but grants no case: an account holding only it sees its own report and nothing else.
+export function canReadCases(access: Permissions) { return access.sections.some(s => LEGAL_SECTIONS.includes(s) && s !== 'documents' && s !== 'daily'); }
+/** Who reads everyone's daily reports: the owner and admins holding the staff or reviews power. */
+export function readsAllReports(powers: AdminPower[]) { return powers.includes('staff') || powers.includes('reviews'); }
 export function canEditClients(access: Permissions) { return access.canEdit && access.caseScope === 'all' && access.sections.includes('clients'); }
 export function canCreateCases(access: Permissions) { return access.canEdit && access.caseScope === 'all' && access.sections.includes('cases'); }
 /** The workspaces (top-level pages) an account opens, in the order of the workspace chooser. */
@@ -67,7 +72,7 @@ export const JOB_ROLES: { id: JobRole; label: string; hint: string; preset?: Omi
   { id: 'manager', label: 'مدير — صلاحيات كاملة', hint: 'كل الصفحات وكل القضايا، مع التعديل والتصدير وكل صلاحيات الإدارة التي تملكها.',
     preset: { sections: Object.keys(SECTIONS) as Section[], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
   { id: 'lawyer', label: 'محامٍ', hint: 'يرى القضايا المسجلة باسمه، مع الجلسات والمهام.',
-    preset: { sections: ['overview', 'cases', 'clients', 'deadlines', 'work', 'conflicts'], caseScope: 'selected', caseIds: [], canEdit: true, canExport: false } },
+    preset: { sections: ['overview', 'cases', 'clients', 'deadlines', 'work', 'conflicts', 'daily'], caseScope: 'selected', caseIds: [], canEdit: true, canExport: false } },
   { id: 'counsel', label: 'مستشار', hint: 'مستشار قانوني: كل القضايا والموكلين والتحليل والمستندات للدراسة والرأي، مع التعديل والتصدير.',
     preset: { sections: ['overview', 'cases', 'clients', 'deadlines', 'analytics', 'verification', 'work', 'conflicts', 'documents'], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
   { id: 'secretary', label: 'سكرتارية', hint: 'السكرتارية والمواعيد والمهام لكل القضايا، مع الطباعة.',
@@ -91,7 +96,7 @@ export const JOB_ROLES: { id: JobRole; label: string; hint: string; preset?: Omi
   { id: 'officeAdmin', label: 'موظف إداري', hint: 'الأعمال الإدارية العامة: الأجندة والمهام والأرشيف، مع الطباعة.',
     preset: { sections: ['secretary', 'work', 'archive'], caseScope: 'all', caseIds: [], canEdit: true, canExport: true } },
   { id: 'traineeLawyer', label: 'محامٍ متدرب', hint: 'يطّلع على القضايا التي يحددها له المسؤول للتعلم والمساعدة، دون تعديل أو تصدير.',
-    preset: { sections: ['overview', 'cases', 'deadlines', 'work'], caseScope: 'selected', caseIds: [], canEdit: false, canExport: false } },
+    preset: { sections: ['overview', 'cases', 'deadlines', 'work', 'daily'], caseScope: 'selected', caseIds: [], canEdit: false, canExport: false } },
   { id: 'legalResearcher', label: 'باحث قانوني', hint: 'دراسة القضايا والأحكام والمستندات وإعداد المذكرات، قراءة مع الطباعة.',
     preset: { sections: ['overview', 'cases', 'clients', 'analytics', 'conflicts', 'documents'], caseScope: 'all', caseIds: [], canEdit: false, canExport: true } },
   { id: 'translator', label: 'مترجم', hint: 'ترجمة مستندات القضايا: يطّلع على القضايا والمستندات ويطبعها.',

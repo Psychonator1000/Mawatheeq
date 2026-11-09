@@ -1314,3 +1314,42 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .print-check-evidence{display:grid;gap:4px}.print-check-evidence .evidence-row{display:grid;grid-template-columns:auto minmax(0,1fr) 140px 64px;gap:6px;align-items:center}
 .print-check-attest{margin:6px 0}
 @media(max-width:700px){.print-check-evidence .evidence-row{grid-template-columns:auto minmax(0,1fr)}.print-check-evidence .evidence-row input[type=date],.print-check-evidence .evidence-row input[type=number]{grid-column:2}}
+/* «مهام اليوم والتقرير»: a bar for the day and the person, then the missions and the report side by side, each scrolling inside. */
+.day-desk{display:flex;flex-direction:column;gap:10px;height:calc(100dvh - var(--legal-desk-offset,150px));min-height:460px}
+.day-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.day-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.day-nav .date-picker,.day-nav .field{margin:0}
+.day-title{font-size:16px;white-space:nowrap}.day-who{min-width:170px}
+.day-counts{display:flex;gap:6px}.day-links{display:flex;gap:6px;flex-wrap:wrap;margin-inline-start:auto}.day-links .btn{min-height:34px;padding:4px 10px;font-size:13px}
+.day-grid{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px}.day-grid.solo{grid-template-columns:minmax(0,1fr)}
+.day-missions,.day-report{display:flex;flex-direction:column;min-height:0;overflow:hidden;margin:0}
+.day-col-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--border)}.day-col-head h2{font-size:16px;margin:0}.day-col-head .actions{margin-inline-start:auto;gap:4px}
+.day-add{margin-inline-start:auto;min-height:32px;padding:4px 10px}.day-add-form{flex-basis:100%}
+.day-list,.day-report-body{flex:1 1 auto;min-height:0;overflow:auto;padding:6px 10px}
+.day-empty{color:var(--muted-foreground);padding:14px;text-align:center;margin:0}
+.mission{border-bottom:1px solid var(--border);padding:6px 2px}.mission:last-child{border-bottom:0}
+.mission-line{display:grid;grid-template-columns:auto 52px minmax(0,1fr) minmax(0,.7fr) auto;align-items:center;gap:8px}
+.mission-kind{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--brand) 10%,transparent);white-space:nowrap}
+.mission-kind.k-deadline{background:#b4690e1a;color:#93560b}.mission-kind.k-followup{background:#2a6fb01a;color:#235d93}
+.mission-time{font-size:12.5px;color:var(--muted-foreground);white-space:nowrap}
+.mission-main{all:unset;cursor:pointer;min-width:0;display:flex;flex-direction:column}.mission-main:disabled{cursor:default}.mission-main:focus-visible{outline:2px solid var(--ring);border-radius:4px}
+.mission-main b,.mission-main small,.mission-place,.mission-place small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mission-main small,.mission-place small{font-size:12px;color:var(--muted-foreground)}.mission-place{font-size:13px;min-width:0;display:flex;flex-direction:column}
+.mission .btn{min-height:32px;padding:4px 12px}
+.mission.late{background:#a32e380a}.mission.late .mission-time{color:#a32e38;font-weight:600}
+.mission.done{opacity:.72}.mission-result{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:#2f7a4c;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mission-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0 2px}.mission-form input:not([type=checkbox]),.mission-form select{height:34px;padding:2px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card);font:inherit;font-size:13.5px;min-width:0}
+.mission-form>input:not([type=time]){flex:1 1 160px}.mission-form .field,.mission-form .date-picker{margin:0}
+.report-part{padding:6px 0;border-bottom:1px dashed var(--border);display:block}.report-part:last-child{border-bottom:0}
+.report-part-head{display:flex;align-items:center;gap:6px;font-size:13.5px}.report-part-head .icon-btn{margin-inline-start:auto;width:28px;height:28px}
+.report-line{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;gap:6px;margin-top:4px}.report-line input,.report-notes textarea{width:100%;min-width:0;height:32px;padding:2px 8px;border:1px solid var(--border);border-radius:8px;background:var(--card);font:inherit;font-size:13px}
+.report-line .icon-btn{width:30px;height:30px}.report-notes textarea{height:auto;margin-top:4px;resize:vertical}
+.day-report-foot{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border)}.day-report-foot .muted{margin-inline-end:auto;font-size:13px}
+.report-read ol{margin:4px 0;padding-inline-start:20px;font-size:13.5px}.report-notes-text{white-space:pre-wrap;margin:4px 0;font-size:13.5px}
+.team-list{list-style:none;margin:0;padding:6px 10px;overflow:auto;flex:1 1 auto;min-height:0}.team-list button{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;padding:7px 6px;border-bottom:1px solid var(--border);cursor:pointer}
+.team-list button:disabled{cursor:default}.team-list button:not(:disabled):hover{background:color-mix(in srgb,var(--brand) 6%,transparent)}.team-list small{margin-inline-start:auto;color:var(--muted-foreground)}
+.day-back{margin:8px 10px 0;align-self:flex-start;min-height:30px;padding:3px 10px}
+@media(min-width:1001px){.main:has(.day-desk){height:100dvh;display:flex;flex-direction:column}.main:has(.day-desk)>*{flex-shrink:0}.main:has(.day-desk)>.workspace{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding-bottom:12px}
+ .main:has(.day-desk)>.workspace>.fade-in{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}.main:has(.day-desk) .day-desk{flex:1 1 auto;height:auto}.main:has(.day-desk) .footer-note{display:none}}
+@media(max-width:1000px){.day-desk{height:auto}.day-grid{grid-template-columns:1fr}.day-list,.day-report-body{max-height:none;overflow:visible}.day-missions,.day-report{overflow:visible}
+ .mission-line{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"k m a" "t p a";row-gap:2px}.mission-kind{grid-area:k}.mission-time{grid-area:t}.mission-main{grid-area:m}.mission-place{grid-area:p}.mission-line>:last-child{grid-area:a}}
+.report-count{min-width:20px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--brand) 12%,transparent);font-size:12px;line-height:19px;text-align:center;font-variant-numeric:tabular-nums}
