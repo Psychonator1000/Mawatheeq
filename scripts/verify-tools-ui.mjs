@@ -266,22 +266,16 @@ assert.equal(await page.evaluate(()=>document.documentElement.dataset.backdrop),
  await page.keyboard.press('Alt+ArrowLeft');await page.waitForFunction(f=>document.querySelector('[data-record-window] h2')?.textContent?.trim()!==f,first);
  await page.keyboard.press('Escape');await win.waitFor({state:'hidden'})}}
 
-// Easter egg: typing "persona" switches to the hidden theme; typing it again returns to the previous theme,
-// and the hidden theme is listed only while it is active.
+// The trial themes are gone: their old secret words change nothing, and the theme list does not offer them.
 const theme=()=>page.evaluate(()=>document.documentElement.dataset.theme);
-await page.locator('body').click({position:{x:5,y:5}});await page.keyboard.type('persona');
-assert.equal(await theme(),'phantom','The secret word applies the hidden theme');
-await page.keyboard.type('persona');assert.equal(await theme(),'burgundy','Typing it again restores the previous theme');
+await page.locator('body').click({position:{x:5,y:5}});await page.keyboard.type('persona');await page.keyboard.type('nier');
+assert.equal(await theme(),'burgundy','The old secret words do nothing');
 await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
-assert.equal(await page.getByRole('radio',{name:'لصوص القلوب'}).count(),0,'Hidden while inactive');await page.getByRole('button',{name:'تم'}).click();
-await page.keyboard.type('persona');assert.equal(await theme(),'phantom');
-await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
-assert.equal(await page.getByRole('radio',{name:'لصوص القلوب'}).count(),1,'Listed while active');
+assert.equal(await page.getByRole('radio',{name:/لصوص القلوب|يورها/}).count(),0,'Neither trial theme is listed');
 await page.getByRole('radio',{name:'عنابي مواثيق'}).check();
 await page.getByRole('radio',{name:/^بدون إخفاء الشكل/}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.cursor-halo')).display),'none','the cursor follower can be hidden');
 await page.getByRole('radio',{name:'نقطة',exact:true}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.cursor-halo')).width),'8px');
 await page.getByRole('radio',{name:'حلقة صغيرة',exact:true}).check();
-assert.equal(await page.getByRole('radio',{name:'لصوص القلوب'}).count(),0,'Choosing another theme hides it again');
 await page.getByRole('button',{name:'تم'}).click();assert.equal(await theme(),'burgundy');
 
 // Keyboard shortcuts.

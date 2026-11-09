@@ -15,12 +15,10 @@ export const THEMES = {
   indigo: { label: 'نيلي', swatch: '#3b3f9e', accent: '#b4b8ff' },
   copper: { label: 'نحاسي', swatch: '#8a4a24', accent: '#ecd0a3' },
   graphite: { label: 'رمادي فحمي', swatch: '#33393f', accent: '#c4ccd4' },
-  phantom: { label: 'لصوص القلوب', swatch: '#e60012', accent: '#0d0d0d', hidden: true },
-  yorha: { label: 'يورها (NieR)', swatch: '#dedac7', accent: '#4e4b42', hidden: true },
 } as const;
 type ThemeInfo = { label: string; swatch: string; accent: string; hidden?: boolean };
 /** Hidden themes appear in the list only after their secret word is typed (an easter egg). */
-export const SECRET_WORDS: Record<string, keyof typeof THEMES> = { persona: 'phantom', phantom: 'phantom', aero: 'sky', sakura: 'rose', nier: 'yorha', yorha: 'yorha' };
+export const SECRET_WORDS: Record<string, keyof typeof THEMES> = { aero: 'sky', sakura: 'rose' };
 export const TEXT_SIZES = { normal: { label: 'عادي' }, large: { label: 'كبير' }, xlarge: { label: 'كبير جداً' } } as const;
 /** Interface fonts: text and headings. «خليجي» (Tajawal) is the office's choice; «مكتبي» pairs a crisp sans with a Naskh for titles. */
 export const FONTS = {
@@ -80,17 +78,14 @@ export const CURSORS = {
 export type Appearance = { theme: keyof typeof THEMES; backdrop: keyof typeof BACKDROPS; motion: keyof typeof MOTION_LEVELS; text: keyof typeof TEXT_SIZES; font: keyof typeof FONTS; density: keyof typeof DENSITIES; mode: keyof typeof MODES; performance: keyof typeof PERFORMANCE; follower: keyof typeof FOLLOWERS; cursor: keyof typeof CURSORS; pattern: keyof typeof PATTERNS; unlocked: string[]; previous?: keyof typeof THEMES };
 export const DEFAULT_APPEARANCE: Appearance = { theme: 'burgundy', backdrop: 'constellation', motion: 'full', text: 'normal', font: 'gulf', density: 'comfortable', mode: 'auto', performance: 'auto', follower: 'ring', cursor: 'themed', pattern: 'pinstripe', unlocked: [] };
 /** Themes whose own look is dark. */
-const DARK_NATIVE = new Set<string>(['noir', 'phantom']);
+const DARK_NATIVE = new Set<string>(['noir']);
 /**
  * The stylesheet theme and mode actually applied. The gold theme is black and gold when dark and white and gold
- * when light; Persona has its own light "paper" version; every other theme gets a generated dark version.
+ * when light; every other theme gets a generated dark version.
  */
 export function resolveTheme(a: Pick<Appearance, 'theme' | 'mode'>): { theme: string; dark: boolean; mode: '' | 'dark' } {
   const dark = a.mode === 'dark' || (a.mode === 'auto' && DARK_NATIVE.has(a.theme));
   if (a.theme === 'noir') return { theme: dark ? 'noir' : 'ivory', dark, mode: '' };
-  if (a.theme === 'phantom') return { theme: dark ? 'phantom' : 'phantom-light', dark, mode: '' };
-  // YoRHa: parchment and ink in light mode, near-black and parchment in dark mode.
-  if (a.theme === 'yorha') return { theme: dark ? 'yorha-dark' : 'yorha', dark, mode: '' };
   return { theme: a.theme, dark, mode: dark ? 'dark' : '' };
 }
 const key = 'mawatheeq.appearance.v1';
@@ -139,20 +134,11 @@ function applyThemedCursor(theme: string, dark: boolean) {
   const arrow = 'M6 3v21.5l5.6-5.3 3.8 8.4 3.6-1.6-3.8-8.3h7.7z';
   const shape = (fill: string, stroke: string, extra = '') => `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">${extra}<path d="${arrow}" fill="${fill}" stroke="${stroke}" stroke-width="1.7" stroke-linejoin="round"/></svg>`;
   let normal: string, hand: string;
-  if (theme.startsWith('phantom')) {
-    // Comic-style: a hard red arrow with a black outline and an offset shadow.
-    const shadow = `<path d="${arrow}" transform="translate(2.5 2.5)" fill="${theme === 'phantom' ? '#ffffff' : '#000000'}"/>`;
-    normal = shape('#e60012', '#000000', shadow); hand = shape(theme === 'phantom' ? '#ffffff' : '#000000', '#e60012', shadow.replace(/fill="[^"]+"/, 'fill="#e60012"'));
-  } else if (theme === 'rose') {
+  if (theme === 'rose') {
     // Sakura: a blush-pink arrow; over clickable things it carries a small blossom.
     const blush = '<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe3ea"/><stop offset="1" stop-color="#e2678f"/></linearGradient></defs>';
     const flower = '<g transform="translate(23 23)" fill="#f9bfd2" stroke="#d9466f" stroke-width=".8">' + [0, 72, 144, 216, 288].map(r => `<ellipse cy="-3.6" rx="2.6" ry="3.6" transform="rotate(${r})"/>`).join('') + '<circle r="1.4" fill="#d9466f"/></g>';
     normal = shape('url(#p)', dark ? '#2a0f18' : '#7a1f42', blush); hand = shape('url(#p)', dark ? '#2a0f18' : '#7a1f42', blush).replace('</svg>', flower + '</svg>');
-  } else if (theme.startsWith('yorha')) {
-    // YoRHa: a parchment arrow outlined in ink; over clickable things it becomes solid ink with a square marker.
-    const [paper, ink] = theme === 'yorha-dark' ? ['#1d1c19', '#d6d0b5'] : ['#e9e5d5', '#4e4b42'];
-    const mark = `<rect x="21" y="21" width="7" height="7" fill="${ink}" stroke="${paper}" stroke-width="1.2"/>`;
-    normal = shape(paper, ink); hand = shape(ink, paper).replace('</svg>', mark + '</svg>');
   } else if (theme === 'sky') {
     // Aero: a glossy blue arrow with a white rim.
     const gloss = '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfeaff"/><stop offset=".45" stop-color="#3fb3f0"/><stop offset="1" stop-color="#0d6fb0"/></linearGradient><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9ffd0"/><stop offset=".5" stop-color="#8fdc5a"/><stop offset="1" stop-color="#3f9a24"/></linearGradient></defs>';

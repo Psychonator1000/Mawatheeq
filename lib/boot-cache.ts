@@ -4,6 +4,7 @@
 // expiry, revocation or a permissions change), so nothing outlives the account's own sign-in on this browser.
 import type { LocalUser } from './local-auth';
 import type { Permissions } from './permissions';
+import { forgetInstant } from './instant';
 
 const BOOT = 'mawatheeq.boot.v1', OWNER_BOOT = 'mawatheeq.boot.owner.v1', OWNER_SESSION = 'mawatheeq.owner-session.v1', DB = 'mawatheeq-cache', STORE = 'snapshots', SESSION = 'mawatheeq.local-session.v1';
 type Boot = { user: LocalUser; access?: Permissions; tag: string };
@@ -71,5 +72,6 @@ async function dropSnapshots(keep = '') {
 /** Forget the account, its permissions and every stored dataset. */
 export function clearBoot() {
   try { localStorage.removeItem(BOOT); localStorage.removeItem(OWNER_BOOT); } catch { /* Ignore. */ }
+  forgetInstant();
   void dropSnapshots();
 }
