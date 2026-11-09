@@ -109,7 +109,7 @@ try{
  await page.getByText('رُحّلت جلسة DESK-STUDY').waitFor();await page.waitForFunction(()=>document.querySelector('.mission:has(.mission-main b)')&&[...document.querySelectorAll('.mission')].some(m=>m.textContent.includes('DESK-STUDY')&&m.classList.contains('done')));
  assert.equal((await caseOf('desk-study')).procedures.at(-1).decision,'شطب الدعوى','Posted into the case');
  await page.getByLabel('تقرير من').selectOption('me');const mine=page.getByRole('region',{name:'تقريري اليومي'});await mine.getByText('لم يُحفظ بعد').waitFor();
- await mine.getByRole('button',{name:'إضافة سطر: أعمال إدارية داخل المحاكم'}).click();await mine.getByPlaceholder('العمل والجهة').fill('قيد صحيفة دعوى');await mine.getByPlaceholder('النتيجة').first().fill('تم القيد');
+ await mine.getByRole('button',{name:'إضافة سطر: الأعمال الإدارية داخل المحاكم'}).click();await mine.getByPlaceholder('العمل المنجز ورقم الملف').fill('قيد صحيفة دعوى');await mine.getByPlaceholder('النتيجة أو الإجراء المتخذ').fill('تم القيد');
  await mine.getByRole('button',{name:'إرسال التقرير'}).click();await page.getByText('أُرسل التقرير').waitFor();await mine.getByText(/^أُرسل /).waitFor();await screen('daily-mine');
  const stored=(await rpc('mawatheeq_daily_request',[login.token,'mine',JSON.stringify({date:today})])).report;
  assert.deepEqual(stored.payload.admin,[{text:'قيد صحيفة دعوى',result:'تم القيد'}]);assert.ok(stored.submittedAt,'Sent');
@@ -120,7 +120,7 @@ try{
   const open=p2.getByRole('button',{name:'فتح القضايا',exact:true});if(await open.count())await open.click();
   const own=p2.getByRole('region',{name:'تقريري اليومي'});await own.waitFor();assert.equal(await p2.locator('.day-missions').count(),0,'No missions column');
   assert.deepEqual(await p2.locator('.nav-button').allInnerTexts().then(t=>t.map(x=>x.trim()).filter(x=>/سجل الأحكام|ترحيل|المهام والجلسات/.test(x))),[],'No case pages');
-  await own.getByRole('button',{name:'إضافة سطر: مراجعة جهات أخرى'}).click();await own.getByPlaceholder('الجهة والموضوع').fill('وزارة العدل — شهادة');await own.getByRole('button',{name:'حفظ',exact:true}).click();await own.getByText('مسودة محفوظة').waitFor();
+  await own.getByRole('button',{name:'إضافة سطر: الأعمال والمراجعات الخارجية'}).click();await own.getByPlaceholder('الجهة التي تمت مراجعتها').fill('وزارة العدل — شهادة');await own.getByRole('button',{name:'حفظ',exact:true}).click();await own.getByText('مسودة محفوظة').waitFor();
   await p2.screenshot({path:artifacts+'/daily-reporter.png'});await other.close();}
  await page.getByLabel('تقرير من').selectOption('team');const sent=page.locator('.team-list li',{hasText:'ui_reporter'});await sent.getByText('مسودة').waitFor();await sent.getByRole('button').click();await page.getByText('وزارة العدل — شهادة').waitFor();
 
@@ -128,6 +128,10 @@ try{
  await page.getByRole('tab',{name:'ترحيل الجلسات'}).click();await page.getByRole('region',{name:'ترحيل الجلسات'}).locator('.mission',{hasText:'DESK-DUE'}).waitFor();
  await page.getByRole('tab',{name:'المواعيد'}).click();await page.getByRole('region',{name:'المواعيد'}).waitFor();
  await page.getByRole('tab',{name:'التقويم'}).click();await page.locator('.day-cal-cell.today').click();await page.getByRole('tab',{name:'اليوم',selected:true}).waitFor();await mission('DESK-DUE').waitFor();
+ // «الأداء»: one row a person; the owner's sent report counts, the reporter's draft does not; a row opens that person's day.
+ await page.getByRole('tab',{name:'الأداء'}).click();const perf=page.locator('.perf-table tbody tr',{hasText:'ui_reporter'});await perf.waitFor();
+ assert.match(await page.locator('.perf-table tbody tr',{hasText:'ui_owner'}).innerText(),/1 من/,'The owner sent one report');assert.match(await perf.innerText(),/0 من[\s\S]*مسودة|مسودة[\s\S]*0 من/,'The reporter has a draft, none sent');
+ await perf.click();await page.getByRole('tab',{name:'اليوم',selected:true}).waitFor();await page.getByRole('region',{name:'تقرير الزميل'}).getByText('وزارة العدل — شهادة').waitFor();
  await page.setViewportSize({width:390,height:844});await screen('posting-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'No horizontal page scroll on phones');
  assert.deepEqual(errors,[],'No page errors');
  console.log('Passed cases desk: posting a sitting, posting errors, stayed cases, roll, contracts, a consultation and filing a case under study.');

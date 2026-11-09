@@ -1,6 +1,6 @@
 // «مهام اليوم والتقرير»: the day's missions of one person (or the whole team) taken from the cases and the office's
 // work, and that person's daily report, which fills itself with what was done and takes the rest by hand.
-import { caseCode, caseState, type CaseRecord, type Rules } from './domain.ts';
+import { caseCode, caseState, formatDate, type CaseRecord, type Rules } from './domain.ts';
 import { clientName } from './clients.ts';
 import { normalizeSearch } from './case-browse.ts';
 import { isFiled, isSessionEntry, lastSitting, nextSitting, shiftDays } from './case-desk.ts';
@@ -12,38 +12,61 @@ export type Mission = {
   key: string; kind: MissionKind; date: string; time: string; title: string; sub: string; place: string;
   /** open: still to do on its day; late: its day has passed and it is still open; done: finished. */
   state: 'open' | 'late' | 'done'; result: string; c?: CaseRecord; work?: WorkItem; who: string;
+  /** A posted sitting's decision and what follows it, for its line in the report. */
+  decision?: string; next?: string;
 };
 /** Whose missions are shown: the signed-in person, one colleague, or everyone the account can see. */
 export type Person = { id: string; username: string; displayName?: string } | 'all';
 
-export type ReportLine = { key?: string; text: string; result: string };
+export type LineField = 'text' | 'court' | 'subject' | 'result' | 'next';
+export type ReportLine = { key?: string; text: string; result: string; court?: string; subject?: string; next?: string };
 export type DailyPayload = {
   hearings: ReportLine[]; tasks: ReportLine[]; admin: ReportLine[]; external: ReportLine[]; other: ReportLine[]; pending: ReportLine[]; notes: string;
 };
-/** The report's hand-written parts, in the order they are shown and printed. */
-export const REPORT_PARTS: [Exclude<keyof DailyPayload, 'notes'>, string, string, string][] = [
-  ['hearings', 'الجلسات التي حضرتها', 'القضية والمحكمة', 'القرار والجلسة التالية'],
-  ['tasks', 'المهام المنجزة', 'المهمة', 'النتيجة'],
-  ['admin', 'أعمال إدارية داخل المحاكم', 'العمل والجهة', 'النتيجة'],
-  ['external', 'مراجعة جهات أخرى', 'الجهة والموضوع', 'النتيجة'],
-  ['other', 'أعمال أخرى', 'العمل', 'النتيجة'],
-  ['pending', 'متابعات معلقة', 'ما يحتاج متابعة', 'الموعد أو الملاحظة'],
+export type ReportPart = Exclude<keyof DailyPayload, 'notes'>;
+/**
+ * The report's parts in the order they are filled, shown and printed (the office's daily-work form): what each holds,
+ * and the fields of each line. Sittings posted and tasks closed from «المهام» come in by themselves.
+ */
+export const REPORT_PARTS: { key: ReportPart; title: string; hint: string; add: string; fields: [LineField, string][] }[] = [
+  { key: 'hearings', title: 'الجلسات التي تم حضورها', hint: 'كل جلسة ترحّلها من «المهام» تُضاف هنا بنفسها.', add: 'إضافة جلسة',
+    fields: [['text', 'رقم القضية'], ['court', 'المحكمة / الدائرة'], ['result', 'ما تم في الجلسة / القرار'], ['next', 'الإجراء المطلوب بعد الجلسة']] },
+  { key: 'tasks', title: 'المهام المنجزة', hint: 'كل مهمة تُتمّها من «المهام» تُضاف هنا بنفسها.', add: 'إضافة مهمة', fields: [['text', 'المهمة'], ['result', 'النتيجة']] },
+  { key: 'admin', title: 'الأعمال الإدارية داخل المحاكم', hint: 'مثل الإعلانات، الإيداعات، استخراج الشهادات، متابعة الخبراء، مراجعة التنفيذ أو أقسام المحكمة.', add: 'إضافة عمل إداري',
+    fields: [['text', 'العمل المنجز ورقم الملف'], ['result', 'النتيجة أو الإجراء المتخذ']] },
+  { key: 'external', title: 'الأعمال والمراجعات الخارجية', hint: 'الوزارات، المخافر، النيابات، الجهات الحكومية وغيرها.', add: 'إضافة مراجعة',
+    fields: [['text', 'الجهة التي تمت مراجعتها'], ['subject', 'موضوع المراجعة / رقم الملف'], ['result', 'النتيجة']] },
+  { key: 'other', title: 'أعمال أخرى', hint: 'مثل الاجتماعات مع الموكلين، الاتصالات المهمة، أو إعداد مذكرات ومستندات قانونية.', add: 'إضافة عمل', fields: [['text', 'العمل المنجز'], ['result', 'النتيجة']] },
+  { key: 'pending', title: 'الأعمال المعلقة والمتابعة المطلوبة', hint: 'رقم الملف، المطلوب، والموعد أو الشخص المسؤول عن المتابعة.', add: 'إضافة متابعة',
+    fields: [['text', 'رقم الملف والمطلوب'], ['result', 'الموعد أو المسؤول عن المتابعة']] },
 ];
+export const NOTES = { title: 'ملاحظات أو معوقات', hint: 'أي ملاحظة تستدعي تدخل المسؤول أو التنسيق مع الإداريين.' };
+export const ORDINALS = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 'خامساً', 'سادساً', 'سابعاً', 'ثامناً'];
+const EXTRA: LineField[] = ['court', 'subject', 'next'];
 export const emptyReport = (): DailyPayload => ({ hearings: [], tasks: [], admin: [], external: [], other: [], pending: [], notes: '' });
-/** A stored payload read safely: missing or malformed parts come back empty. */
+/** A stored payload read safely: missing or malformed parts come back empty; reports saved before the extra fields read as they were. */
 export function readReport(raw: unknown): DailyPayload {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>, out = emptyReport();
-  for (const [k] of REPORT_PARTS) {
-    const list = Array.isArray(o[k]) ? o[k] as unknown[] : [];
-    out[k] = list.filter(x => x && typeof x === 'object').map(x => { const l = x as Record<string, unknown>; return { ...(l.key ? { key: String(l.key) } : {}), text: String(l.text ?? ''), result: String(l.result ?? '') }; });
+  for (const { key } of REPORT_PARTS) {
+    const list = Array.isArray(o[key]) ? o[key] as unknown[] : [];
+    out[key] = list.filter(x => x && typeof x === 'object').map(x => {
+      const l = x as Record<string, unknown>, line: ReportLine = { ...(l.key ? { key: String(l.key) } : {}), text: String(l.text ?? ''), result: String(l.result ?? '') };
+      for (const f of EXTRA) if (typeof l[f] === 'string' && (l[f] as string) !== '') line[f] = l[f] as string;
+      return line;
+    });
   }
   out.notes = typeof o.notes === 'string' ? o.notes : '';
   return out;
 }
+const lineValues = (l: ReportLine) => [l.text, l.court, l.subject, l.result, l.next].map(v => (v || '').trim());
 /** Lines with something written in them, and the payload without empty lines (what is saved). */
-export const filledLines = (lines: ReportLine[]) => lines.filter(l => l.text.trim() || l.result.trim());
-export const cleanReport = (r: DailyPayload): DailyPayload => ({ ...r, ...Object.fromEntries(REPORT_PARTS.map(([k]) => [k, filledLines(r[k])])), notes: r.notes.trim() });
-export const reportCount = (r: DailyPayload) => REPORT_PARTS.reduce((n, [k]) => n + filledLines(r[k]).length, 0) + (r.notes.trim() ? 1 : 0);
+export const filledLines = (lines: ReportLine[]) => lines.filter(l => lineValues(l).some(Boolean));
+export const cleanReport = (r: DailyPayload): DailyPayload => ({ ...r, ...Object.fromEntries(REPORT_PARTS.map(({ key }) => [key, filledLines(r[key])])), notes: r.notes.trim() });
+export const reportCount = (r: DailyPayload) => REPORT_PARTS.reduce((n, { key }) => n + filledLines(r[key]).length, 0) + (r.notes.trim() ? 1 : 0);
+/** «ملخص اليوم»: how many of each the report holds. */
+export const daySummary = (r: DailyPayload) => Object.fromEntries(REPORT_PARTS.map(({ key }) => [key, filledLines(r[key]).length])) as Record<ReportPart, number>;
+/** A line as one piece of text, its fields in the part's order. */
+export const lineText = (l: ReportLine, part: ReportPart) => (REPORT_PARTS.find(x => x.key === part)!.fields.map(([f]) => (l[f] || '').trim()).filter(Boolean)).join(' — ');
 
 const ref = (c: CaseRecord) => caseCode(c) || c.autoNumber || 'بلا كود';
 const parties = (c: CaseRecord) => `${clientName(c) || '—'} ضد ${c.opponent || '—'}`;
@@ -99,7 +122,8 @@ export function missionsFor({ records, work, members, rules, date, today, person
     const posted = (c.procedures || []).filter(p => isSessionEntry(p) && p.date === date).at(-1);
     if (posted) {
       const o = caseOwner(c, date);
-      if (o.mine) out.push({ key: 'h:' + c.id + ':' + date, kind: 'hearing', date, time: '', title: ref(c), sub: parties(c), place: String(posted.court || c.court || ''), state: 'done', result: [posted.decision || posted.text, posted.followup ? 'الجلسة التالية ' + posted.followup : ''].filter(Boolean).join(' · '), c, who: o.who });
+      const decision = String(posted.text || posted.decision || ''), next = posted.followup ? 'الجلسة القادمة ' + formatDate(posted.followup) : '';
+      if (o.mine) out.push({ key: 'h:' + c.id + ':' + date, kind: 'hearing', date, time: '', title: ref(c), sub: parties(c), place: String(posted.court || c.court || ''), state: 'done', result: [decision, next].filter(Boolean).join(' · '), decision, next, c, who: o.who });
     }
     // Follow-ups set on a procedure other than a sitting (a sitting's own next date is its posting).
     for (const p of c.procedures || []) if (!isSessionEntry(p) && p.kind !== 'قيد الدعوى' && p.followup === date) {
@@ -137,7 +161,9 @@ export const passesFilter = (m: Mission, f: MissionFilter) => f === 'all' || (f 
  */
 export function withDone(report: DailyPayload, missions: Mission[]): DailyPayload {
   const have = new Set([...report.hearings, ...report.tasks].map(l => l.key).filter(Boolean));
-  const add = (m: Mission) => ({ key: m.key, text: [m.title, m.kind === 'hearing' ? m.place : m.sub].filter(Boolean).join(' · '), result: m.result });
+  const add = (m: Mission): ReportLine => m.kind === 'hearing'
+    ? { key: m.key, text: m.title, court: m.place, result: m.decision ?? m.result, next: m.next || '' }
+    : { key: m.key, text: m.title, result: m.result };
   const hearings = missions.filter(m => m.state === 'done' && m.kind === 'hearing' && !have.has(m.key)).map(add);
   const tasks = missions.filter(m => m.state === 'done' && m.kind === 'task' && !have.has(m.key)).map(add);
   if (!hearings.length && !tasks.length) return report;
@@ -156,23 +182,25 @@ export const STATUS_LABELS = { sent: 'أُرسل', draft: 'مسودة', none: '�
 
 /** The report as plain text, to paste into a message. */
 export function reportText(r: DailyPayload, name: string, date: string): string {
-  const parts = [`التقرير اليومي — ${name} — ${date}`];
-  for (const [k, title] of REPORT_PARTS) { const lines = filledLines(r[k]); if (lines.length) parts.push('', title + ':', ...lines.map((l, i) => `${i + 1}. ${l.text}${l.result.trim() ? ' — ' + l.result : ''}`)); }
-  if (r.notes.trim()) parts.push('', 'ملاحظات:', r.notes.trim());
+  const parts = [`تقرير الأعمال اليومية — ${name} — ${date}`], sum = daySummary(r);
+  REPORT_PARTS.forEach(({ key, title }, n) => { const lines = filledLines(r[key]); if (lines.length) parts.push('', `${ORDINALS[n]}: ${title}`, ...lines.map((l, i) => `${i + 1}. ${lineText(l, key)}`)); });
+  if (r.notes.trim()) parts.push('', `${ORDINALS[REPORT_PARTS.length]}: ${NOTES.title}`, r.notes.trim());
+  parts.push('', `ملخص اليوم: ${sum.hearings} جلسات · ${sum.admin} أعمال إدارية · ${sum.external} مراجعات خارجية · ${sum.tasks} مهام`);
   return parts.join('\n');
 }
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
 /** One or more reports as a printable page (one report per page). */
 export function reportsHtml(list: { name: string; date: string; payload: DailyPayload; sent: string }[], printedBy: string, printedAt: string): string {
   const one = (x: (typeof list)[number]) => {
-    const body = REPORT_PARTS.map(([k, title, a, b]) => { const lines = filledLines(x.payload[k]); return lines.length ? `<h2>${esc(title)}</h2><table><thead><tr><th class="n">م</th><th>${esc(a)}</th><th>${esc(b)}</th></tr></thead><tbody>${lines.map((l, i) => `<tr><td class="n">${i + 1}</td><td>${esc(l.text)}</td><td>${esc(l.result)}</td></tr>`).join('')}</tbody></table>` : ''; }).join('');
-    return `<section><header><h1>التقرير اليومي</h1><p><b>${esc(x.name)}</b> · ${esc(x.date)}${x.sent ? ' · ' + esc(x.sent) : ''}</p></header>${body || '<p class="empty">لم يُكتب شيء في هذا التقرير.</p>'}${x.payload.notes.trim() ? `<h2>ملاحظات</h2><p class="notes">${esc(x.payload.notes)}</p>` : ''}</section>`;
+    const body = REPORT_PARTS.map(({ key, title, fields }, n) => { const lines = filledLines(x.payload[key]); return lines.length ? `<h2>${ORDINALS[n]}: ${esc(title)}</h2><table><thead><tr><th class="n">م</th>${fields.map(([, label]) => `<th>${esc(label)}</th>`).join('')}</tr></thead><tbody>${lines.map((l, i) => `<tr><td class="n">${i + 1}</td>${fields.map(([f]) => `<td>${esc(l[f] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table>` : ''; }).join('');
+    const sum = daySummary(x.payload), tiles = [['جلسات', sum.hearings], ['أعمال إدارية', sum.admin], ['مراجعات خارجية', sum.external], ['مهام منجزة', sum.tasks]].map(([l, v]) => `<td><b>${v}</b><br>${l}</td>`).join('');
+    return `<section><header><h1>تقرير الأعمال اليومية</h1><p><b>${esc(x.name)}</b> · ${esc(x.date)}${x.sent ? ' · ' + esc(x.sent) : ''}</p></header>${body || '<p class="empty">لم يُكتب شيء في هذا التقرير.</p>'}${x.payload.notes.trim() ? `<h2>${ORDINALS[REPORT_PARTS.length]}: ${esc(NOTES.title)}</h2><p class="notes">${esc(x.payload.notes)}</p>` : ''}<h2>ملخص اليوم</h2><table class="sum"><tr>${tiles}</tr></table></section>`;
   };
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>التقرير اليومي</title><style>
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير الأعمال اليومية</title><style>
 @page{size:A4;margin:14mm}body{font-family:Arial,Tahoma,sans-serif;font-size:12.5px;color:#111;margin:0}section{page-break-after:always}section:last-of-type{page-break-after:auto}
 header{border-bottom:2px solid #111;margin-bottom:8px}h1{font-size:18px;margin:0 0 2px}header p{margin:0 0 6px}h2{font-size:13.5px;margin:12px 0 4px}
 table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:4px 6px;text-align:right;vertical-align:top}th{background:#eee}.n{width:26px;text-align:center}
-.notes{white-space:pre-wrap;border:1px solid #888;padding:6px}.empty{color:#666}footer{margin-top:10px;font-size:10.5px;color:#555}</style></head><body>${list.map(one).join('')}<footer>طُبع ${esc(printedAt)} · ${esc(printedBy)}</footer></body></html>`;
+.notes{white-space:pre-wrap;border:1px solid #888;padding:6px}.sum td{text-align:center;width:25%}.sum b{font-size:16px}.empty{color:#666}footer{margin-top:10px;font-size:10.5px;color:#555}</style></head><body>${list.map(one).join('')}<footer>طُبع ${esc(printedAt)} · ${esc(printedBy)}</footer></body></html>`;
 }
 
 type Range = Omit<Input, 'date'>;
@@ -219,4 +247,52 @@ export function agendaBetween({ records, work, members, person, ownCasesOnly = f
     const v = day(w.dueDate); v.tasks++; if (w.status === 'done') v.done++; v.items.push({ kind: 'task', title: w.title, done: w.status === 'done' });
   }
   return days;
+}
+
+/** The date in Kuwait of a moment, for «sent the same day». */
+const kuwaitDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kuwait' }).format(new Date(iso));
+export type PersonStats = {
+  userId: string; name: string; workDays: number; sent: number; sameDay: number; drafts: number;
+  hearings: number; tasks: number; admin: number; external: number; other: number; posted: number; lateNow: number; lastSent: string | null;
+};
+/**
+ * «الأداء»: each person's work over a period — reports sent against working days (Friday and Saturday off), sent the
+ * same day, what the reports hold, sittings they posted in the cases themselves, and what is overdue for them now.
+ */
+export function performance({ people, reports, from, to, today, records, work, members, rules }: {
+  people: { userId: string; username: string; displayName: string }[]; reports: StoredReport[]; from: string; to: string; today: string;
+  records: CaseRecord[]; work: WorkItem[]; members: Member[]; rules?: Rules;
+}): PersonStats[] {
+  let workDays = 0;
+  for (let d = from; d <= (to < today ? to : today); d = shiftDays(d, 1)) if (![5, 6].includes(new Date(d + 'T12:00:00Z').getUTCDay())) workDays++;
+  const everyone = [...people, ...reports.filter(r => !people.some(p => p.userId === r.userId)).map(r => ({ userId: r.userId, username: r.username, displayName: r.displayName }))]
+    .filter((p, i, a) => a.findIndex(x => x.userId === p.userId) === i);
+  // Sittings posted in the period, by the account that recorded them.
+  const posted = new Map<string, number>();
+  for (const c of records) for (const p of c.procedures || []) if (isSessionEntry(p) && p.recordedBy && p.date >= from && p.date <= to) posted.set(p.recordedBy, (posted.get(p.recordedBy) || 0) + 1);
+  return everyone.map(p => {
+    const mine = reports.filter(r => r.userId === p.userId && r.date >= from && r.date <= to), sent = mine.filter(r => r.submittedAt);
+    const sum = mine.reduce((t, r) => { const s = daySummary(readReport(r.payload)); for (const k of Object.keys(t) as ReportPart[]) t[k] += s[k]; return t; }, { hearings: 0, tasks: 0, admin: 0, external: 0, other: 0, pending: 0 } as Record<ReportPart, number>);
+    const member = members.find(m => m.id === p.userId);
+    const lateNow = member ? missionsFor({ records, work, members, rules, date: today, today, person: member, viewerId: p.userId }).filter(m => m.state === 'late').length : 0;
+    return {
+      userId: p.userId, name: p.displayName || p.username, workDays, sent: sent.length, sameDay: sent.filter(r => kuwaitDay(r.submittedAt!) === r.date).length, drafts: mine.length - sent.length,
+      hearings: sum.hearings, tasks: sum.tasks, admin: sum.admin, external: sum.external, other: sum.other, posted: posted.get(p.username) || 0, lateNow,
+      lastSent: sent.map(r => r.submittedAt!).sort().at(-1) || null,
+    };
+  }).sort((a, b) => b.sent - a.sent || a.name.localeCompare(b.name, 'ar'));
+}
+/** The periods offered for «الأداء»: this week (Sunday to Thursday in Kuwait), this month, last month, the last 30 days. */
+export function periods(today: string): [string, string, string, string][] {
+  const dow = new Date(today + 'T12:00:00Z').getUTCDay(), sunday = shiftDays(today, -dow), month = today.slice(0, 7) + '-01';
+  const lastEnd = shiftDays(month, -1), lastStart = lastEnd.slice(0, 7) + '-01';
+  return [['week', 'هذا الأسبوع', sunday, today], ['month', 'هذا الشهر', month, today], ['last', 'الشهر الماضي', lastStart, lastEnd], ['30', 'آخر 30 يوماً', shiftDays(today, -29), today]];
+}
+/** «الأداء» as a printable page. */
+export function performanceHtml(rows: PersonStats[], period: string, printedBy: string, printedAt: string): string {
+  const head = ['المحامي', 'التقارير المرسلة', 'في اليوم نفسه', 'مسودات', 'جلسات حضرها', 'جلسات رحّلها', 'أعمال إدارية', 'مراجعات خارجية', 'مهام منجزة', 'متأخر الآن'];
+  const body = rows.map(r => [r.name, `${r.sent} من ${r.workDays}`, r.sameDay, r.drafts, r.hearings, r.posted, r.admin, r.external, r.tasks, r.lateNow]);
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>أداء الفريق</title><style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,Tahoma,sans-serif;font-size:12px;color:#111}
+h1{font-size:18px;margin:0 0 2px}p{margin:0 0 8px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:4px 6px;text-align:center}th{background:#eee}td:first-child{text-align:right}footer{margin-top:8px;font-size:10.5px;color:#555}</style></head>
+<body><h1>أداء الفريق</h1><p>${esc(period)}</p><table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table><footer>طُبع ${esc(printedAt)} · ${esc(printedBy)}</footer></body></html>`;
 }

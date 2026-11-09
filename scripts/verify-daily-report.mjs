@@ -1,6 +1,6 @@
 // «مهام اليوم والتقرير»: whose missions are whose, late and done states, the report filling itself, the team view.
 import assert from 'node:assert/strict';
-import { agendaBetween, datesAhead, passesDates, cleanReport, emptyReport, missionsFor, namesPerson, passesFilter, readReport, reportCount, reportText, reportsHtml, teamStatus, withDone } from '../lib/daily-report.ts';
+import { performance, periods, lineText, agendaBetween, datesAhead, passesDates, cleanReport, emptyReport, missionsFor, namesPerson, passesFilter, readReport, reportCount, reportText, reportsHtml, teamStatus, withDone } from '../lib/daily-report.ts';
 const today = '2026-11-09';
 const base = { code: '', autoNumber: '', client: 'شركة', clientGroup: '', opponent: 'خصم', role: '', type: 'حكم أول درجة', ruling: '', outcome: 'غير محدد', appealRecorded: '', appealConfirmation: '', date: '', notes: '', court: 'الكلية', lawyer: '', procedures: [] };
 const sitting = (date, followup, extra = {}) => ({ id: 'p' + date, date, kind: 'جلسة', venue: 'المحكمة', court: 'الكلية', decision: 'تأجيل', text: 'تأجيل', followup, ...extra });
@@ -60,7 +60,14 @@ assert.deepEqual(readReport({ admin: [{ text: 1, result: null }, 'x'], notes: 5 
 const clean = cleanReport({ ...emptyReport(), admin: [{ text: ' ', result: '' }, { text: 'قيد صحيفة', result: 'تم' }], notes: '  ملاحظة ' });
 assert.deepEqual(clean.admin, [{ text: 'قيد صحيفة', result: 'تم' }]);
 assert.equal(reportCount(clean), 2);
-assert.match(reportText(clean, 'سارة', '09/11/2026'), /أعمال إدارية داخل المحاكم:\n1\. قيد صحيفة — تم/);
+assert.match(reportText(clean, 'سارة', '09/11/2026'), /ثالثاً: الأعمال الإدارية داخل المحاكم\n1\. قيد صحيفة — تم/);
+assert.match(reportText(clean, 'سارة', '09/11/2026'), /ملخص اليوم: 0 جلسات · 1 أعمال إدارية/);
+// A posted sitting fills the four fields of its line; an older report without them still reads.
+const hearingLine = withDone(emptyReport(), sara).hearings[0];
+assert.deepEqual([hearingLine.text, hearingLine.court, hearingLine.result, hearingLine.next], ['104', 'الكلية', 'حجز للحكم', 'الجلسة القادمة 01/12/2026']);
+assert.deepEqual(readReport({ hearings: [{ text: '2310 · الكلية', result: 'تأجيل' }] }).hearings, [{ text: '2310 · الكلية', result: 'تأجيل' }]);
+assert.deepEqual(readReport({ external: [{ text: 'الداخلية', subject: 'شهادة', result: 'تم', court: '' }] }).external, [{ text: 'الداخلية', subject: 'شهادة', result: 'تم' }]);
+assert.equal(lineText({ text: 'الداخلية', subject: 'شهادة', result: 'تم' }, 'external'), 'الداخلية — شهادة — تم');
 const html = reportsHtml([{ name: '<سارة>', date: '09/11/2026', payload: clean, sent: '' }], 'owner', '09/11/2026');
 assert.ok(html.includes('&lt;سارة&gt;') && !html.includes('<سارة>'), 'Printed names are escaped');
 
@@ -80,4 +87,19 @@ assert.equal(cal.get(today).hearings, 1, 'Sara: one sitting posted today (c4); c
 assert.equal(cal.get(today).tasks, 2, 'Her two tasks of today');
 assert.equal(cal.get('2026-11-07').tasks, 1, 'The late task on its own day');
 assert.equal(agendaBetween({ records, work, members, today, person: 'all' }, '2026-11-01', '2026-11-30').get(today).hearings, 3, 'The office: c1, c2 due and c4 posted');
+// «الأداء»: reports sent against working days, the same day or later, what they hold, sittings posted, overdue now.
+const rep = (userId, username, date, submittedAt, payload) => ({ userId, username, displayName: username, date, payload, submittedAt, updatedAt: '', revision: 1 });
+const recs = [{ ...c4, procedures: c4.procedures.map(p => ({ ...p, recordedBy: 'sara' })) }, c3];
+const stats = performance({ people: expected.slice(0, 2), today, from: '2026-11-01', to: today, records: recs, work, members,
+  reports: [rep('u2', 'sara', today, today + 'T09:00:00Z', { admin: [{ text: 'قيد', result: '' }], external: [{ text: 'الداخلية', result: '' }], hearings: [{ text: '104', result: 'حجز' }] }),
+    rep('u2', 'sara', '2026-11-08', '2026-11-09T05:00:00Z', {}), rep('u1', 'ahmad', today, null, { tasks: [{ text: 'x', result: 'y' }] })] });
+const s2 = stats.find(x => x.userId === 'u2'), s1 = stats.find(x => x.userId === 'u1');
+assert.equal(s2.workDays, 7, 'Working days from 1 to 9 November 2026 (Friday and Saturday off)');
+assert.deepEqual([s2.sent, s2.sameDay, s2.drafts, s2.hearings, s2.admin, s2.external], [2, 1, 0, 1, 1, 1], 'Sent, the same day, and what the reports hold');
+assert.equal(s2.posted, 1, 'The sittings she posted in the cases in the period (the October one is outside it)');
+assert.equal(s2.lateNow, 1, 'Her task overdue now');
+assert.deepEqual([s1.sent, s1.drafts, s1.tasks], [0, 1, 1], 'A draft is not counted as sent');
+assert.ok(s1.lateNow >= 1, 'His sitting not posted is overdue');
+assert.equal(stats[0].userId, 'u2', 'Most reports sent first');
+assert.deepEqual(periods('2026-11-09').map(p => p.slice(2)), [['2026-11-08', '2026-11-09'], ['2026-11-01', '2026-11-09'], ['2026-10-01', '2026-10-31'], ['2026-10-11', '2026-11-09']]);
 console.log('Passed daily report: missions by person (named lawyer, assigned attendee, own cases), late and done states, filters, the report filling itself once, safe reading, text and print, team status.');

@@ -8,7 +8,7 @@ import {lastSitting,shiftDays} from '@/lib/case-desk';
 import {type Member,type WorkItem,monthGrid,shiftMonth} from '@/lib/office';
 import {dailyRequest,officeRequest} from '@/lib/local-auth';
 import {printHtml} from '@/lib/print';
-import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emptyReport,memberLabel,missionsFor,namesPerson,datesAhead,DATES_FILTERS,passesDates,agendaBetween,type DatesFilter,type AgendaDay,passesFilter,readReport,reportCount,reportText,reportsHtml,teamStatus,withDone,
+import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emptyReport,memberLabel,missionsFor,namesPerson,performance,periods,performanceHtml,type PersonStats,daySummary,lineText,ORDINALS,NOTES,type ReportPart,datesAhead,DATES_FILTERS,passesDates,agendaBetween,type DatesFilter,type AgendaDay,passesFilter,readReport,reportCount,reportText,reportsHtml,teamStatus,withDone,
  type DailyPayload,type Mission,type MissionFilter,type Person,type ReportLine,type StoredReport} from '@/lib/daily-report';
 import {DateField,api} from './shared';
 import {SelectList} from './filter-select';
@@ -18,11 +18,12 @@ type Props={records:CaseRecord[];rules?:Rules;clients:ClientEntity[];work:WorkIt
  missionsOn:boolean;canPost:boolean;canWork:boolean;canReport:boolean;reviewer:boolean;ownCasesOnly:boolean;printedBy:string;
  onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onWorkChanged:()=>void};
 const ICONS={hearing:Gavel,task:ListChecks,deadline:Hourglass,followup:CalendarClock};
-type Mode='day'|'posting'|'dates'|'calendar';
+type TeamList={reports:StoredReport[];expected:{userId:string;username:string;displayName:string}[]};
+type Mode='day'|'posting'|'dates'|'calendar'|'perf';
 const monthName=(d:string)=>new Intl.DateTimeFormat('ar-KW-u-nu-latn',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(d.slice(0,7)+'-01T12:00:00Z'));
 const WEEKDAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const weekday=(d:string)=>new Intl.DateTimeFormat('ar-KW',{weekday:'long',timeZone:'UTC'}).format(new Date(d+'T12:00:00Z'));
-const clock=(iso?:string|null)=>iso?new Intl.DateTimeFormat('ar-KW',{hour:'numeric',minute:'2-digit'}).format(new Date(iso)):'';
+const clock=(iso?:string|null)=>iso?new Intl.DateTimeFormat('ar-KW-u-nu-latn',{hour:'numeric',minute:'2-digit'}).format(new Date(iso)):'';
 
 /**
  * «مهام اليوم والتقرير»: one screen for the day. The missions of the day each with its one action (post a sitting,
@@ -87,7 +88,7 @@ export default function DayDesk(p:Props){
    {grid.map(d=>{const a=agenda.get(d);return <button key={d} type="button" role="gridcell" className={'day-cal-cell'+(d.slice(0,7)!==date.slice(0,7)?' out':'')+(d===today?' today':'')+(d===date?' picked':'')} onClick={()=>{setMode('day');go(d)}} aria-label={formatDate(d)+(a?` · ${a.hearings} جلسة · ${a.tasks} مهمة`:'')}>
     <span className="mono">{Number(d.slice(8))}</span>{a&&<span className="day-cal-counts">{a.hearings>0&&<b className="k-hearing">{a.hearings}<span> جلسة</span></b>}{a.tasks>0&&<b className="k-task">{a.tasks}<span> مهمة</span></b>}</span>}
     {a&&a.items.slice(0,2).map((x,i)=><small key={i} className={x.done?'done':''}>{x.title}</small>)}{a&&a.items.length>2&&<small className="more">+{a.items.length-2}</small>}</button>})}</div></section>;
- const mainCol=mode==='posting'?postingCol:mode==='dates'?datesCol:mode==='calendar'?calendarCol:missionsCol;
+ const mainCol=mode==='perf'?<Performance p={p} onPick={id=>{setWho(id===p.user.id?'me':id);setMode('day')}}/>:mode==='posting'?postingCol:mode==='dates'?datesCol:mode==='calendar'?calendarCol:missionsCol;
  const reportCol=team?<TeamPanel list={list} date={date} reading={reading} onRead={setReading} printedBy={p.printedBy}/>
   :self?(p.canReport?<ReportPanel r={report} date={date} today={today} name={memberLabel(me)} printedBy={p.printedBy}/>:null)
   :<section className="panel day-report" aria-label="تقرير الزميل"><div className="day-col-head"><h2>تقرير {memberLabel(person==='all'?undefined:person)}</h2>{colleague&&<span className={'tag '+(colleague.submittedAt?'green':'amber')}>{colleague.submittedAt?'أُرسل '+clock(colleague.submittedAt):'مسودة'}</span>}</div>
@@ -95,15 +96,15 @@ export default function DayDesk(p:Props){
  // The same head as every other page: the title, one line on the day, and the controls beside it.
  const summary=p.missionsOn?[missions.length?`${missions.length} مهمة`:'لا مهام',done?`${done} منجزة`:'',late?`${late} متأخرة`:''].filter(Boolean).join(' · '):'اكتب ما أنجزته في هذا اليوم';
  return <div className="day-desk">
-  <div className="page-head"><div><h1>مهام اليوم والتقرير</h1><p className="subtitle">{mode==='calendar'?monthName(date):mode==='dates'?'من أسبوع مضى إلى ثلاثين يوماً قادمة':`${weekday(date)} ${formatDate(date)} · ${mode==='posting'?`${posting.length} جلسة في المكتب`:summary}`}</p></div>
+  <div className="page-head"><div><h1>مهام اليوم والتقرير</h1><p className="subtitle">{mode==='perf'?'عمل كل محامٍ في الفترة: التقارير، الجلسات، الأعمال، وما تأخر':mode==='calendar'?monthName(date):mode==='dates'?'من أسبوع مضى إلى ثلاثين يوماً قادمة':`${weekday(date)} ${formatDate(date)} · ${mode==='posting'?`${posting.length} جلسة في المكتب`:summary}`}</p></div>
    <div className="actions day-actions">
-    {p.missionsOn&&<div className="day-modes" role="tablist" aria-label="العرض">{([['day','اليوم'],...(p.canPost?[['posting','ترحيل الجلسات']]:[]),['dates','المواعيد'],['calendar','التقويم']] as [Mode,string][]).map(([k,l])=><button key={k} role="tab" aria-selected={mode===k} className={'work-chip'+(mode===k?' on':'')} onClick={()=>{void report.flush();setMode(k)}}>{l}</button>)}</div>}
+    {p.missionsOn&&<div className="day-modes" role="tablist" aria-label="العرض">{([['day','اليوم'],...(p.canPost?[['posting','ترحيل الجلسات']]:[]),['dates','المواعيد'],['calendar','التقويم'],...(p.reviewer?[['perf','الأداء']]:[])] as [Mode,string][]).map(([k,l])=><button key={k} role="tab" aria-selected={mode===k} className={'work-chip'+(mode===k?' on':'')} onClick={()=>{void report.flush();setMode(k)}}>{l}</button>)}</div>}
     {(mode==='day'||mode==='posting')&&<div className="day-nav" role="group" aria-label="اليوم"><button className="icon-btn" aria-label="اليوم السابق" onClick={()=>go(shiftDays(date,-1))}><ChevronRight size={16}/></button>
      <DateField label="اختر يوماً" value={date} onChange={v=>v&&go(v)}/><button className="icon-btn" aria-label="اليوم التالي" onClick={()=>go(shiftDays(date,1))}><ChevronLeft size={16}/></button>
      {date!==today&&<button className="btn" onClick={()=>go(today)}>العودة لليوم</button>}</div>}
-    {p.reviewer&&mode!=='posting'&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">الفريق (كل التقارير)</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
+    {p.reviewer&&mode!=='posting'&&mode!=='perf'&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">الفريق (كل التقارير)</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
    </div></div>
-  <div className={'day-grid'+(mainCol&&reportCol?'':' solo')}>{mainCol}{reportCol}</div>
+  <div className={'day-grid'+(mainCol&&reportCol&&mode!=='perf'?'':' solo')}>{mainCol}{mode!=='perf'&&reportCol}</div>
  </div>;
 }
 
@@ -119,12 +120,12 @@ function MissionRow({m,p,showWho,onDone}:{m:Mission;p:Props;showWho:boolean;onDo
    <button type="button" className="mission-main" disabled={!m.c} onClick={()=>m.c&&p.onOpen(m.c)}><b>{m.title}</b><small>{m.sub}</small></button>
    <span className="mission-place">{m.place}{showWho&&m.who&&<small>{m.who}</small>}</span>
    {m.state==='done'?<span className="mission-result" title={m.result}><Check size={14}/> {m.result||'تم'}</span>:action}</div>
-  {open&&m.kind==='hearing'&&m.c&&<PostForm c={m.c} date={m.date} p={p} onClose={()=>setOpen(false)} onPosted={l=>onDone('hearings',{key:m.key,text:[m.title,m.place].filter(Boolean).join(' · '),result:l})}/>}
+  {open&&m.kind==='hearing'&&m.c&&<PostForm c={m.c} date={m.date} p={p} onClose={()=>setOpen(false)} onPosted={(decision,next)=>onDone('hearings',{key:m.key,text:m.title,court:m.place,result:decision,next})}/>}
   {open&&m.kind==='task'&&m.work&&<DoneForm w={m.work} onClose={()=>setOpen(false)} onSaved={note=>{onDone('tasks',{key:m.key,text:m.title,result:note});p.onWorkChanged()}}/>}
  </article>;
 }
 
-function PostForm({c,date,p,onClose,onPosted}:{c:CaseRecord;date:string;p:Props;onClose:()=>void;onPosted:(result:string)=>void}){
+function PostForm({c,date,p,onClose,onPosted}:{c:CaseRecord;date:string;p:Props;onClose:()=>void;onPosted:(decision:string,next:string)=>void}){
  const last=lastSitting(c),venue=(String(last?.venue||'المحكمة') as Venue),options=venue==='إدارة الخبراء'?EXPERT_DECISIONS:DECISIONS;
  const [decision,setDecision]=useState(''),[next,setNext]=useState(''),[time,setTime]=useState(String(last?.nextTime||'')),[details,setDetails]=useState(''),[busy,setBusy]=useState(false);
  const needsNext=!!decision&&options.find(d=>d.label===decision)?.next!=='none',ref=caseCode(c)||c.autoNumber||'';
@@ -135,7 +136,7 @@ function PostForm({c,date,p,onClose,onPosted}:{c:CaseRecord;date:string;p:Props;
   setBusy(true);
   try{const proc=sessionProcedure({date,venue,court:String(last?.court||c.court||''),decision,details,nextDate:needsNext?next:'',nextTime:needsNext?time:'',recordedBy:p.printedBy});
    const d=await api('/api/cases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({case:{...c,procedures:[...c.procedures,proc]}})});
-   p.onSaved(enrichCase(d.case,p.clients));onPosted([decision,details.trim(),needsNext?'الجلسة التالية '+formatDate(next):''].filter(Boolean).join(' · '));toast.success('رُحّلت جلسة '+ref);onClose()}
+   p.onSaved(enrichCase(d.case,p.clients));onPosted([decision,details.trim()].filter(Boolean).join(' — '),needsNext?'الجلسة القادمة '+formatDate(next):'');toast.success('رُحّلت جلسة '+ref);onClose()}
   catch(e){toast.error((e as Error).message)}finally{setBusy(false)}
  }
  return <div className="mission-form"><SelectList aria-label={'قرار جلسة '+ref} value={decision} onChange={e=>setDecision(e.target.value)}><option value="">قرار الجلسة</option>{options.map(d=><option key={d.label}>{d.label}</option>)}</SelectList>
@@ -189,23 +190,62 @@ function useOwnReport(on:boolean,date:string,today:string,missions:Mission[]){
   add:(part:'hearings'|'tasks',line:ReportLine)=>{const s=cur.current;if(s.payload[part].some(l=>l.key===line.key))return;const payload={...s.payload,[part]:[...s.payload[part],line]};setState(x=>({...x,payload}));cur.current={...s,payload};void save(false,payload)}};
 }
 
+/** «الأداء»: each person's work over a period, for the owner and the admins who read reports. A row opens that person's day. */
+function Performance({p,onPick}:{p:Props;onPick:(userId:string)=>void}){
+ const today=todayISO(),options=periods(today),[period,setPeriod]=useState(options[0][0]);
+ const chosen=options.find(o=>o[0]===period)||options[0],from=chosen[2],to=chosen[3],range={name:chosen[1]};
+ // The figures for the period asked, worked out once when its reports arrive (a slower answer for an earlier period never shows).
+ const [got,setGot]=useState<{key:string;rows?:PersonStats[];error?:string}>({key:''});
+ const {records,work,members,rules}=p;
+ useEffect(()=>{let on=true;const key=from+'|'+to;
+  dailyRequest<TeamList>('list',{from,to}).then(d=>{if(on)setGot({key,rows:performance({people:d.expected,reports:d.reports,from,to,today:todayISO(),records,work,members,rules})})}).catch(e=>{if(on)setGot({key,error:(e as Error).message})});
+  return()=>{on=false}},[from,to,records,work,members,rules]);
+ const current=got.key===from+'|'+to?got:{key:''},error=current.error||'',rows=current.rows||[],data=current.rows;
+ const label=`${range.name} · ${formatDate(from)} – ${formatDate(to)}`;
+ const total=rows.reduce((t,r)=>({sent:t.sent+r.sent,due:t.due+r.workDays,hearings:t.hearings+r.hearings,posted:t.posted+r.posted,late:t.late+r.lateNow}),{sent:0,due:0,hearings:0,posted:0,late:0});
+ const print=()=>{if(!printHtml(performanceHtml(rows,label,p.printedBy,formatDate(today))))toast.error('تعذر فتح الطباعة.')};
+ return <section className="panel day-missions" aria-label="الأداء"><div className="day-col-head"><h2>الأداء</h2>
+   <div className="work-chips day-chips" role="group" aria-label="الفترة">{options.map(([k,l])=><button key={k} className={'work-chip'+(period===k?' on':'')} aria-pressed={period===k} onClick={()=>setPeriod(k)}>{l}</button>)}</div>
+   <div className="actions"><button className="btn" disabled={!rows.length} onClick={print}><Printer size={15}/> طباعة</button></div></div>
+  {error?<p className="day-empty" role="alert">{error}</p>:!data?<p className="day-empty" role="status"><LoaderCircle className="spin" size={14}/> جارٍ الحساب…</p>:!rows.length?<p className="day-empty">لا أحد مكلف بالتقرير اليومي بعد. امنح قسم «التقرير اليومي» من صلاحيات الفريق.</p>:<>
+  <div className="perf-totals"><span><strong>{total.due?Math.round(100*total.sent/total.due):0}%</strong> من التقارير المطلوبة أُرسلت</span><span><strong>{total.hearings}</strong> جلسة في التقارير</span><span><strong>{total.posted}</strong> جلسة رُحّلت في القضايا</span><span className={total.late?'late':''}><strong>{total.late}</strong> متأخر الآن</span></div>
+  <div className="day-list"><table className="office-table perf-table"><thead><tr><th>المحامي</th><th>التقارير المرسلة</th><th>في اليوم نفسه</th><th>جلسات حضرها</th><th>جلسات رحّلها</th><th>أعمال إدارية</th><th>مراجعات خارجية</th><th>مهام منجزة</th><th>متأخر الآن</th><th>آخر تقرير</th></tr></thead>
+   <tbody>{rows.map(r=>{const pct=r.workDays?Math.min(100,Math.round(100*r.sent/r.workDays)):0;return <tr key={r.userId} tabIndex={0} onClick={()=>onPick(r.userId)} onKeyDown={e=>{if(e.key==='Enter')onPick(r.userId)}} title="فتح يومه وتقريره">
+    <td><b>{r.name}</b>{r.drafts>0&&<small>{r.drafts} مسودة لم تُرسل</small>}</td>
+    <td><span className="perf-rate"><i style={{width:pct+'%'}} className={pct>=90?'good':pct>=60?'mid':'low'}/></span><span>{r.sent} من {r.workDays}</span></td>
+    <td className="mono">{r.sameDay}</td><td className="mono">{r.hearings}</td><td className="mono">{r.posted}</td><td className="mono">{r.admin}</td><td className="mono">{r.external}</td><td className="mono">{r.tasks}</td>
+    <td className={'mono'+(r.lateNow?' late':'')}>{r.lateNow}</td><td>{r.lastSent?formatDate(r.lastSent.slice(0,10))+' '+clock(r.lastSent):'—'}</td></tr>})}</tbody></table></div></>}
+ </section>;
+}
+
+/** «ملخص اليوم»: the report's counts at a glance. */
+function DaySummary({payload}:{payload:DailyPayload}){
+ const sum=daySummary(cleanReport(payload));
+ return <div className="day-summary" aria-label="ملخص اليوم"><b>ملخص اليوم</b>{([['جلسات',sum.hearings],['أعمال إدارية',sum.admin],['مراجعات خارجية',sum.external],['مهام منجزة',sum.tasks]] as [string,number][]).map(([l,v])=><span key={l}><strong>{v}</strong>{l}</span>)}</div>;
+}
+
+/** The person's own report, on the office's daily-work form: numbered parts, each with what it holds and its lines. */
 function ReportPanel({r,date,today,name,printedBy}:{r:OwnReport;date:string;today:string;name:string;printedBy:string}){
  const future=date>today,ro=future||r.busy;
- const setLine=(k:(typeof REPORT_PARTS)[number][0],i:number,v:Partial<ReportLine>)=>r.set({...r.payload,[k]:r.payload[k].map((l,j)=>j===i?{...l,...v}:l)});
- const addLine=(k:(typeof REPORT_PARTS)[number][0])=>{r.set({...r.payload,[k]:[...r.payload[k],{text:'',result:''}]});setTimeout(()=>document.querySelector<HTMLInputElement>(`[data-part="${k}"] .report-line:last-child input`)?.focus(),30)};
+ const setLine=(k:ReportPart,i:number,v:Partial<ReportLine>)=>r.set({...r.payload,[k]:r.payload[k].map((l,j)=>j===i?{...l,...v}:l)});
+ const addLine=(k:ReportPart)=>{r.set({...r.payload,[k]:[...r.payload[k],{text:'',result:''}]});setTimeout(()=>document.querySelector<HTMLInputElement>(`[data-part="${k}"] .report-line:last-of-type input`)?.focus(),30)};
  const status=r.loading?'جارٍ التحميل…':r.dirty?'تعديلات غير محفوظة':r.submittedAt?'أُرسل '+clock(r.submittedAt):r.revision?'مسودة محفوظة':'لم يُحفظ بعد';
- const copy=()=>{void navigator.clipboard?.writeText(reportText(cleanReport(r.payload),name,formatDate(date))).then(()=>toast.success('نُسخ التقرير'),()=>toast.error('تعذر النسخ.'))};
+ const copy=()=>{void navigator.clipboard?.writeText(reportText(cleanReport(r.payload),name,formatDate(date))).then(()=>toast.success('نُسخ التقرير المكتمل'),()=>toast.error('تعذر النسخ.'))};
  const print=()=>{if(!printHtml(reportsHtml([{name,date:formatDate(date),payload:cleanReport(r.payload),sent:r.submittedAt?'أُرسل '+clock(r.submittedAt):'مسودة'}],printedBy,formatDate(today))))toast.error('تعذر فتح الطباعة.')};
  return <section className="panel day-report" aria-label="تقريري اليومي">
-  <div className="day-col-head"><h2>تقريري اليومي</h2><span className={'tag '+(r.dirty?'amber':r.submittedAt?'green':'')} role="status">{status}</span>
-   <div className="actions"><button className="icon-btn" aria-label="نسخ التقرير نصاً" title="نسخ" onClick={copy}><Copy size={15}/></button><button className="icon-btn" aria-label="طباعة التقرير" title="طباعة" onClick={print}><Printer size={15}/></button></div></div>
+  <div className="day-col-head"><h2>تقرير الأعمال اليومية</h2><span className={'tag '+(r.dirty?'amber':r.submittedAt?'green':'')} role="status">{status}</span>
+   <div className="actions"><button className="icon-btn" aria-label="طباعة التقرير" title="طباعة" onClick={print}><Printer size={15}/></button></div></div>
   {r.error?<p className="day-empty" role="alert">{r.error}</p>:future?<p className="day-empty">لا يُكتب تقرير ليوم لم يأتِ بعد.</p>:<>
-  <div className="day-report-body">{REPORT_PARTS.map(([k,title,a,b])=><div key={k} className="report-part" data-part={k}>
-   <div className="report-part-head"><b>{title}</b>{r.payload[k].length>0&&<span className="report-count">{r.payload[k].length}</span>}<button className="part-add" aria-label={'إضافة سطر: '+title} disabled={ro} onClick={()=>addLine(k)}><Plus size={13}/> سطر</button></div>
-   {r.payload[k].map((l,i)=><div key={i} className="report-line"><input aria-label={a} placeholder={a} value={l.text} disabled={ro} onChange={e=>setLine(k,i,{text:e.target.value})}/><input aria-label={b} placeholder={b} value={l.result} disabled={ro} onChange={e=>setLine(k,i,{result:e.target.value})}/>
-    <button className="icon-btn" aria-label="حذف السطر" disabled={ro} onClick={()=>r.set({...r.payload,[k]:r.payload[k].filter((_,j)=>j!==i)})}><X size={14}/></button></div>)}</div>)}
-   <label className="report-part report-notes"><b>ملاحظات</b><textarea rows={2} value={r.payload.notes} disabled={ro} onChange={e=>r.set({...r.payload,notes:e.target.value})} placeholder="ما يجب أن يعرفه المسؤول"/></label></div>
-  <div className="day-report-foot"><span className="muted">{reportCount(cleanReport(r.payload))} بند</span>
+  <div className="day-report-body">{REPORT_PARTS.map(({key,title,hint,add,fields},n)=><div key={key} className="report-part" data-part={key}>
+   <div className="report-part-head"><b>{ORDINALS[n]}: {title}</b>{r.payload[key].length>0&&<span className="report-count">{r.payload[key].length}</span>}</div>
+   <p className="report-hint">{hint}</p>
+   {r.payload[key].map((l,i)=><div key={i} className="report-line" style={{'--n':fields.length} as React.CSSProperties}>
+    {fields.map(([f,label])=><input key={f} aria-label={label} placeholder={label} value={l[f]||''} disabled={ro} onChange={e=>setLine(key,i,{[f]:e.target.value})}/>)}
+    <button className="icon-btn" aria-label="حذف السطر" disabled={ro} onClick={()=>r.set({...r.payload,[key]:r.payload[key].filter((_,j)=>j!==i)})}><X size={14}/></button></div>)}
+   <button className="part-add" aria-label={'إضافة سطر: '+title} disabled={ro} onClick={()=>addLine(key)}><Plus size={13}/> {add}</button></div>)}
+   <label className="report-part report-notes"><b>{ORDINALS[REPORT_PARTS.length]}: {NOTES.title}</b><textarea rows={2} value={r.payload.notes} disabled={ro} onChange={e=>r.set({...r.payload,notes:e.target.value})} placeholder={NOTES.hint}/></label>
+   <DaySummary payload={r.payload}/></div>
+  <div className="day-report-foot"><button className="btn" disabled={!reportCount(cleanReport(r.payload))} onClick={copy}><Copy size={15}/> نسخ التقرير المكتمل</button>
    <button className="btn" disabled={r.busy||r.loading||!r.dirty} onClick={()=>void r.save(false)}><Save size={15}/> حفظ</button>
    <button className="btn primary" disabled={r.busy||r.loading||!reportCount(cleanReport(r.payload))} onClick={()=>void r.save(true)}>{r.busy?<LoaderCircle className="spin" size={15}/>:<Send size={15}/>} {r.submittedAt?'إعادة الإرسال':'إرسال التقرير'}</button></div></>}
  </section>;
@@ -214,10 +254,11 @@ function ReportPanel({r,date,today,name,printedBy}:{r:OwnReport;date:string;toda
 function ReportReader({r,printedBy}:{r:StoredReport;printedBy:string}){
  const payload=cleanReport(readReport(r.payload)),name=r.displayName||r.username;
  const print=()=>{if(!printHtml(reportsHtml([{name,date:formatDate(r.date),payload,sent:r.submittedAt?'أُرسل '+clock(r.submittedAt):'مسودة'}],printedBy,formatDate(todayISO()))))toast.error('تعذر فتح الطباعة.')};
- return <div className="day-report-body report-read">{REPORT_PARTS.map(([k,title])=>payload[k].length?<div key={k} className="report-part"><div className="report-part-head"><b>{title}</b><span className="report-count">{payload[k].length}</span></div>
-  <ol>{payload[k].map((l,i)=><li key={i}>{l.text}{l.result&&<span className="muted"> — {l.result}</span>}</li>)}</ol></div>:null)}
-  {payload.notes&&<div className="report-part"><div className="report-part-head"><b>ملاحظات</b></div><p className="report-notes-text">{payload.notes}</p></div>}
+ return <div className="day-report-body report-read">{REPORT_PARTS.map(({key,title},n)=>payload[key].length?<div key={key} className="report-part"><div className="report-part-head"><b>{ORDINALS[n]}: {title}</b><span className="report-count">{payload[key].length}</span></div>
+  <ol>{payload[key].map((l,i)=><li key={i}>{lineText(l,key)}</li>)}</ol></div>:null)}
+  {payload.notes&&<div className="report-part"><div className="report-part-head"><b>{ORDINALS[REPORT_PARTS.length]}: {NOTES.title}</b></div><p className="report-notes-text">{payload.notes}</p></div>}
   {!reportCount(payload)&&<p className="day-empty">التقرير فارغ.</p>}
+  <DaySummary payload={payload}/>
   <div className="actions"><button className="btn" onClick={print}><Printer size={15}/> طباعة</button><button className="btn" onClick={()=>void navigator.clipboard?.writeText(reportText(payload,name,formatDate(r.date))).then(()=>toast.success('نُسخ التقرير'))}><Copy size={15}/> نسخ</button></div></div>;
 }
 

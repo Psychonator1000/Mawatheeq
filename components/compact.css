@@ -1395,3 +1395,17 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 @media(max-width:1000px){.day-modes{width:100%;overflow-x:auto}.day-cal{grid-auto-rows:minmax(52px,auto);padding:6px 4px;gap:2px}.day-cal-cell small{display:none}.day-cal-head{font-size:10.5px}}
 .day-cal{grid-template-rows:auto;align-content:stretch}
 @media(max-width:1000px){.day-cal-counts b>span{display:none}.day-cal-counts b{padding:0 5px}}
+/* The report on the office's daily-work form: each part with what it holds, its lines and its own «add» button. */
+.report-hint{margin:2px 0 4px;font-size:12px;color:var(--muted-foreground);line-height:1.6}
+.report-line{display:grid;grid-template-columns:repeat(var(--n,2),minmax(0,1fr)) auto;gap:6px;margin-top:4px;padding:6px;border-radius:8px;background:color-mix(in srgb,var(--brand) 4%,transparent)}
+.day-report-body .part-add{margin-top:6px;padding:3px 10px;border:1px dashed var(--border);border-radius:999px}
+.day-summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--brand) 6%,transparent);font-size:12.5px}
+.day-summary>b{margin-inline-end:auto}.day-summary span{display:inline-flex;align-items:baseline;gap:4px;color:var(--muted-foreground)}.day-summary strong{font-size:16px;color:var(--foreground);font-variant-numeric:tabular-nums}
+@media(max-width:1000px){.report-line{grid-template-columns:minmax(0,1fr) auto}.report-line>input{grid-column:1}.report-line>.icon-btn{grid-column:2;grid-row:1}}
+.day-grid.solo .day-summary{grid-column:1/-1}
+/* «الأداء»: totals for the team, then one row a person. */
+.perf-totals{display:flex;gap:18px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted-foreground)}.perf-totals strong{font-size:17px;color:var(--foreground);margin-inline-end:4px;font-variant-numeric:tabular-nums}.perf-totals .late strong{color:#a32e38}
+.perf-table td,.perf-table th{text-align:center;white-space:nowrap}.perf-table td:first-child,.perf-table th:first-child{text-align:start}.perf-table td:first-child small{display:block;font-size:11.5px;color:#93560b}
+.perf-table tbody tr{cursor:pointer}.perf-table tbody tr:hover,.perf-table tbody tr:focus-visible{background:color-mix(in srgb,var(--brand) 6%,transparent);outline:none}.perf-table td.late{color:#a32e38;font-weight:600}
+.perf-rate{display:inline-block;width:70px;height:6px;border-radius:999px;background:var(--border);margin-inline-end:6px;vertical-align:middle;overflow:hidden}.perf-rate i{display:block;height:100%}.perf-rate i.good{background:#2f7a4c}.perf-rate i.mid{background:#b4690e}.perf-rate i.low{background:#a32e38}
+.day-report-foot{flex-wrap:wrap}.day-report-foot .btn{white-space:nowrap}
