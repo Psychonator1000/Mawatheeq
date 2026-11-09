@@ -1,6 +1,6 @@
 // «مهام اليوم والتقرير»: whose missions are whose, late and done states, the report filling itself, the team view.
 import assert from 'node:assert/strict';
-import { performance, periods, lineText, agendaBetween, datesAhead, passesDates, cleanReport, emptyReport, missionsFor, namesPerson, passesFilter, readReport, reportCount, reportText, reportsHtml, teamStatus, withDone } from '../lib/daily-report.ts';
+import { performance, periods, lineText, agendaBetween, datesAhead, passesDates, cleanReport, emptyReport, missionsFor, namesPerson, passesFilter, readReport, reportCount, reportText, reportsHtml, teamDay, teamStatus, withDone } from '../lib/daily-report.ts';
 const today = '2026-11-09';
 const base = { code: '', autoNumber: '', client: 'شركة', clientGroup: '', opponent: 'خصم', role: '', type: 'حكم أول درجة', ruling: '', outcome: 'غير محدد', appealRecorded: '', appealConfirmation: '', date: '', notes: '', court: 'الكلية', lawyer: '', procedures: [] };
 const sitting = (date, followup, extra = {}) => ({ id: 'p' + date, date, kind: 'جلسة', venue: 'المحكمة', court: 'الكلية', decision: 'تأجيل', text: 'تأجيل', followup, ...extra });
@@ -77,6 +77,12 @@ const reports = [{ userId: 'u1', username: 'ahmad', displayName: 'أحمد عل�
   { userId: 'u2', username: 'sara', displayName: 'سارة', date: today, payload: {}, submittedAt: null, updatedAt: '', revision: 1 },
   { userId: 'u5', username: 'y', displayName: 'يوسف', date: today, payload: {}, submittedAt: null, updatedAt: '', revision: 1 }];
 assert.deepEqual(teamStatus(expected, reports, today).map(t => [t.userId, t.status]), [['u4', 'none'], ['u2', 'draft'], ['u5', 'draft'], ['u1', 'sent']]);
+// «الفريق اليوم»: each person's sittings and tasks of the day (done of all) and what is late, beside their report.
+const board = Object.fromEntries(teamDay({ expected, reports, date: today, today, records, work, members }).map(r => [r.userId, r]));
+const line = r => [r.status, r.hearings, r.hearingsDone, r.tasks, r.tasksDone, r.late];
+assert.deepEqual(line(board.u2), ['draft', 1, 1, 2, 1, 1], 'Sara: c4 posted; two tasks, one done; the task of the 7th late');
+assert.deepEqual(line(board.u1), ['sent', 2, 0, 0, 0, 1], 'Ahmad: c1 and c2 (assigned) to post; c3 late');
+assert.deepEqual(line(board.u4), ['none', 0, 0, 0, 0, 0], 'Someone without an account in the members list: the report only');
 // «المواعيد»: follow-ups ahead for the person; «التقويم»: each day's sittings and tasks.
 const ahead = datesAhead({ records, work, members, today, person: members[0], viewerId: 'u1' });
 assert.ok(ahead.some(m => m.kind === 'followup' && m.c.id === 'c5'), 'A follow-up set for today is listed');

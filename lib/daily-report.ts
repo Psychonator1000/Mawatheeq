@@ -179,6 +179,27 @@ export function teamStatus(expected: { userId: string; username: string; display
     .sort((a, b) => ({ none: 0, draft: 1, sent: 2 })[a.status] - ({ none: 0, draft: 1, sent: 2 })[b.status] || (a.displayName || a.username).localeCompare(b.displayName || b.username, 'ar'));
 }
 export const STATUS_LABELS = { sent: 'أُرسل', draft: 'مسودة', none: 'لم يُكتب' } as const;
+/** One row of «الفريق اليوم»: the person's report, the day's sittings and tasks (done of all), and what is late now. */
+export type TeamDayRow = {
+  userId: string; username: string; name: string; status: 'sent' | 'draft' | 'none'; report?: StoredReport; items: number;
+  hearings: number; hearingsDone: number; tasks: number; tasksDone: number; late: number;
+};
+export function teamDay({ expected, reports, date, today, records, work, members, rules }: {
+  expected: { userId: string; username: string; displayName: string }[]; reports: StoredReport[]; date: string; today: string;
+  records: CaseRecord[]; work: WorkItem[]; members: Member[]; rules?: Rules;
+}): TeamDayRow[] {
+  return teamStatus(expected, reports, date).map(t => {
+    const member = members.find(m => m.id === t.userId);
+    const all = member ? missionsFor({ records, work, members, rules, date, today, person: member, viewerId: t.userId }) : [];
+    const on = all.filter(m => m.date === date), h = on.filter(m => m.kind === 'hearing'), k = on.filter(m => m.kind === 'task');
+    return {
+      userId: t.userId, username: t.username, name: t.displayName || t.username, status: t.status, report: t.report,
+      items: t.report ? reportCount(readReport(t.report.payload)) : 0,
+      hearings: h.length, hearingsDone: h.filter(m => m.state === 'done').length, tasks: k.length, tasksDone: k.filter(m => m.state === 'done').length,
+      late: all.filter(m => m.state === 'late').length,
+    };
+  });
+}
 
 /** The report as plain text, to paste into a message. */
 export function reportText(r: DailyPayload, name: string, date: string): string {

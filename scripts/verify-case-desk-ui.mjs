@@ -104,7 +104,7 @@ try{
  await nav('مهام اليوم والتقرير');assert.equal(await page.locator('.nav-section',{hasText:'الجلسات والمواعيد'}).locator('xpath=following-sibling::*[1]').locator('.nav-button').count(),2,'One page for the day, plus posting errors');
  const mission=code=>page.locator('.mission',{hasText:code});await mission('DESK-STUDY').waitFor();
  assert.match(await mission('DESK-MISSED').getAttribute('class'),/late/,'A sitting not posted is late');assert.match(await mission('DESK-DUE').getAttribute('class'),/done/,'A sitting posted today is done');
- await page.getByText('لا أحد مكلف بالتقرير اليومي').waitFor({state:'detached'}).catch(()=>{});await page.locator('.team-list',{hasText:'ui_reporter'}).waitFor();await screen('daily-team');
+ await page.getByText('لا أحد مكلف بالتقرير اليومي').waitFor({state:'detached'}).catch(()=>{});await page.locator('.team-board tr',{hasText:'ui_reporter'}).waitFor();await screen('daily-team');
  await mission('DESK-STUDY').getByRole('button',{name:'ترحيل'}).click();await page.getByLabel('قرار جلسة DESK-STUDY').selectOption('شطب الدعوى');await mission('DESK-STUDY').getByRole('button',{name:/حفظ في القضية/}).click();
  await page.getByText('رُحّلت جلسة DESK-STUDY').waitFor();await page.waitForFunction(()=>document.querySelector('.mission:has(.mission-main b)')&&[...document.querySelectorAll('.mission')].some(m=>m.textContent.includes('DESK-STUDY')&&m.classList.contains('done')));
  assert.equal((await caseOf('desk-study')).procedures.at(-1).decision,'شطب الدعوى','Posted into the case');
@@ -122,7 +122,7 @@ try{
   assert.deepEqual(await p2.locator('.nav-button').allInnerTexts().then(t=>t.map(x=>x.trim()).filter(x=>/سجل الأحكام|ترحيل|المهام والجلسات/.test(x))),[],'No case pages');
   await own.getByRole('button',{name:'إضافة سطر: الأعمال والمراجعات الخارجية'}).click();await own.getByPlaceholder('الجهة التي تمت مراجعتها').fill('وزارة العدل — شهادة');await own.getByRole('button',{name:'حفظ',exact:true}).click();await own.getByText('مسودة محفوظة').waitFor();
   await p2.screenshot({path:artifacts+'/daily-reporter.png'});await other.close();}
- await page.getByLabel('تقرير من').selectOption('team');const sent=page.locator('.team-list li',{hasText:'ui_reporter'});await sent.getByText('مسودة').waitFor();await sent.getByRole('button').click();await page.getByText('وزارة العدل — شهادة').waitFor();
+ await page.getByLabel('تقرير من').selectOption('team');const sent=page.locator('.team-board tr',{hasText:'ui_reporter'});await sent.getByText('مسودة').waitFor();await sent.getByRole('button',{name:'اقرأ التقرير'}).click();await page.getByText('وزارة العدل — شهادة').waitFor();
 
  // The views of the page: all the day's sittings, the dates ahead, the month — and a day of the month opens that day.
  await page.getByRole('tab',{name:'ترحيل الجلسات'}).click();await page.getByRole('region',{name:'ترحيل الجلسات'}).locator('.mission',{hasText:'DESK-DUE'}).waitFor();

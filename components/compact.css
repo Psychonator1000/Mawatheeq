@@ -1364,7 +1364,8 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .part-add:hover:not(:disabled){background:color-mix(in srgb,var(--brand) 8%,transparent)}.part-add:disabled{opacity:.45;cursor:default}.part-add:focus-visible{outline:2px solid var(--ring)}
 /* A report alone on the page (no missions) lays its parts out in columns instead of stretching each line across the screen. */
 @media(min-width:1001px){.day-grid.solo .day-report-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));column-gap:28px;align-content:start}
- .day-grid.solo .report-notes{grid-column:1/-1}.day-grid.solo .day-report:not(:has(.team-list)) .day-report-foot{justify-content:flex-start}}
+ .day-grid.solo .report-notes{grid-column:1/-1}.day-grid.solo .day-report:not(:has(.team-list)) .day-report-foot{justify-content:flex-start}
+ .day-path .day-sec-head .day-chips{order:0}}
 /* The day's controls sit in the page head's action area, like the buttons of the other pages, and wrap rather than scroll. */
 /* The day head: a fixed grid in every view. The views sit in the same place whatever is showing, the controls have
    fixed slots (the day's arrows and date, then whose work), and the line under the title stays on one line, so
@@ -1402,7 +1403,7 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .mission-form>.field>span:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .mission-form>.field .date-picker-control>.icon-btn{display:none}.mission-form .date-picker-button{height:34px}
 .mission-form>input[type=time]{width:110px;flex:0 0 auto}.mission-form>input:not([type=time]){flex:1 1 140px}.mission-form select{flex:0 1 220px}
-@media(min-width:1001px) and (max-width:1500px){.day-add>span{display:none}.day-add{padding:4px 9px}}
+
 /* Pages opened from «مهام اليوم والتقرير» lead back to it: a link in the path and a button above the page. */
 .crumb-link{all:unset;cursor:pointer;color:var(--muted-foreground)}.crumb-link:hover{color:var(--brand);text-decoration:underline}.crumb-link:focus-visible{outline:2px solid var(--ring);border-radius:4px}
 .back-to-day{align-self:flex-start;min-height:32px;padding:4px 12px;margin-bottom:8px;font-size:13px}
@@ -1439,20 +1440,27 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 #instant-screen.leaving{opacity:0;pointer-events:none}
 body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 
-/* «خطوات اليوم» and the line under the head of every daily view: what the view is for and what to do next. The step
-   to do now is outlined, finished ones are ticked, and a click goes to the place where the step is done. */
-.day-guide{display:flex;gap:8px;margin:0 0 10px;padding:0;list-style:none;flex-shrink:0;height:52px}
-.day-guide>li{flex:1 1 0;min-width:0}
-.day-step{width:100%;height:100%;display:flex;align-items:center;gap:10px;text-align:start;padding:7px 12px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:inherit}
-.day-step:hover{border-color:color-mix(in srgb,var(--brand) 45%,var(--border))}
-.day-step-n{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:color-mix(in srgb,var(--foreground) 8%,transparent);color:var(--muted-foreground)}
-.day-step.now{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 16%,transparent)}.day-step.now .day-step-n{background:var(--brand);color:#fff}
-.day-step.done .day-step-n{background:color-mix(in srgb,#2f7d57 16%,transparent);color:#2f7d57}.day-step.done b{color:var(--muted-foreground)}
-.day-step-text{display:flex;flex-direction:column;min-width:0;line-height:1.5}.day-step-text b{font-size:13px}
-.day-step-text small{font-size:11.5px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.day-purpose{display:flex;gap:8px;align-items:center;margin:0 0 10px;padding:8px 12px;height:52px;box-sizing:border-box;border-radius:12px;background:color-mix(in srgb,var(--brand) 6%,var(--card));border:1px solid var(--border);font-size:13px;flex-shrink:0}
-.day-purpose>svg{flex:none;color:var(--brand)}
-.day-empty-action{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}.day-empty-action p{max-width:46ch;margin:0;line-height:1.9}
-.day-flash{animation:day-flash 1.2s ease-out}
-@keyframes day-flash{0%{box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 45%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
-@container day (max-width:760px){.day-guide{flex-direction:column;gap:6px}.day-step-text small{white-space:normal}.day-guide,.day-purpose{height:auto}}
+/* The line under the head of every daily view: what the view is for and what to press. One height in every view. */
+.day-purpose{display:flex;gap:8px;align-items:center;margin:0 0 10px;padding:8px 12px;height:44px;box-sizing:border-box;border-radius:12px;background:color-mix(in srgb,var(--brand) 6%,var(--card));border:1px solid var(--border);font-size:13px;flex-shrink:0}
+.day-purpose>svg{flex:none;color:var(--brand)}.day-purpose>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.day-purpose .day-purpose-act{margin-inline-start:auto;min-height:30px;padding:3px 10px;flex:none}
+.day-empty-action{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}.day-empty-action p{max-width:52ch;margin:0;line-height:1.9}
+/* The day as one column read from the top: numbered sections in one scrolling panel, their heads staying in view, and
+   for one's own report a bar fixed at the bottom with what it holds and the buttons to save and send it. */
+.day-path{display:flex;flex-direction:column;min-height:0;height:100%;margin:0;overflow:hidden}
+.day-path-body{flex:1 1 auto;min-height:0;overflow:auto;padding:0 18px 14px}
+.day-path .day-sec{display:block;overflow:visible;max-width:1180px;margin-inline:auto;padding:0 0 14px}
+.day-path .day-sec+.day-sec{border-top:1px dashed var(--border);padding-top:4px}
+.day-sec-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:2;padding:10px 0 8px;background:var(--card)}
+.day-sec-head h2{display:flex;align-items:center;gap:8px;font-size:16px;margin:0}.day-sec-head .actions{margin-inline-start:auto;display:flex;gap:6px}
+.day-sec-n{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--brand);color:#fff;font-size:13px;font-weight:700}
+.day-path .day-list,.day-path .day-report-body{overflow:visible;padding:0;max-height:none}
+.day-path .day-sec-head>.day-chips{flex:1 1 auto}
+.part-adds{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}.part-adds .part-add{padding:4px 12px;border:1px dashed color-mix(in srgb,var(--brand) 40%,var(--border));border-radius:999px;font-weight:600}
+.day-report-sec .report-hint{margin:0 0 6px}
+.day-bar{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 18px;border-top:1px solid var(--border);background:color-mix(in srgb,var(--brand) 5%,var(--card));flex-shrink:0}
+.day-bar .day-summary{margin:0;padding:0;background:none}.day-bar .day-summary>b{display:none}
+.day-bar>.actions{margin-inline-start:auto;display:flex;gap:6px;align-items:center}.day-bar .btn{min-height:36px;white-space:nowrap}
+.team-board th,.team-board td{vertical-align:middle;white-space:nowrap}.team-board td .ok{color:#2f7d57;font-weight:600}.team-board td.late{color:#a32e38;font-weight:700}
+.team-board .team-board-acts{display:flex;gap:6px;justify-content:flex-end}.team-board-acts .btn{min-height:32px;padding:3px 10px}
+@container day (max-width:760px){.day-path{overflow:visible;height:auto}.day-path-body{overflow:visible}.day-purpose{height:auto}.day-purpose>span{white-space:normal}.day-path-body{padding:0 10px 10px}.day-bar{padding:8px 10px}.day-bar .day-summary{display:none}.day-bar>.actions{margin-inline-start:0;flex:1}.day-bar>.actions .btn.primary{flex:1}}
