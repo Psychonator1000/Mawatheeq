@@ -11,6 +11,7 @@ import SharedApp from './shared-app';
 import { applyAppearance, loadAppearance, onThemeChange } from '@/lib/appearance';
 import { syncThemeStyles } from '@/components/theme-styles';
 import ErrorBoundary, { reloadForUpdate } from '@/components/error-boundary';
+import { startInstant } from '@/lib/instant';
 
 // Apply saved theme and motion choices before the first paint.
 onThemeChange(syncThemeStyles);
@@ -18,6 +19,8 @@ applyAppearance(loadAppearance());
 // After a new version is published, a page that was already open cannot load parts it has not used yet; reload it.
 window.addEventListener('vite:preloadError', event => { if (reloadForUpdate()) event.preventDefault(); });
 
+// The last screen, already showing, gives way as soon as the live page is ready.
+startInstant();
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider attribute="class" forcedTheme="light">
