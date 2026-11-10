@@ -12,7 +12,7 @@ import {workspaceStorageKey} from '@/lib/departments';
 import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, isSwitchedSession, returnToOwner, type LocalUser } from '@/lib/local-auth';
 import type { Permissions } from '@/lib/permissions';
 import { cachedUser, cachedAccess, rememberUser, rememberAccess } from '@/lib/boot-cache';
-import { toolOff } from '@/lib/view-map';
+import { canSee, effectiveView, toolOff } from '@/lib/view-map';
 import BrandLogo from '@/components/brand-logo';
 import { userIdle } from '@/lib/live';
 
@@ -109,7 +109,7 @@ export default function SharedApp() {
   const passwordForm = user && (passwordRequired || changingPassword);
   if (ready && user && !passwordForm) return <AccountContext.Provider value={{ username: user.username, busy, onChangePassword: () => { setChangingPassword(true); setMessage(''); setError(''); }, onLogout: () => void logout() }}>
     <MotionLayer />
-    <Suspense fallback={null}>{!toolOff(cachedAccess(),'chat')&&<Chat userId={user.id} />}<PaperFiles userId={user.id} /></Suspense>
+    <Suspense fallback={null}>{!toolOff(cachedAccess(),'chat')&&<Chat userId={user.id} />}{canSee(effectiveView(cachedAccess()||{}),'page:paper')&&<PaperFiles userId={user.id} />}</Suspense>
     <ConnectionStatus />
     {user.role !== 'owner' && isSwitchedSession() && <div className="switch-banner" role="status"><span>أنت الآن داخل حساب <b dir="ltr">{user.username}</b> بصلاحياته فقط.</span><button className="btn" disabled={busy} onClick={() => { setBusy(true); backToStaffList(); void returnToOwner().finally(() => setBusy(false)); }}>العودة إلى حسابي</button></div>}
     <AuthorizedWorkspace key={user.id} owner={user.role==='owner'} />
