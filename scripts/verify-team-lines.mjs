@@ -66,4 +66,25 @@ assert.deepEqual((await seen(head)).reports,names(head,lead,a,other),'Every leve
 assert.equal((await daily(a.token,'team')).leads,true,'Whoever has someone under him leads');
 await db.exec('reset role');const ownerId=(await db.query("select user_id from public.mawatheeq_members where role='owner'")).rows[0].user_id;await db.exec('set role anon');
 await assert.rejects(()=>set(admin.token,ownerId,head.id),/المالك/);
-console.log('Passed team lines: leads read their team down the line and themselves, the head reads the leads and their teams, nobody reads above or beside, no loops, only the owner or a staff admin changes the lines.');
+// «الأقسام»: a section under the head holds lawyer_b; the head oversees him through it, the lead does not.
+let chart=await daily(owner.token,'save_area',{name:'المحامون',role:'lawyer',parentUser:head.id});
+const area=chart.areas.find(x=>x.name==='المحامون');assert.equal(area.parentUser,head.id);assert.equal(area.role,'lawyer');
+await daily(owner.token,'set_manager',{userId:b.id,areaId:area.id});
+assert.ok((await seen(head)).reports.includes('lawyer_b'),'Whoever a section sits under oversees everyone inside it');
+assert.ok(!(await seen(lead)).reports.includes('lawyer_b'));
+await denied(()=>daily(b.token,'list',{from:day,to:day}));
+// Sections move: under lawyer_a, lawyer_a now oversees lawyer_b; a section cannot go under someone inside it.
+chart=await daily(owner.token,'save_area',{id:area.id,name:'المحامون',role:'lawyer',parentUser:a.id});
+assert.ok((await seen(a)).reports.includes('lawyer_b'));
+await assert.rejects(()=>daily(owner.token,'save_area',{id:area.id,name:'المحامون',parentUser:b.id}),/لا يوضع قسم/);
+await assert.rejects(()=>daily(owner.token,'set_manager',{userId:a.id,areaId:area.id}),/لا يتبع أحد/,'Nobody goes into a section under himself');
+const inner=(await daily(owner.token,'save_area',{name:'متدربون',parentArea:area.id})).areas.find(x=>x.name==='متدربون');
+await assert.rejects(()=>daily(owner.token,'save_area',{id:area.id,name:'المحامون',parentArea:inner.id}),/لا يوضع قسم/);
+await denied(()=>daily(lead.token,'save_area',{name:'قسمي'}));
+await assert.rejects(()=>daily(owner.token,'save_area',{name:'  '}),/اكتب اسماً/);
+// Removing a section moves whoever was in it up to where the section was.
+chart=await daily(owner.token,'delete_area',{id:area.id});
+assert.deepEqual(chart.lines.find(l=>l.userId===b.id),{userId:b.id,managerId:a.id,areaId:null},'Moved up to the section\'s place');
+assert.equal(chart.areas.find(x=>x.id===inner.id).parentUser,a.id,'Inner sections move up too');
+assert.ok((await seen(a)).reports.includes('lawyer_b'));
+console.log('Passed team lines: leads read their team down the line and themselves, the head reads the leads and their teams, nobody reads above or beside, no loops, only the owner or a staff admin changes the lines; sections hold people and sections, whoever a section sits under oversees everyone in it, sections move without loops and their people move up when one is removed.');

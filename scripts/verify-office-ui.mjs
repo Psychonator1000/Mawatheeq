@@ -208,6 +208,22 @@ try{
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');await card.waitFor({state:'hidden'}).catch(()=>{});
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:artifacts+'/team-tree-mobile.png'});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'No page-wide sideways scroll');await page.setViewportSize({width:1440,height:1000});
+  // «الأقسام»: a section «المحامون» picked as lawyers' work, under ui_clerk; salem.ui dragged into it; ui_clerk still
+  // oversees him through it; removing the section puts salem.ui back under ui_clerk.
+  await page.getByRole('button',{name:'إضافة قسم',exact:true}).click();const ad=page.getByRole('dialog');
+  await ad.getByRole('radio',{name:'محامٍ',exact:true}).click();assert.equal(await ad.getByLabel('اسم القسم').inputValue(),'المحامون','Named after the work');
+  const where=ad.getByRole('combobox',{name:'مكان القسم'});await where.click();await where.fill('ui_clerk');await page.getByRole('option',{name:/ui_clerk/}).click();
+  await page.waitForTimeout(300);await page.screenshot({path:artifacts+'/team-area-dialog.png'});
+  await ad.getByRole('button',{name:'إضافة القسم',exact:true}).click();await ad.waitFor({state:'hidden'});
+  const area=tree.locator('.org-area[data-area="المحامون"]');await area.waitFor();
+  await box('salem.ui').dragTo(area);await page.getByText(/تحت قسم «المحامون» الآن/).waitFor();
+  await tree.locator('li:has(> .org-area[data-area="المحامون"]) .org-box[data-person="salem.ui"]').waitFor();
+  assert.match(await box('ui_clerk').innerText(),/يشرف على شخص واحد/,'Oversees him through the section');
+  await page.screenshot({path:artifacts+'/team-tree-area.png'});
+  await db.exec('reset role');const inArea=(await db.query("select a.username u,t.manager_id,ar.name from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.team_areas ar on ar.id=t.area_id")).rows;await db.exec('set role anon');
+  assert.deepEqual(inArea,[{u:'salem.ui',manager_id:null,name:'المحامون'}]);
+  await area.click();page.once('dialog',d=>void d.accept());await page.getByRole('dialog').getByRole('button',{name:'حذف القسم',exact:true}).click();await page.getByText('حُذف القسم.').waitFor();
+  await tree.locator('li:has(> .org-box[data-person="ui_clerk"]) .org-box[data-person="salem.ui"]').waitFor();
   await page.getByRole('tab',{name:'القائمة',exact:true}).click();}
  // Every page in the side list can be hidden, the day's page and «ملفاتي الورقية» too: gone from that account's menu.
  {await page.getByRole('button',{name:'تطبيق على عدة حسابات',exact:true}).click();const dlg=page.getByRole('dialog');
