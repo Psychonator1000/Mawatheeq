@@ -10,7 +10,7 @@ import {officeRequest} from '@/lib/local-auth';
 import {officePages} from '@/lib/office-api';
 import type {OfficeContext,WorkItem} from '@/lib/office';
 import {Toaster} from '../ui/sonner';
-import {readSnapshot,writeSnapshot} from '@/lib/boot-cache';
+import {peekSnapshot,readSnapshot,writeSnapshot} from '@/lib/boot-cache';
 import {EditorDialog,StatusMessage} from './shared';
 import {clientName} from '@/lib/clients';
 // Departments load on demand.
@@ -25,14 +25,19 @@ import BrandLogo from '../brand-logo';
 // Sections laid out to fit one screen, their lists scrolling inside their panels.
 const DESKS:Department[]=['secretary','collections','hr','archive','accounting'];
 export default function DepartmentWorkspace({workspace,access}:{workspace:Department;access:Permissions}) {
- const [cases,setCases]=useState<CaseSummary[]>([]),[context,setContext]=useState<OfficeContext|null>(null),[work,setWork]=useState<WorkItem[]>([]);
- const [version,setVersion]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState(''),[selected,setSelected]=useState<CaseSummary|null>(null);
- useEffect(()=>{let active=true;setLoading(true);setError('');
-  // The last copy of the case list shows at once while the server's copy loads (not for the secretary desk, which also waits on its work list).
+ // What this workspace showed earlier in the visit draws at once; the secretary desk also needs its office and work lists.
+ const kept=()=>{const c=peekSnapshot<CaseSummary[]>('dept-cases:'+workspace);if(!c)return null;if(workspace!=='secretary')return {c,ctx:null,w:[] as WorkItem[]};
+  const ctx=peekSnapshot<OfficeContext>('dept-context:secretary'),w=peekSnapshot<WorkItem[]>('dept-work:secretary');return ctx&&w?{c,ctx,w}:null};
+ const [cases,setCases]=useState<CaseSummary[]>(()=>kept()?.c||[]),[context,setContext]=useState<OfficeContext|null>(()=>kept()?.ctx||null),[work,setWork]=useState<WorkItem[]>(()=>kept()?.w||[]);
+ const [version,setVersion]=useState(0),[loading,setLoading]=useState(()=>!kept()),[error,setError]=useState(''),[selected,setSelected]=useState<CaseSummary|null>(null);
+ useEffect(()=>{let active=true;setLoading(!kept()&&workspace!=='hr');setError('');
+  // The last copy shows at once while the server's copy loads (for the secretary desk with its office and work lists).
   let fresh=false;
-  if(workspace!=='hr'&&workspace!=='secretary')void readSnapshot<CaseSummary[]>('dept-cases:'+workspace).then(c=>{if(active&&c&&!fresh){setCases(c);setLoading(false)}});
-  Promise.all([workspace==='hr'?[]:departmentCases(workspace),workspace==='secretary'?officeRequest<OfficeContext>('context'):null,workspace==='secretary'?officePages<WorkItem>('work_page'):[]]).then(([c,ctx,w])=>{fresh=true;if(active){setCases(c);setContext(ctx);setWork(w);if(workspace!=='hr')void writeSnapshot('dept-cases:'+workspace,c)}}).catch(e=>{if(active){setCases([]);setWork([]);setError(e.message)}}).finally(()=>{if(active)setLoading(false)});
+  if(workspace!=='hr')void Promise.all([readSnapshot<CaseSummary[]>('dept-cases:'+workspace),workspace==='secretary'?readSnapshot<OfficeContext>('dept-context:secretary'):null,workspace==='secretary'?readSnapshot<WorkItem[]>('dept-work:secretary'):[]])
+   .then(([c,ctx,w])=>{if(active&&c&&!fresh&&(workspace!=='secretary'||(ctx&&w))){setCases(c);if(workspace==='secretary'){setContext(ctx);setWork(w||[])}setLoading(false)}});
+  Promise.all([workspace==='hr'?[]:departmentCases(workspace),workspace==='secretary'?officeRequest<OfficeContext>('context'):null,workspace==='secretary'?officePages<WorkItem>('work_page'):[]]).then(([c,ctx,w])=>{fresh=true;if(active){setCases(c);setContext(ctx);setWork(w);if(workspace!=='hr')void writeSnapshot('dept-cases:'+workspace,c);if(workspace==='secretary'){void writeSnapshot('dept-context:secretary',ctx);void writeSnapshot('dept-work:secretary',w)}}}).catch(e=>{if(active&&!kept()){setCases([]);setWork([]);setError(e.message)}else if(active)setError(e.message)}).finally(()=>{if(active)setLoading(false)});
   return()=>{active=false};
+ // eslint-disable-next-line react-hooks/exhaustive-deps -- `kept` reads the copies of this workspace, which is listed
  },[workspace,version]);
  const refresh=()=>setVersion(v=>v+1),meta=WORKSPACES[workspace];
  // «البريد» is a page of every workspace, opened from its tab or from the mail icon.

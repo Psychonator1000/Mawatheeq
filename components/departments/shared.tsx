@@ -7,10 +7,11 @@ import {clientName} from '@/lib/clients';
 import {saveBlob} from '../shared';
 import {RecordHistory} from '../office-shared';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '../ui/dialog';
-import {readSnapshot,writeSnapshot} from '@/lib/boot-cache';
+import {peekSnapshot,readSnapshot,writeSnapshot} from '@/lib/boot-cache';
 export function useRecords<P>(workspace:Department) {
- const [rows,setRows]=useState<DepartmentRecord<P>[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[version,setVersion]=useState(0);
- useEffect(()=>{let active=true,fresh=false;setLoading(true);setError('');
+ // A copy already read in this visit shows at once (no loading line); the server's copy replaces it when it comes.
+ const [rows,setRows]=useState<DepartmentRecord<P>[]>(()=>peekSnapshot<DepartmentRecord<P>[]>('dept:'+workspace)||[]),[loading,setLoading]=useState(()=>!peekSnapshot('dept:'+workspace)),[error,setError]=useState(''),[version,setVersion]=useState(0);
+ useEffect(()=>{let active=true,fresh=false;setLoading(!peekSnapshot('dept:'+workspace));setError('');
   // Show the last copy at once while the server's copy loads.
   void readSnapshot<DepartmentRecord<P>[]>('dept:'+workspace).then(r=>{if(active&&r&&!fresh){setRows(r);setLoading(false)}});
   departmentPages<DepartmentRecord<P>>(workspace,'records_page').then(r=>{fresh=true;if(active){setRows(r);void writeSnapshot('dept:'+workspace,r)}}).catch(e=>{if(active){setRows([]);setError(e.message)}}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[workspace,version]);

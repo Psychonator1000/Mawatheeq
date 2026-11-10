@@ -29,17 +29,29 @@ export const ENTRY_TYPES = {fee:'أتعاب مستحقة',receipt:'مقبوضا�
 export const LEAVE_STATUSES = {pending:'بانتظار القرار',approved:'معتمدة',rejected:'مرفوضة',cancelled:'ملغاة'};
 export const workspaceStorageKey='mawatheeq.workspace.v1';
 export async function departmentPages<T>(workspace:Department,action:string,data:Record<string,unknown>={},size=500):Promise<T[]> {
- const rows:T[]=[];
- for(let offset=0;;offset+=size){const page=await departmentRequest<T[]>(action,{...data,workspace,offset});rows.push(...page);if(page.length<size)return rows;}
+ return pagesInParallel<T>(offset=>departmentRequest<T[]>(action,{...data,workspace,offset,limit:2000}),size);
+}
+/**
+ * Every page of a list, asking for 2000 at a time and, after the first, three pages at once: the archive's 7,000 files
+ * come in two rounds instead of fifteen requests made one after another. A server that answers fewer per page (500,
+ * or `size` for lists without larger pages) is followed page by page in the same way.
+ */
+async function pagesInParallel<T>(ask:(offset:number)=>Promise<T[]>,size:number):Promise<T[]> {
+ const first=await ask(0),step=first.length>=2000?2000:first.length===size?size:0;
+ if(!step)return first;
+ const rows=[...first];
+ for(let offset=step;;offset+=3*step){
+  const batch=await Promise.all([0,1,2].map(i=>ask(offset+i*step)));
+  for(const page of batch)rows.push(...page);
+  if(batch.some(page=>page.length<step))return rows;
+ }
 }
 /**
  * The cases a department screen may link to, 2000 at a time. A server without the larger batches answers 500 at a
  * time; a full batch of either size means there may be more.
  */
 export async function departmentCases(workspace:Department):Promise<CaseSummary[]> {
- const rows:CaseSummary[]=[];
- for(let offset=0;;){const page=await departmentRequest<CaseSummary[]>('cases_page',{workspace,offset,limit:2000});rows.push(...page);offset+=page.length;
-  if(!page.length||(page.length<2000&&page.length%500))return rows;}
+ return pagesInParallel<CaseSummary>(offset=>departmentRequest<CaseSummary[]>('cases_page',{workspace,offset,limit:2000}),500);
 }
 export function newDepartmentRecord<P>(workspace:DepartmentRecord['workspace'],kind:DepartmentRecord['kind'],payload:P):DepartmentRecord<P> {
  return {id:crypto.randomUUID(),workspace,kind,caseId:'',subjectId:'',payload,revision:0,archived:false,review:null,createdAt:'',updatedAt:'',createdBy:'',updatedBy:''};
