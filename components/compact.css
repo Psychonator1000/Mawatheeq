@@ -1485,7 +1485,7 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 
 /* «فريق المكتب» as a tree: boxes joined by lines from the top down. The layout runs left to right (so the joining
    lines are simple) with the branches put in right-to-left order; the text in each box stays right to left. */
-.org-tree{direction:ltr;overflow:auto;padding:8px 4px 16px;max-height:calc(100vh - 230px);--org-line:color-mix(in srgb,var(--brand) 32%,var(--border))}
+.org-tree{direction:ltr;overflow:auto;padding:8px 4px 16px;height:max(420px,calc(100vh - 250px));cursor:grab;overscroll-behavior:contain;--org-line:color-mix(in srgb,var(--brand) 32%,var(--border))}
 .org-tree ul{display:flex;justify-content:center;align-items:flex-start;list-style:none;margin:0;padding:18px 0 0;position:relative}
 .org-tree .org-root{padding-top:0;width:max-content;min-width:100%}
 .org-tree li{display:flex;flex-direction:column;align-items:center;position:relative;padding:18px 6px 0}
@@ -1560,3 +1560,14 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .org-choice{width:min(560px,calc(100vw - 32px));max-width:none}
 .org-choice-options{display:grid;gap:8px}.org-choice-opt{display:grid;gap:2px;text-align:right;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--card);cursor:pointer}
 .org-choice-opt:hover{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,var(--card))}.org-choice-opt b{font-size:14px}.org-choice-opt small{color:var(--muted-foreground)}
+
+/* The tree as a map: zoom buttons over its corner; dragging an empty spot moves it. */
+.org-tree-wrap{position:relative;min-width:0}
+.org-tree{border:1px solid color-mix(in srgb,var(--brand) 12%,var(--border));border-radius:14px;background:color-mix(in srgb,var(--brand) 2%,transparent)}
+.org-tree.panning{cursor:grabbing;user-select:none}.org-tree .org-box{cursor:pointer}.org-tree .org-box[draggable=true]{cursor:grab}
+.org-zoom{position:absolute;top:8px;left:8px;z-index:5;display:flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--border);border-radius:999px;background:var(--card);box-shadow:0 4px 14px -6px rgb(40 20 15/.25)}
+.org-zoom .icon-btn{width:28px;height:28px}.org-zoom-value{min-width:46px;border:0;background:none;font-size:12px;font-weight:600;color:var(--muted-foreground);cursor:pointer}
+/* Dropping beside a box: a bar on the side it will take; in its middle: under it, with a label saying so. */
+.org-box.drop-before::after,.org-box.drop-after::after{content:'';position:absolute;top:8%;height:84%;width:4px;border-radius:4px;background:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)}
+.org-box.drop-before::after{right:-7px}.org-box.drop-after::after{left:-7px}
+.org-drop-label{position:absolute;inset-inline:0;bottom:-11px;margin:auto;width:max-content;padding:1px 10px;border-radius:999px;background:var(--brand);color:var(--brand-foreground,#fff);font-size:11px;font-weight:600;z-index:3}

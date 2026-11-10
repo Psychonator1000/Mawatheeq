@@ -111,4 +111,10 @@ chart=await daily(owner.token,'add_extra',{userId:other.id,areaId:coll.id});asse
 chart=await daily(owner.token,'remove_extra',{userId:other.id,areaId:coll.id});assert.deepEqual(chart.extras,[]);
 await daily(owner.token,'add_extra',{userId:other.id,areaId:coll.id});chart=await daily(owner.token,'delete_area',{id:coll.id});
 assert.deepEqual(chart.extras,[],'A removed section takes its extra members with it');
+// The order of boxes side by side: «set_order» gives them positions in the order sent; only managers arrange them.
+chart=await daily(owner.token,'set_order',{nodes:['u:'+b.id,'u:'+a.id,'not-a-node']});
+assert.deepEqual(chart.order,{['u:'+b.id]:0,['u:'+a.id]:1},'Positions in the order sent; anything else ignored');
+chart=await daily(owner.token,'set_order',{nodes:['u:'+a.id,'u:'+b.id]});assert.deepEqual([chart.order['u:'+a.id],chart.order['u:'+b.id]],[0,1]);
+await denied(()=>daily(lead.token,'set_order',{nodes:['u:'+a.id]}));
+await assert.rejects(()=>daily(owner.token,'set_order',{nodes:'x'}),/ترتيب غير صالح/);
 console.log('Passed team lines: leads read their team down the line and themselves, the head reads the leads and their teams, nobody reads above or beside, no loops, only the owner or a staff admin changes the lines; sections hold people and sections, whoever a section sits under oversees everyone in it, sections move without loops and their people move up when one is removed.');

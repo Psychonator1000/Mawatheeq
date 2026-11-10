@@ -195,6 +195,22 @@ try{
  {await page.getByRole('tab',{name:'الهيكل',exact:true}).click();const tree=page.locator('.org-tree');await tree.waitFor();
   const box=u=>tree.locator(`.org-box[data-person="${u}"]`);
   assert.equal(await box('ui_owner').count(),0,'The program\'s owner account is not a person in the tree');
+  // Like icons on a phone: dropped on the side of ui_clerk, salem.ui takes the place beside him (saved), and nobody
+  // reports to anybody; only the middle of a box puts one under the other.
+  {const b=await box('ui_clerk').boundingBox();await box('salem.ui').dragTo(box('ui_clerk'),{targetPosition:{x:b.width*0.92,y:b.height/2}});
+   let order=[];for(let i=0;i<40;i++){order=await tree.locator('.org-tray .org-box').evaluateAll(e=>e.map(x=>x.dataset.person));if(order.indexOf('salem.ui')===order.indexOf('ui_clerk')-1)break;await page.waitForTimeout(100)}
+   assert.equal(order.indexOf('salem.ui'),order.indexOf('ui_clerk')-1,'Placed just before him');
+   await db.exec('reset role');assert.equal((await db.query('select count(*)::int n from mawatheeq_private.team_lines')).rows[0].n,0,'Nobody under anybody');
+   assert.equal((await db.query('select count(*)::int n from mawatheeq_private.team_order')).rows[0].n>=2,true,'The order is kept');await db.exec('set role anon');}
+  // The tree as a map: the wheel zooms (around the pointer), the buttons too, and dragging an empty spot moves it.
+  {const zv=page.locator('.org-zoom-value');await page.locator('.org-zoom').getByRole('button',{name:'تصغير'}).click();assert.notEqual(await zv.innerText(),'100٪');
+   const t=await tree.boundingBox();await page.mouse.move(t.x+t.width/2,t.y+t.height-30);await page.mouse.wheel(0,-300);
+   await page.waitForTimeout(150);const z1=await zv.innerText();await page.mouse.wheel(0,600);await page.waitForTimeout(150);assert.notEqual(await zv.innerText(),z1,'The wheel zooms');
+   await zv.click();assert.equal(await zv.innerText(),'100٪');
+   await page.locator('.org-zoom').getByRole('button',{name:'تكبير'}).click();await page.locator('.org-zoom').getByRole('button',{name:'تكبير'}).click();
+   const before=await tree.evaluate(e=>[e.scrollLeft,e.scrollTop]);await page.mouse.move(t.x+20,t.y+t.height-20);await page.mouse.down();await page.mouse.move(t.x+220,t.y+t.height-120,{steps:6});await page.mouse.up();
+   assert.notDeepEqual(await tree.evaluate(e=>[e.scrollLeft,e.scrollTop]),before,'Dragging an empty spot moves the tree');
+   await zv.click();}
   await box('salem.ui').dragTo(box('ui_clerk'));await page.getByText(/يتبع الآن/).waitFor();
   await tree.locator('li:has(> .org-box[data-person="ui_clerk"]) .org-box[data-person="salem.ui"]').waitFor();
   assert.match(await box('ui_clerk').innerText(),/مسؤول عن شخص واحد/);

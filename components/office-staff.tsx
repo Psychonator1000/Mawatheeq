@@ -70,15 +70,21 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
   void move(node,target);
  }
  // Moving a box moves everything under it; the server refuses putting anything under something it holds.
- async function move(node:string,target:string|null){
+ async function move(node:string,target:string|null):Promise<boolean>{
   const nextChart={...chart,extras:(chart.extras||[]).filter(x=>!(node==='u:'+x.userId&&target==='a:'+x.areaId))};
   const changes=changesFor(movedParents(parent,node,target),nextChart);
   const to=place(target);setTreeBusy(true);
   try{setChart(node.startsWith('u:')?await dailyRequest<TeamChart>('set_manager',{userId:node.slice(2),managerId:to.user,areaId:to.area})
     :await (()=>{const a=areaOf(node.slice(2))!;return dailyRequest<TeamChart>('save_area',{id:a.id,name:a.name,role:a.role,parentUser:to.user,parentArea:to.area})})());
    toast.success(!target?`${labelOf(node)} في أعلى الهيكل الآن`:node.startsWith('u:')&&target.startsWith('u:')?`${labelOf(node)} يتبع الآن ${labelOf(target)}`:`${labelOf(node)} تحت ${labelOf(target)} الآن`);
-   await applyChanges(changes)}
-  catch(e){toast.error((e as Error).message)}finally{setTreeBusy(false)}
+   await applyChanges(changes);return true}
+  catch(e){toast.error((e as Error).message);return false}finally{setTreeBusy(false)}
+ }
+ // Dropped beside a box (as icons on a phone): it takes that place among the boxes of that head, moving there first
+ // when it was under someone else.
+ async function arrange(node:string,up:string|null,order:string[]){
+  if((parent.get(node)||null)!==up&&!await move(node,up))return;
+  try{setChart(await dailyRequest<TeamChart>('set_order',{nodes:order}))}catch(e){toast.error((e as Error).message)}
  }
  // A section a person belongs to besides their main place: a line from them to it in the tree.
  async function extra(userId:string,areaId:string,add:boolean){
@@ -170,7 +176,7 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
  return <section className="panel office-staff"><div className="panel-head"><div><h2>فريق المكتب والصلاحيات</h2><p className="panel-note">المالك ومن مُنح «إدارة الموظفين والصلاحيات» ينشئون المستخدمين ويحددون الأقسام والقضايا والعمليات وصلاحيات الإدارة.</p></div><div className="actions"><div className="seg staff-view" role="tablist" aria-label="عرض الفريق">{([['tree','الهيكل'],['list','القائمة']] as const).map(([k,l])=><button key={k} type="button" role="tab" aria-selected={view===k} className={'seg-opt'+(view===k?' on show':'')} onClick={()=>show(k)}>{l}</button>)}</div>{view==='tree'&&<button className="btn" disabled={treeBusy} onClick={()=>setAreaEdit('new')} title="صندوق لنوع من العمل (المحامون، المحاسبة…) تسحب إليه الموظفين">إضافة قسم</button>}<button className="btn" disabled={busy||!bulkMembers.length} onClick={()=>setBulk(true)}>تطبيق على عدة حسابات</button>{unscoped.length>0&&<button className="btn" disabled={busy} onClick={()=>void scopeLawyers()}>كل محامٍ يرى قضاياه فقط ({unscoped.length})</button>}<button className="btn" onClick={()=>setLawyers(true)}>حسابات المحامين</button><button className="btn primary" onClick={()=>open('new')}>إضافة موظف</button></div></div>
  {bulk&&<BulkAccess members={bulkMembers} onClose={()=>setBulk(false)} onDone={onChanged}/>}
  {lawyers&&<LawyerAccounts members={context.members} records={records} onClose={()=>setLawyers(false)} onCreated={onChanged}/>}
- <div className="panel-body"><p className="subtitle">حسابات محلية دون بريد إلكتروني. تبدأ الحسابات الجديدة بلا صلاحيات حتى تختارها. تغيير الصلاحيات أو إيقاف الحساب ينهي جلساته الحالية.</p><div className="staff-search searchbox"><Search size={16}/><input aria-label="بحث في فريق المكتب" placeholder="ابحث باسم المستخدم أو اسم الموظف…" value={staffSearch} onChange={e=>setStaffSearch(e.target.value)}/>{staffSearch&&<small>{shownMembers.length} من {context.members.length}</small>}</div>{view==='list'?<div className="table-wrap"><table className="office-table"><thead><tr><th>اسم المستخدم</th><th>الوصول</th><th>الحالة</th><th>إدارة الحساب</th></tr></thead><tbody>{shownMembers.map(m=><tr key={m.id}><td><span dir="ltr">{m.username}</span>{m.displayName&&<small>{m.displayName}</small>}</td><td>{accessOf(m)}</td><td>{m.enabled?'فعال':'موقوف'}{m.mustChangePassword?' · يلزم تغيير كلمة المرور':''}</td><td>{actionsOf(m)}</td></tr>)}</tbody></table></div>:<div className={'org-layout'+(personPanel?' with-panel':'')}><OrgTree members={context.members.filter(m=>m.role==='owner'||m.permissions?.accountKind!=='client')} chart={chart} search={staffSearch} selected={person?.id||(areaEdit&&areaEdit!=='new'?'a:'+areaEdit.id:'')} onPick={setPerson} onPickArea={setAreaEdit} onMove={drop} canMove={m=>m.role!=='owner'&&!treeBusy}/>{personPanel}</div>}</div>
+ <div className="panel-body"><p className="subtitle">حسابات محلية دون بريد إلكتروني. تبدأ الحسابات الجديدة بلا صلاحيات حتى تختارها. تغيير الصلاحيات أو إيقاف الحساب ينهي جلساته الحالية.</p><div className="staff-search searchbox"><Search size={16}/><input aria-label="بحث في فريق المكتب" placeholder="ابحث باسم المستخدم أو اسم الموظف…" value={staffSearch} onChange={e=>setStaffSearch(e.target.value)}/>{staffSearch&&<small>{shownMembers.length} من {context.members.length}</small>}</div>{view==='list'?<div className="table-wrap"><table className="office-table"><thead><tr><th>اسم المستخدم</th><th>الوصول</th><th>الحالة</th><th>إدارة الحساب</th></tr></thead><tbody>{shownMembers.map(m=><tr key={m.id}><td><span dir="ltr">{m.username}</span>{m.displayName&&<small>{m.displayName}</small>}</td><td>{accessOf(m)}</td><td>{m.enabled?'فعال':'موقوف'}{m.mustChangePassword?' · يلزم تغيير كلمة المرور':''}</td><td>{actionsOf(m)}</td></tr>)}</tbody></table></div>:<div className={'org-layout'+(personPanel?' with-panel':'')}><OrgTree members={context.members.filter(m=>m.role==='owner'||m.permissions?.accountKind!=='client')} chart={chart} search={staffSearch} selected={person?.id||(areaEdit&&areaEdit!=='new'?'a:'+areaEdit.id:'')} onPick={setPerson} onPickArea={setAreaEdit} onMove={drop} onArrange={(n,u,o)=>void arrange(n,u,o)} canMove={m=>m.role!=='owner'&&!treeBusy}/>{personPanel}</div>}</div>
  {choice&&(()=>{const who=nameOf(choice.node.slice(2)),a=areaOf(choice.target.slice(2));const ws=a?.workspace?WORKSPACE_LABELS[a.workspace].split(' (')[0]:a?.name;
   return <Dialog open onOpenChange={v=>{if(!v)setChoice(null)}}><DialogContent dir="rtl" className="office-dialog org-choice">
    <DialogHeader><DialogTitle>{who} و{labelOf(choice.target)}</DialogTitle><DialogDescription>هو الآن في {wsLabel(workspacesFor(parent,chart,choice.node.slice(2))).replace(/ فقط$/,'')}. ماذا تريد؟</DialogDescription></DialogHeader>

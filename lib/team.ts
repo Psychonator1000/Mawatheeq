@@ -9,7 +9,8 @@ export type Workspace = keyof typeof WORKSPACE_LABELS;
 export type TeamArea = { id: string; name: string; role: string | null; workspace?: Workspace | null; parentUser: string | null; parentArea: string | null };
 /** `extras`: sections a person belongs to besides their main place, for the workspaces those sections stand for. */
 export type TeamExtra = { userId: string; areaId: string };
-export type TeamChart = { lines: TeamLine[]; areas: TeamArea[]; extras?: TeamExtra[] };
+/** `order`: each box's place among the boxes side by side under the same head, as the owner arranged them. */
+export type TeamChart = { lines: TeamLine[]; areas: TeamArea[]; extras?: TeamExtra[]; order?: Record<string, number> };
 /** What an account oversees (`below`, at any depth), and the whole chart for whoever may change it or reads every report. */
 export type TeamInfo = TeamChart & { all: boolean; leads: boolean; canManage: boolean; below: string[] };
 export const EMPTY_CHART: TeamChart = { lines: [], areas: [], extras: [] };
