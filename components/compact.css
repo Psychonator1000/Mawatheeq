@@ -1487,7 +1487,7 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
    lines are simple) with the branches put in right-to-left order; the text in each box stays right to left. */
 .org-tree{direction:ltr;overflow:auto;padding:8px 4px 16px;max-height:calc(100vh - 230px);--org-line:color-mix(in srgb,var(--brand) 32%,var(--border))}
 .org-tree ul{display:flex;justify-content:center;align-items:flex-start;list-style:none;margin:0;padding:18px 0 0;position:relative}
-.org-tree .org-root{padding-top:0}
+.org-tree .org-root{padding-top:0;width:max-content;min-width:100%}
 .org-tree li{display:flex;flex-direction:column;align-items:center;position:relative;padding:18px 6px 0}
 .org-tree .org-root>li{padding-top:0}
 .org-tree li::before,.org-tree li::after{content:'';position:absolute;top:0;width:50%;height:18px;border-top:2px solid var(--org-line)}
@@ -1519,7 +1519,7 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .person-access small{display:block;color:var(--muted-foreground)}.person-actions .actions{flex-wrap:wrap}
 .staff-view .seg-opt{padding:4px 12px;font-size:13px}.staff-view .seg-opt.on.show{background:var(--brand);color:var(--brand-foreground,#fff)}
 /* Sections («الأقسام») in the tree: a tinted box with the kind of work's icon; its people hang under it. */
-.org-box.org-area{width:190px;min-height:46px;border:2px solid color-mix(in srgb,var(--brand) 55%,var(--border));background:color-mix(in srgb,var(--brand) 11%,var(--card));border-radius:14px}
+.org-box.org-area{width:164px;min-height:46px;border:2px solid color-mix(in srgb,var(--brand) 55%,var(--border));background:color-mix(in srgb,var(--brand) 11%,var(--card));border-radius:14px}
 .org-box.org-area>b{font-size:14px;color:var(--brand)}.org-box.org-area>.org-meta{grid-column:1/-1}
 .area-dialog{width:min(820px,calc(100vw - 32px));max-width:none}
 .area-dialog [data-slot=dialog-title]{display:flex;align-items:center;gap:6px}

@@ -2,7 +2,7 @@
 import {useMemo,useState} from 'react';
 import {Crown,FolderTree,GripVertical,UsersRound} from 'lucide-react';
 import type {Member} from '@/lib/office';
-import {rolesLabel,type JobRole} from '@/lib/permissions';
+import {WORKSPACE_LABELS,rolesLabel,type JobRole} from '@/lib/permissions';
 import {inferRoles,ROLE_ICONS} from './permission-editor';
 import {normalizeSearch} from '@/lib/case-browse';
 import {nodesBelow,parents,peopleBelow,peopleCount,type TeamArea,type TeamChart} from '@/lib/team';
@@ -53,7 +53,7 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    className={'org-box org-area'+(selected===key?' on':'')+(over===key&&d.droppable?' drop':'')+(drag===key?' dragging':'')}
    title="قسم: اضغط لتسميته أو نقله أو حذفه، أو اسحبه إلى مكان آخر، أو أفلت فيه موظفين" onClick={()=>onPickArea(a)}>
    <GripVertical size={13} aria-hidden className="org-grip"/><Icon size={15} aria-hidden className="org-icon"/><b>{a.name}</b>
-   <span className="org-meta">{count?peopleCount(count):'فارغ — أفلت فيه موظفين'}</span></button>};
+   <span className="org-meta">{count?peopleCount(count):'فارغ — أفلت فيه موظفين'}</span>{a.workspace&&<span className="org-team" title={`من فيه يفتح ${WORKSPACE_LABELS[a.workspace]} فقط`}>مساحة {WORKSPACE_LABELS[a.workspace].split(' (')[0]}</span>}</button>};
  // A head's branches (sections and people with their own team) each get a column; the rest sit together in one wrapping block.
  const branch=(n:Node):React.ReactNode=>{const under=kids.get(n.member?.role==='owner'?'':n.key)||[];
   const heads=under.filter(x=>x.area||kids.get(x.key)?.length),rest=under.filter(x=>!x.area&&!kids.get(x.key)?.length);

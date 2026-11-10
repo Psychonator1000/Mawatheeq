@@ -2,7 +2,11 @@
 // `team_areas`, read and changed through the daily request). A node of the tree is a person ('u:' + id) or a section
 // ('a:' + id); every node has one parent, or none when it sits at the top under the owner.
 export type TeamLine = { userId: string; managerId: string | null; areaId: string | null };
-export type TeamArea = { id: string; name: string; role: string | null; parentUser: string | null; parentArea: string | null };
+import { LEGAL_SECTIONS, WORKSPACE_LABELS, type Permissions, type Section } from './permissions';
+
+export type Workspace = keyof typeof WORKSPACE_LABELS;
+/** `workspace`: the workspace a section stands for; whoever sits in it (at any depth) opens that workspace alone. */
+export type TeamArea = { id: string; name: string; role: string | null; workspace?: Workspace | null; parentUser: string | null; parentArea: string | null };
 export type TeamChart = { lines: TeamLine[]; areas: TeamArea[] };
 /** What an account oversees (`below`, at any depth), and the whole chart for whoever may change it or reads every report. */
 export type TeamInfo = TeamChart & { all: boolean; leads: boolean; canManage: boolean; below: string[] };
@@ -36,3 +40,29 @@ export const AREA_NAMES: Record<string, string> = {
   courier: 'الخارجيات', representative: 'المندوبون', driver: 'السائقون', officeAdmin: 'الشؤون الإدارية', officeBoy: 'الخدمات', developer: 'البرمجيات',
   networkEngineer: 'الشبكات', itSupport: 'الدعم الفني', engineer: 'الهندسة',
 };
+
+/** The workspace a person or section is in: that of the nearest section above it (itself included) standing for one. */
+export function workspaceOf(parent: Map<string, string>, areas: TeamArea[], key: string): Workspace | null {
+  const byId = new Map(areas.map(a => [a.id, a]));
+  for (let k: string | undefined = key, n = 0; k && n < 80; k = parent.get(k), n++) if (k.startsWith('a:')) { const w = byId.get(k.slice(2))?.workspace; if (w) return w; }
+  return null;
+}
+/** The cases workspace's pages for someone who had none of them: the day, the register, dates and tasks. */
+const LEGAL_START: Section[] = ['overview', 'cases', 'deadlines', 'work', 'daily'];
+/**
+ * A person's pages once they sit in the section of workspace `ws` (or in none): that workspace's pages alone. Moving into
+ * the cases workspace keeps the cases pages they had, or starts from the usual ones; a department is its one section;
+ * no workspace means no pages. The daily report («مهام اليوم والتقرير») stays with whoever had it.
+ */
+export function sectionsFor(p: Pick<Permissions, 'sections'>, ws: Workspace | null): Section[] {
+  const daily: Section[] = p.sections.includes('daily') ? ['daily'] : [];
+  if (!ws) return daily;
+  if (ws === 'legal') { const own = p.sections.filter(s => LEGAL_SECTIONS.includes(s)); return own.some(s => s !== 'daily') ? own : [...new Set([...LEGAL_START, ...daily])]; }
+  return [ws as Section, ...daily];
+}
+/** Each node's parent once `node` is moved under `target` (null: the top). */
+export function movedParents(parent: Map<string, string>, node: string, target: string | null): Map<string, string> {
+  const next = new Map(parent);
+  if (target) next.set(node, target); else next.delete(node);
+  return next;
+}

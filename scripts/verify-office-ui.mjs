@@ -224,6 +224,16 @@ try{
   assert.deepEqual(inArea,[{u:'salem.ui',manager_id:null,name:'المحامون'}]);
   await area.click();page.once('dialog',d=>void d.accept());await page.getByRole('dialog').getByRole('button',{name:'حذف القسم',exact:true}).click();await page.getByText('حُذف القسم.').waitFor();
   await tree.locator('li:has(> .org-box[data-person="ui_clerk"]) .org-box[data-person="salem.ui"]').waitFor();
+  // Sections for the workspaces: in «السكرتارية» salem.ui opens the secretary workspace alone (saved through the
+  // permission save, his sessions ended); moved into «القضايا» he opens the cases workspace again.
+  const pagesOf=async u=>{await db.exec('reset role');const r=(await db.query("select ma.permissions->'sections' s from mawatheeq_private.member_access ma join mawatheeq_private.accounts a on a.id=ma.user_id where a.username=$1",[u])).rows[0].s;await db.exec('set role anon');return r};
+  const ws=n=>tree.locator(`.org-area[data-area="${n}"]`);await ws('السكرتارية').waitFor();
+  page.once('dialog',d=>{assert.match(d.message(),/السكرتارية فقط/);void d.accept()});await box('salem.ui').dragTo(ws('السكرتارية'));await page.getByText('حُدّثت صفحاته لمساحة قسمه.').waitFor();
+  assert.deepEqual((await pagesOf('salem.ui')).filter(x=>x!=='daily'),['secretary'],'Only the secretary workspace');
+  await page.screenshot({path:artifacts+'/team-tree-workspaces.png'});
+  page.once('dialog',d=>void d.accept());await box('salem.ui').dragTo(ws('القضايا'));await page.getByText('حُدّثت صفحاته لمساحة قسمه.').last().waitFor();
+  await page.waitForFunction(()=>true);let legal=[];for(let i=0;i<30;i++){legal=await pagesOf('salem.ui');if(legal.includes('cases'))break;await page.waitForTimeout(100)}
+  assert.ok(legal.includes('cases')&&!legal.includes('secretary'),'Back to the cases workspace alone');
   await page.getByRole('tab',{name:'القائمة',exact:true}).click();}
  // Every page in the side list can be hidden, the day's page and «ملفاتي الورقية» too: gone from that account's menu.
  {await page.getByRole('button',{name:'تطبيق على عدة حسابات',exact:true}).click();const dlg=page.getByRole('dialog');

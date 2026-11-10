@@ -87,4 +87,14 @@ chart=await daily(owner.token,'delete_area',{id:area.id});
 assert.deepEqual(chart.lines.find(l=>l.userId===b.id),{userId:b.id,managerId:a.id,areaId:null},'Moved up to the section\'s place');
 assert.equal(chart.areas.find(x=>x.id===inner.id).parentUser,a.id,'Inner sections move up too');
 assert.ok((await seen(a)).reports.includes('lawyer_b'));
+// Sections for the workspaces exist from the start, one each, and keep their workspace through a rename or a move.
+chart=await daily(owner.token,'team');
+assert.deepEqual(chart.areas.filter(x=>x.workspace).map(x=>x.workspace).sort(),['accounting','archive','collections','hr','legal','secretary']);
+const sec=chart.areas.find(x=>x.workspace==='secretary');
+chart=await daily(owner.token,'save_area',{id:sec.id,name:'السكرتارية والاستقبال',role:'secretary',parentUser:head.id});
+assert.equal(chart.areas.find(x=>x.id===sec.id).workspace,'secretary','Kept when the save does not name it');
+chart=await daily(owner.token,'save_area',{id:sec.id,name:'السكرتارية',role:'secretary',workspace:null,parentUser:null});
+assert.equal(chart.areas.find(x=>x.id===sec.id).workspace,null,'Cleared when asked');
+chart=await daily(owner.token,'save_area',{name:'تحصيل ٢',workspace:'collections'});assert.equal(chart.areas.find(x=>x.name==='تحصيل ٢').workspace,'collections');
+await assert.rejects(()=>daily(owner.token,'save_area',{name:'خطأ',workspace:'nowhere'}));
 console.log('Passed team lines: leads read their team down the line and themselves, the head reads the leads and their teams, nobody reads above or beside, no loops, only the owner or a staff admin changes the lines; sections hold people and sections, whoever a section sits under oversees everyone in it, sections move without loops and their people move up when one is removed.');

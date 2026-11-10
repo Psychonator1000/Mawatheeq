@@ -17,7 +17,7 @@ import LawyerAccounts from './lawyer-accounts';
 import BulkAccess from './bulk-access';
 import OrgTree from './org-tree';
 import {FilterBox} from './filter-select';
-import {EMPTY_CHART,nodesBelow,parents,peopleBelow,peopleCount,type TeamArea,type TeamChart,type TeamInfo} from '@/lib/team';
+import {EMPTY_CHART,movedParents,nodesBelow,parents,peopleBelow,peopleCount,sectionsFor,workspaceOf,type TeamArea,type TeamChart,type TeamInfo} from '@/lib/team';
 import AreaEditor,{type AreaDraft} from './area-editor';
 
 type AccessChange={id:number;before:Permissions|null;after:Permissions;revision:number;actor:string;createdAt:string};
@@ -47,19 +47,37 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
  const areaOf=(id?:string|null)=>chart.areas.find(a=>a.id===id);
  const labelOf=(key?:string|null)=>!key?'':key.startsWith('a:')?`قسم «${areaOf(key.slice(2))?.name||''}»`:nameOf(key.slice(2));
  const place=(key:string|null)=>({user:key?.startsWith('u:')?key.slice(2):null,area:key?.startsWith('a:')?key.slice(2):null});
+ // A section standing for a workspace opens that workspace alone to everyone in it: moving people (or a section) changes
+ // their pages through the usual permission save, which ends their sessions so it holds at once. Anyone whose workspace
+ // does not change (people outside every such section included) is left as they are.
+ const changesFor=(nextParent:Map<string,string>,nextAreas:TeamArea[])=>context.members.filter(m=>m.role!=='owner'&&m.permissions&&m.permissions.accountKind!=='client')
+  .map(m=>({m,from:workspaceOf(parent,chart.areas,'u:'+m.id),to:workspaceOf(nextParent,nextAreas,'u:'+m.id)})).filter(x=>x.from!==x.to);
+ type Change=ReturnType<typeof changesFor>[number];
+ const agree=(list:Change[])=>!list.length||window.confirm(`تتغير مساحة العمل التي يفتحها:\n\n${list.map(x=>`• ${x.m.displayName||x.m.username}: ${x.to?WORKSPACE_LABELS[x.to]+' فقط':'لا مساحة عمل'}`).join('\n')}\n\nتُحدَّث صفحاتهم الآن وتنتهي جلساتهم الحالية، فيفتحون عند الدخول التالي ما يخص قسمهم فقط. متابعة؟`);
+ async function applyChanges(list:Change[]){if(!list.length)return;const failed:string[]=[];
+  for(const {m,to} of list){const p=m.permissions!,view={...(p.view||{})};if(to)delete view['ws:'+to];
+   try{await officeRequest('set_member_access',{id:m.id,revision:p.revision,permissions:{...p,sections:sectionsFor(p,to),view}})}catch(e){failed.push(`${m.displayName||m.username}: ${friendly(e)}`)}}
+  onChanged();if(failed.length)toast.error('لم تُحدَّث صفحات:\n'+failed.join('\n'));else toast.success(list.length===1?'حُدّثت صفحاته لمساحة قسمه.':'حُدّثت صفحاتهم لمساحة قسمهم.')}
  // Moving a box moves everything under it; the server refuses putting anything under something it holds.
  async function move(node:string,target:string|null){
+  const changes=changesFor(movedParents(parent,node,target),chart.areas);if(!agree(changes))return;
   const to=place(target);setTreeBusy(true);
   try{setChart(node.startsWith('u:')?await dailyRequest<TeamChart>('set_manager',{userId:node.slice(2),managerId:to.user,areaId:to.area})
     :await (()=>{const a=areaOf(node.slice(2))!;return dailyRequest<TeamChart>('save_area',{id:a.id,name:a.name,role:a.role,parentUser:to.user,parentArea:to.area})})());
-   toast.success(!target?`${labelOf(node)} في أعلى الهيكل الآن`:node.startsWith('u:')&&target.startsWith('u:')?`${labelOf(node)} يتبع الآن ${labelOf(target)}`:`${labelOf(node)} تحت ${labelOf(target)} الآن`)}
+   toast.success(!target?`${labelOf(node)} في أعلى الهيكل الآن`:node.startsWith('u:')&&target.startsWith('u:')?`${labelOf(node)} يتبع الآن ${labelOf(target)}`:`${labelOf(node)} تحت ${labelOf(target)} الآن`);
+   await applyChanges(changes)}
   catch(e){toast.error((e as Error).message)}finally{setTreeBusy(false)}
  }
- async function saveArea(d:AreaDraft){const to=place(d.parent);setTreeBusy(true);
-  try{setChart(await dailyRequest<TeamChart>('save_area',{id:d.id||null,name:d.name,role:d.role,parentUser:to.user,parentArea:to.area}));setAreaEdit(null);toast.success(d.id?'حُفظ القسم.':`أُضيف قسم «${d.name}». اسحب الموظفين إليه.`)}
+ async function saveArea(d:AreaDraft){const to=place(d.parent);
+  const nextAreas=d.id?chart.areas.map(a=>a.id===d.id?{...a,workspace:d.workspace}:a):chart.areas,changes=d.id?changesFor(movedParents(parent,'a:'+d.id,d.parent),nextAreas):[];
+  if(!agree(changes))return;setTreeBusy(true);
+  try{setChart(await dailyRequest<TeamChart>('save_area',{id:d.id||null,name:d.name,role:d.role,workspace:d.workspace,parentUser:to.user,parentArea:to.area}));await applyChanges(changes);setAreaEdit(null);toast.success(d.id?'حُفظ القسم.':`أُضيف قسم «${d.name}». اسحب الموظفين إليه.`)}
   catch(e){toast.error((e as Error).message)}finally{setTreeBusy(false)}}
- async function deleteArea(a:TeamArea){if(!window.confirm(`حذف قسم «${a.name}»؟ ينتقل من فيه إلى مكان القسم في الهيكل.`))return;setTreeBusy(true);
-  try{setChart(await dailyRequest<TeamChart>('delete_area',{id:a.id}));setAreaEdit(null);toast.success('حُذف القسم.')}catch(e){toast.error((e as Error).message)}finally{setTreeBusy(false)}}
+ async function deleteArea(a:TeamArea){if(!window.confirm(`حذف قسم «${a.name}»؟ ينتقل من فيه إلى مكان القسم في الهيكل.`))return;
+  // Whoever was inside moves up to the section's place, and takes the workspace found there.
+  const key='a:'+a.id,up=parent.get(key)||null,next=new Map(parent);next.delete(key);for(const [k,v] of parent)if(v===key){if(up)next.set(k,up);else next.delete(k)}
+  const changes=changesFor(next,chart.areas.filter(x=>x.id!==a.id));if(!agree(changes))return;setTreeBusy(true);
+  try{setChart(await dailyRequest<TeamChart>('delete_area',{id:a.id}));await applyChanges(changes);setAreaEdit(null);toast.success('حُذف القسم.')}catch(e){toast.error((e as Error).message)}finally{setTreeBusy(false)}}
  const isOwner=context.user.role==='owner';
  // Admins manage other staff whose admin powers they also hold; never themselves or the owner.
  const blocked=(m:Member)=>!isOwner&&(m.id===context.user.id?'حسابك: يديره المالك أو مسؤول آخر.':powersOf(m.permissions||{}).some(p=>!powers.includes(p))?'يملك صلاحيات إدارة لا تملكها.':'');
