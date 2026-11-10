@@ -110,9 +110,20 @@ try{
  assert.equal((await caseOf('desk-study')).procedures.at(-1).decision,'شطب الدعوى','Posted into the case');
  await page.getByLabel('تقرير من').selectOption('me');const mine=page.getByRole('region',{name:'تقريري اليومي'});await mine.getByText('لم يُحفظ بعد').waitFor();
  await mine.getByRole('button',{name:'إضافة سطر: الأعمال الإدارية داخل المحاكم'}).click();await mine.getByPlaceholder('العمل المنجز ورقم الملف').fill('قيد صحيفة دعوى');await mine.getByPlaceholder('النتيجة أو الإجراء المتخذ').fill('تم القيد');
+ // A hearing added by hand names its case by picking it (typing part of the code finds it), and takes its court from it;
+ // the court is one from the list, and words typed into it that match nothing are not kept.
+ await mine.getByRole('button',{name:'إضافة سطر: الجلسات التي تم حضورها'}).click();const pickCase=mine.getByRole('combobox',{name:'كود القضية'}).last();
+ await pickCase.click();await pickCase.fill('missed');await page.getByRole('option',{name:/DESK-MISSED/}).click();
+ assert.equal(await pickCase.getAttribute('data-value'),'desk-missed','The line is linked to the case');
+ await page.waitForFunction(()=>[...document.querySelectorAll('[aria-label="كود القضية"]')].some(e=>e.value==='DESK-MISSED'),null,{timeout:3000});
+ const pickCourt=mine.getByRole('combobox',{name:'المحكمة / الدائرة'}).last();
+ assert.equal(await pickCourt.getAttribute('data-value'),(await caseOf('desk-missed')).court||'','The court comes from the case');
+ await pickCourt.click();await pickCourt.fill('كلام حر لا يطابق');await page.getByText('لا توجد نتيجة مطابقة في القائمة').waitFor();await page.keyboard.press('Tab');
+ assert.equal(await pickCourt.getAttribute('data-value'),(await caseOf('desk-missed')).court||'','Free wording is not kept');
+ await mine.getByPlaceholder('ما تم في الجلسة / القرار').last().fill('تأجيل');
  await mine.getByRole('button',{name:'إرسال التقرير'}).click();await page.getByText('أُرسل التقرير').waitFor();await mine.getByText(/^أُرسل /).waitFor();await screen('daily-mine');
  const stored=(await rpc('mawatheeq_daily_request',[login.token,'mine',JSON.stringify({date:today})])).report;
- assert.deepEqual(stored.payload.admin,[{text:'قيد صحيفة دعوى',result:'تم القيد'}]);assert.ok(stored.submittedAt,'Sent');
+ assert.deepEqual(stored.payload.admin,[{text:'قيد صحيفة دعوى',result:'تم القيد'}]);assert.ok(stored.payload.hearings.some(l=>l.caseId==='desk-missed'&&l.text==='DESK-MISSED'),'Saved with its case');assert.ok(stored.submittedAt,'Sent');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+2),true,'The day fits one screen');
  // An account holding only the report section: the report and nothing else, no case at all.
  {const other=await context.browser().newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});const p2=await other.newPage();await configurePage(p2);

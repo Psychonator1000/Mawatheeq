@@ -20,7 +20,8 @@ export type Mission = {
 export type Person = { id: string; username: string; displayName?: string } | 'all';
 
 export type LineField = 'text' | 'court' | 'subject' | 'result' | 'next';
-export type ReportLine = { key?: string; text: string; result: string; court?: string; subject?: string; next?: string };
+/** `caseId`: the case a hearing line is about, picked by its code (lines that came from a posted sitting carry it in `key`). */
+export type ReportLine = { key?: string; text: string; result: string; court?: string; subject?: string; next?: string; caseId?: string };
 export type DailyPayload = {
   hearings: ReportLine[]; tasks: ReportLine[]; admin: ReportLine[]; external: ReportLine[]; other: ReportLine[]; pending: ReportLine[]; notes: string;
 };
@@ -31,7 +32,7 @@ export type ReportPart = Exclude<keyof DailyPayload, 'notes'>;
  */
 export const REPORT_PARTS: { key: ReportPart; title: string; hint: string; add: string; fields: [LineField, string][] }[] = [
   { key: 'hearings', title: 'الجلسات التي تم حضورها', hint: 'كل جلسة ترحّلها من القائمة تُضاف هنا بنفسها، أو أضفها يدوياً بالزر أدناه.', add: 'إضافة جلسة',
-    fields: [['text', 'رقم القضية'], ['court', 'المحكمة / الدائرة'], ['result', 'ما تم في الجلسة / القرار'], ['next', 'الإجراء المطلوب بعد الجلسة']] },
+    fields: [['text', 'كود القضية'], ['court', 'المحكمة / الدائرة'], ['result', 'ما تم في الجلسة / القرار'], ['next', 'الإجراء المطلوب بعد الجلسة']] },
   { key: 'tasks', title: 'المهام المنجزة', hint: 'كل مهمة تُتمّها من القائمة تُضاف هنا بنفسها، أو أضفها يدوياً بالزر أدناه.', add: 'إضافة مهمة', fields: [['text', 'المهمة'], ['result', 'النتيجة']] },
   { key: 'admin', title: 'الأعمال الإدارية داخل المحاكم', hint: 'مثل الإعلانات، الإيداعات، استخراج الشهادات، متابعة الخبراء، مراجعة التنفيذ أو أقسام المحكمة.', add: 'إضافة عمل إداري',
     fields: [['text', 'العمل المنجز ورقم الملف'], ['result', 'النتيجة أو الإجراء المتخذ']] },
@@ -53,6 +54,7 @@ export function readReport(raw: unknown): DailyPayload {
     out[key] = list.filter(x => x && typeof x === 'object').map(x => {
       const l = x as Record<string, unknown>, line: ReportLine = { ...(l.key ? { key: String(l.key) } : {}), text: String(l.text ?? ''), result: String(l.result ?? '') };
       for (const f of EXTRA) if (typeof l[f] === 'string' && (l[f] as string) !== '') line[f] = l[f] as string;
+      if (typeof l.caseId === 'string' && l.caseId) line.caseId = l.caseId;
       return line;
     });
   }
@@ -69,7 +71,7 @@ export const daySummary = (r: DailyPayload) => Object.fromEntries(REPORT_PARTS.m
 /** A line as one piece of text, its fields in the part's order. */
 export const lineText = (l: ReportLine, part: ReportPart) => (REPORT_PARTS.find(x => x.key === part)!.fields.map(([f]) => (l[f] || '').trim()).filter(Boolean)).join(' — ');
 
-const ref = (c: CaseRecord) => caseCode(c) || c.autoNumber || 'بلا كود';
+export const ref = (c: CaseRecord) => caseCode(c) || c.autoNumber || 'بلا كود';
 const parties = (c: CaseRecord) => `${clientName(c) || '—'} ضد ${c.opponent || '—'}`;
 export const memberLabel = (m?: { username: string; displayName?: string }) => m ? m.displayName || m.username : '';
 
@@ -324,3 +326,6 @@ export function performanceHtml(rows: PersonStats[], period: string, _printedBy:
 <table class="list perf"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body || `<tr><td colspan="${head.length}">لا أحد مكلف بالتقرير اليومي.</td></tr>`}</tbody></table>
 <p class="legend">جلسات حضرها: المذكورة في تقاريره. جلسات رحّلها: المسجّلة في ملفات القضايا. متأخر الآن: جلسات لم تُرحَّل ومهام فات موعدها حتى يوم الطباعة.</p>${printFooter(printedAt)}`, true);
 }
+
+/** The case a hearing line is about: the one picked for it, or the one its posted sitting came from. */
+export const lineCase = (l: ReportLine) => l.caseId || /^h:(.+):\d{4}-\d{2}-\d{2}$/.exec(l.key || '')?.[1] || '';

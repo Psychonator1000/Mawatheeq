@@ -3,16 +3,18 @@ import {ChevronRight,ChevronLeft,Check,Save,Send,Printer,Copy,Plus,X,ArrowUpLeft
 import {openWorkspace} from '@/lib/open-record';
 import {toast} from 'sonner';
 import {type CaseRecord,type Rules,caseCode,formatDate,todayISO} from '@/lib/domain';
-import {type ClientEntity,enrichCase} from '@/lib/clients';
+import {type ClientEntity,clientName,enrichCase} from '@/lib/clients';
 import {DECISIONS,EXPERT_DECISIONS,sessionProcedure,type Venue} from '@/lib/sessions';
 import {lastSitting,shiftDays} from '@/lib/case-desk';
 import {type Member,type WorkItem,monthGrid,shiftMonth} from '@/lib/office';
 import {dailyRequest,officeRequest} from '@/lib/local-auth';
 import {printHtml} from '@/lib/print';
-import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emptyReport,memberLabel,missionsFor,namesPerson,performance,periods,performanceHtml,type PersonStats,daySummary,lineText,ORDINALS,NOTES,type ReportPart,datesAhead,DATES_FILTERS,passesDates,agendaBetween,type DatesFilter,type AgendaDay,passesFilter,readReport,reportCount,reportText,reportsHtml,teamDay,type TeamDayRow,withDone,
+import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emptyReport,memberLabel,missionsFor,namesPerson,performance,periods,performanceHtml,type PersonStats,daySummary,lineText,ORDINALS,NOTES,type ReportPart,datesAhead,DATES_FILTERS,passesDates,agendaBetween,type DatesFilter,type AgendaDay,passesFilter,readReport,lineCase,ref as caseRef,type LineField,reportCount,reportText,reportsHtml,teamDay,type TeamDayRow,withDone,
  type DailyPayload,type Mission,type MissionFilter,type Person,type ReportLine,type StoredReport} from '@/lib/daily-report';
 import {DateField,api} from './shared';
-import {SelectList} from './filter-select';
+import {FilterBox,SelectList} from './filter-select';
+import {courtChoices} from '@/lib/court-names';
+import {COURTS} from '@/lib/choices';
 
 type Props={records:CaseRecord[];rules?:Rules;clients:ClientEntity[];work:WorkItem[];members:Member[];user:{id:string;username:string};
  /** Missions come from cases and work this account can see; an account holding only the report section has none. */
@@ -22,7 +24,7 @@ const ICONS={hearing:Gavel,task:ListChecks,deadline:Hourglass,followup:CalendarC
 type TeamList={reports:StoredReport[];expected:{userId:string;username:string;displayName:string}[]};
 type Mode='day'|'posting'|'dates'|'calendar'|'perf';
 // The quick-add buttons of «ما عملته»: each kind of work in a word or two.
-const QUICK_ADD:Record<ReportPart,string>={hearings:'جلسة حضرتها',tasks:'مهمة أنجزتها',admin:'عمل إداري في المحكمة',external:'مراجعة خارجية',other:'عمل آخر',pending:'متابعة مطلوبة'};
+const QUICK_ADD:Record<ReportPart,string>={hearings:'جلسة حضرتها',tasks:'مهمة أنجزتها',admin:'عمل إداري في المحكمة (المطلوب متابعتها)',external:'مراجعة خارجية',other:'عمل آخر',pending:'متابعة مطلوبة'};
 const TAB_HINTS:Record<Mode,string>={day:'قائمة اليوم والتقرير عنه',posting:'كل جلسات المكتب في اليوم: سجّل ما تم فيها وحدد القادمة',dates:'مواعيد الطعن والمتابعات',calendar:'الشهر كاملاً بجلساته ومهامه',perf:'عمل كل محامٍ في الأسبوع أو الشهر'};
 const monthName=(d:string)=>new Intl.DateTimeFormat('ar-KW-u-nu-latn',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(d.slice(0,7)+'-01T12:00:00Z'));
 const WEEKDAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -41,6 +43,8 @@ export default function DayDesk(p:Props){
  const missions=useMemo(()=>p.missionsOn?missionsFor({records:p.records,work:p.work,members:p.members,rules:p.rules,date,today,person,ownCasesOnly:p.ownCasesOnly&&self,viewerId:p.user.id}):[],
   // eslint-disable-next-line react-hooks/exhaustive-deps -- person follows `who`
   [p.missionsOn,p.records,p.work,p.members,p.rules,date,today,who,p.ownCasesOnly,p.user.id]);
+ // The cases of the day's hearings come first when a hearing is added to the report by hand.
+ const dayCases=useMemo(()=>[...new Set(missions.filter(m=>m.kind==='hearing'&&m.c).map(m=>m.c!.id))],[missions]);
  const [lateOpen,setLateOpen]=useState(false),[mode,setMode]=useState<Mode>('day'),[datesFilter,setDatesFilter]=useState<DatesFilter>('all');
  const range={records:p.records,work:p.work,members:p.members,rules:p.rules,today,person,ownCasesOnly:p.ownCasesOnly&&self,viewerId:p.user.id};
  // «ترحيل الجلسات»: every sitting of the chosen day in the office, to post one after another.
@@ -100,10 +104,10 @@ export default function DayDesk(p:Props){
  // The day is one column read from the top: numbered sections, and for one's own report a bar fixed at the bottom
  // with what the report holds and the buttons to save and send it.
  const sections=team?<>{p.reviewer&&<TeamBoard rows={board} date={date} today={today} reading={reading} onRead={setReading} onDay={id=>pick(id===p.user.id?'me':id)} printedBy={p.printedBy} canManage={p.canManageTeam}/>}{missionsCol}</>
-  :self?<>{missionsCol}{p.canReport?<ReportEditor r={report} date={date} today={today} n={p.missionsOn?'٢':'١'} others={p.missionsOn}/>
+  :self?<>{missionsCol}{p.canReport?<ReportEditor r={report} date={date} today={today} n={p.missionsOn?'٢':'١'} others={p.missionsOn} records={p.records} first={dayCases}/>
    // Without the report section the page says so, and how to turn it on, rather than leaving the report out silently.
    :<section className="day-sec" aria-label="التقرير اليومي غير مفعّل"><div className="day-sec-head"><h2><span className="day-sec-n" aria-hidden>٢</span>ما عملته اليوم</h2></div>
-    <div className="day-empty day-empty-action"><p>التقرير اليومي غير مفعّل لهذا الحساب، لذلك لا يظهر هنا ما يُكتب ويُرسل. يفعّله المسؤول من «فريق المكتب» ← «تعديل الصلاحيات» على الحساب ← الضغط على «مهام اليوم والتقرير» في المعاينة، ثم الحفظ. ولترحيل الجلسات وإتمام المهام يُفعَّل معه «السماح بالتعديل».</p></div></section>}</>
+    <div className="day-empty day-empty-action"><p>التقرير اليومي غير مفعّل لهذا الحساب، لذلك لا يظهر هنا ما يُكتب ويُرسل. يفعّله المسؤول من «فريق المكتب» ← «تعديل الصلاحيات» على الحساب ← الضغط على «مهام اليوم والتقرير» في المعاينة حتى يصبح «ظاهر»، ثم الحفظ. ولترحيل الجلسات وإتمام المهام يُفعَّل معه «السماح بالتعديل».</p></div></section>}</>
   :<>{missionsCol}<section className="day-sec" aria-label="تقرير الزميل"><div className="day-sec-head"><h2><span className="day-sec-n" aria-hidden>{p.missionsOn?'٢':'١'}</span>تقرير {name}</h2>{colleague&&<span className={'tag '+(colleague.submittedAt?'green':'amber')}>{colleague.submittedAt?'أُرسل '+clock(colleague.submittedAt):'مسودة'}</span>}</div>
    {!list?<p role="status" className="day-empty"><LoaderCircle className="spin" size={14}/> جارٍ التحميل…</p>:colleague?<ReportReader r={colleague} printedBy={p.printedBy}/>:<p className="day-empty">لم يكتب تقريراً لهذا اليوم.</p>}</section></>;
  const dayPath=<section className="panel day-path" aria-label={team?'يوم الفريق':self?(p.canReport?'تقريري اليومي':'يومي'):'يوم '+name}>
@@ -253,8 +257,21 @@ function DaySummary({payload}:{payload:DailyPayload}){
 }
 
 /** «ما عملته»: the person's own report as one section — a button for each kind of work, and what it holds so far. */
-function ReportEditor({r,date,today,n,others}:{r:OwnReport;date:string;today:string;n:string;others:boolean}){
+function ReportEditor({r,date,today,n,others,records,first}:{r:OwnReport;date:string;today:string;n:string;others:boolean;records:CaseRecord[];first:string[]}){
  const future=date>today,ro=future||r.busy,[notes,setNotes]=useState(false);
+ // A hearing line names its case by picking it (by code, automatic number, case number or a party), never by free text,
+ // so it links to the actual case; its court is picked from the courts the office's cases use, filled from the case.
+ const byId=useMemo(()=>new Map(records.map(c=>[c.id,c])),[records]);
+ const caseOptions=useMemo(()=>{const head=new Set(first);return [...first.map(id=>byId.get(id)).filter((c):c is CaseRecord=>!!c),...records.filter(c=>!head.has(c.id))]
+  .map(c=>({value:c.id,label:caseRef(c),hint:`${clientName(c)||'—'} ضد ${c.opponent||'—'}${c.court?' · '+c.court:''}`,terms:[c.autoNumber,c.caseNumber].filter(Boolean).join(' ')}))},[records,first,byId]);
+ const courts=useMemo(()=>{const n=new Map<string,number>();for(const c of records){const v=String(c.court||'').trim();if(v)n.set(v,(n.get(v)||0)+1)}
+  for(const v of courtChoices([...n.keys()],COURTS))if(!n.has(v))n.set(v,0);return [...n].sort((a,b)=>b[1]-a[1]).map(([v])=>({value:v,label:v}))},[records]);
+ const lineField=(k:ReportPart,j:number,l:ReportLine,f:LineField,label:string)=>{
+  if(k==='hearings'&&f==='text'){const id=lineCase(l);return <FilterBox key={f} label={label} placeholder={label+' (اكتب للبحث)'} value={byId.has(id)?id:l.text} disabled={ro} options={caseOptions}
+   onChange={v=>{const c=byId.get(v);if(c)setLine(k,j,{caseId:c.id,text:caseRef(c),court:l.court||String(c.court||'')})}}/>}
+  if(k==='hearings'&&f==='court'){const own=byId.get(lineCase(l))?.court;return <FilterBox key={f} label={label} placeholder={label} value={l.court||''} disabled={ro}
+   options={own&&!courts.some(o=>o.value===own)?[{value:own,label:own},...courts]:courts} onChange={v=>setLine(k,j,{court:v})}/>}
+  return <input key={f} aria-label={label} placeholder={label} value={l[f]||''} disabled={ro} onChange={e=>setLine(k,j,{[f]:e.target.value})}/>};
  const setLine=(k:ReportPart,i:number,v:Partial<ReportLine>)=>r.set({...r.payload,[k]:r.payload[k].map((l,j)=>j===i?{...l,...v}:l)});
  const addLine=(k:ReportPart)=>{r.set({...r.payload,[k]:[...r.payload[k],{text:'',result:''}]});setTimeout(()=>document.querySelector<HTMLInputElement>(`[data-part="${k}"] .report-line:last-of-type input`)?.focus(),30)};
  const showNotes=notes||!!r.payload.notes;
@@ -267,7 +284,7 @@ function ReportEditor({r,date,today,n,others}:{r:OwnReport;date:string;today:str
   <div className="day-report-body">{REPORT_PARTS.map(({key,title,fields},i)=>r.payload[key].length?<div key={key} className="report-part" data-part={key}>
    <div className="report-part-head"><b>{ORDINALS[i]}: {title}</b><span className="report-count">{r.payload[key].length}</span></div>
    {r.payload[key].map((l,j)=><div key={j} className="report-line" style={{'--n':fields.length} as React.CSSProperties}>
-    {fields.map(([f,label])=><input key={f} aria-label={label} placeholder={label} value={l[f]||''} disabled={ro} onChange={e=>setLine(key,j,{[f]:e.target.value})}/>)}
+    {fields.map(([f,label])=>lineField(key,j,l,f,label))}
     <button className="icon-btn" aria-label="حذف السطر" disabled={ro} onClick={()=>r.set({...r.payload,[key]:r.payload[key].filter((_,x)=>x!==j)})}><X size={14}/></button></div>)}</div>:null)}
    {showNotes&&<label className="report-part report-notes"><b>{ORDINALS[REPORT_PARTS.length]}: {NOTES.title}</b><textarea rows={2} autoFocus={notes&&!r.payload.notes} value={r.payload.notes} disabled={ro} onChange={e=>r.set({...r.payload,notes:e.target.value})} placeholder={NOTES.hint}/></label>}
    {!reportCount(r.payload)&&!showNotes&&<p className="day-empty">لا شيء في التقرير بعد.</p>}</div></>}

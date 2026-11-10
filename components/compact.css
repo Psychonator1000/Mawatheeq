@@ -1426,7 +1426,10 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .day-report-body .part-add{margin-top:6px;padding:3px 10px;border:1px dashed var(--border);border-radius:999px}
 .day-summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--brand) 6%,transparent);font-size:12.5px}
 .day-summary>b{margin-inline-end:auto}.day-summary span{display:inline-flex;align-items:baseline;gap:4px;color:var(--muted-foreground)}.day-summary strong{font-size:16px;color:var(--foreground);font-variant-numeric:tabular-nums}
-@media(max-width:1000px){.report-line{grid-template-columns:minmax(0,1fr) auto}.report-line>input{grid-column:1}.report-line>.icon-btn{grid-column:2;grid-row:1}}
+/* A hearing line has four fields: its part takes the whole row. */
+.day-report-body>.report-part[data-part=hearings]{grid-column:1/-1}
+.report-line>.filter-select-box{min-width:0;width:100%}.report-line>.filter-select-box input{padding-inline-end:28px}
+@media(max-width:1000px){.report-line{grid-template-columns:minmax(0,1fr) auto}.report-line>input,.report-line>.filter-select-box{grid-column:1}.report-line>.icon-btn{grid-column:2;grid-row:1}}
 .day-grid.solo .day-summary{grid-column:1/-1}
 /* «الأداء»: totals for the team, then one row a person. */
 .perf-totals{display:flex;gap:18px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted-foreground)}.perf-totals strong{font-size:17px;color:var(--foreground);margin-inline-end:4px;font-variant-numeric:tabular-nums}.perf-totals .late strong{color:#a32e38}
