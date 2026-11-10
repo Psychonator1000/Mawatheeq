@@ -206,6 +206,9 @@ try{
    await db.exec('reset role');let rows=[];for(let i=0;i<40;i++){rows=(await db.query('select x,y from mawatheeq_private.team_layout')).rows;if(rows.length)break;await page.waitForTimeout(100)}
    assert.equal(rows.length,1,'Its place is kept');assert.ok(rows[0].x%20===0&&rows[0].y%20===0,'On the grid');
    assert.equal((await db.query('select count(*)::int n from mawatheeq_private.team_lines')).rows[0].n,0,'Nobody under anybody');await db.exec('set role anon');}
+  // The board fits the screen: the page itself does not scroll past it, and the board stays inside the page's card.
+  {const m=await page.evaluate(()=>{const b=document.querySelector('.org-tree').getBoundingClientRect(),c=document.querySelector('.office-staff').getBoundingClientRect();return {page:document.scrollingElement.scrollHeight-innerHeight,inside:b.bottom<=c.bottom+1}});
+   assert.ok(m.page<=2,'No page scroll past the board ('+m.page+')');assert.ok(m.inside,'Inside the card');await page.screenshot({path:artifacts+'/team-board-fits.png'});}
   // Kept after a reload: the page reads back where every box was put.
   await page.reload();await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();await page.locator('.org-tree-wrap').waitFor();
   await page.locator('.org-canvas [data-person="salem.ui"]').waitFor({timeout:8000});
@@ -229,6 +232,16 @@ try{
    let after=before;for(let i=0;i<30;i++){after=await box('salem.ui').boundingBox();if(Math.abs(after.x-before.x)>100)break;await page.waitForTimeout(100)}
    assert.ok(Math.abs(after.x-before.x)>100&&Math.abs(after.y-before.y)>60,'Its people moved with it');
    await page.screenshot({path:artifacts+'/team-board-block.png'});}
+  // Let go on the edge of another box (not its middle): never one inside the other, the nearest free spot instead;
+  // «إعادته لمكانه التلقائي» puts him back in his block.
+  {const c=await box('ui_clerk').boundingBox(),s0=await box('salem.ui').boundingBox();await page.mouse.move(s0.x+s0.width/2,s0.y+s0.height/2);await page.mouse.down();
+   await page.mouse.move(c.x+c.width*0.92,c.y+c.height*0.5,{steps:10});await page.mouse.up();await page.waitForTimeout(600);
+   const S=await box('salem.ui').boundingBox(),C=await box('ui_clerk').boundingBox();
+   assert.ok(S.x>=C.x+C.width-1||S.x+S.width<=C.x+1||S.y>=C.y+C.height-1||S.y+S.height<=C.y+1,'Not on top of each other');
+   await db.exec('reset role');assert.equal((await db.query('select count(*)::int n from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id where a.username=$1 and t.manager_id is not null',['salem.ui'])).rows[0].n,1,'Still under ui_clerk');await db.exec('set role anon');
+   await box('salem.ui').click();await page.locator('.org-panel').getByRole('button',{name:'إعادته لمكانه التلقائي'}).click();
+   await page.locator('.org-panel').getByRole('button',{name:'إعادته لمكانه التلقائي'}).waitFor({state:'detached'});await under(await nodeOf('salem.ui'),await nodeOf('ui_clerk'));
+   await page.locator('.org-panel').getByRole('button',{name:'إغلاق'}).click();}
   assert.match(await box('ui_clerk').innerText(),/مسؤول عن شخص واحد/);
   await db.exec('reset role');const line=(await db.query("select a.username u,m.username boss from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.accounts m on m.id=t.manager_id")).rows;await db.exec('set role anon');
   assert.deepEqual(line,[{u:'salem.ui',boss:'ui_clerk'}],'Saved');
@@ -282,6 +295,8 @@ try{
   assert.equal(await tree.locator('.org-links > path.area').count(),2,'A line to each extra section');
   await box('ui_clerk').click();await page.locator('.org-panel').waitFor();assert.equal(await tree.locator('.org-links > path.area.on').count(),2,'His lines stand out');
   await page.waitForTimeout(300);await page.screenshot({path:artifacts+'/team-extra-lines.png'});
+  {const m=await page.evaluate(()=>{const p=document.querySelector('.org-panel').getBoundingClientRect(),c=document.querySelector('.office-staff').getBoundingClientRect();return {inside:p.bottom<=c.bottom+1,page:document.scrollingElement.scrollHeight-innerHeight}});
+   assert.ok(m.inside,'The panel stays inside the card');assert.ok(m.page<=2,'No page scroll with the panel open ('+m.page+')');}
   await page.locator('.org-panel').getByRole('button',{name:'إغلاق'}).click();await page.waitForTimeout(200);await page.screenshot({path:artifacts+'/team-extra-lines-quiet.png'});await box('ui_clerk').click();await page.locator('.org-panel').waitFor();
   await page.locator('.org-panel').getByRole('button',{name:'إخراجه من قسم «السكرتارية»'}).click();
   assert.deepEqual((await waitPages('ui_clerk',v=>!v.includes('secretary'))).filter(x=>x!=='daily').sort(),['accounting','hr']);

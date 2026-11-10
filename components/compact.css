@@ -471,6 +471,13 @@ details.books-reverse>summary{cursor:pointer;list-style:none}details.books-rever
  .department-content.desk-page>.office-staff>.panel-body>*{flex-shrink:0}
  .department-content.desk-page>.office-staff>.panel-body>.table-wrap{flex:1 1 auto;min-height:140px;overflow:auto;overscroll-behavior:contain}
  .department-content.desk-page>.office-staff .table-wrap thead th{position:sticky;top:0;z-index:2;background:var(--card)}
+ /* The board takes whatever height is left on the screen, so the page itself never scrolls past it. */
+ .department-content.desk-page>.office-staff>.panel-body>.org-layout{flex:1 1 auto;min-height:340px;align-items:stretch}
+ .org-layout>.org-tree-wrap{display:flex;flex-direction:column;min-height:0}
+ .org-layout>.org-tree-wrap>.org-board{flex:1 1 auto;min-height:0}
+ .org-layout>.org-tree-wrap>.org-board>.org-tree{height:100%}
+ .org-layout>.org-panel{align-self:stretch;position:relative;top:0;max-height:none;min-height:0;overflow:auto}
+ .department-content.desk-page>.office-staff>.panel-body>.org-layout.with-panel{grid-template-rows:minmax(0,1fr)}
 }
 /* Judgment results: the ring beside one row per result with its share as a bar, count and percentage. */
 :root .doughnut-area{display:grid;grid-template-columns:auto minmax(0,1fr);justify-content:stretch;gap:28px;padding:10px 6px}
@@ -1527,7 +1534,8 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .area-roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px;max-height:40vh;overflow:auto;padding:2px}
 .area-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
 .area-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}.area-foot .danger{margin-inline-end:auto}
-.area-foot .btn.danger:not(.primary){color:#a32e38;border-color:color-mix(in srgb,#a32e38 40%,var(--border))}
+/* «حذف القسم»: an outlined red button (the solid red of other themes hid its label). */
+:root:root .area-foot .btn.danger{background:var(--card);color:#a32e38;border-color:color-mix(in srgb,#a32e38 45%,var(--border))}:root:root .area-foot .btn.danger:hover{background:color-mix(in srgb,#a32e38 10%,var(--card))}
 .org-box[draggable=true]{padding-inline-start:20px}
 
 /* The tray of people not placed in the tree yet: drag from it, or drop a box on it to take it out of the tree. */
@@ -1590,3 +1598,4 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .org-board{position:relative}
 .org-canvas>.org-group{cursor:grab}.org-canvas>.org-group.dragging{z-index:19;border-color:var(--brand);transition:none}
 .org-tree{user-select:none;-webkit-user-select:none}
+.org-zoom-reset{border:0;border-inline-start:1px solid var(--border);background:none;padding:0 10px;font-size:12px;font-weight:600;color:var(--brand);cursor:pointer;white-space:nowrap}

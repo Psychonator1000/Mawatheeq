@@ -1,12 +1,12 @@
 'use client';
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
-import {FolderTree,GripVertical,Maximize2,Minus,Plus,UsersRound} from 'lucide-react';
+import {FolderTree,Maximize2,Minus,Plus,UsersRound} from 'lucide-react';
 import type {Member} from '@/lib/office';
 import {WORKSPACE_LABELS,rolesLabel,type JobRole} from '@/lib/permissions';
 import {inferRoles,ROLE_ICONS} from './permission-editor';
 import {normalizeSearch} from '@/lib/case-browse';
 import {nodesBelow,parents,peopleBelow,peopleCount,type TeamArea,type TeamChart} from '@/lib/team';
-import {BOX_W,layoutBoard,snap,type Flow} from '@/lib/org-layout';
+import {BOX_W,freeSpot,layoutBoard,obstacles,snap,type Flow} from '@/lib/org-layout';
 
 const name=(m:Member)=>m.displayName||m.username;
 const ZOOM_KEY='mawatheeq.org-zoom.v1',MIN_ZOOM=0.3,MAX_ZOOM=1.5,MARGIN=60;
@@ -104,7 +104,9 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    const z=zoomRef.current,c=canvas.current!.getBoundingClientRect();
    // Let go on the board: the box takes that spot (snapped to the grid), and boxes put by hand under it move as much.
    const from=onBoard?board.at.get(key)!:{x:(cur.sx-c.left)/z+origin.x-BOX_W/2,y:(cur.sy-c.top)/z+origin.y-20};
-   const dx=cur.dx/z,dy=cur.dy/z,out:Record<string,[number,number]>={[key]:[snap(from.x+dx),snap(from.y+dy)]};
+   // Never on top of another box: let go over one, it takes the nearest free spot beside it.
+   const want={x:snap(from.x+cur.dx/z),y:snap(from.y+cur.dy/z)},free=freeSpot(want.x,want.y,obstacles(board,blocked));
+   const dx=free.x-from.x,dy=free.y-from.y,out:Record<string,[number,number]>={[key]:[free.x,free.y]};
    for(const k of blocked)if(k!==key&&placed[k])out[k]=[snap(placed[k][0]+dx),snap(placed[k][1]+dy)];
    onPlace(out)};
   addEventListener('pointermove',move);addEventListener('pointerup',up);addEventListener('pointercancel',up)};
@@ -118,7 +120,7 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    className={'org-box'+(team?' lead':'')+(m.enabled?'':' off')+(selected===m.id?' on':'')+(q&&!hit(m)?' dim':'')+(target?' drop':'')+(moving.has(key)?' dragging':'')}
    style={onBoard&&p?{left:p.x-origin.x,top:p.y-origin.y,...shift(key)}:shift(key)}
    title={movable?'اضغط لعرض خياراته. اسحبه إلى أي مكان، أو إلى وسط صندوق شخص ليتبعه، أو إلى وسط قسم ليدخله':'اضغط لعرض خياراته'}>
-   {movable&&<GripVertical size={13} aria-hidden className="org-grip"/>}
+   
    {team>0&&<UsersRound size={14} aria-hidden className="org-icon"/>}
    <b>{name(m)}</b><small dir="ltr">{m.username}</small>
    <span className="org-meta">{roles.length?rolesLabel(roles):'بلا دور'}{!m.enabled&&' · موقوف'}</span>
@@ -130,7 +132,7 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    className={'org-box org-area'+(selected===key?' on':'')+(target?' drop':'')+(moving.has(key)?' dragging':'')}
    style={p?{left:p.x-origin.x,top:p.y-origin.y,...shift(key)}:undefined}
    title="قسم: اضغط لتسميته أو نقله أو حذفه. اسحبه إلى أي مكان، أو أفلت في وسطه موظفين">
-   <GripVertical size={13} aria-hidden className="org-grip"/><Icon size={15} aria-hidden className="org-icon"/><b>{a.name}</b>
+   <Icon size={15} aria-hidden className="org-icon"/><b>{a.name}</b>
    <span className="org-meta">{count?peopleCount(count):'فارغ — أفلت فيه موظفين'}</span>{a.workspace&&<span className="org-team" title={`من فيه يفتح ${WORKSPACE_LABELS[a.workspace]} فقط`}>مساحة {WORKSPACE_LABELS[a.workspace].split(' (')[0]}</span>}
    {target&&<span className="org-drop-label">داخله</span>}</button>};
 
@@ -184,7 +186,9 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    <button type="button" className="icon-btn" aria-label="تصغير" title="تصغير (أو عجلة الفأرة)" onClick={()=>setZoom(zoom/1.15)}><Minus size={15}/></button>
    <button type="button" className="org-zoom-value" title="الحجم الطبيعي" onClick={()=>setZoom(1)}>{Math.round(zoom*100)}٪</button>
    <button type="button" className="icon-btn" aria-label="تكبير" title="تكبير (أو عجلة الفأرة)" onClick={()=>setZoom(zoom*1.15)}><Plus size={15}/></button>
-   <button type="button" className="icon-btn" aria-label="ملاءمة الهيكل للشاشة" title="ملاءمة الهيكل كله للشاشة" onClick={fit}><Maximize2 size={14}/></button></div>
+   <button type="button" className="icon-btn" aria-label="ملاءمة الهيكل للشاشة" title="ملاءمة الهيكل كله للشاشة" onClick={fit}><Maximize2 size={14}/></button>
+   {Object.keys(placed).length>0&&<button type="button" className="org-zoom-reset" title="إرجاع كل الصناديق إلى ترتيبها التلقائي تحت رؤسائها"
+    onClick={()=>{if(window.confirm('إرجاع كل الصناديق إلى ترتيبها التلقائي؟ تبقى التبعية والأقسام كما هي، ويُلغى ما نقلته يدوياً فقط.'))onPlace(Object.fromEntries(Object.keys(placed).map(k=>[k,null])))}}>ترتيب تلقائي</button>}</div>
   <div className={'org-tree'+(panning?' panning':'')+(drag?.moved?' moving':'')} ref={view} aria-label="الهيكل الوظيفي" onPointerDown={pan}>
   <div className="org-canvas" ref={canvas} style={{zoom,width:w,height:h}}>
    <svg className="org-links" width={size.w} height={size.h} aria-hidden>

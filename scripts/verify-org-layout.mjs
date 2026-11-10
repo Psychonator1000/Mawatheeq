@@ -34,4 +34,9 @@ assert.deepEqual([g.x - p('lead').x, g.y - p('lead').y], [400, 300]);
 assert.ok(p('y1').x >= g.x && p('y1').y >= g.y && p('y1').x + BOX_W <= g.x + g.w, 'Its people inside it');
 b = layoutBoard({ kids, isLeaf, placed: { 'g:lead': [400, 300], lead: [5000, 5000] }, flows: {} });
 assert.deepEqual([b.groups.find(x => x.parent === 'lead').x, b.groups.find(x => x.parent === 'lead').y], [5400, 5300], 'It follows its head');
+// A box put by hand on top of another is drawn on the nearest free spot: never one inside the other.
+{const free=layoutBoard({ kids, isLeaf, placed: {}, flows: {} });const on=free.at.get('lead');
+ b = layoutBoard({ kids, isLeaf, placed: { x1: [on.x + 20, on.y + 10] }, flows: {} });
+ const A=p('x1'),L=p('lead');assert.ok(A.x>=L.x+BOX_W||A.x+BOX_W<=L.x||A.y>=L.y+BOX_H||A.y+BOX_H<=L.y,'Not on top of the lead');
+ for(const k of ['y1','y2','head','x2']){const o=p(k);assert.ok(A.x>=o.x+BOX_W||A.x+BOX_W<=o.x||A.y>=o.y+BOX_H||A.y+BOX_H<=o.y,'Not on top of '+k)}}
 console.log('Passed org board layout: heads over teams, down, left and right, blocks of people, boxes put by hand with their teams.');

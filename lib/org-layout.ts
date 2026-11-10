@@ -16,7 +16,7 @@ export const snap = (v: number) => Math.round(v / GRID) * GRID;
  * `kids`: each node's children in their order ('' for the top); `isLeaf`: a person with nobody under him (sections are
  * never leaves); `placed`: boxes put by hand; `flows`: the heads whose branch grows sideways.
  */
-export function layoutBoard({ kids, isLeaf, placed, flows }: {
+function layoutOnce({ kids, isLeaf, placed, flows }: {
   kids: Map<string, string[]>; isLeaf: (key: string) => boolean; placed: Record<string, [number, number]>; flows: Record<string, Flow>;
 }): Board {
   const flow = (k: string): Flow => flows[k] || 'down';
@@ -102,4 +102,38 @@ export function layoutBoard({ kids, isLeaf, placed, flows }: {
   for (const k of Object.keys(placed)) if (parent.has(k) || roots.includes(k)) resolve(k);
   for (const g of groups) { const p = groupAt(g); g.x = p.x; g.y = p.y; }
   return { at, groups, flow };
+}
+
+type Rect = { x: number; y: number; w: number; h: number };
+const hits = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+/** The free spot on the grid nearest to (x, y) for a box, clear of every obstacle by a small gap. */
+export function freeSpot(x: number, y: number, obstacles: Rect[], w = BOX_W, h = BOX_H): Point {
+  const gap = 8, clear = (px: number, py: number) => !obstacles.some(o => hits({ x: px - gap, y: py - gap, w: w + 2 * gap, h: h + 2 * gap }, o));
+  if (clear(x, y)) return { x, y };
+  const tries: Point[] = [];
+  for (let r = 1; r <= 40; r++) for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r) tries.push({ x: x + dx * GRID, y: y + dy * GRID });
+  tries.sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
+  return tries.find(t => clear(t.x, t.y)) || { x, y };
+}
+/** Every box on the board, and the obstacles a box (with what moves with it) must keep clear of. */
+export function obstacles(board: Board, skip: Set<string>): Rect[] {
+  const out: Rect[] = [];
+  for (const [k, p] of board.at) if (!skip.has(k)) out.push({ x: p.x, y: p.y, w: BOX_W, h: BOX_H });
+  for (const g of board.groups) if (!skip.has(g.parent) && !g.keys.some(k => skip.has(k))) out.push({ x: g.x, y: g.y, w: g.w, h: g.h });
+  return out;
+}
+
+/**
+ * The board, with no box put by hand left on top of another: one that would cover another box is drawn on the nearest
+ * free spot instead (with everything under it), so two boxes never end up stuck one inside the other.
+ */
+export function layoutBoard(input: { kids: Map<string, string[]>; isLeaf: (key: string) => boolean; placed: Record<string, [number, number]>; flows: Record<string, Flow> }): Board {
+  const first = layoutOnce(input), moved: Record<string, [number, number]> = {};
+  const below = (k: string, out = new Set<string>([k])) => { for (const c of input.kids.get(k) || []) if (!out.has(c)) { out.add(c); below(c, out); } return out; };
+  for (const k of Object.keys(input.placed)) {
+    const p = first.at.get(k); if (!p) continue;
+    const mine = below(k), free = freeSpot(p.x, p.y, obstacles(first, mine));
+    if (free.x !== p.x || free.y !== p.y) { moved[k] = [free.x, free.y]; first.at.set(k, free); }
+  }
+  return Object.keys(moved).length ? layoutOnce({ ...input, placed: { ...input.placed, ...moved } }) : first;
 }
