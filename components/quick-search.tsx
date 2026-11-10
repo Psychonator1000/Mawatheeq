@@ -11,13 +11,18 @@ import type {CaseRecord} from '@/lib/domain';
 export type QuickSection={id:string;label:string;icon:ElementType};
 export type QuickAction={id:string;label:string;run:()=>void};
 const limit=8;
+const caseIndexes=new WeakMap<CaseRecord[],(readonly [CaseRecord,string])[]>(),clientIndexes=new WeakMap<ClientEntity[],(readonly [ClientEntity,string])[]>();
+function caseIndexOf(cases:CaseRecord[]){let i=caseIndexes.get(cases);if(!i){i=cases.map(c=>[c,normalizeSearch([c.code,c.autoNumber,clientName(c),c.client,c.opponent,c.clientContactName,c.lawyer,...allCaseNumbers(c)].join(' '))] as const);caseIndexes.set(cases,i)}return i}
+function clientIndexOf(clients:ClientEntity[]){let i=clientIndexes.get(clients);if(!i){i=clients.map(c=>[c,normalizeSearch([c.name,...c.aliases,...c.contacts.map(p=>p.name)].join(' '))] as const);clientIndexes.set(clients,i)}return i}
 /** Ctrl/⌘+K search over records the user can already open. */
 export default function QuickSearch({open,onOpenChange,recent=[],cases,clients,sections,actions,onOpenCase,onOpenClient,onGo}:{open:boolean;onOpenChange:(open:boolean)=>void;recent?:CaseRecord[];cases:CaseRecord[];clients:ClientEntity[];sections:QuickSection[];actions:QuickAction[];onOpenCase:(c:CaseRecord)=>void;onOpenClient:(c:ClientEntity)=>void;onGo:(view:string)=>void}) {
  const [query,setQuery]=useState('');
  useEffect(()=>{const key=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();onOpenChange(!open)}};addEventListener('keydown',key);return()=>removeEventListener('keydown',key)},[open,onOpenChange]);
  const term=normalizeSearch(query.trim());
- const caseIndex=useMemo(()=>cases.map(c=>[c,normalizeSearch([c.code,c.autoNumber,clientName(c),c.client,c.opponent,c.clientContactName,c.lawyer,...allCaseNumbers(c)].join(' '))] as const),[cases]);
- const clientIndex=useMemo(()=>clients.map(c=>[c,normalizeSearch([c.name,...c.aliases,...c.contacts.map(p=>p.name)].join(' '))] as const),[clients]);
+ // The search text of every case and client is worked out when the search is first opened, not when the app opens
+ // (with thousands of cases that is a noticeable pause on a slow computer), and kept while the lists stay the same.
+ const caseIndex=useMemo(()=>open?caseIndexOf(cases):[],[cases,open]);
+ const clientIndex=useMemo(()=>open?clientIndexOf(clients):[],[clients,open]);
  const foundCases=term?caseIndex.filter(([,text])=>text.includes(term)).slice(0,limit).map(([c])=>c):[];
  const foundClients=term?clientIndex.filter(([,text])=>text.includes(term)).slice(0,5).map(([c])=>c):[];
  const matches=(label:string)=>!term||normalizeSearch(label).includes(term);

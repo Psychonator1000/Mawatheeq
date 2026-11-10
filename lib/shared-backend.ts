@@ -57,7 +57,9 @@ async function allClients(action: 'list' | 'lookup') {
  */
 type CaseCopy = { asOf: string; rows: StoredRow[]; full: number; print?: string };
 type Changes = { asOf: string; count: number; fingerprint: string; more: boolean; rows: StoredRow[] };
-let caseCopy: CaseCopy | null = null, copyLoaded = false, copyUser = '';
+// The stored copy is read once and every refresh waits for that same read: two refreshes starting together (a
+// return to the window during a timed refresh) would otherwise both find no copy and both read every case again.
+let caseCopy: CaseCopy | null = null, copyRead: Promise<void> | null = null, copyUser = '';
 let lastCases: { rows: StoredRow[]; directory: unknown; rulesKey: string; result: unknown } | null = null;
 const textTag = (t: string) => { let h = 2166136261; for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 16777619); return (h >>> 0).toString(36) + t.length.toString(36); };
 async function fingerprint(rows: StoredRow[]) {
@@ -66,6 +68,20 @@ async function fingerprint(rows: StoredRow[]) {
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
+async function keptCopy(user: string) {
+  if (user !== copyUser) { copyUser = user; copyRead = null; caseCopy = null; clientCopy = null; lastCases = null; }
+  await (copyRead ??= readSnapshot<CaseCopy>('case-rows').then(c => { if (copyUser === user) caseCopy = c; }));
+}
+/**
+ * The cases kept from the last visit, for the screen to open with before the server answers (one stored copy serves
+ * both: the workspace keeps only the clients and rules beside it). `print` is the fingerprint those cases carry, so
+ * the workspace trusts the opening copy's stamp only when it describes these very cases.
+ */
+export async function storedCases(clients: ClientEntity[]): Promise<{ cases: CaseRecord[]; print?: string } | null> {
+  const user = cachedUser()?.id || ''; if (!user) return null;
+  await keptCopy(user);
+  return caseCopy && { cases: caseCopy.rows.map(row => enrichCase({ ...row.payload, id: row.id, revision: row.revision, archived: row.archived } as CaseRecord, clients)), print: caseCopy.print };
+}
 async function caseRows(): Promise<{ rows: StoredRow[]; changed: boolean; print?: string }> {
   // A database without «cases_changes» yet (before its update is applied) is read in full as before.
   try { return await changedRows(); } catch { return { rows: await allRows('mawatheeq_cases'), changed: true }; }
@@ -73,8 +89,7 @@ async function caseRows(): Promise<{ rows: StoredRow[]; changed: boolean; print?
 async function changedRows(): Promise<{ rows: StoredRow[]; changed: boolean; print?: string }> {
   // Signing in as someone else (or switching to a staff account) starts from that account's own copy.
   const user = cachedUser()?.id || '';
-  if (user !== copyUser) { copyUser = user; copyLoaded = false; caseCopy = null; clientCopy = null; lastCases = null; }
-  if (!copyLoaded) { copyLoaded = true; caseCopy = await readSnapshot<CaseCopy>('case-rows'); }
+  await keptCopy(user);
   if (caseCopy) {
     const d = await localRequest<Changes>('cases_changes', { since: caseCopy.asOf, light: true });
     if (!d.more) {

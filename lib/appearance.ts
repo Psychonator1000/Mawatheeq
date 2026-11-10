@@ -122,7 +122,10 @@ export function applyAppearance(a: Appearance) {
   if (liteMode(a)) root.dataset.perf = 'lite'; else delete root.dataset.perf;
   if (view.mode) root.dataset.mode = view.mode; else delete root.dataset.mode;
   themeStylesHook?.();
-  if (a.cursor === 'themed') applyThemedCursor(view.theme, view.dark); else { root.style.removeProperty('--cursor-arrow'); root.style.removeProperty('--cursor-hand'); }
+  // The themed pointer reads the theme's colours from the page, which makes the browser work out every style: done
+  // once the page is idle, so it never holds up the first screen.
+  if (a.cursor === 'themed') { const draw = () => applyThemedCursor(view.theme, view.dark); if (typeof requestIdleCallback === 'function') requestIdleCallback(draw, { timeout: 1500 }); else setTimeout(draw, 300); }
+  else { root.style.removeProperty('--cursor-arrow'); root.style.removeProperty('--cursor-hand'); }
 }
 const svgUrl = (svg: string, x: number, y: number, fallback: string) => `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${x} ${y}, ${fallback}`;
 /** Draws the mouse pointer in the current theme's colours (an arrow, and a filled variant over clickable things). */

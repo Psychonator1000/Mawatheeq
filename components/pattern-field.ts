@@ -111,7 +111,13 @@ export function createPatternSheet() {
     }
   };
   const replace = () => { if (!placeFrame) placeFrame = requestAnimationFrame(place); };
-  const watcher = new MutationObserver(replace);
+  // Changes to the page itself are measured once the browser is idle: while the app is still building, measuring on
+  // every frame made the browser lay the whole page out again each time (most of a second on a slow computer).
+  // Scrolling and resizing still measure on the next frame, so the windows keep up with the pattern.
+  let idleTask = 0;
+  const whenIdle = () => { if (idleTask) return; const run = () => { idleTask = 0; replace(); };
+    idleTask = typeof requestIdleCallback === 'function' ? requestIdleCallback(run, { timeout: 600 }) : window.setTimeout(run, 120); };
+  const watcher = new MutationObserver(whenIdle);
   watcher.observe(document.body, { childList: true, subtree: true });
   // Panels also slide a little while the page scrolls and as sections animate in; measure again once they settle.
   let settle = 0;

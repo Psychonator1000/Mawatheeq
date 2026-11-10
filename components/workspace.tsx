@@ -20,7 +20,7 @@ import {clampPage} from '@/lib/pagination';
 import {CaseRecord,Rules,DEFAULT_RULES,caseState,emptyCase,formatDate,todayISO,elapsedDaysLabel,remainingDaysLabel,TYPES,inCaseCategory,newCategoryCase,type CaseCategory,caseCode} from '@/lib/domain';
 import {Choice,Field,DateField,Badge,Empty,Count,api,saveBlob} from './shared';
 import CaseDetail from './case-detail';
-import {fullCaseRows,isTrimmed} from '@/lib/shared-backend';
+import {fullCaseRows,isTrimmed,storedCases} from '@/lib/shared-backend';
 import {RemainingDays} from './case-timing';
 import {sharedBackend} from '@/lib/client-api';
 import OfficeWork from './office-work';
@@ -163,7 +163,8 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
  useEffect(()=>{const idle=window.requestIdleCallback||((f:()=>void)=>window.setTimeout(f,200)),cancel=window.cancelIdleCallback||clearTimeout;const id=idle(()=>{baseOptions(filterRecords)});return()=>cancel(id)},[filterRecords]);
  const scrollMemory=useRef<Record<string,number>>({});
  // Each section reopens where you left it; a new section starts at the top.
- useEffect(()=>{const y=scrollMemory.current[view]||0;requestAnimationFrame(()=>scrollTo({top:y,behavior:'auto'}))},[view]);
+ // Back to where the page was left; nothing to do (and no layout to force) when it is the top on both sides.
+ useEffect(()=>{const y=scrollMemory.current[view]||0;if(!y&&!scrollY)return;requestAnimationFrame(()=>scrollTo({top:y,behavior:'auto'}))},[view]);
  const search=filters.search;
  const changeFilter=(key:keyof CaseFilters,value:string)=>{setFilters(current=>({...current,[key]:value}));setPage(1);if((key==='year'||key==='month'||key==='numberStatus'||key==='category'||key==='clientEntityId'||key==='analysisField'||key==='analysisValue')&&view==='cases')history.replaceState(null,'',caseFiltersHash({...filters,[key]:value}))};
  const setSearch=(value:string)=>changeFilter('search',value);
@@ -181,7 +182,10 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
  const load=async()=>{setError('');try{const d=await api('/api/cases');fresh.current=true;shown.current=true;if(d===lastCases.current)return;lastCases.current=d;
   // What is on screen (the copy the page opened with, or the last answer) already holds the same cases, clients and
   // rules: nothing to redraw or save again.
-  if(d.stamp&&d.stamp===onScreen.current)return;onScreen.current=d.stamp||'';apply(d);if(sharedBackend)void writeSnapshot('cases',d)}catch(e){if(shown.current){clearTimeout(retry.current);retry.current=window.setTimeout(()=>void load(),retryDelay())}else setError((e as Error).message)}finally{setLoading(false)}};useEffect(()=>{if(sharedBackend)void readSnapshot<Parameters<typeof apply>[0]&{stamp?:string}>('cases').then(d=>{if(d&&!fresh.current){shown.current=true;onScreen.current=d.stamp||'';apply(d);setLoading(false)}});load();const hash=()=>{const v=location.hash.slice(1).split('?')[0];if([...NAV.map(x=>x.id),...DESK_PAGES.map(d=>d[0]),'settings','paper','execution','insurance','telecom'].includes(v)){setView(['execution','insurance','telecom'].includes(v)?'cases':v);setFilters({...EMPTY_CASE_FILTERS,...caseLinkFilters(location.hash)});setOutcome('');setType('');setLawyer('');setPage(1)}};hash();addEventListener('hashchange',hash);return()=>removeEventListener('hashchange',hash)},[]);
+  if(d.stamp&&d.stamp===onScreen.current)return;onScreen.current=d.stamp||'';apply(d);if(sharedBackend)void writeSnapshot('cases',{...d,cases:undefined})}catch(e){if(shown.current){clearTimeout(retry.current);retry.current=window.setTimeout(()=>void load(),retryDelay())}else setError((e as Error).message)}finally{setLoading(false)}};useEffect(()=>{if(sharedBackend)void readSnapshot<Omit<Parameters<typeof apply>[0],'cases'>&{cases?:CaseRecord[];stamp?:string}>('cases').then(async d=>{if(!d||fresh.current)return;
+   // The cases themselves come from the copy the refreshes keep (an older stored copy may still hold them here).
+   let cases=d.cases,stamp=d.stamp||'';if(!cases){const kept=await storedCases(d.clients||[]);if(!kept||fresh.current)return;cases=kept.cases;if(!kept.print||!stamp.startsWith(kept.print+':'))stamp=''}
+   shown.current=true;onScreen.current=stamp;apply({...d,cases});setLoading(false)});load();const hash=()=>{const v=location.hash.slice(1).split('?')[0];if([...NAV.map(x=>x.id),...DESK_PAGES.map(d=>d[0]),'settings','paper','execution','insurance','telecom'].includes(v)){setView(['execution','insurance','telecom'].includes(v)?'cases':v);setFilters({...EMPTY_CASE_FILTERS,...caseLinkFilters(location.hash)});setOutcome('');setType('');setLawyer('');setPage(1)}};hash();addEventListener('hashchange',hash);return()=>removeEventListener('hashchange',hash)},[]);
  // A colleague's change arrives over the live channel; the timed refresh is the safety net (every 2.5–3 minutes with the channel, 25–40 seconds without), at random so open copies do not ask at the same moment. Returning to the window refreshes at most every 10 seconds.
  useEffect(()=>{if(!sharedBackend)return;void startLive();let timer=0,last=Date.now(),soon=0;const refresh=()=>{if(document.visibilityState==='visible'&&Date.now()-last>10000){last=Date.now();void load()}};const wait=()=>pollEvery(25000,150000)+Math.random()*15000;const tick=()=>{if(!userIdle())refresh();timer=window.setTimeout(tick,wait())};timer=window.setTimeout(tick,wait());
   // A colleague's saved case arrives by ping; a burst of saves becomes one refresh a moment later.
@@ -201,7 +205,10 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
  // Cases with an open hearing or task due on the report date, for «متابعات اليوم».
  const dueWork=useMemo(()=>new Set((office?.work||[]).filter(w=>w.caseId&&w.dueDate===reportDate&&w.status!=='done'&&w.status!=='cancelled').map(w=>w.caseId)),[office,reportDate]);
  // The register's list: the same rules as the server's «cases_list» (lib/case-list.ts), so a page read from either agrees.
- const sorted=useMemo(()=>listCases(records,rules,{view:view==='deadlines'?'deadlines':'cases',archive,filters,outcome,type,lawyer,deadlineFilter,reportDate,sort},todayISO(),dueWork),[records,rules,view,archive,filters,outcome,type,lawyer,deadlineFilter,reportDate,sort,dueWork]),filtered=sorted;
+ // The register's list is worked out once the register (or the deadlines) has been opened, not on an opening that
+ // shows another page; from then on it is kept up to date as before, so going back to it is instant.
+ const [listSeen,setListSeen]=useState(false);if(!listSeen&&(view==='cases'||view==='deadlines'))setListSeen(true);
+ const sorted=useMemo(()=>listSeen||view==='cases'||view==='deadlines'?listCases(records,rules,{view:view==='deadlines'?'deadlines':'cases',archive,filters,outcome,type,lawyer,deadlineFilter,reportDate,sort},todayISO(),dueWork):[],[listSeen,records,rules,view,archive,filters,outcome,type,lawyer,deadlineFilter,reportDate,sort,dueWork]),filtered=sorted;
  // Next scheduled hearing per case, from open hearings dated today or later.
  const nextHearing=useMemo(()=>{const m=new Map<string,WorkItem>(),today=todayISO();for(const w of office?.work||[])if(w.kind==='hearing'&&w.status!=='done'&&w.status!=='cancelled'&&w.caseId&&w.dueDate>=today&&(!m.has(w.caseId)||w.dueDate<m.get(w.caseId)!.dueDate))m.set(w.caseId,w);return m},[office]);
  useEffect(()=>setPage(1),[filters,outcome,type,lawyer,view,archive,deadlineFilter,reportDate,sort]);const pageSize=20,pages=Math.max(1,Math.ceil(filtered.length/pageSize)),currentPage=clampPage(page,pages);

@@ -24,6 +24,8 @@ export default function MonthlyCases({ records, onSelectMonth }: { records: Case
   // The chart follows its box's size, read by the browser after layout rather than measured on demand: measuring on
   // demand made the whole overview recalculate several times each time the page was shown again.
   const box = useRef<HTMLDivElement>(null), [size, setSize] = useState({ w: 0, h: 0 });
+  // The tooltip measures itself in the page when it appears, so it is added the first time the pointer comes over the chart.
+  const [tip, setTip] = useState(false);
   useEffect(() => { const el = box.current; if (!el) return;
     const ro = new ResizeObserver(([e]) => { const w = Math.round(e.contentRect.width), h = Math.round(e.contentRect.height); setSize(s => s.w === w && s.h === h ? s : { w, h }); });
     ro.observe(el); return () => ro.disconnect(); }, []);
@@ -32,7 +34,7 @@ export default function MonthlyCases({ records, onSelectMonth }: { records: Case
       <label className="chart-year"><span>السنة</span><SelectList aria-label="السنة" value={year} onChange={e => setYear(e.target.value)}>{years.map(y => <option key={y} value={y}>{y}</option>)}</SelectList></label>
     </div>
     <div className="panel-body">
-      <div className="chart-box monthly-chart" ref={box}><div className="chart-fill">{size.w > 0 && size.h > 0 &&
+      <div className="chart-box monthly-chart" ref={box} onPointerEnter={() => setTip(true)} onFocus={() => setTip(true)}><div className="chart-fill">{size.w > 0 && size.h > 0 &&
         <AreaChart width={size.w} height={size.h} data={monthly} margin={{ top: 16, right: 18, bottom: 0, left: 18 }} onClick={event => {
           const index = event.activeTooltipIndex;
           if (index == null || !/^\d+$/.test(String(index))) return;
@@ -42,7 +44,7 @@ export default function MonthlyCases({ records, onSelectMonth }: { records: Case
           <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--brand)" stopOpacity={.22}/><stop offset="100%" stopColor="var(--brand)" stopOpacity={0}/></linearGradient></defs>
           <CartesianGrid strokeDasharray="4 6" vertical={false} verticalCoordinatesGenerator={noLines} horizontalCoordinatesGenerator={fourLines} stroke="#e8dfd3"/>
           <XAxis dataKey="month" axisLine={false} tickLine={false} interval={size.w < 560 ? 1 : 0} tick={MonthTick}/>
-          <Tooltip contentStyle={{ border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, textAlign: 'right', background: 'var(--popover)', color: 'var(--popover-foreground)' }} formatter={value => [value, 'سجل حكم']}/>
+          {tip&&<Tooltip contentStyle={{ border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, textAlign: 'right', background: 'var(--popover)', color: 'var(--popover-foreground)' }} formatter={value => [value, 'سجل حكم']}/>}
           <Area dataKey="count" type="monotone" stroke="var(--brand)" strokeWidth={2.5} fill={`url(#${gradientId})`} dot={{ r: 3 }} activeDot={{ r: 6 }} animationDuration={500}/>
         </AreaChart>}
       </div></div>
