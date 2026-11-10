@@ -58,11 +58,11 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
  const changesFor=(nextParent:Map<string,string>,next:TeamChart)=>context.members.filter(m=>m.role!=='owner'&&m.permissions&&m.permissions.accountKind!=='client')
   .map(m=>({m,from:workspacesFor(parent,chart,m.id),to:workspacesFor(nextParent,next,m.id)})).filter(x=>x.from.join()!==x.to.join());
  type Change=ReturnType<typeof changesFor>[number];
- const agree=(list:Change[])=>!list.length||window.confirm(`تتغير مساحات العمل التي يفتحها:\n\n${list.map(x=>`• ${x.m.displayName||x.m.username}: ${wsLabel(x.to)}`).join('\n')}\n\nتُحدَّث صفحاتهم الآن وتنتهي جلساتهم الحالية، فيفتحون عند الدخول التالي ما يخص أقسامهم فقط. متابعة؟`);
+ // No question first (the owner asked): the change is made, and the message after it says whose workspaces changed to what.
  async function applyChanges(list:Change[]){if(!list.length)return;const failed:string[]=[];
   for(const {m,to} of list){const p=m.permissions!,view={...(p.view||{})};for(const w of to)delete view['ws:'+w];
    try{await officeRequest('set_member_access',{id:m.id,revision:p.revision,permissions:{...p,sections:sectionsFor(p,to),view}})}catch(e){failed.push(`${m.displayName||m.username}: ${friendly(e)}`)}}
-  onChanged();if(failed.length)toast.error('لم تُحدَّث صفحات:\n'+failed.join('\n'));else toast.success(list.length===1?'حُدّثت صفحاته لمساحات أقسامه.':'حُدّثت صفحاتهم لمساحات أقسامهم.')}
+  onChanged();if(failed.length)toast.error('لم تُحدَّث صفحات:\n'+failed.join('\n'));else toast.success(`حُدّثت صفحاتهم لمساحات أقسامهم (تنتهي جلساتهم الحالية):\n${list.map(x=>`• ${x.m.displayName||x.m.username}: ${wsLabel(x.to)}`).join('\n')}`)}
  // Dropping someone on a section of another workspace asks whether they move there or are added to it as well.
  function drop(node:string,target:string|null){
   const area=target?.startsWith('a:')?areaOf(target.slice(2)):undefined;
@@ -72,7 +72,7 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
  // Moving a box moves everything under it; the server refuses putting anything under something it holds.
  async function move(node:string,target:string|null){
   const nextChart={...chart,extras:(chart.extras||[]).filter(x=>!(node==='u:'+x.userId&&target==='a:'+x.areaId))};
-  const changes=changesFor(movedParents(parent,node,target),nextChart);if(!agree(changes))return;
+  const changes=changesFor(movedParents(parent,node,target),nextChart);
   const to=place(target);setTreeBusy(true);
   try{setChart(node.startsWith('u:')?await dailyRequest<TeamChart>('set_manager',{userId:node.slice(2),managerId:to.user,areaId:to.area})
     :await (()=>{const a=areaOf(node.slice(2))!;return dailyRequest<TeamChart>('save_area',{id:a.id,name:a.name,role:a.role,parentUser:to.user,parentArea:to.area})})());
@@ -83,19 +83,19 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
  // A section a person belongs to besides their main place: a line from them to it in the tree.
  async function extra(userId:string,areaId:string,add:boolean){
   const extras=(chart.extras||[]).filter(x=>!(x.userId===userId&&x.areaId===areaId));
-  const changes=changesFor(parent,{...chart,extras:add?[...extras,{userId,areaId}]:extras});if(!agree(changes))return;setTreeBusy(true);
+  const changes=changesFor(parent,{...chart,extras:add?[...extras,{userId,areaId}]:extras});setTreeBusy(true);
   try{setChart(await dailyRequest<TeamChart>(add?'add_extra':'remove_extra',{userId,areaId}));toast.success(add?`${nameOf(userId)} في ${labelOf('a:'+areaId)} أيضاً الآن`:`لم يعد ${nameOf(userId)} في ${labelOf('a:'+areaId)}`);await applyChanges(changes)}
   catch(e){toast.error((e as Error).message)}finally{setTreeBusy(false)}
  }
  async function saveArea(d:AreaDraft){const to=place(d.parent);
   const nextAreas=d.id?chart.areas.map(a=>a.id===d.id?{...a,workspace:d.workspace}:a):chart.areas,changes=d.id?changesFor(movedParents(parent,'a:'+d.id,d.parent),{...chart,areas:nextAreas}):[];
-  if(!agree(changes))return;setTreeBusy(true);
+  setTreeBusy(true);
   try{setChart(await dailyRequest<TeamChart>('save_area',{id:d.id||null,name:d.name,role:d.role,workspace:d.workspace,parentUser:to.user,parentArea:to.area}));await applyChanges(changes);setAreaEdit(null);toast.success(d.id?'حُفظ القسم.':`أُضيف قسم «${d.name}». اسحب الموظفين إليه.`)}
   catch(e){toast.error((e as Error).message)}finally{setTreeBusy(false)}}
  async function deleteArea(a:TeamArea){if(!window.confirm(`حذف قسم «${a.name}»؟ ينتقل من فيه إلى مكان القسم في الهيكل.`))return;
   // Whoever was inside moves up to the section's place, and takes the workspace found there.
   const key='a:'+a.id,up=parent.get(key)||null,next=new Map(parent);next.delete(key);for(const [k,v] of parent)if(v===key){if(up)next.set(k,up);else next.delete(k)}
-  const changes=changesFor(next,{...chart,areas:chart.areas.filter(x=>x.id!==a.id),extras:(chart.extras||[]).filter(x=>x.areaId!==a.id)});if(!agree(changes))return;setTreeBusy(true);
+  const changes=changesFor(next,{...chart,areas:chart.areas.filter(x=>x.id!==a.id),extras:(chart.extras||[]).filter(x=>x.areaId!==a.id)});setTreeBusy(true);
   try{setChart(await dailyRequest<TeamChart>('delete_area',{id:a.id}));await applyChanges(changes);setAreaEdit(null);toast.success('حُذف القسم.')}catch(e){toast.error((e as Error).message)}finally{setTreeBusy(false)}}
  const isOwner=context.user.role==='owner';
  // Admins manage other staff whose admin powers they also hold; never themselves or the owner.
