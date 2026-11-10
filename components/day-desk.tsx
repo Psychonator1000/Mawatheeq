@@ -100,7 +100,10 @@ export default function DayDesk(p:Props){
  // The day is one column read from the top: numbered sections, and for one's own report a bar fixed at the bottom
  // with what the report holds and the buttons to save and send it.
  const sections=team?<>{p.reviewer&&<TeamBoard rows={board} date={date} today={today} reading={reading} onRead={setReading} onDay={id=>pick(id===p.user.id?'me':id)} printedBy={p.printedBy} canManage={p.canManageTeam}/>}{missionsCol}</>
-  :self?<>{missionsCol}{p.canReport&&<ReportEditor r={report} date={date} today={today} n={p.missionsOn?'٢':'١'} others={p.missionsOn}/>}</>
+  :self?<>{missionsCol}{p.canReport?<ReportEditor r={report} date={date} today={today} n={p.missionsOn?'٢':'١'} others={p.missionsOn}/>
+   // Without the report section the page says so, and how to turn it on, rather than leaving the report out silently.
+   :<section className="day-sec" aria-label="التقرير اليومي غير مفعّل"><div className="day-sec-head"><h2><span className="day-sec-n" aria-hidden>٢</span>ما عملته اليوم</h2></div>
+    <div className="day-empty day-empty-action"><p>التقرير اليومي غير مفعّل لهذا الحساب، لذلك لا يظهر هنا ما يُكتب ويُرسل. يفعّله المسؤول من «فريق المكتب» ← «تعديل الصلاحيات» على الحساب ← الضغط على «مهام اليوم والتقرير» في المعاينة، ثم الحفظ. ولترحيل الجلسات وإتمام المهام يُفعَّل معه «السماح بالتعديل».</p></div></section>}</>
   :<>{missionsCol}<section className="day-sec" aria-label="تقرير الزميل"><div className="day-sec-head"><h2><span className="day-sec-n" aria-hidden>{p.missionsOn?'٢':'١'}</span>تقرير {name}</h2>{colleague&&<span className={'tag '+(colleague.submittedAt?'green':'amber')}>{colleague.submittedAt?'أُرسل '+clock(colleague.submittedAt):'مسودة'}</span>}</div>
    {!list?<p role="status" className="day-empty"><LoaderCircle className="spin" size={14}/> جارٍ التحميل…</p>:colleague?<ReportReader r={colleague} printedBy={p.printedBy}/>:<p className="day-empty">لم يكتب تقريراً لهذا اليوم.</p>}</section></>;
  const dayPath=<section className="panel day-path" aria-label={team?'يوم الفريق':self?(p.canReport?'تقريري اليومي':'يومي'):'يوم '+name}>
@@ -110,7 +113,7 @@ export default function DayDesk(p:Props){
  // Under the head of every view, one line that says what the view is for and what to press.
  const PURPOSE:Record<Mode,string>={
   day:team?'لكل محامٍ تقريره وجلساته ومهامه وما تأخر عليه، وتحتها جلسات ومهام المكتب. «يومه» يفتح قائمته وتقريره.'
-   :self?(p.missionsOn&&p.canReport?'أنجز جلساتك ومهامك من القائمة، وأضف ما عملته خارجها، ثم أرسل التقرير من الشريط في الأسفل.':p.canReport?'أضف ما عملته اليوم بالأزرار، ثم أرسل التقرير من الشريط في الأسفل.':'جلساتك ومهامك في هذا اليوم: رحّل كل جلسة وأتمّ كل مهمة من زرها.')
+   :self?(p.missionsOn&&p.canReport?'أنجز جلساتك ومهامك من القائمة، وأضف ما عملته خارجها، ثم أرسل التقرير من الشريط في الأسفل.':p.canReport?'أضف ما عملته اليوم بالأزرار، ثم أرسل التقرير من الشريط في الأسفل.':'جلساتك ومهامك في هذا اليوم. التقرير اليومي غير مفعّل لهذا الحساب (التفاصيل في القسم الثاني).')
    :`يوم ${name}: جلساته ومهامه، وتقريره.`,
   posting:`كل جلسات المكتب في هذا اليوم (${posting.length}). اضغط «ترحيل» في كل جلسة لتسجيل ما تم فيها وتحديد الجلسة القادمة.`,
   dates:'مواعيد الطعن والمتابعات من أسبوع مضى إلى ثلاثين يوماً قادمة. اختر تصنيفاً، ثم «فتح القضية» للعمل عليها.',
@@ -259,7 +262,7 @@ function ReportEditor({r,date,today,n,others}:{r:OwnReport;date:string;today:str
   <div className="day-sec-head"><h2><span className="day-sec-n" aria-hidden>{n}</span>{others?'ما عملته أيضاً':'ما عملته اليوم'}</h2></div>
   {r.error?<p className="day-empty" role="alert">{r.error}</p>:future?<p className="day-empty">لا يُكتب تقرير ليوم لم يأتِ بعد.</p>:<>
   <p className="report-hint">{others?'ما ترحّله وتُتمّه من القائمة يُضاف إلى تقريرك بنفسه. أضف هنا كل عمل آخر:':'أضف كل عمل قمت به اليوم:'}</p>
-  <div className="part-adds" role="group" aria-label="إضافة إلى التقرير">{REPORT_PARTS.map(({key,title,add})=><button key={key} type="button" className="part-add" aria-label={'إضافة سطر: '+title} title={title} disabled={ro} onClick={()=>addLine(key)}><Plus size={13}/> {QUICK_ADD[key]}</button>)}
+  <div className="part-adds" role="group" aria-label="إضافة إلى التقرير">{REPORT_PARTS.map(({key,title})=><button key={key} type="button" className="part-add" aria-label={'إضافة سطر: '+title} title={title} disabled={ro} onClick={()=>addLine(key)}><Plus size={13}/> {QUICK_ADD[key]}</button>)}
    {!showNotes&&<button type="button" className="part-add" disabled={ro} onClick={()=>setNotes(true)}><Plus size={13}/> ملاحظة أو معوق</button>}</div>
   <div className="day-report-body">{REPORT_PARTS.map(({key,title,fields},i)=>r.payload[key].length?<div key={key} className="report-part" data-part={key}>
    <div className="report-part-head"><b>{ORDINALS[i]}: {title}</b><span className="report-count">{r.payload[key].length}</span></div>
