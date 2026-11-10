@@ -12,7 +12,7 @@ const name=(m:Member)=>m.displayName||m.username;
 const ZOOM_KEY='mawatheeq.org-zoom.v1',MIN_ZOOM=0.3,MAX_ZOOM=1.5,MARGIN=60;
 const readZoom=()=>{try{const z=Number(localStorage.getItem(ZOOM_KEY));return z>=MIN_ZOOM&&z<=MAX_ZOOM?z:1}catch{return 1}};
 type Line={id:string;d:string;kind:'tree'|'area'|'boss';on:boolean};
-type Drag={key:string;sx:number;sy:number;dx:number;dy:number;moved:boolean;target:string|null;tray:boolean;board:boolean};
+type Drag={key:string;sx:number;sy:number;dx:number;dy:number;moved:boolean;target:string|null;tray:boolean;board:boolean;rejoin:boolean};
 
 /**
  * «فريق المكتب» as a board on a grid (as devices on a network map): the office's people (the program's own owner
@@ -80,18 +80,20 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
   // eslint-disable-next-line react-hooks/exhaustive-deps -- carried reads the board and the tree
   [drag,parent,board]);
  const start=(e:React.PointerEvent,key:string,movable:boolean,onBoard:boolean)=>{if(e.button!==0)return;e.stopPropagation();
-  const d:Drag={key,sx:e.clientX,sy:e.clientY,dx:0,dy:0,moved:false,target:null,tray:false,board:false};dragRef.current=d;
+  const d:Drag={key,sx:e.clientX,sy:e.clientY,dx:0,dy:0,moved:false,target:null,tray:false,board:false,rejoin:false};dragRef.current=d;
   const blocked=carried(key),isBlock=key.startsWith('g:');
   const move=(ev:PointerEvent)=>{const cur=dragRef.current!;const dx=ev.clientX-cur.sx,dy=ev.clientY-cur.sy;
    if(!cur.moved&&(!movable||Math.hypot(dx,dy)<5))return;
-   let target:string|null=null,tray=false,onB=false;
+   let target:string|null=null,tray=false,onB=false,rejoin=false;
    for(const el of document.elementsFromPoint(ev.clientX,ev.clientY) as HTMLElement[]){
     const node=el.closest<HTMLElement>('[data-node]')?.dataset.node;
     if(node&&!blocked.has(node)&&!isBlock){const r=el.closest<HTMLElement>('[data-node]')!.getBoundingClientRect(),fx=(ev.clientX-r.left)/r.width,fy=(ev.clientY-r.top)/r.height;
      if(fx>0.2&&fx<0.8&&fy>0.15&&fy<0.85&&(parent.get(key)||null)!==node){target=node;break}}
     if(el.classList?.contains('org-tray')&&!isBlock){tray=true;break}
+    // Back over the frame of his own team: he rejoins it.
+    if(el.classList?.contains('org-group')&&!isBlock&&el.dataset.group===parent.get(key)&&!kids.get(key)?.length){rejoin=true;onB=true;break}
     if(el.classList?.contains('org-canvas')||el.classList?.contains('org-tree')){onB=true;break}}
-   const next={...cur,dx,dy,moved:true,target,tray,board:onB};dragRef.current=next;setDrag(next)};
+   const next={...cur,dx,dy,moved:true,target,tray,board:onB,rejoin};dragRef.current=next;setDrag(next)};
   const up=(ev:PointerEvent)=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);
    const cur=dragRef.current!;dragRef.current=null;setDrag(null);
    if(isBlock){if(!cur.moved||!cur.board)return;const g=board.groups.find(x=>'g:'+x.parent===key)!,head=board.at.get(g.parent)!,z=zoomRef.current;
@@ -99,6 +101,7 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    if(!cur.moved){if(ev.type==='pointerup'){const n=byKey.get(key);if(n?.member)onPick(n.member);else if(n?.area)onPickArea(n.area)}return}
    const clear=Object.fromEntries([...blocked].filter(k=>placed[k]).map(k=>[k,null])) as Record<string,null>;
    if(cur.target){onMove(key,cur.target);if(Object.keys(clear).length)onPlace(clear);return}
+   if(cur.rejoin){onPlace({[key]:null});return}
    if(cur.tray){if((parent.get(key)||null)!==null)onMove(key,null);onPlace({...clear,[key]:null});return}
    if(!cur.board)return;
    const z=zoomRef.current,c=canvas.current!.getBoundingClientRect();
@@ -195,10 +198,10 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
     <defs><marker id="org-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
      <marker id="org-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8"><circle cx="5" cy="5" r="4"/></marker></defs>
     {[...lines].sort((a,b)=>Number(a.on)-Number(b.on)).map(l=><path key={l.id} d={l.d} className={l.kind+(l.on?' on':'')} markerEnd={l.kind==='area'?'url(#org-arrow)':l.kind==='boss'?'url(#org-dot)':undefined}/>)}</svg>
-   {board.groups.map(g=><div key={g.parent} className={'org-group'+(moving.has('g:'+g.parent)?' dragging':'')} data-group={g.parent} title="اسحب الإطار لنقل هذه المجموعة كلها"
+   {board.groups.map(g=><div key={g.parent} className={'org-group'+(moving.has('g:'+g.parent)?' dragging':'')+(drag?.rejoin&&parent.get(drag.key)===g.parent?' drop':'')} data-group={g.parent} title="اسحب الإطار لنقل هذه المجموعة كلها"
     onPointerDown={e=>start(e,'g:'+g.parent,true,true)} style={{left:g.x-origin.x,top:g.y-origin.y,width:g.w,height:g.h,...(moving.has('g:'+g.parent)||moving.has(g.parent)?shift(moving.has('g:'+g.parent)?'g:'+g.parent:g.parent):undefined)}}/>)}
    {[...board.at.keys()].map(k=>{const n=byKey.get(k);return n?.member?personBox(n.member,true):n?.area?areaBox(n.area):null})}
   </div></div></div>
-  {drag?.moved&&<p className="org-tip" role="status">{drag.target?'أفلته الآن ليصبح تحته':drag.tray?'أفلته الآن لإخراجه من الهيكل':'أفلته في أي مكان ليبقى فيه، أو في وسط صندوق شخص ليتبعه أو في وسط قسم ليدخله.'}</p>}
+  {drag?.moved&&<p className="org-tip" role="status">{drag.target?'أفلته الآن ليصبح تحته':drag.tray?'أفلته الآن لإخراجه من الهيكل':drag.rejoin?'أفلته الآن ليعود إلى إطار فريقه':'أفلته في أي مكان ليبقى فيه، أو في وسط صندوق شخص ليتبعه أو في وسط قسم ليدخله.'}</p>}
  </div>;
 }

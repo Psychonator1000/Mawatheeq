@@ -239,8 +239,10 @@ try{
    const S=await box('salem.ui').boundingBox(),C=await box('ui_clerk').boundingBox();
    assert.ok(S.x>=C.x+C.width-1||S.x+S.width<=C.x+1||S.y>=C.y+C.height-1||S.y+S.height<=C.y+1,'Not on top of each other');
    await db.exec('reset role');assert.equal((await db.query('select count(*)::int n from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id where a.username=$1 and t.manager_id is not null',['salem.ui'])).rows[0].n,1,'Still under ui_clerk');await db.exec('set role anon');
-   await box('salem.ui').click();await page.locator('.org-panel').getByRole('button',{name:'إعادته لمكانه التلقائي'}).click();
-   await page.locator('.org-panel').getByRole('button',{name:'إعادته لمكانه التلقائي'}).waitFor({state:'detached'});await under(await nodeOf('salem.ui'),await nodeOf('ui_clerk'));
+   // His head gathers his people back into one frame (salem.ui was put on his own spot).
+   await box('ui_clerk').click();await page.locator('.org-panel').getByRole('button',{name:'جمع فريقه في إطار واحد (1)'}).click();
+   await page.locator('.org-panel').getByRole('button',{name:/جمع فريقه/}).waitFor({state:'detached'});await under(await nodeOf('salem.ui'),await nodeOf('ui_clerk'));
+   assert.ok(await tree.locator(`[data-group="${await nodeOf('ui_clerk')}"]`).count(),'Back in the frame');
    await page.locator('.org-panel').getByRole('button',{name:'إغلاق'}).click();}
   assert.match(await box('ui_clerk').innerText(),/مسؤول عن شخص واحد/);
   await db.exec('reset role');const line=(await db.query("select a.username u,m.username boss from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.accounts m on m.id=t.manager_id")).rows;await db.exec('set role anon');

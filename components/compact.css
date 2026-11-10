@@ -1599,3 +1599,4 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .org-canvas>.org-group{cursor:grab}.org-canvas>.org-group.dragging{z-index:19;border-color:var(--brand);transition:none}
 .org-tree{user-select:none;-webkit-user-select:none}
 .org-zoom-reset{border:0;border-inline-start:1px solid var(--border);background:none;padding:0 10px;font-size:12px;font-weight:600;color:var(--brand);cursor:pointer;white-space:nowrap}
+.org-canvas>.org-group.drop{border:2px solid var(--brand);background:color-mix(in srgb,var(--brand) 9%,transparent)}
