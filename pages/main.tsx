@@ -12,6 +12,7 @@ import { applyAppearance, loadAppearance, onThemeChange } from '@/lib/appearance
 import { syncThemeStyles } from '@/components/theme-styles';
 import ErrorBoundary, { reloadForUpdate } from '@/components/error-boundary';
 import { startInstant } from '@/lib/instant';
+import { checkConfig } from '@/lib/supabase-client';
 
 // Apply saved theme and motion choices before the first paint.
 onThemeChange(syncThemeStyles);
@@ -21,6 +22,8 @@ window.addEventListener('vite:preloadError', event => { if (reloadForUpdate()) e
 
 // The last screen, already showing, gives way as soon as the live page is ready.
 startInstant();
+// The connection settings are asked for now, while the first screen is built, rather than once it is up.
+checkConfig().catch(() => undefined);
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider attribute="class" forcedTheme="light">
