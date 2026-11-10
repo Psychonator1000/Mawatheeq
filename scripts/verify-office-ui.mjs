@@ -206,6 +206,9 @@ try{
    await db.exec('reset role');let rows=[];for(let i=0;i<40;i++){rows=(await db.query('select x,y from mawatheeq_private.team_layout')).rows;if(rows.length)break;await page.waitForTimeout(100)}
    assert.equal(rows.length,1,'Its place is kept');assert.ok(rows[0].x%20===0&&rows[0].y%20===0,'On the grid');
    assert.equal((await db.query('select count(*)::int n from mawatheeq_private.team_lines')).rows[0].n,0,'Nobody under anybody');await db.exec('set role anon');}
+  // Kept after a reload: the page reads back where every box was put.
+  await page.reload();await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();await page.locator('.org-tree-wrap').waitFor();
+  await page.locator('.org-canvas [data-person="salem.ui"]').waitFor({timeout:8000});
   // The tree as a map: the wheel zooms (around the pointer), the buttons too, and dragging an empty spot moves it.
   {const zv=page.locator('.org-zoom-value');await page.locator('.org-zoom').getByRole('button',{name:'تصغير'}).click();assert.notEqual(await zv.innerText(),'100٪');
    const view=page.locator('.org-tree'),t=await view.boundingBox();await page.mouse.move(t.x+t.width/2,t.y+120);await page.mouse.wheel(0,-300);
@@ -286,6 +289,8 @@ try{
   // A second boss: salem.ui (in «القضايا») dropped on ui_clerk answers to him as well: a dotted line ending in a circle.
   await box('salem.ui').dragTo(box('ui_clerk'));await page.getByRole('dialog').getByRole('button',{name:/يتبع ui_clerk أيضاً/}).click();
   await page.getByText(/يتبع ui_clerk أيضاً الآن/).waitFor();await tree.locator('.org-links > path.boss').waitFor();
+  // Still there after a reload: the second boss's line and the extra section's line.
+  await page.reload();await page.locator('.org-tree-wrap').waitFor();await tree.locator('.org-links > path.boss').waitFor({timeout:8000});await tree.locator('.org-links > path.area').first().waitFor();
   // Which way a branch grows: «القضايا» to the right.
   await tree.locator('.org-area[data-area="القضايا"]').click();const ae=page.getByRole('dialog');await ae.getByRole('radio',{name:'→ يمين'}).click();
   await db.exec('reset role');let flow=[];for(let i=0;i<40;i++){flow=(await db.query('select dir from mawatheeq_private.team_flow')).rows;if(flow.length)break;await page.waitForTimeout(100)}await db.exec('set role anon');

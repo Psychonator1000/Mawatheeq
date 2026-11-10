@@ -32,7 +32,7 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
  const [view,setView]=useState<'tree'|'list'>(()=>{try{return localStorage.getItem('mawatheeq.staff-view.v1')==='list'?'list':'tree'}catch{return 'tree'}});
  const show=(v:'tree'|'list')=>{setView(v);try{localStorage.setItem('mawatheeq.staff-view.v1',v)}catch{/* this visit only */}};
  const [chart,setChart]=useState<TeamChart>(EMPTY_CHART),[person,setPerson]=useState<Member|null>(null),[areaEdit,setAreaEdit]=useState<TeamArea|'new'|null>(null),[treeBusy,setTreeBusy]=useState(false);
- useEffect(()=>{let on=true;dailyRequest<TeamInfo>('team').then(t=>{if(on)setChart({lines:t.lines,areas:t.areas||[]})}).catch(()=>{});return()=>{on=false}},[]);
+ useEffect(()=>{let on=true;dailyRequest<TeamInfo>('team').then(t=>{if(on)setChart({lines:t.lines,areas:t.areas||[],extras:t.extras||[],order:t.order||{},layout:t.layout||{},flow:t.flow||{},bosses:t.bosses||[]})}).catch(()=>{});return()=>{on=false}},[]);
  const parent=useMemo(()=>parents(chart),[chart]);
  const [choice,setChoice]=useState<{node:string;target:string}|null>(null);
  // The person panel beside the tree closes with Escape (a list open inside it closes first, by itself).
