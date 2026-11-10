@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { backend, loadBackend } from './supabase-client';
+import { loadBackend } from './supabase-client';
 import { mailRequest, sessionToken } from './local-auth';
 import type { WorkspaceId } from './departments';
 import { userIdle } from './live';
@@ -85,8 +85,7 @@ export function useMailAvailable() {
 
 /** Calls the «mail» edge function, which reaches the mail servers; the session token is checked in the database. */
 export async function mailFunction<T = unknown>(action: 'sync' | 'test' | 'save' | 'send' | 'upload' | 'attachment', data: Record<string, unknown> = {}): Promise<T> {
-  await loadBackend();
-  const { data: result, error } = await backend().functions.invoke('mail', { body: { action, sessionToken: sessionToken(), ...data } });
+  const { data: result, error } = await (await loadBackend()).functions.invoke('mail', { body: { action, sessionToken: sessionToken(), ...data } });
   if (error || result?.error) {
     let message = result?.error || '';
     const ctx = (error as { context?: Response } | null)?.context;
@@ -99,7 +98,7 @@ export async function mailFunction<T = unknown>(action: 'sync' | 'test' | 'save'
 /** Uploads an attachment for a message being written and returns its storage path. */
 export async function uploadAttachment(accountId: string, file: File): Promise<string> {
   const r = await mailFunction<{ path: string; token: string }>('upload', { accountId, name: file.name, size: file.size });
-  const { error } = await backend().storage.from('mawatheeq-mail').uploadToSignedUrl(r.path, r.token, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+  const { error } = await (await loadBackend()).storage.from('mawatheeq-mail').uploadToSignedUrl(r.path, r.token, file, { contentType: file.type || 'application/octet-stream', upsert: false });
   if (error) throw new Error('تعذر رفع المرفق: ' + error.message);
   return r.path;
 }

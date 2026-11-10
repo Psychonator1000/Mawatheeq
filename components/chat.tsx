@@ -4,7 +4,7 @@ import {createPortal} from 'react-dom';
 import {ArrowRight,Bell,Download,Eye,FileText,LogOut,MessageCircle,Paperclip,Pencil,Plus,Search,Send,Trash2,UserPlus,Users,X} from 'lucide-react';
 import {toast} from 'sonner';
 import {chatRequest,fileRequest} from '@/lib/local-auth';
-import {backend} from '@/lib/supabase-client';
+import {loadBackend} from '@/lib/supabase-client';
 import {requestOpen} from '@/lib/open-record';
 import {useChatSlot} from './chat-slot';
 import {Popover,PopoverContent,PopoverTrigger} from './ui/popover';
@@ -145,7 +145,7 @@ function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeav
    else{
     let filePath='';
     if(file){const up=await fileRequest('chat_upload',{conversationId:conv.id,name:file.name,size:file.size,mime:file.type}).catch(e=>{throw new Error(/سجل الدخول أولاً/.test(String(e?.message))?'إرفاق الملفات في المحادثات لم يُفعّل على الخادم بعد. أرسل الرسالة دون ملف.':e.message)});
-     const {error}=await backend().storage.from('mawatheeq-chat').uploadToSignedUrl(up.path,up.token!,file,{contentType:file.type,upsert:false});if(error)throw new Error('تعذر رفع الملف: '+error.message);filePath=up.path}
+     const {error}=await (await loadBackend()).storage.from('mawatheeq-chat').uploadToSignedUrl(up.path,up.token!,file,{contentType:file.type,upsert:false});if(error)throw new Error('تعذر رفع الملف: '+error.message);filePath=up.path}
     await chatRequest('send',{conversationId:conv.id,clientId:crypto.randomUUID(),body,refs,filePath});
    }
    setText('');setRefs([]);setFile(null);await load(true);onChanged();

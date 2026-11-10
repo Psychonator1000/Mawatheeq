@@ -1,5 +1,5 @@
 import { liveTopicOf, pingLive } from './live';
-import { backend, loadBackend } from './supabase-client';
+import { checkConfig, loadBackend, rpc } from './supabase-client';
 import { clearBoot } from './boot-cache';
 
 export type LocalUser = { id: string; username: string; role: 'owner' | 'editor'; mustChangePassword: boolean };
@@ -16,10 +16,9 @@ function saveToken(value: string) {
   announce();
 }
 async function sessionRequest<T = unknown>(endpoint: string, action: string, data: Record<string, unknown> = {}): Promise<T> {
-  await loadBackend();
   const current = token || localStorage.getItem(storageKey) || '';
   if (!current) throw new Error('يرجى تسجيل الدخول أولاً.');
-  const { data: result, error } = await backend().rpc(endpoint, { p_token: current, p_action: action, p_data: data });
+  const { data: result, error } = await rpc(endpoint, { p_token: current, p_action: action, p_data: data });
   if (error) {
     if (error.code === '28000' && current === (localStorage.getItem(storageKey) || '')) saveToken('');
     throw Object.assign(new Error(error.message), { code: error.code });
@@ -58,15 +57,14 @@ export async function booksRequest<T = unknown>(action: string, data: Record<str
 export const sessionToken = () => token || localStorage.getItem(storageKey) || '';
 export const mailRequest = <T = unknown>(action: string, data: Record<string, unknown> = {}) => sessionRequest<T>('mawatheeq_mail_request', action, data);
 export async function restoreSession(): Promise<LocalUser | null> {
-  await loadBackend();
+  await checkConfig();
   token = localStorage.getItem(storageKey) || '';
   if (!token) return null;
   try { return await localRequest<LocalUser>('session'); }
   catch (error) { if (!token) return null; throw error; }
 }
 export async function signIn(username: string, password: string): Promise<LocalUser> {
-  await loadBackend();
-  const { data, error } = await backend().rpc('mawatheeq_local_login', { p_username: username.trim(), p_password: password });
+  const { data, error } = await rpc<{ token?: string; user?: LocalUser; error?: string }>('mawatheeq_local_login', { p_username: username.trim(), p_password: password });
   if (error || data?.error) throw new Error(data?.error || error?.message || 'تعذر تسجيل الدخول.');
   if (!data?.token || !data?.user) throw new Error('تعذر بدء الجلسة.');
   saveToken(data.token);
@@ -99,9 +97,8 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return localRequest<LocalUser>('password', { currentPassword, newPassword });
 }
 export async function fileRequest(action: 'upload' | 'download' | 'cleanup' | 'chat_upload' | 'chat_download' | 'case_upload' | 'case_download' | 'case_delete', data: Record<string, unknown>) {
-  await loadBackend();
   const current = token || localStorage.getItem(storageKey) || '';
-  const { data: result, error } = await backend().functions.invoke('local-files', { body: { action, sessionToken: current, ...data } });
+  const { data: result, error } = await (await loadBackend()).functions.invoke('local-files', { body: { action, sessionToken: current, ...data } });
   if (error || result?.error) throw new Error(result?.error || 'تعذر الوصول إلى ملف PDF.');
   return result as { path: string; token?: string; url?: string };
 }

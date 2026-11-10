@@ -1,4 +1,4 @@
-import { backend } from './supabase-client';
+import { loadBackend } from './supabase-client';
 import { localRequest, fileRequest, clientRequest } from './local-auth';
 import { DEFAULT_RULES, type CaseRecord, type Rules } from './domain';
 import { enrichCase, type ClientEntity } from './clients';
@@ -195,7 +195,7 @@ async function saveDocument(body: BodyInit | null | undefined) {
     const upload = await fileRequest('upload', { id });
     fileKey = upload.path;
     filename = file.name;
-    checked(await backend().storage.from('mawatheeq-documents').uploadToSignedUrl(fileKey, upload.token!, file, { contentType: 'application/pdf', upsert: false }));
+    checked(await (await loadBackend()).storage.from('mawatheeq-documents').uploadToSignedUrl(fileKey, upload.token!, file, { contentType: 'application/pdf', upsert: false }));
   }
   try {
     return await localRequest('save_document', { id, payload, filename, fileKey, revision: Number(body.get('revision') || 0) });

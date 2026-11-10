@@ -12,10 +12,15 @@ export const LIVE_EVENT: Record<LiveTopic, string> = { chat: 'mawatheeq-live-cha
 
 let channel: RealtimeChannel | null = null, ready = false;
 const queued = new Set<LiveTopic>();
+let starting = false;
 
 export async function startLive() {
   // Automated test browsers run against a stand-in backend, and the office server has no live channel: both keep the timed checks only.
-  if (channel || navigator.webdriver) return;
+  if (channel || starting || navigator.webdriver) return;
+  starting = true;
+  // The channel (and the library behind it) waits until the opened page has settled: it only speeds up news of a
+  // colleague's change, which the timed checks also bring.
+  await new Promise<void>(go => typeof requestIdleCallback === 'function' ? requestIdleCallback(() => go(), { timeout: 4000 }) : setTimeout(go, 1500));
   try {
     const client = await loadBackend();
     if (!/\.supabase\.co$/.test(new URL(String((client as unknown as { supabaseUrl: unknown }).supabaseUrl)).hostname)) return;
@@ -27,7 +32,7 @@ export async function startLive() {
       ready = status === 'SUBSCRIBED';
       if (ready) { for (const t of queued) void send(t); queued.clear(); }
     });
-  } catch { channel = null; }
+  } catch { channel = null; } finally { starting = false; }
 }
 
 async function send(topic: LiveTopic) {

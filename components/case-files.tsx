@@ -4,7 +4,7 @@ import {Download,ExternalLink,FileImage,FileSpreadsheet,FileText,FolderOpen,Load
 import {toast} from 'sonner';
 import {AlertDialog,AlertDialogAction,AlertDialogCancel,AlertDialogContent,AlertDialogDescription,AlertDialogFooter,AlertDialogHeader,AlertDialogTitle} from '@/components/ui/alert-dialog';
 import {caseFileRequest,fileRequest} from '@/lib/local-auth';
-import {backend} from '@/lib/supabase-client';
+import {loadBackend} from '@/lib/supabase-client';
 import {formatDate,todayISO} from '@/lib/domain';
 import {normalizeSearch} from '@/lib/case-browse';
 import {CASE_FILE_ACCEPT,CASE_FILE_CATEGORIES,MAX_CASE_FILE,caseFileMime,formatSize,guessCategory,isPreviewable,titleFromName,type CaseFile} from '@/lib/case-files';
@@ -57,7 +57,7 @@ export default function CaseFiles({caseId,canEdit:allowed,onCount}:{caseId:strin
    setItem(item.key,{state:'uploading',error:undefined});
    try{
     const up=await fileRequest('case_upload',{caseId,name:item.file.name,size:item.file.size,mime:item.mime});
-    const {error:sent}=await backend().storage.from('mawatheeq-case-files').uploadToSignedUrl(up.path,up.token!,item.file,{contentType:item.mime,upsert:false});
+    const {error:sent}=await (await loadBackend()).storage.from('mawatheeq-case-files').uploadToSignedUrl(up.path,up.token!,item.file,{contentType:item.mime,upsert:false});
     if(sent)throw new Error('تعذر رفع الملف: '+sent.message);
     await caseFileRequest('add',{caseId,path:up.path,name:item.file.name,size:item.file.size,mime:item.mime,title:item.title.trim()||titleFromName(item.file.name),category:item.category,docDate:item.docDate});
     setItem(item.key,{state:'done'});ok++;
