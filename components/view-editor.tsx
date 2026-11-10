@@ -1,14 +1,14 @@
 import {Eye,EyeOff,Lock,MousePointerClick,UserRound,Briefcase,Scale,BookOpenCheck} from 'lucide-react';
-import {ACCOUNT_KINDS,DEFAULT_TEMPLATE,VIEW_ITEMS,VIEW_TEMPLATES,cycleMode,setMode,viewMode,type AccountKind,type ViewItem,type ViewMode,type ViewSettings} from '@/lib/view-map';
+import {ACCOUNT_KINDS,DEFAULT_TEMPLATE,VIEW_ITEMS,VIEW_TEMPLATES,cycleMode,itemMode,viewMode,withItemMode,type AccountKind,type ViewItem,type ViewMode,type ViewSettings} from '@/lib/view-map';
 import type {Permissions} from '@/lib/permissions';
 type Section=Permissions['sections'][number];
 import type {CaseRecord} from '@/lib/domain';
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {normalizeSearch} from '@/lib/case-browse';
 
 const KIND_ICONS:Record<AccountKind,typeof Eye>={staff:Briefcase,lawyer:Scale,counsel:BookOpenCheck,client:UserRound};
 const MODE_LABEL:Record<ViewMode,string>={show:'ظاهر',read:'اطلاع فقط',hide:'مخفي'};
-const pages=VIEW_ITEMS.filter(i=>i.kind==='page'),spaces=VIEW_ITEMS.filter(i=>i.kind==='workspace'),tabs=VIEW_ITEMS.filter(i=>i.kind==='tab');
+const pages=VIEW_ITEMS.filter(i=>i.kind==='page'),spaces=VIEW_ITEMS.filter(i=>i.kind==='workspace'&&i.section),tools=VIEW_ITEMS.filter(i=>i.kind==='workspace'&&!i.section),tabs=VIEW_ITEMS.filter(i=>i.kind==='tab');
 const cards=VIEW_ITEMS.filter(i=>i.kind==='card'),fieldsOf=(card:string)=>VIEW_ITEMS.filter(i=>i.parent===card);
 const groups=[...new Set(pages.map(p=>p.group||''))];
 
@@ -28,23 +28,31 @@ export default function ViewEditor({value,onChange,records=[],part='all'}:{value
  const granted=(i:ViewItem)=>!i.section||value.sections.includes(i.section as Section);
  // A click on an item that is not granted grants its section and shows that item alone (the section's other pages in
  // the side list stay hidden until clicked); hiding the last shown page of a section takes the section away, so the
- // server refuses it too, not only the menu.
- const toggle=(i:ViewItem,own:ViewMode,readable:boolean)=>{
-  const sec=i.section as Section|undefined,siblings=sec?VIEW_ITEMS.filter(x=>x.section===sec):[],side=(x:ViewItem)=>x.kind==='page'||x.kind==='workspace';
-  if(sec&&!value.sections.includes(sec)){
-   let next=setMode(view,i.id,'show');for(const x of siblings)if(x.id!==i.id&&side(x)&&side(i))next=setMode(next,x.id,'hide');
-   onChange({...value,sections:[...value.sections,sec],view:next});return;
-  }
-  let next=setMode(view,i.id,cycleMode(own,readable));
-  if(sec&&siblings.every(x=>viewMode(next,x.id)==='hide')){for(const x of siblings)next=setMode(next,x.id,'show');onChange({...value,view:next,sections:value.sections.filter(x=>x!==sec)});return}
-  set(next);
+ // server refuses it too, not only the menu. Pressing and dragging gives every item passed over the same setting.
+ const latest=useRef(value);useEffect(()=>{latest.current=value});
+ const commit=(v:Permissions)=>{latest.current=v;onChange(v)};
+ const modeOf=(v:Permissions,i:ViewItem):ViewMode=>itemMode(v,i);
+ const withMode=(v:Permissions,i:ViewItem,mode:ViewMode):Permissions=>withItemMode(v,i,mode);
+ const nextMode=(v:Permissions,i:ViewItem,readable:boolean):ViewMode=>i.section&&!v.sections.includes(i.section as Section)?'show':cycleMode((v.view||{})[i.id]||'show',readable);
+ const paint=useRef<{mode:ViewMode;seen:Set<string>}|null>(null);
+ const startPaint=(e:React.PointerEvent,i:ViewItem,readable:boolean)=>{
+  if(e.button!==0)return;e.preventDefault();
+  const mode=nextMode(latest.current,i,readable);commit(withMode(latest.current,i,mode));
+  paint.current={mode,seen:new Set([i.id])};
+  const move=(ev:PointerEvent)=>{const el=(document.elementFromPoint(ev.clientX,ev.clientY) as HTMLElement|null)?.closest<HTMLElement>('[data-ve]'),p=paint.current;
+   if(!el||!p||p.seen.has(el.dataset.ve!))return;p.seen.add(el.dataset.ve!);const it=VIEW_ITEMS.find(x=>x.id===el.dataset.ve);if(!it)return;
+   const m=p.mode==='read'&&el.dataset.readable!=='1'?'show':p.mode;if(modeOf(latest.current,it)!==m)commit(withMode(latest.current,it,m))};
+  const up=()=>{paint.current=null;removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up)};
+  addEventListener('pointermove',move);addEventListener('pointerup',up);addEventListener('pointercancel',up);
  };
  const item=(i:ViewItem,cls='',readable=true)=>{
   const own=view[i.id]||'show',mode=granted(i)?viewMode(view,i.id):'hide',off=!granted(i);
   const inherited=mode!==own&&!off;
-  return <button type="button" key={i.id} className={'ve-item ve-'+mode+(inherited?' ve-inherited':'')+(off?' ve-off':'')+' '+cls}
-   title={off?`${i.label}: غير ممنوح. اضغط لمنحه`:`${i.label}: ${MODE_LABEL[mode]}${inherited?' (من الأعلى)':''}. اضغط للتغيير`}
-   aria-label={`${i.label}: ${off?'غير ممنوح':MODE_LABEL[mode]}`} onClick={()=>toggle(i,own,readable)}>
+  return <button type="button" key={i.id} data-ve={i.id} data-readable={readable?'1':undefined} className={'ve-item ve-'+mode+(inherited?' ve-inherited':'')+(off?' ve-off':'')+' '+cls}
+   title={off?`${i.label}: غير ممنوح. اضغط لمنحه`:`${i.label}: ${MODE_LABEL[mode]}${inherited?' (من الأعلى)':''}. اضغط للتغيير، أو اضغط واسحب لتغيير عدة عناصر معاً`}
+   aria-label={`${i.label}: ${off?'غير ممنوح':MODE_LABEL[mode]}`} onPointerDown={e=>startPaint(e,i,readable)}
+   // A press with the mouse or a finger is handled above; Enter or Space on the keyboard arrives here alone.
+   onClick={e=>{if(e.detail===0)commit(withMode(latest.current,i,nextMode(latest.current,i,readable)))}}>
    <span>{i.label}</span>{mode==='read'?<Lock aria-hidden size={12}/>:mode==='hide'?<EyeOff aria-hidden size={12}/>:null}</button>};
  const applyKind=(k:AccountKind)=>{const t=VIEW_TEMPLATES.find(x=>x.id===DEFAULT_TEMPLATE[k]);onChange({...value,accountKind:k,view:t?{...t.view}:view,...(k==='client'?{canEdit:false,canExport:false,caseScope:'selected' as const}:{})})};
  const same=(a:ViewSettings,b:ViewSettings)=>{const ka=Object.keys(a),kb=Object.keys(b);return ka.length===kb.length&&ka.every(k=>a[k]===b[k])};
@@ -66,7 +74,8 @@ export default function ViewEditor({value,onChange,records=[],part='all'}:{value
 <div className="ve-legend"><span className="ve-item ve-show">ظاهر</span><span className="ve-item ve-read">اطلاع فقط <Lock size={12}/></span><span className="ve-item ve-hide">مخفي <EyeOff size={12}/></span></div></div>
   <div className="ve-preview">
    <aside className="ve-side" aria-label="القائمة الجانبية"><div className="ve-side-scroll">{groups.map(g=><div key={g||'top'} className="ve-group">{g&&<small>{g}</small>}{pages.filter(p=>(p.group||'')===g).map(p=>item(p,'ve-page'))}</div>)}
-    <div className="ve-group"><small>مساحات العمل الأخرى</small>{spaces.map(s=>item(s,'ve-page',false))}</div></div></aside>
+    <div className="ve-group"><small>مساحات العمل الأخرى</small>{spaces.map(s=>item(s,'ve-page',false))}</div>
+    <div className="ve-group"><small>التواصل</small>{tools.map(s=>item(s,'ve-page',false))}</div></div></aside>
    <div className="ve-case" aria-label="نافذة القضية">
     <div className="ve-tabs">{tabs.map(t=>item(t,'ve-tab'))}</div>
     <div className="ve-cards">{cards.map(c=>{const mode=viewMode(view,c.id);return <div key={c.id} className={'ve-card ve-'+mode}>

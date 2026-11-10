@@ -47,6 +47,9 @@ export const VIEW_ITEMS: ViewItem[] = [
   { id: 'ws:accounting', label: 'المحاسبة', kind: 'workspace', section: 'accounting' },
   { id: 'ws:hr', label: 'الموارد البشرية', kind: 'workspace', section: 'hr' },
   { id: 'ws:archive', label: 'الأرشيف', kind: 'workspace', section: 'archive' },
+  // Mail and chat, switched off per account here; the server refuses them too (view_hidden).
+  { id: 'ws:mail', label: 'البريد', kind: 'workspace' },
+  { id: 'ws:chat', label: 'المحادثات', kind: 'workspace' },
   // The case window: its tabs…
   { id: 'tab:case', label: 'بيانات الحكم', kind: 'tab' },
   { id: 'tab:sessions', label: 'الجلسات', kind: 'tab' },
@@ -126,6 +129,32 @@ export const DEFAULT_TEMPLATE: Record<AccountKind, string> = { staff: 'all', law
 /** Parts a client account never has, whatever its view map says: the server refuses them to client accounts. */
 const CLIENT_NEVER = ['tab:files', 'tab:discussion', 'tab:verification', 'tab:finance', 'tab:collections', 'page:paper', 'page:mail', 'ws:secretary', 'ws:collections', 'ws:accounting', 'ws:hr', 'ws:archive'];
 /** The view map the app applies: the account's own, plus what its kind never sees. */
+/** Whether mail or chat is switched off for this account (the owner, with no view map, always has both). */
+export const toolOff = (access: { view?: ViewSettings; accountKind?: AccountKind } | null | undefined, tool: 'mail' | 'chat') => !!access && effectiveView(access)['ws:' + tool] === 'hide';
 export function effectiveView(access: { view?: ViewSettings; accountKind?: AccountKind }): ViewSettings {
   return access.accountKind === 'client' ? { ...(access.view || {}), ...Object.fromEntries(CLIENT_NEVER.map(id => [id, 'hide'])) } : access.view || {};
 }
+
+/**
+ * An account's pages with item `i` set to `mode`, as the permission editor does it: an item whose section is not
+ * granted is granted and shown alone in the side list (its section's other pages hidden); hiding the last shown item
+ * of a section takes the section away, so the server refuses it too. Shared by the editor and «تطبيق على عدة حسابات».
+ */
+export function withItemMode<P extends { sections: string[]; view?: ViewSettings }>(v: P, i: ViewItem, mode: ViewMode): P {
+  const sec = i.section, siblings = sec ? VIEW_ITEMS.filter(x => x.section === sec) : [], side = (x: ViewItem) => x.kind === 'page' || x.kind === 'workspace';
+  let next = v.view || {};
+  if (sec && !v.sections.includes(sec)) {
+    if (mode === 'hide') return v;
+    next = setMode(next, i.id, mode);
+    for (const x of siblings) if (x.id !== i.id && side(x) && side(i)) next = setMode(next, x.id, 'hide');
+    return { ...v, sections: [...v.sections, sec], view: next };
+  }
+  next = setMode(next, i.id, mode);
+  if (sec && siblings.every(x => viewMode(next, x.id) === 'hide')) {
+    for (const x of siblings) next = setMode(next, x.id, 'show');
+    return { ...v, view: next, sections: v.sections.filter(x => x !== sec) };
+  }
+  return { ...v, view: next };
+}
+/** The item's mode for an account: hidden when its section is not granted. */
+export const itemMode = (v: { sections: string[]; view?: ViewSettings }, i: ViewItem): ViewMode => i.section && !v.sections.includes(i.section) ? 'hide' : viewMode(v.view || {}, i.id);

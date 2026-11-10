@@ -144,4 +144,8 @@ assert.deepEqual(await ids(amal), ['office@example.test']);
 await db.exec('reset role');
 assert.equal((await db.query('select count(*)::int n from mawatheeq_private.mail_messages')).rows[0].n, 0);
 assert.equal((await db.query('select count(*)::int n from mawatheeq_private.mail_secrets')).rows[0].n, 1, 'Only the shared mailbox password remains');
+// Mail switched off for an account (its view map hides «ws:mail»): no mailbox opens for it, whatever its sections.
+{const off=await grant('amal',{sections:['secretary','collections'],caseScope:'all',caseIds:[],canEdit:true,canExport:false,view:{'ws:mail':'hide'}});
+ await denied(()=>mail(off,'list',{workspace:'secretary'}));
+ assert.equal((await db.query("select mawatheeq_private.mail_can_open(id,'secretary') ok from mawatheeq_private.accounts where username='amal'")).rows[0].ok,false,'Mail is closed when switched off');}
 console.log('Passed mail DB: shared and personal mailboxes, per-section visibility of incoming and outgoing mail and sending, unread counts, claiming, de-duplication, replies, assignment, removal.');

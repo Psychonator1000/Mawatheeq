@@ -124,5 +124,9 @@ assert.ok((await chat(amal2, 'search', { q: 'بدر' })).some(r => r.type === 'u
 await db.exec('reset role');
 assert.equal((await db.query("select has_function_privilege('anon','mawatheeq_private.chat_ref_ok(uuid,jsonb)','execute') ok")).rows[0].ok, false, 'Helpers are not callable directly');
 await db.exec('set role anon'); await assert.rejects(() => db.query('select * from mawatheeq_private.chat_messages'), /permission denied/, 'Tables are not readable directly'); await db.exec('reset role');
+// Chat switched off for an account (its view map hides «ws:chat»): every chat action is refused for it.
+{const off=await grant('salem',{sections:['overview'],caseScope:'all',caseIds:[],canEdit:false,canExport:false,view:{'ws:chat':'hide'}});
+ await assert.rejects(()=>chat(off,'summary'),e=>e.code==='42501'||/صلاحية/.test(e.message),'Chat is refused when switched off');
+ const on=await grant('salem',{sections:['overview'],caseScope:'all',caseIds:[],canEdit:false,canExport:false});await chat(on,'summary');}
 await db.close();
 console.log('Passed chat database: session checks, people list, one direct conversation per pair, reference filtering per reader and sender, idempotent sends, unread counts, member-only access with owner read-only review, groups (create/add/rename/leave), 15-minute edit/delete, file size/type limits and member-only downloads, permission-aware search.');

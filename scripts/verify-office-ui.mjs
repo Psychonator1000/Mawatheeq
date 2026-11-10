@@ -167,7 +167,23 @@ try{
  {let keys=[];for(let i=0;i<40;i++){keys=await ownerKeys();if(keys.filter(k=>k.endsWith(':case-rows')).length===1)break;await page.waitForTimeout(100)}
   assert.ok(before.length>=1,'both copies existed while switched');assert.equal(keys.filter(k=>k.endsWith(':case-rows')).length,1,'only one account copy left');
   const owner=await page.evaluate(()=>JSON.parse(localStorage.getItem('mawatheeq.boot.v1')).user.id);assert.ok(keys.some(k=>k===owner+':case-rows'),'the owner\'s copy is kept');}
+ // «العودة إلى حسابي» comes back to where the owner was: the team page.
+ await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();
  await openTeam();
+ // The live preview: press on one page and drag over another, and both take the first one's new setting.
+ {await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
+  const dlg=page.getByRole('dialog'),a=dlg.locator('[data-ve="page:overview"]'),b=dlg.locator('[data-ve="page:clients"]');await a.waitFor();
+  const ba=await a.boundingBox(),bb=await b.boundingBox();await page.mouse.move(ba.x+ba.width/2,ba.y+ba.height/2);await page.mouse.down();
+  await page.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2,{steps:8});await page.mouse.up();
+  const state=async l=>(await l.getAttribute('aria-label')).split(': ')[1];assert.equal(await state(a),await state(b),'Dragging gives every page passed over the same setting');
+  await page.keyboard.press('Escape');await dlg.waitFor({state:'hidden'}).catch(()=>{});}
+ // «تطبيق على عدة حسابات»: mail switched off for every account but the one unticked.
+ {await page.getByRole('button',{name:'تطبيق على عدة حسابات',exact:true}).click();const dlg=page.getByRole('dialog');
+  await dlg.getByRole('radiogroup',{name:'البريد'}).getByRole('radio',{name:'مخفي'}).click();
+  await dlg.locator('.bulk-list label',{hasText:'salem.ui'}).locator('input').uncheck();
+  page.once('dialog',d=>void d.accept());await dlg.getByRole('button',{name:/^تطبيق على الحسابات المحددة/}).click();await dlg.waitFor({state:'hidden'});
+  await db.exec('reset role');  const mail=async u=>(await db.query("select ma.permissions->'view'->>'ws:mail' v from mawatheeq_private.member_access ma join mawatheeq_private.accounts a on a.id=ma.user_id where a.username=$1",[u])).rows[0]?.v||null;
+  assert.equal(await mail('ui_clerk'),'hide','Mail switched off for the ticked accounts');assert.equal(await mail('salem.ui'),null,'The unticked account keeps mail');await db.exec('set role anon');}
  // The lawyer's account follows his name on the cases: «قضاياه فقط» is selected and new cases are included.
  await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText(/قضاياه فقط: 5 قضية/).waitFor();
  await page.getByLabel('بحث في فريق المكتب').fill('سالم');assert.equal(await page.locator('.office-staff tbody tr').count(),1,'Staff search finds the lawyer by name');await page.getByLabel('بحث في فريق المكتب').fill('');

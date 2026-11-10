@@ -6,6 +6,8 @@ export type LocalUser = { id: string; username: string; role: 'owner' | 'editor'
 const storageKey = 'mawatheeq.local-session.v1';
 // While the owner works inside a staff account, the owner's own session waits here to be restored.
 const ownerKey = 'mawatheeq.owner-session.v1';
+// The owner's place while looking through a staff account, and the remembered workspace (lib/departments' key).
+const ownerPlaceKey = 'mawatheeq.owner-place.v1', workspaceKey = 'mawatheeq.workspace.v1';
 export const sessionEvent = 'mawatheeq-session-changed';
 let token = '';
 
@@ -83,6 +85,8 @@ export async function switchToUser(id: string): Promise<LocalUser> {
   const owner = token || localStorage.getItem(storageKey) || '';
   const result = await officeRequest<{ token: string; user: LocalUser }>('switch_user', { id });
   localStorage.setItem(ownerKey, owner);
+  // Where the owner was (the workspace, «فريق المكتب» usually, and the page), to come back to it on «العودة إلى حسابي».
+  try { localStorage.setItem(ownerPlaceKey, JSON.stringify({ workspace: sessionStorage.getItem(workspaceKey) || '', hash: location.hash })); sessionStorage.removeItem(workspaceKey); } catch { /* Back to the chooser instead. */ }
   saveToken(result.token);
   return result.user;
 }
@@ -91,6 +95,12 @@ export async function returnToOwner(): Promise<void> {
   const owner = localStorage.getItem(ownerKey) || '';
   try { await localRequest('logout'); } catch { /* The switched session also expires on its own. */ }
   localStorage.removeItem(ownerKey);
+  try {
+    const place = JSON.parse(localStorage.getItem(ownerPlaceKey) || 'null') as { workspace?: string; hash?: string } | null;
+    localStorage.removeItem(ownerPlaceKey);
+    if (place?.workspace) sessionStorage.setItem(workspaceKey, place.workspace); else sessionStorage.removeItem(workspaceKey);
+    if (place && place.hash !== location.hash) history.replaceState(null, '', location.pathname + location.search + (place.hash || ''));
+  } catch { /* The owner's own start page instead. */ }
   saveToken(owner);
 }
 export async function changePassword(currentPassword: string, newPassword: string): Promise<LocalUser> {

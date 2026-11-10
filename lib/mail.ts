@@ -3,6 +3,8 @@ import { loadBackend } from './supabase-client';
 import { mailRequest, sessionToken } from './local-auth';
 import type { WorkspaceId } from './departments';
 import { userIdle } from './live';
+import { cachedAccess } from './boot-cache';
+import { toolOff } from './view-map';
 
 export type MailWorkspace = WorkspaceId;
 export type MailRight = 'inbox' | 'sent' | 'send';
@@ -74,13 +76,15 @@ const availableKey = 'mawatheeq.mail-available.v1';
 const rememberedAvailable = () => { try { return localStorage.getItem(availableKey) === '1'; } catch { return false; } };
 export function useMailAvailable() {
   const [ok, setOk] = useState(rememberedAvailable);
+  // Mail switched off for this account in its permissions: no icon, tab or page (the server refuses it too).
+  const off = toolOff(cachedAccess(), 'mail');
   useEffect(() => { let live = true; void mailAvailable().then(v => {
     // A passing network error keeps what this device last knew; only a server without mail hides the icon.
     if (!v && !notInstalled) return;
     try { if (v) localStorage.setItem(availableKey, '1'); else localStorage.removeItem(availableKey); } catch { /* this visit only */ }
     if (live) setOk(v);
   }); return () => { live = false; }; }, []);
-  return ok;
+  return ok && !off;
 }
 
 /** Calls the «mail» edge function, which reaches the mail servers; the session token is checked in the database. */
