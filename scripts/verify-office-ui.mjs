@@ -201,10 +201,10 @@ try{
   await db.exec('reset role');const line=(await db.query("select a.username u,m.username boss from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.accounts m on m.id=t.manager_id")).rows;await db.exec('set role anon');
   assert.deepEqual(line,[{u:'salem.ui',boss:'ui_clerk'}],'Saved');
   await page.screenshot({path:artifacts+'/team-tree.png'});
-  await box('ui_clerk').click();const card=page.getByRole('dialog');await card.getByText('يشرف على شخص واحد').waitFor();
+  await box('ui_clerk').click();const card=page.locator('.org-panel');await card.getByText(/مسؤول عن شخص واحد/).waitFor();
   for(const b of ['تعديل الصلاحيات','كلمة المرور','الدور الوظيفي'])await card.getByRole('button',{name:b,exact:true}).waitFor();
   await page.waitForTimeout(400);await page.screenshot({path:artifacts+'/team-person-card.png'});
-  const up=card.getByRole('combobox');await up.click();await up.fill('salem');
+  const up=card.getByRole('combobox').first();await up.click();await up.fill('salem');
   assert.equal(await page.getByRole('option',{name:/salem\.ui/}).count(),0,'Nobody reports to someone under them');
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');await card.waitFor({state:'hidden'}).catch(()=>{});
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:artifacts+'/team-tree-mobile.png'});
@@ -229,12 +229,29 @@ try{
   // permission save, his sessions ended); moved into «القضايا» he opens the cases workspace again.
   const pagesOf=async u=>{await db.exec('reset role');const r=(await db.query("select ma.permissions->'sections' s from mawatheeq_private.member_access ma join mawatheeq_private.accounts a on a.id=ma.user_id where a.username=$1",[u])).rows[0].s;await db.exec('set role anon');return r};
   const ws=n=>tree.locator(`.org-area[data-area="${n}"]`);await ws('السكرتارية').waitFor();
-  page.once('dialog',d=>{assert.match(d.message(),/السكرتارية فقط/);void d.accept()});await box('salem.ui').dragTo(ws('السكرتارية'));await page.getByText('حُدّثت صفحاته لمساحة قسمه.').waitFor();
+  page.once('dialog',d=>{assert.match(d.message(),/السكرتارية فقط/);void d.accept()});await box('salem.ui').dragTo(ws('السكرتارية'));await page.getByText(/حُدّثت صفحاته/).waitFor();
   assert.deepEqual((await pagesOf('salem.ui')).filter(x=>x!=='daily'),['secretary'],'Only the secretary workspace');
   await page.screenshot({path:artifacts+'/team-tree-workspaces.png'});
-  page.once('dialog',d=>void d.accept());await box('salem.ui').dragTo(ws('القضايا'));await page.getByText('حُدّثت صفحاته لمساحة قسمه.').last().waitFor();
+  await box('salem.ui').dragTo(ws('القضايا'));page.once('dialog',d=>void d.accept());await page.getByRole('dialog').getByRole('button',{name:/نقله إلى قسم «القضايا»/}).click();await page.getByText(/حُدّثت صفحاته/).last().waitFor();
   await page.waitForFunction(()=>true);let legal=[];for(let i=0;i<30;i++){legal=await pagesOf('salem.ui');if(legal.includes('cases'))break;await page.waitForTimeout(100)}
   assert.ok(legal.includes('cases')&&!legal.includes('secretary'),'Back to the cases workspace alone');
+  // More than one workspace: ui_clerk goes into «المحاسبة», then is added to «السكرتارية» and «الموارد البشرية» as well
+  // (the drop asks: move there, or add there too); his pages are the three; lines run from him to the extra sections,
+  // and stand out when he is selected; taking one away removes its workspace.
+  const waitPages=async(u,ok)=>{let v=[];for(let i=0;i<50;i++){v=await pagesOf(u);if(ok(v))return v;await page.waitForTimeout(100)}return v};
+  page.once('dialog',d=>void d.accept());await box('ui_clerk').dragTo(ws('المحاسبة'));
+  assert.deepEqual((await waitPages('ui_clerk',v=>v.includes('accounting'))).filter(x=>x!=='daily'),['accounting']);
+  for(const n of ['السكرتارية','الموارد البشرية']){await box('ui_clerk').dragTo(ws(n));const ch=page.getByRole('dialog');await ch.getByRole('button',{name:new RegExp('إضافته إلى قسم «'+n+'» أيضاً')}).waitFor();
+   if(n==='السكرتارية'){await page.waitForTimeout(300);await page.screenshot({path:artifacts+'/team-extra-choice.png'})}
+   page.once('dialog',d=>void d.accept());await ch.getByRole('button',{name:new RegExp('إضافته إلى قسم «'+n+'» أيضاً')}).click();await page.getByText(new RegExp(`في قسم «${n}» أيضاً الآن`)).waitFor()}
+  assert.deepEqual((await waitPages('ui_clerk',v=>v.includes('hr'))).filter(x=>x!=='daily').sort(),['accounting','hr','secretary'],'Three workspaces');
+  assert.equal(await tree.locator('.org-links > path').count(),2,'A line to each extra section');
+  await box('ui_clerk').click();await page.locator('.org-panel').waitFor();assert.equal(await tree.locator('.org-links > path.on').count(),2,'His lines stand out');
+  await page.waitForTimeout(300);await page.screenshot({path:artifacts+'/team-extra-lines.png'});
+  await page.locator('.org-panel').getByRole('button',{name:'إغلاق'}).click();await page.waitForTimeout(200);await page.screenshot({path:artifacts+'/team-extra-lines-quiet.png'});await box('ui_clerk').click();await page.locator('.org-panel').waitFor();
+  page.once('dialog',d=>void d.accept());await page.locator('.org-panel').getByRole('button',{name:'إخراجه من قسم «السكرتارية»'}).click();
+  assert.deepEqual((await waitPages('ui_clerk',v=>!v.includes('secretary'))).filter(x=>x!=='daily').sort(),['accounting','hr']);
+  await page.keyboard.press('Escape');await page.locator('.org-panel').waitFor({state:'detached'});
   await page.getByRole('tab',{name:'القائمة',exact:true}).click();}
  // Every page in the side list can be hidden, the day's page and «ملفاتي الورقية» too: gone from that account's menu.
  {await page.getByRole('button',{name:'تطبيق على عدة حسابات',exact:true}).click();const dlg=page.getByRole('dialog');

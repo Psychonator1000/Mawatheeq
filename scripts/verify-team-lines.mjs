@@ -97,4 +97,18 @@ chart=await daily(owner.token,'save_area',{id:sec.id,name:'السكرتارية'
 assert.equal(chart.areas.find(x=>x.id===sec.id).workspace,null,'Cleared when asked');
 chart=await daily(owner.token,'save_area',{name:'تحصيل ٢',workspace:'collections'});assert.equal(chart.areas.find(x=>x.name==='تحصيل ٢').workspace,'collections');
 await assert.rejects(()=>daily(owner.token,'save_area',{name:'خطأ',workspace:'nowhere'}));
+// Extra sections: lawyer_other sits in «تحصيل ٢» and is added to «الموارد البشرية» as well; moved into it, he is no
+// longer an extra member of it; removed sections take their extra members with them; only managers change them.
+const hrArea=chart.areas.find(x=>x.workspace==='hr'),coll=chart.areas.find(x=>x.name==='تحصيل ٢');
+await daily(owner.token,'set_manager',{userId:other.id,areaId:coll.id});
+chart=await daily(owner.token,'add_extra',{userId:other.id,areaId:hrArea.id});
+assert.deepEqual(chart.extras,[{userId:other.id,areaId:hrArea.id}]);
+await assert.rejects(()=>daily(owner.token,'add_extra',{userId:other.id,areaId:coll.id}),/في هذا القسم أصلاً/);
+await denied(()=>daily(lead.token,'add_extra',{userId:other.id,areaId:hrArea.id}));
+chart=await daily(owner.token,'set_manager',{userId:other.id,areaId:hrArea.id});
+assert.deepEqual(chart.extras,[],'Moved into the section: no longer an extra member of it');
+chart=await daily(owner.token,'add_extra',{userId:other.id,areaId:coll.id});assert.equal(chart.extras.length,1);
+chart=await daily(owner.token,'remove_extra',{userId:other.id,areaId:coll.id});assert.deepEqual(chart.extras,[]);
+await daily(owner.token,'add_extra',{userId:other.id,areaId:coll.id});chart=await daily(owner.token,'delete_area',{id:coll.id});
+assert.deepEqual(chart.extras,[],'A removed section takes its extra members with it');
 console.log('Passed team lines: leads read their team down the line and themselves, the head reads the leads and their teams, nobody reads above or beside, no loops, only the owner or a staff admin changes the lines; sections hold people and sections, whoever a section sits under oversees everyone in it, sections move without loops and their people move up when one is removed.');

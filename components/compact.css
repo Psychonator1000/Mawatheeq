@@ -1536,3 +1536,26 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .org-tray .org-leaves{border:0;padding:0;background:none;max-width:calc(6 * 176px + 5 * 8px)}
 .org-tray.drop{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 9%,transparent)}
 .org-tree .org-root{gap:28px}
+/* Lines from a person to the other sections he is in as well; the selected person's stand out. */
+.org-canvas{position:relative;width:max-content;min-width:100%}
+.org-links{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:1}
+/* Boxes sit over the lines, so a line passing behind one never hides its text. */
+.org-tree .org-box{z-index:2}
+.org-links path{fill:none;stroke:var(--org-line);stroke-width:1.6;stroke-dasharray:6 5;opacity:.75;transition:stroke .15s,stroke-width .15s,opacity .15s}
+.org-links path.on{stroke:var(--brand);stroke-width:3;stroke-dasharray:none;opacity:1;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--brand) 45%,transparent))}
+.org-links marker path{fill:var(--brand);stroke:none;opacity:.85}
+.org-box>.org-also{grid-column:1/-1;font-size:11px;color:var(--brand);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The person's options beside the tree (not over it), so his lines stay in sight. */
+.org-panel{direction:rtl;position:fixed;left:16px;right:16px;bottom:12px;z-index:45;max-height:min(46vh,420px);overflow:auto;padding:12px 16px;display:grid;gap:10px;
+ border:1px solid color-mix(in srgb,var(--brand) 25%,var(--border));border-radius:18px;background:var(--card);box-shadow:0 -12px 50px -18px rgb(40 20 15/.35)}
+.org-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.org-panel-head b{font-size:16px}.org-panel-head code{font-size:12px;color:var(--muted-foreground)}.org-panel-head p{margin:2px 0 0}
+.org-panel .staff-person-body{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);align-items:start;gap:12px}
+.org-panel .person-actions{grid-column:1;grid-row:2}.org-panel .person-actions .actions{flex-wrap:wrap;gap:6px}.org-panel .field{display:grid;gap:6px}
+/* Room under the tree for the panel, so the last boxes can still be scrolled into sight above it. */
+.office-staff:has(.org-panel) .org-tree{padding-bottom:min(46vh,420px);max-height:none}
+.org-extras{display:flex;flex-wrap:wrap;gap:6px}.org-extra-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 10px;border-radius:999px;background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand);font-size:12.5px;font-weight:600}
+.org-extra-chip button{display:grid;place-items:center;width:20px;height:20px;border:0;border-radius:999px;background:none;color:inherit;cursor:pointer}.org-extra-chip button:hover{background:color-mix(in srgb,var(--brand) 18%,transparent)}
+@media(max-width:900px){.org-panel{left:8px;right:8px;bottom:8px;max-height:70vh}.org-panel .staff-person-body{grid-template-columns:1fr}.org-panel .person-actions{grid-column:auto;grid-row:auto}}
+.org-choice{width:min(560px,calc(100vw - 32px));max-width:none}
+.org-choice-options{display:grid;gap:8px}.org-choice-opt{display:grid;gap:2px;text-align:right;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--card);cursor:pointer}
+.org-choice-opt:hover{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,var(--card))}.org-choice-opt b{font-size:14px}.org-choice-opt small{color:var(--muted-foreground)}

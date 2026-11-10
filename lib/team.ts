@@ -7,10 +7,12 @@ import { LEGAL_SECTIONS, WORKSPACE_LABELS, type Permissions, type Section } from
 export type Workspace = keyof typeof WORKSPACE_LABELS;
 /** `workspace`: the workspace a section stands for; whoever sits in it (at any depth) opens that workspace alone. */
 export type TeamArea = { id: string; name: string; role: string | null; workspace?: Workspace | null; parentUser: string | null; parentArea: string | null };
-export type TeamChart = { lines: TeamLine[]; areas: TeamArea[] };
+/** `extras`: sections a person belongs to besides their main place, for the workspaces those sections stand for. */
+export type TeamExtra = { userId: string; areaId: string };
+export type TeamChart = { lines: TeamLine[]; areas: TeamArea[]; extras?: TeamExtra[] };
 /** What an account oversees (`below`, at any depth), and the whole chart for whoever may change it or reads every report. */
 export type TeamInfo = TeamChart & { all: boolean; leads: boolean; canManage: boolean; below: string[] };
-export const EMPTY_CHART: TeamChart = { lines: [], areas: [] };
+export const EMPTY_CHART: TeamChart = { lines: [], areas: [], extras: [] };
 
 /** Each node's parent ('u:…' or 'a:…'); a node missing from the map sits at the top. */
 export function parents(chart: TeamChart): Map<string, string> {
@@ -47,18 +49,31 @@ export function workspaceOf(parent: Map<string, string>, areas: TeamArea[], key:
   for (let k: string | undefined = key, n = 0; k && n < 80; k = parent.get(k), n++) if (k.startsWith('a:')) { const w = byId.get(k.slice(2))?.workspace; if (w) return w; }
   return null;
 }
+/**
+ * Every workspace a person opens through the tree: that of their main place, and those of the sections they were added
+ * to as well, in the workspace chooser's order.
+ */
+export function workspacesFor(parent: Map<string, string>, chart: TeamChart, userId: string): Workspace[] {
+  const set = new Set<Workspace>();
+  const main = workspaceOf(parent, chart.areas, 'u:' + userId); if (main) set.add(main);
+  for (const x of chart.extras || []) if (x.userId === userId) { const w = workspaceOf(parent, chart.areas, 'a:' + x.areaId); if (w) set.add(w); }
+  return (Object.keys(WORKSPACE_LABELS) as Workspace[]).filter(w => set.has(w));
+}
 /** The cases workspace's pages for someone who had none of them: the day, the register, dates and tasks. */
 const LEGAL_START: Section[] = ['overview', 'cases', 'deadlines', 'work', 'daily'];
 /**
- * A person's pages once they sit in the section of workspace `ws` (or in none): that workspace's pages alone. Moving into
- * the cases workspace keeps the cases pages they had, or starts from the usual ones; a department is its one section;
- * no workspace means no pages. The daily report («مهام اليوم والتقرير») stays with whoever had it.
+ * A person's pages once the tree gives them the workspaces `ws`: those workspaces' pages alone. The cases workspace keeps
+ * the cases pages they had, or starts from the usual ones; a department is its one section; no workspace means no pages.
+ * The daily report («مهام اليوم والتقرير») stays with whoever had it.
  */
-export function sectionsFor(p: Pick<Permissions, 'sections'>, ws: Workspace | null): Section[] {
+export function sectionsFor(p: Pick<Permissions, 'sections'>, ws: Workspace[]): Section[] {
   const daily: Section[] = p.sections.includes('daily') ? ['daily'] : [];
-  if (!ws) return daily;
-  if (ws === 'legal') { const own = p.sections.filter(s => LEGAL_SECTIONS.includes(s)); return own.some(s => s !== 'daily') ? own : [...new Set([...LEGAL_START, ...daily])]; }
-  return [ws as Section, ...daily];
+  const out: Section[] = [];
+  for (const w of ws) {
+    if (w === 'legal') { const own = p.sections.filter(s => LEGAL_SECTIONS.includes(s)); out.push(...(own.some(s => s !== 'daily') ? own : LEGAL_START)); }
+    else out.push(w as Section);
+  }
+  return [...new Set([...out, ...daily])];
 }
 /** Each node's parent once `node` is moved under `target` (null: the top). */
 export function movedParents(parent: Map<string, string>, node: string, target: string | null): Map<string, string> {

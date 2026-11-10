@@ -1,5 +1,5 @@
 'use client';
-import {useMemo,useState} from 'react';
+import {useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {FolderTree,GripVertical,UsersRound} from 'lucide-react';
 import type {Member} from '@/lib/office';
 import {WORKSPACE_LABELS,rolesLabel,type JobRole} from '@/lib/permissions';
@@ -43,16 +43,17 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    onDrop:(e:React.DragEvent)=>{e.preventDefault();e.stopPropagation();const from=e.dataTransfer.getData('text/plain')||drag;setDrag('');setOver('');if(from&&droppable)onMove(from,target)}}}};
  const personBox=(m:Member)=>{const key='u:'+m.id,team=peopleBelow(parent,key).size,roles=m.permissions?inferRoles(m.permissions):[];
   const d=dnd(key,key,canMove(m));
-  return <button type="button" key={m.id} data-person={m.username} aria-pressed={selected===m.id} {...d.props}
+  const also=(chart.extras||[]).filter(x=>x.userId===m.id).map(x=>chart.areas.find(a=>a.id===x.areaId)?.name).filter(Boolean);
+  return <button type="button" key={m.id} data-person={m.username} data-node={key} aria-pressed={selected===m.id} {...d.props}
    className={'org-box'+(team?' lead':'')+(m.enabled?'':' off')+(selected===m.id?' on':'')+(q&&!hit(m)?' dim':'')+(over===key&&d.droppable?' drop':'')+(drag===key?' dragging':'')}
    title={d.draggable?'اضغط لعرض خياراته، أو اسحبه إلى مسؤوله أو إلى قسم؛ وأفلت عليه زملاءه ليصبح مسؤولهم':'اضغط لعرض خياراته'} onClick={()=>onPick(m)}>
    {d.draggable&&<GripVertical size={13} aria-hidden className="org-grip"/>}
    {team>0&&<UsersRound size={14} aria-hidden className="org-icon"/>}
    <b>{name(m)}</b><small dir="ltr">{m.username}</small>
    <span className="org-meta">{roles.length?rolesLabel(roles):'بلا دور'}{!m.enabled&&' · موقوف'}</span>
-   {team>0&&<span className="org-team">مسؤول عن {peopleCount(team)}</span>}</button>};
+   {team>0&&<span className="org-team">مسؤول عن {peopleCount(team)}</span>}{also.length>0&&<span className="org-also">أيضاً في: {also.join('، ')}</span>}</button>};
  const areaBox=(a:TeamArea)=>{const key='a:'+a.id,count=peopleBelow(parent,key).size,d=dnd(key,key,true),Icon=a.role&&ROLE_ICONS[a.role as JobRole]||FolderTree;
-  return <button type="button" key={a.id} data-area={a.name} aria-pressed={selected===key} {...d.props}
+  return <button type="button" key={a.id} data-area={a.name} data-node={key} aria-pressed={selected===key} {...d.props}
    className={'org-box org-area'+(selected===key?' on':'')+(over===key&&d.droppable?' drop':'')+(drag===key?' dragging':'')}
    title="قسم: اضغط لتسميته أو نقله أو حذفه، أو اسحبه إلى مكان آخر، أو أفلت فيه موظفين" onClick={()=>onPickArea(a)}>
    <GripVertical size={13} aria-hidden className="org-grip"/><Icon size={15} aria-hidden className="org-icon"/><b>{a.name}</b>
@@ -66,11 +67,30 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
  // tray above them to drag from. Dropping a box on the tray takes it out of the tree.
  const top=kids.get('')||[],heads=top.filter(x=>x.area||kids.get(x.key)?.length),loose=top.filter(x=>!x.area&&!kids.get(x.key)?.length);
  const tray=dnd('top',null,false);
- return <div className="org-tree" aria-label="الهيكل الوظيفي">
+ // Lines from each person to the other sections he is in as well, drawn over the tree; those of the selected person
+ // (or section) stand out. They are measured from the boxes after every layout change.
+ const canvas=useRef<HTMLDivElement>(null),[links,setLinks]=useState<{id:string;d:string;on:boolean}[]>([]),[size,setSize]=useState({w:0,h:0});
+ useLayoutEffect(()=>{const el=canvas.current;if(!el)return;
+  const draw=()=>{const box=el.getBoundingClientRect(),at=(k:string)=>el.querySelector<HTMLElement>(`[data-node="${k}"]`)?.getBoundingClientRect();
+   // The boxes' own height (not the lines'), so the curves below them get room without the page growing each time.
+   let content=0;for(const c of el.children)if(!(c instanceof SVGElement))content=Math.max(content,c.getBoundingClientRect().bottom-box.top);
+   let deepest=0;
+   const next=(chart.extras||[]).flatMap(x=>{const a=at('u:'+x.userId),b=at('a:'+x.areaId);if(!a||!b)return [];
+    // From under the person, sweeping below the boxes, into the section from beneath (or from above, when it sits lower).
+    const x1=a.left+a.width/2-box.left,y1=a.bottom-box.top,x2=b.left+b.width/2-box.left,below=b.top>a.bottom,y2=(below?b.top:b.bottom)-box.top,k=Math.max(44,Math.abs(x2-x1)*0.12);
+    deepest=Math.max(deepest,below?y2:Math.max(y1,y2)+k*0.8);
+    const d=below?`M${x1},${y1} C${x1},${y1+k} ${x2},${y2-k} ${x2},${y2}`:`M${x1},${y1} C${x1},${y1+k} ${x2},${Math.max(y1,y2)+k} ${x2},${y2}`;
+    return [{id:x.userId+x.areaId,d,on:selected===x.userId||selected==='a:'+x.areaId}]});
+   const h=Math.max(content,deepest+16);el.style.minHeight=h+'px';setSize({w:el.scrollWidth,h});setLinks(next)};
+  draw();const ro=new ResizeObserver(draw);ro.observe(el);return()=>ro.disconnect()},[chart,members,search,selected]);
+ return <div className="org-tree" aria-label="الهيكل الوظيفي"><div className="org-canvas" ref={canvas}>
+  {links.length>0&&<svg className="org-links" width={size.w} height={size.h} aria-hidden>
+   <defs><marker id="org-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+   {[...links].sort((a,b)=>Number(a.on)-Number(b.on)).map(l=><path key={l.id} d={l.d} className={l.on?'on':''} markerEnd="url(#org-arrow)"/>)}</svg>}
   <div onDragOver={tray.props.onDragOver} onDragLeave={tray.props.onDragLeave} onDrop={tray.props.onDrop} className={'org-tray'+(over==='top'&&tray.droppable?' drop':'')} aria-label="لم يوضعوا في الهيكل بعد">
    <b>لم يوضعوا في الهيكل بعد {loose.length>0&&<span className="tag">{peopleCount(loose.length)}</span>}</b>
    {loose.length?<div className="org-leaves">{loose.map(x=>personBox(x.member!))}</div>:<small>الجميع في أماكنهم. أفلت هنا أي صندوق لإخراجه من الهيكل.</small>}</div>
   {heads.length>0&&<ul className="org-root">{heads.map(h=><li key={h.key}>{branch(h)}</li>).reverse()}</ul>}
-  {drag&&<p className="org-tip" role="status">أفلته على من سيتبع له أو على قسم، أو في «لم يوضعوا في الهيكل بعد» لإخراجه.</p>}
+  </div>{drag&&<p className="org-tip" role="status">أفلته على من سيتبع له أو على قسم، أو في «لم يوضعوا في الهيكل بعد» لإخراجه.</p>}
  </div>;
 }
