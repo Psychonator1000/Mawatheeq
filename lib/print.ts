@@ -38,7 +38,12 @@ ${workRows ? `<h2>المهام والجلسات المفتوحة</h2><table clas
 ${footer(printedAt, printedBy)}`);
 }
 
-const footer = (printedAt: string, printedBy: string) => `<footer><span>طُبع من نظام مواثيق في ${escape(printedAt)}${printedBy ? ' بواسطة ' + escape(printedBy) : ''}</span><span>ملف داخلي سري</span></footer>`;
+// Printed pages carry the date they were printed, never the name of whoever printed them (the owner's wish).
+// `printedBy` stays in the callers' signatures but is not shown.
+const footer = (printedAt: string, _printedBy?: string) => `<footer><span>طُبع من نظام مواثيق في ${escape(printedAt)}</span><span>ملف داخلي سري</span></footer>`;
+/** The office's printed page (logo bar, watermark, no browser header or footer) and its footer, for other printouts. */
+export const printPage = (title: string, body: string, landscape = false) => page(title, body, landscape);
+export const printFooter = (printedAt: string) => footer(printedAt);
 /** The office logo (the same vector mark as in the app), with «و» in the logo's maroon. */
 const SEAL = `<div class="seal" aria-hidden="true">${brandMarkSvg('#8a2d2a')}</div>`;
 /**

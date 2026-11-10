@@ -5,6 +5,7 @@ import { clientName } from './clients.ts';
 import { normalizeSearch } from './case-browse.ts';
 import { isFiled, isSessionEntry, lastSitting, nextSitting, shiftDays } from './case-desk.ts';
 import type { Member, WorkItem } from './office.ts';
+import { printFooter, printPage } from './print.ts';
 
 export type MissionKind = 'hearing' | 'task' | 'deadline' | 'followup';
 export const MISSION_KINDS: Record<MissionKind, string> = { hearing: 'جلسة', task: 'مهمة', deadline: 'موعد طعن', followup: 'متابعة' };
@@ -211,17 +212,19 @@ export function reportText(r: DailyPayload, name: string, date: string): string 
 }
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
 /** One or more reports as a printable page (one report per page). */
-export function reportsHtml(list: { name: string; date: string; payload: DailyPayload; sent: string }[], printedBy: string, printedAt: string): string {
+export function reportsHtml(list: { name: string; date: string; payload: DailyPayload; sent: string }[], _printedBy: string, printedAt: string): string {
   const one = (x: (typeof list)[number]) => {
-    const body = REPORT_PARTS.map(({ key, title, fields }, n) => { const lines = filledLines(x.payload[key]); return lines.length ? `<h2>${ORDINALS[n]}: ${esc(title)}</h2><table><thead><tr><th class="n">م</th>${fields.map(([, label]) => `<th>${esc(label)}</th>`).join('')}</tr></thead><tbody>${lines.map((l, i) => `<tr><td class="n">${i + 1}</td>${fields.map(([f]) => `<td>${esc(l[f] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table>` : ''; }).join('');
-    const sum = daySummary(x.payload), tiles = [['جلسات', sum.hearings], ['أعمال إدارية', sum.admin], ['مراجعات خارجية', sum.external], ['مهام منجزة', sum.tasks]].map(([l, v]) => `<td><b>${v}</b><br>${l}</td>`).join('');
-    return `<section><header><h1>تقرير الأعمال اليومية</h1><p><b>${esc(x.name)}</b> · ${esc(x.date)}${x.sent ? ' · ' + esc(x.sent) : ''}</p></header>${body || '<p class="empty">لم يُكتب شيء في هذا التقرير.</p>'}${x.payload.notes.trim() ? `<h2>${ORDINALS[REPORT_PARTS.length]}: ${esc(NOTES.title)}</h2><p class="notes">${esc(x.payload.notes)}</p>` : ''}<h2>ملخص اليوم</h2><table class="sum"><tr>${tiles}</tr></table></section>`;
+    const body = REPORT_PARTS.map(({ key, title, fields }, n) => {
+      const lines = filledLines(x.payload[key]);
+      return lines.length ? `<h2>${ORDINALS[n]}: ${esc(title)}</h2><table class="list"><thead><tr><th class="n">م</th>${fields.map(([, label]) => `<th>${esc(label)}</th>`).join('')}</tr></thead><tbody>${lines.map((l, i) => `<tr><td class="n">${i + 1}</td>${fields.map(([f]) => `<td>${esc(l[f] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table>` : '';
+    }).join('');
+    const sum = daySummary(x.payload), tiles = ([['جلسات', sum.hearings], ['أعمال إدارية', sum.admin], ['مراجعات خارجية', sum.external], ['مهام منجزة', sum.tasks]] as [string, number][]).map(([l, v]) => `<div><b>${v}</b>${l}</div>`).join('');
+    const status = x.sent ? `<span class="chip ${x.sent.startsWith('أُرسل') ? 'ok' : 'draft'}">${esc(x.sent)}</span>` : '';
+    return `<section class="report"><header><h1>تقرير الأعمال اليومية</h1><p><b>${esc(x.name)}</b> · ${esc(x.date)} ${status}</p></header><div class="tiles">${tiles}</div>${body || '<p class="empty">لم يُكتب شيء في هذا التقرير.</p>'}${x.payload.notes.trim() ? `<h2>${ORDINALS[REPORT_PARTS.length]}: ${esc(NOTES.title)}</h2><p class="notes">${esc(x.payload.notes)}</p>` : ''}</section>`;
   };
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير الأعمال اليومية</title><style>
-@page{size:A4;margin:14mm}body{font-family:Arial,Tahoma,sans-serif;font-size:12.5px;color:#111;margin:0}section{page-break-after:always}section:last-of-type{page-break-after:auto}
-header{border-bottom:2px solid #111;margin-bottom:8px}h1{font-size:18px;margin:0 0 2px}header p{margin:0 0 6px}h2{font-size:13.5px;margin:12px 0 4px}
-table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:4px 6px;text-align:right;vertical-align:top}th{background:#eee}.n{width:26px;text-align:center}
-.notes{white-space:pre-wrap;border:1px solid #888;padding:6px}.sum td{text-align:center;width:25%}.sum b{font-size:16px}.empty{color:#666}footer{margin-top:10px;font-size:10.5px;color:#555}</style></head><body>${list.map(one).join('')}<footer>طُبع ${esc(printedAt)} · ${esc(printedBy)}</footer></body></html>`;
+  const style = `<style>.report+.report{break-before:page}.n{width:28px;text-align:center}.tiles{display:flex;gap:8px;margin:2px 0 6px}.tiles div{flex:1;border:1px solid #e3d8ca;border-radius:6px;padding:6px 4px;text-align:center;background:#fbf8f3;color:#76645a;font-size:11px}.tiles b{display:block;font-size:17px;color:#6e1f33;line-height:1.3}
+.chip{display:inline-block;border-radius:999px;padding:0 9px;font-size:10.5px;margin-inline-start:4px}.chip.ok{background:#e6f1ea;color:#2f6b4f}.chip.draft{background:#f6ecd8;color:#8a5a1a}.notes{white-space:pre-wrap;border:1px solid #e3d8ca;border-radius:6px;padding:6px 8px;margin:0}.empty{color:#8a7a70}</style>`;
+  return printPage('تقرير الأعمال اليومية', style + list.map(one).join('') + printFooter(printedAt));
 }
 
 type Range = Omit<Input, 'date'>;
@@ -310,10 +313,14 @@ export function periods(today: string): [string, string, string, string][] {
   return [['week', 'هذا الأسبوع', sunday, today], ['month', 'هذا الشهر', month, today], ['last', 'الشهر الماضي', lastStart, lastEnd], ['30', 'آخر 30 يوماً', shiftDays(today, -29), today]];
 }
 /** «الأداء» as a printable page. */
-export function performanceHtml(rows: PersonStats[], period: string, printedBy: string, printedAt: string): string {
-  const head = ['المحامي', 'التقارير المرسلة', 'في اليوم نفسه', 'مسودات', 'جلسات حضرها', 'جلسات رحّلها', 'أعمال إدارية', 'مراجعات خارجية', 'مهام منجزة', 'متأخر الآن'];
-  const body = rows.map(r => [r.name, `${r.sent} من ${r.workDays}`, r.sameDay, r.drafts, r.hearings, r.posted, r.admin, r.external, r.tasks, r.lateNow]);
-  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>أداء الفريق</title><style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,Tahoma,sans-serif;font-size:12px;color:#111}
-h1{font-size:18px;margin:0 0 2px}p{margin:0 0 8px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #888;padding:4px 6px;text-align:center}th{background:#eee}td:first-child{text-align:right}footer{margin-top:8px;font-size:10.5px;color:#555}</style></head>
-<body><h1>أداء الفريق</h1><p>${esc(period)}</p><table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table><footer>طُبع ${esc(printedAt)} · ${esc(printedBy)}</footer></body></html>`;
+export function performanceHtml(rows: PersonStats[], period: string, _printedBy: string, printedAt: string): string {
+  const head = ['المحامي', 'التقارير المرسلة من أيام العمل', 'أُرسلت في يومها', 'مسودات', 'جلسات حضرها', 'جلسات رحّلها', 'أعمال إدارية', 'مراجعات خارجية', 'مهام منجزة', 'متأخر الآن'];
+  const cell = (v: number, extra = '') => `<td class="num${v ? '' : ' zero'}${extra}">${v}</td>`;
+  const body = rows.map(r => `<tr><td class="who">${esc(r.name)}</td><td class="num"><b>${r.sent}</b> <span class="of">من ${r.workDays}</span></td>${cell(r.sameDay)}${cell(r.drafts)}${cell(r.hearings)}${cell(r.posted)}${cell(r.admin)}${cell(r.external)}${cell(r.tasks)}${cell(r.lateNow, r.lateNow ? ' late' : '')}</tr>`).join('');
+  const days = rows[0]?.workDays ?? 0;
+  const style = `<style>.perf thead th{text-align:center;white-space:normal;line-height:1.35;vertical-align:middle}.perf td.num{text-align:center;font-variant-numeric:tabular-nums;vertical-align:middle}.perf td.who{font-weight:700;white-space:nowrap;vertical-align:middle}
+.perf .zero{color:#bcaea3}.perf .late{color:#a32e38;font-weight:700}.perf .of{color:#8a7568;font-size:.9em}.legend{margin:10px 0 0;font-size:10.5px;color:#76645a;line-height:1.8}</style>`;
+  return printPage('أداء الفريق', `${style}<header><h1>أداء الفريق</h1><p>${esc(period)} · أيام العمل في الفترة: ${days} (الجمعة والسبت عطلة)</p></header>
+<table class="list perf"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body || `<tr><td colspan="${head.length}">لا أحد مكلف بالتقرير اليومي.</td></tr>`}</tbody></table>
+<p class="legend">جلسات حضرها: المذكورة في تقاريره. جلسات رحّلها: المسجّلة في ملفات القضايا. متأخر الآن: جلسات لم تُرحَّل ومهام فات موعدها حتى يوم الطباعة.</p>${printFooter(printedAt)}`, true);
 }

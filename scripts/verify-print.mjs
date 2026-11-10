@@ -21,7 +21,9 @@ assert.ok(html.includes('<th>تاريخ الحكم</th><td>01/09/2026</td>'), 'D
 assert.ok(!html.includes('<th>المحكمة</th>'), 'Empty fields are omitted');
 assert.ok(html.indexOf('05/09/2026') < html.indexOf('20/09/2026'), 'Procedures print in date order');
 assert.ok(html.includes('جلسة نظر') && !html.includes('منتهية') && !html.includes('قضية أخرى'), 'Only this case\'s open work is listed');
-assert.ok(html.includes('<th>منذ الحكم</th><td>40 يوم</td>') && html.includes('بواسطة ui_owner'));
+assert.ok(html.includes('<th>منذ الحكم</th><td>40 يوم</td>'));
+// Printouts carry the date only, never the name of whoever printed them.
+assert.ok(!html.includes('ui_owner') && !html.includes('بواسطة'), 'No printed-by name');
 const money = (minor, currency) => String(minor) + ' ' + currency;
 const entry = (id, type, amountMinor, extra = {}) => ({ id, caseId: 'print-case', payload: { type, date: '2026-10-0' + id.slice(-1), currency: 'KWD', amountMinor, reference: 'R-' + id, party: 'موكل <i>تجريبي</i>', notes: '', status: 'posted', voidReason: '', ...extra } });
 const receipt = voucherHtml(entry('e1', 'receipt', '1500'), 'TEST-1', money, 'دينار كويتي واحد وخمسمائة فلس', '11/10/2026', '');
