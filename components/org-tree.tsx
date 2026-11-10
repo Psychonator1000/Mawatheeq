@@ -83,6 +83,19 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
     return [{id:x.userId+x.areaId,d,on:selected===x.userId||selected==='a:'+x.areaId}]});
    const h=Math.max(content,deepest+16);el.style.minHeight=h+'px';setSize({w:el.scrollWidth,h});setLinks(next)};
   draw();const ro=new ResizeObserver(draw);ro.observe(el);return()=>ro.disconnect()},[chart,members,search,selected]);
+ // The selected person (or section) is brought into sight with the sections his lines go to, when they fit together.
+ useLayoutEffect(()=>{if(!selected)return;const el=canvas.current,view=el?.parentElement;if(!el||!view)return;
+  const key=selected.startsWith('a:')?selected:'u:'+selected,ends=[key,...(chart.extras||[]).filter(x=>key==='u:'+x.userId||key==='a:'+x.areaId).map(x=>key.startsWith('u:')?'a:'+x.areaId:'u:'+x.userId)];
+  const rects=ends.map(k=>el.querySelector<HTMLElement>(`[data-node="${k}"]`)?.getBoundingClientRect()).filter((r):r is DOMRect=>!!r);if(!rects.length)return;
+  const v=view.getBoundingClientRect(),left=Math.min(...rects.map(r=>r.left)),right=Math.max(...rects.map(r=>r.right));
+  if(left>=v.left&&right<=v.right)return;
+  // Too far apart to fit: he stays at the edge away from his sections, so as much of his lines as possible shows.
+  const me=rects[0],toLeft=left<me.left;
+  const shift=right-left<=view.clientWidth-24?(left+right)/2-(v.left+view.clientWidth/2):toLeft?me.right-(v.left+view.clientWidth-16):me.left-(v.left+16);
+  view.scrollBy({left:shift,behavior:'smooth'})
+  // Only when the selection changes: moving boxes while he stays selected must not pull the view around.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[selected]);
  return <div className="org-tree" aria-label="الهيكل الوظيفي"><div className="org-canvas" ref={canvas}>
   {links.length>0&&<svg className="org-links" width={size.w} height={size.h} aria-hidden>
    <defs><marker id="org-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
