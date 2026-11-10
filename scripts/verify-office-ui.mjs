@@ -192,27 +192,31 @@ try{
   assert.equal(await mail('ui_clerk'),'hide','Mail switched off for the ticked accounts');assert.equal(await mail('salem.ui'),null,'The unticked account keeps mail');await db.exec('set role anon');}
  // The team page as a tree: drag salem.ui's box onto ui_clerk's and salem.ui reports to him (saved, and drawn under him);
  // ui_clerk can no longer be put under salem.ui; a click on a box opens what can be changed for that person.
- {await page.getByRole('tab',{name:'الهيكل',exact:true}).click();const tree=page.locator('.org-tree');await tree.waitFor();
+ {await page.getByRole('tab',{name:'الهيكل',exact:true}).click();const tree=page.locator('.org-tree-wrap');await tree.waitFor();
+  // «a» drawn under «b» on the board (a block of people under a head, or a box under it).
+  const under=async(a,b)=>{for(let i=0;i<40;i++){const A=await tree.locator(`[data-node="${a}"]`).boundingBox().catch(()=>null),B=await tree.locator(`[data-node="${b}"]`).boundingBox().catch(()=>null);if(A&&B&&A.y>B.y+B.height-2)return;await page.waitForTimeout(100)}throw new Error(a+' is not drawn under '+b)};
+  const nodeOf=async u=>{await db.exec('reset role');const id=(await db.query('select id from mawatheeq_private.accounts where username=$1',[u])).rows[0].id;await db.exec('set role anon');return 'u:'+id};
   const box=u=>tree.locator(`.org-box[data-person="${u}"]`);
   assert.equal(await box('ui_owner').count(),0,'The program\'s owner account is not a person in the tree');
-  // Like icons on a phone: dropped on the side of ui_clerk, salem.ui takes the place beside him (saved), and nobody
-  // reports to anybody; only the middle of a box puts one under the other.
-  {const b=await box('ui_clerk').boundingBox();await box('salem.ui').dragTo(box('ui_clerk'),{targetPosition:{x:b.width*0.92,y:b.height/2}});
-   let order=[];for(let i=0;i<40;i++){order=await tree.locator('.org-tray .org-box').evaluateAll(e=>e.map(x=>x.dataset.person));if(order.indexOf('salem.ui')===order.indexOf('ui_clerk')-1)break;await page.waitForTimeout(100)}
-   assert.equal(order.indexOf('salem.ui'),order.indexOf('ui_clerk')-1,'Placed just before him');
-   await db.exec('reset role');assert.equal((await db.query('select count(*)::int n from mawatheeq_private.team_lines')).rows[0].n,0,'Nobody under anybody');
-   assert.equal((await db.query('select count(*)::int n from mawatheeq_private.team_order')).rows[0].n>=2,true,'The order is kept');await db.exec('set role anon');}
+  // A board like a network map: salem.ui dragged from the tray to an empty spot stays there (saved, on the grid), and
+  // nobody reports to anybody; only the middle of a box puts one under the other.
+  {const t=await page.locator('.org-tree').boundingBox(),b=await box('salem.ui').boundingBox();
+   await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.mouse.move(t.x+t.width-260,t.y+t.height-160,{steps:8});await page.mouse.up();
+   await page.locator('.org-canvas [data-person="salem.ui"]').waitFor();
+   await db.exec('reset role');let rows=[];for(let i=0;i<40;i++){rows=(await db.query('select x,y from mawatheeq_private.team_layout')).rows;if(rows.length)break;await page.waitForTimeout(100)}
+   assert.equal(rows.length,1,'Its place is kept');assert.ok(rows[0].x%20===0&&rows[0].y%20===0,'On the grid');
+   assert.equal((await db.query('select count(*)::int n from mawatheeq_private.team_lines')).rows[0].n,0,'Nobody under anybody');await db.exec('set role anon');}
   // The tree as a map: the wheel zooms (around the pointer), the buttons too, and dragging an empty spot moves it.
   {const zv=page.locator('.org-zoom-value');await page.locator('.org-zoom').getByRole('button',{name:'تصغير'}).click();assert.notEqual(await zv.innerText(),'100٪');
-   const t=await tree.boundingBox();await page.mouse.move(t.x+t.width/2,t.y+t.height-30);await page.mouse.wheel(0,-300);
+   const view=page.locator('.org-tree'),t=await view.boundingBox();await page.mouse.move(t.x+t.width/2,t.y+120);await page.mouse.wheel(0,-300);
    await page.waitForTimeout(150);const z1=await zv.innerText();await page.mouse.wheel(0,600);await page.waitForTimeout(150);assert.notEqual(await zv.innerText(),z1,'The wheel zooms');
    await zv.click();assert.equal(await zv.innerText(),'100٪');
    await page.locator('.org-zoom').getByRole('button',{name:'تكبير'}).click();await page.locator('.org-zoom').getByRole('button',{name:'تكبير'}).click();
-   const before=await tree.evaluate(e=>[e.scrollLeft,e.scrollTop]);await page.mouse.move(t.x+20,t.y+t.height-20);await page.mouse.down();await page.mouse.move(t.x+220,t.y+t.height-120,{steps:6});await page.mouse.up();
-   assert.notDeepEqual(await tree.evaluate(e=>[e.scrollLeft,e.scrollTop]),before,'Dragging an empty spot moves the tree');
+   const before=await view.evaluate(e=>[e.scrollLeft,e.scrollTop]);const y0=Math.min(t.y+t.height,page.viewportSize().height)-30;await page.mouse.move(t.x+t.width/2,y0);await page.mouse.down();await page.mouse.move(t.x+t.width/2-200,y0-150,{steps:6});await page.mouse.up();
+   assert.notDeepEqual(await view.evaluate(e=>[e.scrollLeft,e.scrollTop]),before,'Dragging an empty spot moves the tree');
    await zv.click();}
   await box('salem.ui').dragTo(box('ui_clerk'));await page.getByText(/يتبع الآن/).waitFor();
-  await tree.locator('li:has(> .org-box[data-person="ui_clerk"]) .org-box[data-person="salem.ui"]').waitFor();
+  await under(await nodeOf('salem.ui'),await nodeOf('ui_clerk'));
   assert.match(await box('ui_clerk').innerText(),/مسؤول عن شخص واحد/);
   await db.exec('reset role');const line=(await db.query("select a.username u,m.username boss from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.accounts m on m.id=t.manager_id")).rows;await db.exec('set role anon');
   assert.deepEqual(line,[{u:'salem.ui',boss:'ui_clerk'}],'Saved');
@@ -234,13 +238,13 @@ try{
   await ad.getByRole('button',{name:'إضافة القسم',exact:true}).click();await ad.waitFor({state:'hidden'});
   const area=tree.locator('.org-area[data-area="المحامون"]');await area.waitFor();
   await box('salem.ui').dragTo(area);await page.getByText(/تحت قسم «المحامون» الآن/).waitFor();
-  await tree.locator('li:has(> .org-area[data-area="المحامون"]) .org-box[data-person="salem.ui"]').waitFor();
+  await under(await nodeOf('salem.ui'),await tree.locator('.org-area[data-area="المحامون"]').getAttribute('data-node'));
   assert.match(await box('ui_clerk').innerText(),/مسؤول عن شخص واحد/,'Oversees him through the section');
   await page.screenshot({path:artifacts+'/team-tree-area.png'});
   await db.exec('reset role');const inArea=(await db.query("select a.username u,t.manager_id,ar.name from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.team_areas ar on ar.id=t.area_id")).rows;await db.exec('set role anon');
   assert.deepEqual(inArea,[{u:'salem.ui',manager_id:null,name:'المحامون'}]);
   await area.click();page.once('dialog',d=>void d.accept());await page.getByRole('dialog').getByRole('button',{name:'حذف القسم',exact:true}).click();await page.getByText('حُذف القسم.').waitFor();
-  await tree.locator('li:has(> .org-box[data-person="ui_clerk"]) .org-box[data-person="salem.ui"]').waitFor();
+  await under(await nodeOf('salem.ui'),await nodeOf('ui_clerk'));
   // Sections for the workspaces: in «السكرتارية» salem.ui opens the secretary workspace alone (saved through the
   // permission save, his sessions ended); moved into «القضايا» he opens the cases workspace again.
   const pagesOf=async u=>{await db.exec('reset role');const r=(await db.query("select ma.permissions->'sections' s from mawatheeq_private.member_access ma join mawatheeq_private.accounts a on a.id=ma.user_id where a.username=$1",[u])).rows[0].s;await db.exec('set role anon');return r};
@@ -263,13 +267,23 @@ try{
    if(n==='السكرتارية'){await page.waitForTimeout(300);await page.screenshot({path:artifacts+'/team-extra-choice.png'})}
    await ch.getByRole('button',{name:new RegExp('إضافته إلى قسم «'+n+'» أيضاً')}).click();await page.getByText(new RegExp(`في قسم «${n}» أيضاً الآن`)).waitFor()}
   assert.deepEqual((await waitPages('ui_clerk',v=>v.includes('hr'))).filter(x=>x!=='daily').sort(),['accounting','hr','secretary'],'Three workspaces');
-  assert.equal(await tree.locator('.org-links > path').count(),2,'A line to each extra section');
-  await box('ui_clerk').click();await page.locator('.org-panel').waitFor();assert.equal(await tree.locator('.org-links > path.on').count(),2,'His lines stand out');
+  assert.equal(await tree.locator('.org-links > path.area').count(),2,'A line to each extra section');
+  await box('ui_clerk').click();await page.locator('.org-panel').waitFor();assert.equal(await tree.locator('.org-links > path.area.on').count(),2,'His lines stand out');
   await page.waitForTimeout(300);await page.screenshot({path:artifacts+'/team-extra-lines.png'});
   await page.locator('.org-panel').getByRole('button',{name:'إغلاق'}).click();await page.waitForTimeout(200);await page.screenshot({path:artifacts+'/team-extra-lines-quiet.png'});await box('ui_clerk').click();await page.locator('.org-panel').waitFor();
   await page.locator('.org-panel').getByRole('button',{name:'إخراجه من قسم «السكرتارية»'}).click();
   assert.deepEqual((await waitPages('ui_clerk',v=>!v.includes('secretary'))).filter(x=>x!=='daily').sort(),['accounting','hr']);
   await page.keyboard.press('Escape');await page.locator('.org-panel').waitFor({state:'detached'});
+  // A second boss: salem.ui (in «القضايا») dropped on ui_clerk answers to him as well: a dotted line ending in a circle.
+  await box('salem.ui').dragTo(box('ui_clerk'));await page.getByRole('dialog').getByRole('button',{name:/يتبع ui_clerk أيضاً/}).click();
+  await page.getByText(/يتبع ui_clerk أيضاً الآن/).waitFor();await tree.locator('.org-links > path.boss').waitFor();
+  // Which way a branch grows: «القضايا» to the right.
+  await tree.locator('.org-area[data-area="القضايا"]').click();const ae=page.getByRole('dialog');await ae.getByRole('radio',{name:'→ يمين'}).click();
+  await db.exec('reset role');let flow=[];for(let i=0;i<40;i++){flow=(await db.query('select dir from mawatheeq_private.team_flow')).rows;if(flow.length)break;await page.waitForTimeout(100)}await db.exec('set role anon');
+  assert.deepEqual(flow,[{dir:'right'}]);await page.keyboard.press('Escape');await ae.waitFor({state:'hidden'}).catch(()=>{});
+  {const s=await tree.locator('.org-area[data-area="القضايا"]').boundingBox(),p=await box('salem.ui').boundingBox();assert.ok(p.x>s.x+s.width,'His team grows to the right');}
+  await box('ui_clerk').click();await page.locator('.org-panel').waitFor();await page.waitForTimeout(400);await page.screenshot({path:artifacts+'/team-board.png'});
+  await page.locator('.org-panel').getByRole('button',{name:'إغلاق'}).click();await page.locator('.org-zoom').getByRole('button',{name:'ملاءمة الهيكل للشاشة'}).click();await page.waitForTimeout(400);await page.screenshot({path:artifacts+'/team-board-fit.png'});await page.locator('.org-zoom-value').click();
   page.off('dialog',noAsk);
   await page.getByRole('tab',{name:'القائمة',exact:true}).click();}
  // Every page in the side list can be hidden, the day's page and «ملفاتي الورقية» too: gone from that account's menu.

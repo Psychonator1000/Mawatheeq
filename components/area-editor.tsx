@@ -15,7 +15,7 @@ export type AreaDraft={id?:string;name:string;role:string|null;workspace:Workspa
  * the work, and free to change), and where it sits (at the top, under a person or inside another section). Removing it
  * moves whoever was in it up to where it was.
  */
-export default function AreaEditor({area,chart,members,busy,onSave,onDelete,onClose}:{area:TeamArea|'new';chart:TeamChart;members:Member[];busy:boolean;
+export default function AreaEditor({area,chart,members,busy,flow,onSave,onDelete,onClose}:{area:TeamArea|'new';chart:TeamChart;members:Member[];busy:boolean;flow?:React.ReactNode;
  onSave:(d:AreaDraft)=>void;onDelete:(a:TeamArea)=>void;onClose:()=>void}){
  const old=area==='new'?null:area;
  const [role,setRole]=useState<string|null>(old?.role||null),[name,setName]=useState(old?.name||'');
@@ -40,6 +40,7 @@ export default function AreaEditor({area,chart,members,busy,onSave,onDelete,onCl
      options={(Object.keys(WORKSPACE_LABELS) as Workspace[]).map(w=>({value:w,label:WORKSPACE_LABELS[w]+' فقط'}))} onChange={setWorkspace}/>
      <small>{workspace?'من يُسحب إلى هذا القسم يفتح هذه المساحة وحدها، ومن يخرج منه تُزال عنه.':'تجميع فقط: تبقى صفحات من فيه كما هي.'}</small></label>
     <label className="field"><span>مكانه في الهيكل</span><FilterBox label="مكان القسم" value={parent} empty="أعلى الهيكل (تحت المالك)" options={places} onChange={setParent}/></label></div>
+   {flow&&<div className="field"><span>اتجاه من فيه في الهيكل</span>{flow}</div>}
    <div className="area-foot">{old&&<button type="button" className="btn danger" onClick={()=>onDelete(old)}><Trash2 size={15}/> حذف القسم</button>}
     <button type="button" className="btn" onClick={onClose}>إلغاء</button><button type="submit" className="btn primary" disabled={!name.trim()}>{old?'حفظ القسم':'إضافة القسم'}</button></div>
   </fieldset></form>

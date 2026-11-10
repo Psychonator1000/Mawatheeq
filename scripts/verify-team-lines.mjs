@@ -117,4 +117,23 @@ assert.deepEqual(chart.order,{['u:'+b.id]:0,['u:'+a.id]:1},'Positions in the ord
 chart=await daily(owner.token,'set_order',{nodes:['u:'+a.id,'u:'+b.id]});assert.deepEqual([chart.order['u:'+a.id],chart.order['u:'+b.id]],[0,1]);
 await denied(()=>daily(lead.token,'set_order',{nodes:['u:'+a.id]}));
 await assert.rejects(()=>daily(owner.token,'set_order',{nodes:'x'}),/ترتيب غير صالح/);
+// The board: boxes placed by hand keep their place; null lets them arrange themselves again.
+chart=await daily(owner.token,'set_layout',{positions:{['u:'+a.id]:[120.4,-40],['a:'+hrArea.id]:[600,80],'junk':[1,1]}});
+assert.deepEqual(chart.layout,{['u:'+a.id]:[120,-40],['a:'+hrArea.id]:[600,80]});
+chart=await daily(owner.token,'set_layout',{positions:{['u:'+a.id]:null}});assert.deepEqual(Object.keys(chart.layout),['a:'+hrArea.id]);
+await denied(()=>daily(lead.token,'set_layout',{positions:{}}));
+// Which way a branch grows: left or right is kept, down (the default) clears it.
+chart=await daily(owner.token,'set_flow',{node:'u:'+head.id,dir:'right'});assert.deepEqual(chart.flow,{['u:'+head.id]:'right'});
+chart=await daily(owner.token,'set_flow',{node:'u:'+head.id,dir:'down'});assert.deepEqual(chart.flow,{});
+await assert.rejects(()=>daily(owner.token,'set_flow',{node:'u:'+head.id,dir:'up'}),/اتجاه غير صالح/);
+// A second boss: lawyer_other also answers to lead_ui, who then reads his reports; loops are refused; moving him under
+// lead_ui as his main line drops the extra link.
+chart=await daily(owner.token,'add_boss',{userId:other.id,managerId:lead.id});assert.deepEqual(chart.bosses,[{userId:other.id,managerId:lead.id}]);
+assert.ok((await seen(lead)).reports.includes('lawyer_other'),'The second boss reads his reports');
+await assert.rejects(()=>daily(owner.token,'add_boss',{userId:lead.id,managerId:other.id}),/لا يتبع أحد من هو تحته/,'No loops through the second boss');
+await assert.rejects(()=>daily(owner.token,'add_boss',{userId:other.id,managerId:other.id}));
+await denied(()=>daily(lead.token,'add_boss',{userId:b.id,managerId:lead.id}));
+chart=await daily(owner.token,'set_manager',{userId:other.id,managerId:lead.id});assert.deepEqual(chart.bosses,[],'Now his main line');
+await assert.rejects(()=>daily(owner.token,'add_boss',{userId:other.id,managerId:lead.id}),/يتبعه أصلاً/);
+chart=await daily(owner.token,'add_boss',{userId:other.id,managerId:head.id});chart=await daily(owner.token,'remove_boss',{userId:other.id,managerId:head.id});assert.deepEqual(chart.bosses,[]);
 console.log('Passed team lines: leads read their team down the line and themselves, the head reads the leads and their teams, nobody reads above or beside, no loops, only the owner or a staff admin changes the lines; sections hold people and sections, whoever a section sits under oversees everyone in it, sections move without loops and their people move up when one is removed.');

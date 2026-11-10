@@ -10,7 +10,11 @@ export type TeamArea = { id: string; name: string; role: string | null; workspac
 /** `extras`: sections a person belongs to besides their main place, for the workspaces those sections stand for. */
 export type TeamExtra = { userId: string; areaId: string };
 /** `order`: each box's place among the boxes side by side under the same head, as the owner arranged them. */
-export type TeamChart = { lines: TeamLine[]; areas: TeamArea[]; extras?: TeamExtra[]; order?: Record<string, number> };
+/** `bosses`: people a person answers to besides his main line. */
+export type TeamBoss = { userId: string; managerId: string };
+/** `layout`: boxes put by hand on the board; `flow`: heads whose branch grows to the left or right. */
+export type TeamChart = { lines: TeamLine[]; areas: TeamArea[]; extras?: TeamExtra[]; order?: Record<string, number>;
+  layout?: Record<string, [number, number]>; flow?: Record<string, 'left' | 'right'>; bosses?: TeamBoss[] };
 /** What an account oversees (`below`, at any depth), and the whole chart for whoever may change it or reads every report. */
 export type TeamInfo = TeamChart & { all: boolean; leads: boolean; canManage: boolean; below: string[] };
 export const EMPTY_CHART: TeamChart = { lines: [], areas: [], extras: [] };
