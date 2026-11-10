@@ -44,7 +44,8 @@ const base='http://127.0.0.1:4175/Mawatheeq/';
 const go=async(name)=>{await page.getByRole('button',{name:name==='سجل الأحكام'?/^سجل الأحكام/:name,exact:name!=='سجل الأحكام'}).first().click()};
 // Staff accounts live on their own admin page («فريق المكتب»); the cases workspace keeps office settings.
 const openSpace=async(id,hash)=>{await page.evaluate(([k,v,h])=>{sessionStorage.setItem(k,v);if(h)location.hash=h},['mawatheeq.workspace.v1',id,hash]);await page.reload()};
-const openTeam=async()=>{await openSpace('team');await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor()};
+// The team page opens as the tree; most steps below work in «القائمة» (the table), and the tree has its own step.
+const openTeam=async()=>{await openSpace('team');await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();await page.getByRole('tab',{name:'القائمة',exact:true}).click();await page.locator('.office-staff table').waitFor()};
 const openLegal=async(hash='overview')=>{await openSpace('legal',hash);await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).waitFor()};
 try{
  await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await go('فتح مساحة العمل');await go('فتح القضايا');
@@ -189,18 +190,25 @@ try{
   page.once('dialog',d=>void d.accept());await dlg.getByRole('button',{name:/^تطبيق على الحسابات المحددة/}).click();await dlg.waitFor({state:'hidden'});
   await db.exec('reset role');  const mail=async u=>(await db.query("select ma.permissions->'view'->>'ws:mail' v from mawatheeq_private.member_access ma join mawatheeq_private.accounts a on a.id=ma.user_id where a.username=$1",[u])).rows[0]?.v||null;
   assert.equal(await mail('ui_clerk'),'hide','Mail switched off for the ticked accounts');assert.equal(await mail('salem.ui'),null,'The unticked account keeps mail');await db.exec('set role anon');}
- // «الهيكل الوظيفي»: salem.ui reports to ui_clerk; the chart nests him under ui_clerk, ui_clerk can no longer pick
- // someone under him, and the line is saved.
- {await page.getByRole('button',{name:'الهيكل الوظيفي',exact:true}).click();const dlg=page.getByRole('dialog');await dlg.locator('.team-chart').waitFor();
-  const row=who=>dlg.locator('.tc-row',{hasText:who});const boss=row('salem.ui').getByRole('combobox');
-  await boss.click();await boss.fill('ui_clerk');await page.getByRole('option',{name:/ui_clerk/}).click();
-  await dlg.locator('.tc-row.lead',{hasText:'ui_clerk'}).waitFor();await dlg.locator('li li .tc-row',{hasText:'salem.ui'}).waitFor();
-  const up=row('ui_clerk').getByRole('combobox');await up.click();await up.fill('salem');
-  assert.equal(await page.getByRole('option',{name:/salem\.ui/}).count(),0,'Nobody reports to someone under them');await page.keyboard.press('Escape');
-  await dlg.screenshot({path:artifacts+'/team-chart.png'});
+ // The team page as a tree: drag salem.ui's box onto ui_clerk's and salem.ui reports to him (saved, and drawn under him);
+ // ui_clerk can no longer be put under salem.ui; a click on a box opens what can be changed for that person.
+ {await page.getByRole('tab',{name:'الهيكل',exact:true}).click();const tree=page.locator('.org-tree');await tree.waitFor();
+  const box=u=>tree.locator(`.org-box[data-person="${u}"]`);
+  await box('salem.ui').dragTo(box('ui_clerk'));await page.getByText(/يتبع الآن/).waitFor();
+  await tree.locator('li:has(> .org-box[data-person="ui_clerk"]) .org-box[data-person="salem.ui"]').waitFor();
+  assert.match(await box('ui_clerk').innerText(),/يشرف على شخص واحد/);
   await db.exec('reset role');const line=(await db.query("select a.username u,m.username boss from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.accounts m on m.id=t.manager_id")).rows;await db.exec('set role anon');
   assert.deepEqual(line,[{u:'salem.ui',boss:'ui_clerk'}],'Saved');
-  await page.keyboard.press('Escape');await dlg.waitFor({state:'hidden'}).catch(()=>{});}
+  await page.screenshot({path:artifacts+'/team-tree.png'});
+  await box('ui_clerk').click();const card=page.getByRole('dialog');await card.getByText('يشرف على شخص واحد').waitFor();
+  for(const b of ['تعديل الصلاحيات','كلمة المرور','الدور الوظيفي'])await card.getByRole('button',{name:b,exact:true}).waitFor();
+  await page.waitForTimeout(400);await page.screenshot({path:artifacts+'/team-person-card.png'});
+  const up=card.getByRole('combobox');await up.click();await up.fill('salem');
+  assert.equal(await page.getByRole('option',{name:/salem\.ui/}).count(),0,'Nobody reports to someone under them');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await card.waitFor({state:'hidden'}).catch(()=>{});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:artifacts+'/team-tree-mobile.png'});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'No page-wide sideways scroll');await page.setViewportSize({width:1440,height:1000});
+  await page.getByRole('tab',{name:'القائمة',exact:true}).click();}
  // Every page in the side list can be hidden, the day's page and «ملفاتي الورقية» too: gone from that account's menu.
  {await page.getByRole('button',{name:'تطبيق على عدة حسابات',exact:true}).click();const dlg=page.getByRole('dialog');
   for(const name of ['مهام اليوم والتقرير','ملفاتي الورقية'])await dlg.getByRole('radiogroup',{name}).getByRole('radio',{name:'مخفي'}).click();
@@ -228,6 +236,7 @@ try{
  {const ctx2=await browser.newContext({viewport:{width:1360,height:900},reducedMotion:'reduce'});const dep=await ctx2.newPage();await configurePage(dep);
   await dep.goto(base);await dep.getByLabel('اسم المستخدم',{exact:true}).fill('ui_deputy');await dep.getByLabel('كلمة المرور',{exact:true}).fill('Deputy-synthetic-123');await dep.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
   await dep.getByRole('button',{name:'فتح فريق المكتب'}).click();await dep.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();
+  await dep.locator('.org-tree').waitFor();await dep.getByRole('tab',{name:'القائمة',exact:true}).click();
   const ownerRow=dep.getByRole('row').filter({has:dep.getByText('ui_owner',{exact:true})});assert.equal(await ownerRow.getByRole('button').count(),0,'The owner account cannot be managed by an admin');
   await dep.getByRole('row').filter({has:dep.getByText('ui_deputy',{exact:true})}).getByText(/حسابك/).waitFor();
   await dep.getByRole('row').filter({has:dep.getByText('ui_clerk',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();

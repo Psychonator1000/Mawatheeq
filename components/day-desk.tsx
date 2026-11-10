@@ -13,7 +13,7 @@ import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emp
  type DailyPayload,type Mission,type MissionFilter,type Person,type ReportLine,type StoredReport} from '@/lib/daily-report';
 import {DateField,api} from './shared';
 import {FilterBox,SelectList} from './filter-select';
-import type {TeamInfo} from './team-chart';
+import type {TeamInfo} from '@/lib/team';
 import {courtChoices} from '@/lib/court-names';
 import {COURTS} from '@/lib/choices';
 
