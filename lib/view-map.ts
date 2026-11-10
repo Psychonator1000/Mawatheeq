@@ -41,6 +41,8 @@ export const VIEW_ITEMS: ViewItem[] = [
   page('clients', 'الموكلون', 'الموكلون والتقارير', 'clients'),
   page('summary', 'ملخص الموكلين', 'الموكلون والتقارير', 'clients'),
   page('analytics', 'التحليل والإحصائيات', 'الموكلون والتقارير', 'analytics'),
+  // «ملفاتي الورقية» needs no section: every office account has it unless it is hidden here.
+  { id: 'page:paper', label: 'ملفاتي الورقية', kind: 'page', group: 'بريدي وملفاتي' },
   // The other workspaces, whole.
   { id: 'ws:secretary', label: 'السكرتارية', kind: 'workspace', section: 'secretary' },
   { id: 'ws:collections', label: 'التحصيل', kind: 'workspace', section: 'collections' },
@@ -135,12 +137,36 @@ export function effectiveView(access: { view?: ViewSettings; accountKind?: Accou
   return access.accountKind === 'client' ? { ...(access.view || {}), ...Object.fromEntries(CLIENT_NEVER.map(id => [id, 'hide'])) } : access.view || {};
 }
 
+// «مهام اليوم والتقرير» also opens for an account with cases, hearings or deadlines (canOpen in permissions.ts), so its
+// section only decides whether the account writes a daily report: shown = writes one, read-only = sees its day
+// without a report, hidden = not in its menu at all.
+const DAILY = 'page:daily', DAY_SECTIONS = ['work', 'cases', 'deadlines'];
+type Pages = { sections: string[]; view?: ViewSettings; adminPowers?: string[] };
+const dayOpens = (v: Pages) => v.sections.some(s => DAY_SECTIONS.includes(s)) || (v.adminPowers || []).some(p => p === 'staff' || p === 'reviews');
+
+/** Whether the item is in the account's menu at all (granted), before its own setting. */
+export const itemGranted = (v: Pages, i: ViewItem) => !i.section || v.sections.includes(i.section) || (i.id === DAILY && dayOpens(v));
+/** The item's mode for an account: hidden when it is not granted. */
+export function itemMode(v: Pages, i: ViewItem): ViewMode {
+  if (!itemGranted(v, i)) return 'hide';
+  const own = viewMode(v.view || {}, i.id);
+  return i.id === DAILY && own === 'show' && !v.sections.includes('daily') ? 'read' : own;
+}
+/** What one click on the item does: grants it when it is not granted, else turns it to the next mode. */
+export const nextItemMode = (v: Pages, i: ViewItem, readable = true): ViewMode => !itemGranted(v, i) ? 'show' : cycleMode(itemMode(v, i), readable);
+
 /**
  * An account's pages with item `i` set to `mode`, as the permission editor does it: an item whose section is not
  * granted is granted and shown alone in the side list (its section's other pages hidden); hiding the last shown item
  * of a section takes the section away, so the server refuses it too. Shared by the editor and «تطبيق على عدة حسابات».
  */
-export function withItemMode<P extends { sections: string[]; view?: ViewSettings }>(v: P, i: ViewItem, mode: ViewMode): P {
+export function withItemMode<P extends Pages>(v: P, i: ViewItem, mode: ViewMode): P {
+  if (i.id === DAILY) {
+    const others = v.sections.filter(s => s !== 'daily'), view = setMode(v.view || {}, DAILY, mode === 'hide' ? 'hide' : 'show');
+    // Read-only for an account the page does not open for otherwise would leave it out of the menu: it writes reports.
+    const report = mode === 'show' || (mode === 'read' && !dayOpens({ ...v, sections: others }));
+    return { ...v, sections: report ? [...others, 'daily'] : others, view } as P;
+  }
   const sec = i.section, siblings = sec ? VIEW_ITEMS.filter(x => x.section === sec) : [], side = (x: ViewItem) => x.kind === 'page' || x.kind === 'workspace';
   let next = v.view || {};
   if (sec && !v.sections.includes(sec)) {
@@ -150,11 +176,7 @@ export function withItemMode<P extends { sections: string[]; view?: ViewSettings
     return { ...v, sections: [...v.sections, sec], view: next };
   }
   next = setMode(next, i.id, mode);
-  if (sec && siblings.every(x => viewMode(next, x.id) === 'hide')) {
-    for (const x of siblings) next = setMode(next, x.id, 'show');
-    return { ...v, view: next, sections: v.sections.filter(x => x !== sec) };
-  }
+  // The section goes with its last page; the pages keep their hidden mark, since some open by another section too.
+  if (sec && siblings.every(x => viewMode(next, x.id) === 'hide')) return { ...v, view: next, sections: v.sections.filter(x => x !== sec) };
   return { ...v, view: next };
 }
-/** The item's mode for an account: hidden when its section is not granted. */
-export const itemMode = (v: { sections: string[]; view?: ViewSettings }, i: ViewItem): ViewMode => i.section && !v.sections.includes(i.section) ? 'hide' : viewMode(v.view || {}, i.id);

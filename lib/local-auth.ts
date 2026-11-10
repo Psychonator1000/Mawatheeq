@@ -87,6 +87,8 @@ export async function switchToUser(id: string): Promise<LocalUser> {
   localStorage.setItem(ownerKey, owner);
   // Where the owner was (the workspace, «فريق المكتب» usually, and the page), to come back to it on «العودة إلى حسابي».
   try { localStorage.setItem(ownerPlaceKey, JSON.stringify({ workspace: sessionStorage.getItem(workspaceKey) || '', hash: location.hash })); sessionStorage.removeItem(workspaceKey); } catch { /* Back to the chooser instead. */ }
+  // The account opens on its own first page, not on the owner's.
+  history.replaceState(null, '', location.pathname + location.search);
   saveToken(result.token);
   return result.user;
 }

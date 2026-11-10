@@ -131,7 +131,8 @@ try{
  assert.equal(await staff.getByRole('button',{name:'إضافة قضية',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'تصدير',exact:true}).count(),0);
  await staffGo('فتح القضية TEST-2');assert.equal(await staffSheet.getByLabel('الخصم',{exact:true}).isDisabled(),true);assert.equal(await staff.getByRole('button',{name:'حفظ التغييرات',exact:true}).count(),0);
  await staff.getByRole('tab',{name:'التحقق والمصادر',exact:true}).click();await staff.getByText('سجل التغييرات',{exact:true}).waitFor();assert.equal(await staff.getByRole('button',{name:'حفظ طلب المراجعة',exact:true}).count(),0);await staff.keyboard.press('Escape');
- await staff.evaluate(()=>{location.hash='settings'});await staff.getByRole('heading',{name:'هذا القسم غير متاح لحسابك',exact:true}).waitFor();assert.equal(await staff.getByRole('button',{name:'إضافة موظف',exact:true}).count(),0);
+ // A page the account cannot open is never an error page: its first page opens instead.
+ await staff.evaluate(()=>{location.hash='settings'});await staff.waitForFunction(()=>location.hash!=='#settings');assert.equal(await staff.getByRole('heading',{name:'هذا القسم غير متاح لحسابك',exact:true}).count(),0);assert.equal(await staff.getByRole('button',{name:'إضافة موظف',exact:true}).count(),0);
  await staffGo('التحليل والإحصائيات');await staff.getByText('تُحسب الأعداد من 1 سجل حكم نشط',{exact:false}).waitFor();await staff.screenshot({path:artifacts+'/restricted-analytics-desktop.png',fullPage:true});
  await staff.setViewportSize({width:390,height:844});await staff.screenshot({path:artifacts+'/restricted-analytics-mobile.png',fullPage:true});assert.equal(await staff.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true);await staff.setViewportSize({width:1360,height:900});
  await page.setViewportSize({width:1440,height:1000});await openTeam();await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_staff',exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
@@ -157,8 +158,11 @@ try{
  await go('حسابات المحامين');await page.getByLabel('اسم الدخول ا/ سالم تجريبي',{exact:true}).waitFor();await page.getByLabel('اسم الدخول ا/ سالم تجريبي',{exact:true}).fill('salem.ui');await go('إنشاء 1 حساب');
  await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText('ا/ سالم تجريبي',{exact:true}).waitFor();
  page.once('dialog',d=>void d.accept());await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'الدخول بحسابه',exact:true}).click();
- await page.locator('.switch-banner').getByText('salem.ui',{exact:true}).waitFor();await page.evaluate(()=>{location.hash='cases'});await page.getByRole('heading',{name:'سجل الأحكام',exact:true}).waitFor();
- assert.equal(await page.locator('.case-table tbody tr').count(),5,'the lawyer sees only the cases under their name');assert.equal(await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).count(),0);
+ await page.locator('.switch-banner').getByText('salem.ui',{exact:true}).waitFor();
+ // The account opens on its own first page, not on the owner's team page left in the address.
+ await page.locator('main h1').first().waitFor();assert.notEqual(await page.evaluate(()=>location.hash),'#settings');assert.equal(await page.getByRole('heading',{name:'هذا القسم غير متاح لحسابك',exact:true}).count(),0);
+ await page.evaluate(()=>{location.hash='cases'});await page.getByRole('heading',{name:'سجل الأحكام',exact:true}).waitFor();
+ assert.equal(await page.locator('.case-table tbody tr').count(),5,'the lawyer sees only the cases under their name');assert.equal(await page.locator('[data-sidebar="sidebar"]').getByRole('button',{name:'مهام اليوم والتقرير',exact:true}).count(),1,'the day page is there before it is hidden');assert.equal(await page.getByRole('button',{name:'الإعدادات والبيانات',exact:true}).count(),0);
  await page.screenshot({path:artifacts+'/switched-user-desktop.png'});
  const ownerKeys=async()=>page.evaluate(()=>new Promise(res=>{const r=indexedDB.open('mawatheeq-cache',1);r.onsuccess=()=>{const q=r.result.transaction('snapshots').objectStore('snapshots').getAllKeys();q.onsuccess=()=>res(q.result.map(String))}}));
  const before=(await ownerKeys()).filter(k=>k.endsWith(':case-rows'));
@@ -176,6 +180,7 @@ try{
   const ba=await a.boundingBox(),bb=await b.boundingBox();await page.mouse.move(ba.x+ba.width/2,ba.y+ba.height/2);await page.mouse.down();
   await page.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2,{steps:8});await page.mouse.up();
   const state=async l=>(await l.getAttribute('aria-label')).split(': ')[1];assert.equal(await state(a),await state(b),'Dragging gives every page passed over the same setting');
+  await dlg.screenshot({path:artifacts+'/permissions-preview.png'});
   await page.keyboard.press('Escape');await dlg.waitFor({state:'hidden'}).catch(()=>{});}
  // «تطبيق على عدة حسابات»: mail switched off for every account but the one unticked.
  {await page.getByRole('button',{name:'تطبيق على عدة حسابات',exact:true}).click();const dlg=page.getByRole('dialog');
@@ -184,6 +189,16 @@ try{
   page.once('dialog',d=>void d.accept());await dlg.getByRole('button',{name:/^تطبيق على الحسابات المحددة/}).click();await dlg.waitFor({state:'hidden'});
   await db.exec('reset role');  const mail=async u=>(await db.query("select ma.permissions->'view'->>'ws:mail' v from mawatheeq_private.member_access ma join mawatheeq_private.accounts a on a.id=ma.user_id where a.username=$1",[u])).rows[0]?.v||null;
   assert.equal(await mail('ui_clerk'),'hide','Mail switched off for the ticked accounts');assert.equal(await mail('salem.ui'),null,'The unticked account keeps mail');await db.exec('set role anon');}
+ // Every page in the side list can be hidden, the day's page and «ملفاتي الورقية» too: gone from that account's menu.
+ {await page.getByRole('button',{name:'تطبيق على عدة حسابات',exact:true}).click();const dlg=page.getByRole('dialog');
+  for(const name of ['مهام اليوم والتقرير','ملفاتي الورقية'])await dlg.getByRole('radiogroup',{name}).getByRole('radio',{name:'مخفي'}).click();
+  await dlg.getByRole('button',{name:'إلغاء الكل',exact:true}).click();await dlg.locator('.bulk-list label',{hasText:'salem.ui'}).locator('input').check();
+  page.once('dialog',d=>void d.accept());await dlg.getByRole('button',{name:/^تطبيق على الحسابات المحددة/}).click();await dlg.waitFor({state:'hidden'});
+  page.once('dialog',d=>void d.accept());await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'الدخول بحسابه',exact:true}).first().click();
+  await page.locator('.switch-banner').getByText('salem.ui',{exact:true}).waitFor();const side=page.locator('[data-sidebar="sidebar"]');await side.getByRole('button',{name:/^سجل الأحكام/}).waitFor();
+  assert.equal(await side.getByRole('button',{name:'مهام اليوم والتقرير',exact:true}).count(),0,'The day page is hidden');assert.equal(await side.getByRole('button',{name:'ملفاتي الورقية',exact:true}).count(),0,'Paper files are hidden');
+  assert.equal(await page.locator('.paper-slot button').count(),0,'No paper files icon either');
+  await page.locator('.switch-banner').getByRole('button',{name:'العودة إلى حسابي',exact:true}).click();await page.locator('.switch-banner').waitFor({state:'detached'});await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();}
  // The lawyer's account follows his name on the cases: «قضاياه فقط» is selected and new cases are included.
  await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText(/قضاياه فقط: 5 قضية/).waitFor();
  await page.getByLabel('بحث في فريق المكتب').fill('سالم');assert.equal(await page.locator('.office-staff tbody tr').count(),1,'Staff search finds the lawyer by name');await page.getByLabel('بحث في فريق المكتب').fill('');

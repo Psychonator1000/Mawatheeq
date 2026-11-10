@@ -35,7 +35,7 @@ import {LEVEL_TITLE,currentLevel} from '@/lib/case-stages';
 import {loadOffice as fetchOffice,exportOfficeData} from '@/lib/office-api';
 import {type OfficeData,type WorkItem,analysisValue,ANALYSIS_LABELS,reviewStatus} from '@/lib/office';
 import {ALL_POWERS,canOpen,canReadCases,readsAllReports,canManageStaff,canCreateCases,canEditClients,NO_ACCESS,FULL_ACCESS,type Permissions} from '@/lib/permissions';
-import {canSee,effectiveView} from '@/lib/view-map';
+import {canSee,effectiveView,toolOff} from '@/lib/view-map';
 import {localRequest,commentRequest} from '@/lib/local-auth';
 import NotificationBell from './notification-bell';
 import {Mail as MailIcon,FolderOpen as PaperIcon} from 'lucide-react';
@@ -200,6 +200,10 @@ export default function Workspace({access=sharedBackend?NO_ACCESS:FULL_ACCESS,ow
  // Mail opened from the mail icon (here or from another workspace) shows on the mail page with that message.
  const [mailFocus,setMailFocus]=useState({id:'',at:0});
  useEffect(()=>{const on=()=>{const p=takePendingMail('legal');if(p){setMailFocus({id:p.id,at:Date.now()});setView('mail')}};on();addEventListener(OPEN_MAIL_EVENT,on);return()=>removeEventListener(OPEN_MAIL_EVENT,on)},[]);
+ // A page this account cannot open (an old link, a page hidden since, or the owner's page after opening an account) is
+ // never shown as an error: the first page of its menu opens instead. Mail waits for the server's answer unless it is switched off.
+ const firstPage=['overview','cases','study','consultations','stayed','noContract','verification','conflicts','daily','postingErrors','clients','summary','analytics','deadlines','work','mail','paper','settings'].find(allowed);
+ if(!loading&&!error&&firstPage&&!allowed(view)&&!(view==='mail'&&!toolOff(access,'mail'))){setView(firstPage);history.replaceState(null,'',location.pathname+location.search+'#'+firstPage)}
  const go=(v:string,initialFilters:Partial<CaseFilters>={})=>{if(['execution','insurance','telecom'].includes(v)){initialFilters={...initialFilters,category:v};v='cases'}if(!allowed(v)){toast.error('لا تملك صلاحية هذا القسم.');return}scrollMemory.current[view]=scrollY;setView(v);location.hash=v==='cases'?caseFiltersHash(initialFilters):v;setFilters({...EMPTY_CASE_FILTERS,...initialFilters});setOutcome('');setType('');setLawyer('');setPage(1);setArchive(false)};
  const active=useMemo(()=>records.filter(c=>!c.archived),[records]),computed=useMemo(()=>new Map(records.map(c=>[c.id,caseState(c,rules)])),[records,rules]);const state=(c:CaseRecord)=>computed.get(c.id)!;
  // Counts over every open case, worked out once per change of the cases or rules, not on every redraw.
