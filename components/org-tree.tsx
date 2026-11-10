@@ -74,22 +74,28 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
  // Dragging a box: it follows the pointer with everything under it. Over the middle of another box it goes under (or
  // into) it; over the tray, out of the tree; anywhere else on the board it stays where it is let go, on the grid.
  const [drag,setDrag]=useState<Drag|null>(null),dragRef=useRef<Drag|null>(null);
- const moving=useMemo(()=>drag?.moved?new Set([drag.key,...nodesBelow(parent,drag.key)]):new Set<string>(),[drag,parent]);
+ // What moves with a dragged box: everything under it; with a dragged block, its people.
+ const carried=(key:string)=>key.startsWith('g:')?new Set([key,...(board.groups.find(g=>'g:'+g.parent===key)?.keys||[])]):new Set([key,...nodesBelow(parent,key)]);
+ const moving=useMemo(()=>drag?.moved?carried(drag.key):new Set<string>(),
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- carried reads the board and the tree
+  [drag,parent,board]);
  const start=(e:React.PointerEvent,key:string,movable:boolean,onBoard:boolean)=>{if(e.button!==0)return;e.stopPropagation();
   const d:Drag={key,sx:e.clientX,sy:e.clientY,dx:0,dy:0,moved:false,target:null,tray:false,board:false};dragRef.current=d;
-  const blocked=new Set([key,...nodesBelow(parent,key)]);
+  const blocked=carried(key),isBlock=key.startsWith('g:');
   const move=(ev:PointerEvent)=>{const cur=dragRef.current!;const dx=ev.clientX-cur.sx,dy=ev.clientY-cur.sy;
    if(!cur.moved&&(!movable||Math.hypot(dx,dy)<5))return;
    let target:string|null=null,tray=false,onB=false;
    for(const el of document.elementsFromPoint(ev.clientX,ev.clientY) as HTMLElement[]){
     const node=el.closest<HTMLElement>('[data-node]')?.dataset.node;
-    if(node&&!blocked.has(node)){const r=el.closest<HTMLElement>('[data-node]')!.getBoundingClientRect(),fx=(ev.clientX-r.left)/r.width,fy=(ev.clientY-r.top)/r.height;
+    if(node&&!blocked.has(node)&&!isBlock){const r=el.closest<HTMLElement>('[data-node]')!.getBoundingClientRect(),fx=(ev.clientX-r.left)/r.width,fy=(ev.clientY-r.top)/r.height;
      if(fx>0.2&&fx<0.8&&fy>0.15&&fy<0.85&&(parent.get(key)||null)!==node){target=node;break}}
-    if(el.classList?.contains('org-tray')){tray=true;break}
+    if(el.classList?.contains('org-tray')&&!isBlock){tray=true;break}
     if(el.classList?.contains('org-canvas')||el.classList?.contains('org-tree')){onB=true;break}}
    const next={...cur,dx,dy,moved:true,target,tray,board:onB};dragRef.current=next;setDrag(next)};
   const up=(ev:PointerEvent)=>{removeEventListener('pointermove',move);removeEventListener('pointerup',up);removeEventListener('pointercancel',up);
    const cur=dragRef.current!;dragRef.current=null;setDrag(null);
+   if(isBlock){if(!cur.moved||!cur.board)return;const g=board.groups.find(x=>'g:'+x.parent===key)!,head=board.at.get(g.parent)!,z=zoomRef.current;
+    onPlace({[key]:[snap(g.x-head.x+cur.dx/z),snap(g.y-head.y+cur.dy/z)]});return}
    if(!cur.moved){if(ev.type==='pointerup'){const n=byKey.get(key);if(n?.member)onPick(n.member);else if(n?.area)onPickArea(n.area)}return}
    const clear=Object.fromEntries([...blocked].filter(k=>placed[k]).map(k=>[k,null])) as Record<string,null>;
    if(cur.target){onMove(key,cur.target);if(Object.keys(clear).length)onPlace(clear);return}
@@ -136,9 +142,13 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    const rect=(k:string)=>{const r=el.querySelector<HTMLElement>(`[data-node="${k}"]`)?.getBoundingClientRect();return r&&{l:(r.left-box.left)/z,t:(r.top-box.top)/z,r:(r.right-box.left)/z,b:(r.bottom-box.top)/z}};
    const block=(k:string)=>{const r=el.querySelector<HTMLElement>(`[data-group="${k}"]`)?.getBoundingClientRect();return r&&{l:(r.left-box.left)/z,t:(r.top-box.top)/z,r:(r.right-box.left)/z,b:(r.bottom-box.top)/z}};
    type R={l:number;t:number;r:number;b:number};
-   // A head's line leaves the side his branch grows from and turns once on the way.
-   const elbow=(a:R,c:R,dir:Flow)=>{if(dir==='down'){const x1=(a.l+a.r)/2,y1=a.b,x2=(c.l+c.r)/2,y2=c.t,m=y1+Math.max(14,(y2-y1)/2);return `M${x1},${y1} V${m} H${x2} V${y2}`}
-    const x1=dir==='right'?a.r:a.l,y1=(a.t+a.b)/2,x2=dir==='right'?c.l:c.r,y2=(c.t+c.b)/2,m=x1+(x2-x1)/2;return `M${x1},${y1} H${m} V${y2} H${x2}`};
+   // A head's line leaves the side of his box that faces the box it goes to (beside it: the side; below or above: the
+   // bottom or top), enters the facing side of the other, and turns once halfway; it never crosses either box.
+   const elbow=(a:R,c:R,dir:Flow)=>{const ax=(a.l+a.r)/2,ay=(a.t+a.b)/2,cx=(c.l+c.r)/2,cy=(c.t+c.b)/2;
+    const side=c.l>=a.r+8||c.r<=a.l-8,vert=c.t>=a.b+8||c.b<=a.t-8;
+    if(side&&(!vert||dir!=='down')){const right=c.l>=a.r,x1=right?a.r:a.l,x2=right?c.l:c.r,m=(x1+x2)/2;return `M${x1},${ay} H${m} V${cy} H${x2}`}
+    if(vert){const down=c.t>=a.b,y1=down?a.b:a.t,y2=down?c.t:c.b,m=(y1+y2)/2;return `M${ax},${y1} V${m} H${cx} V${y2}`}
+    return `M${ax},${ay} L${cx},${cy}`};
    const curve=(a:R,b:R)=>{const x1=(a.l+a.r)/2,y1=a.b,x2=(b.l+b.r)/2,below=b.t>a.b,y2=below?b.t:b.b,k=Math.max(44,Math.abs(x2-x1)*0.12);
     return below?`M${x1},${y1} C${x1},${y1+k} ${x2},${y2-k} ${x2},${y2}`:`M${x1},${y1} C${x1},${y1+k} ${x2},${Math.max(y1,y2)+k} ${x2},${y2}`};
    const out:Line[]=[],grouped=new Set(board.groups.flatMap(g=>g.keys));
@@ -181,7 +191,8 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
     <defs><marker id="org-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
      <marker id="org-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8"><circle cx="5" cy="5" r="4"/></marker></defs>
     {[...lines].sort((a,b)=>Number(a.on)-Number(b.on)).map(l=><path key={l.id} d={l.d} className={l.kind+(l.on?' on':'')} markerEnd={l.kind==='area'?'url(#org-arrow)':l.kind==='boss'?'url(#org-dot)':undefined}/>)}</svg>
-   {board.groups.map(g=><div key={g.parent} className="org-group" data-group={g.parent} style={{left:g.x-origin.x,top:g.y-origin.y,width:g.w,height:g.h,...(moving.has(g.parent)?shift(g.parent):undefined)}}/>)}
+   {board.groups.map(g=><div key={g.parent} className={'org-group'+(moving.has('g:'+g.parent)?' dragging':'')} data-group={g.parent} title="اسحب الإطار لنقل هذه المجموعة كلها"
+    onPointerDown={e=>start(e,'g:'+g.parent,true,true)} style={{left:g.x-origin.x,top:g.y-origin.y,width:g.w,height:g.h,...(moving.has('g:'+g.parent)||moving.has(g.parent)?shift(moving.has('g:'+g.parent)?'g:'+g.parent:g.parent):undefined)}}/>)}
    {[...board.at.keys()].map(k=>{const n=byKey.get(k);return n?.member?personBox(n.member,true):n?.area?areaBox(n.area):null})}
   </div></div></div>
   {drag?.moved&&<p className="org-tip" role="status">{drag.target?'أفلته الآن ليصبح تحته':drag.tray?'أفلته الآن لإخراجه من الهيكل':'أفلته في أي مكان ليبقى فيه، أو في وسط صندوق شخص ليتبعه أو في وسط قسم ليدخله.'}</p>}

@@ -1588,3 +1588,5 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .org-extra-chip.boss{background:color-mix(in srgb,#2b6f8a 14%,transparent);color:#2b6f8a}
 .org-flow{width:max-content}.org-flow .seg-opt{padding:4px 12px;font-size:13px}.org-flow .seg-opt.on.show{background:var(--brand);color:var(--brand-foreground,#fff)}
 .org-board{position:relative}
+.org-canvas>.org-group{cursor:grab}.org-canvas>.org-group.dragging{z-index:19;border-color:var(--brand);transition:none}
+.org-tree{user-select:none;-webkit-user-select:none}

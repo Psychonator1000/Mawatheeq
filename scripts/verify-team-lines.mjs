@@ -120,7 +120,9 @@ await assert.rejects(()=>daily(owner.token,'set_order',{nodes:'x'}),/ترتيب 
 // The board: boxes placed by hand keep their place; null lets them arrange themselves again.
 chart=await daily(owner.token,'set_layout',{positions:{['u:'+a.id]:[120.4,-40],['a:'+hrArea.id]:[600,80],'junk':[1,1]}});
 assert.deepEqual(chart.layout,{['u:'+a.id]:[120,-40],['a:'+hrArea.id]:[600,80]});
-chart=await daily(owner.token,'set_layout',{positions:{['u:'+a.id]:null}});assert.deepEqual(Object.keys(chart.layout),['a:'+hrArea.id]);
+chart=await daily(owner.token,'set_layout',{positions:{['u:'+a.id]:null}});
+chart=await daily(owner.token,'set_layout',{positions:{['g:u:'+lead.id]:[40,200]}});assert.deepEqual(chart.layout['g:u:'+lead.id],[40,200],'A block of people keeps its place too');
+chart=await daily(owner.token,'set_layout',{positions:{['g:u:'+lead.id]:null}});assert.deepEqual(Object.keys(chart.layout),['a:'+hrArea.id]);
 await denied(()=>daily(lead.token,'set_layout',{positions:{}}));
 // Which way a branch grows: left or right is kept, down (the default) clears it.
 chart=await daily(owner.token,'set_flow',{node:'u:'+head.id,dir:'right'});assert.deepEqual(chart.flow,{['u:'+head.id]:'right'});

@@ -77,10 +77,19 @@ export function layoutBoard({ kids, isLeaf, placed, flows }: {
   const parent = new Map<string, string>();
   for (const [p, list] of kids) for (const c of list) if (p) parent.set(c, p);
   const at = new Map<string, Point>();
+  // A block dragged as a whole keeps the offset it was given from its head ('g:' + the head); its people move with it.
+  const inGroup = new Map<string, Group>();
+  for (const g of groups) for (const c of g.keys) inGroup.set(c, g);
+  const groupAt = (g: Group): Point => {
+    const head = resolve(g.parent), a = auto.get(g.parent) || { x: 0, y: 0 }, off = placed['g:' + g.parent];
+    return off ? { x: head.x + off[0], y: head.y + off[1] } : { x: head.x + g.x - a.x, y: head.y + g.y - a.y };
+  };
   const resolve = (k: string): Point => {
     const done = at.get(k); if (done) return done;
     let p: Point;
+    const g = inGroup.get(k);
     if (placed[k]) p = { x: placed[k][0], y: placed[k][1] };
+    else if (g) { const gp = groupAt(g), mine = auto.get(k)!; p = { x: gp.x + mine.x - g.x, y: gp.y + mine.y - g.y }; }
     else {
       const up = parent.get(k), mine = auto.get(k) || { x: 0, y: 0 };
       if (!up) p = mine;
@@ -91,6 +100,6 @@ export function layoutBoard({ kids, isLeaf, placed, flows }: {
   };
   for (const k of auto.keys()) resolve(k);
   for (const k of Object.keys(placed)) if (parent.has(k) || roots.includes(k)) resolve(k);
-  for (const g of groups) { const a = auto.get(g.parent), r = at.get(g.parent); if (a && r) { g.x += r.x - a.x; g.y += r.y - a.y; } }
+  for (const g of groups) { const p = groupAt(g); g.x = p.x; g.y = p.y; }
   return { at, groups, flow };
 }

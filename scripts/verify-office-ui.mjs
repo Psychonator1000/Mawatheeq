@@ -217,6 +217,15 @@ try{
    await zv.click();}
   await box('salem.ui').dragTo(box('ui_clerk'));await page.getByText(/يتبع الآن/).waitFor();
   await under(await nodeOf('salem.ui'),await nodeOf('ui_clerk'));
+  // A block of people is dragged by its frame as a whole: its place is kept (as an offset from its head), its people with it.
+  {const clerk=await nodeOf('ui_clerk'),frame=tree.locator(`[data-group="${clerk}"]`);await frame.evaluate(e=>e.scrollIntoView({block:'center',inline:'center'}));await page.waitForTimeout(200);
+   const f=await frame.boundingBox(),before=await box('salem.ui').boundingBox();
+   await page.mouse.move(f.x+4,f.y+4);await page.mouse.down();await page.mouse.move(f.x+184,f.y+124,{steps:8});await page.mouse.up();
+   await db.exec('reset role');let rows=[];for(let i=0;i<40;i++){rows=(await db.query("select node from mawatheeq_private.team_layout where node like 'g:%'")).rows;if(rows.length)break;await page.waitForTimeout(100)}await db.exec('set role anon');
+   assert.deepEqual(rows,[{node:'g:'+clerk}],'The block keeps its place');
+   let after=before;for(let i=0;i<30;i++){after=await box('salem.ui').boundingBox();if(Math.abs(after.x-before.x)>100)break;await page.waitForTimeout(100)}
+   assert.ok(Math.abs(after.x-before.x)>100&&Math.abs(after.y-before.y)>60,'Its people moved with it');
+   await page.screenshot({path:artifacts+'/team-board-block.png'});}
   assert.match(await box('ui_clerk').innerText(),/مسؤول عن شخص واحد/);
   await db.exec('reset role');const line=(await db.query("select a.username u,m.username boss from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.accounts m on m.id=t.manager_id")).rows;await db.exec('set role anon');
   assert.deepEqual(line,[{u:'salem.ui',boss:'ui_clerk'}],'Saved');

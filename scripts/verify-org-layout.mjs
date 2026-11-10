@@ -27,4 +27,11 @@ const dx = p('y1').x - p('lead').x, dy = p('y1').y - p('lead').y;
 assert.deepEqual([dx, dy], [before.at.get('y1').x - before.at.get('lead').x, before.at.get('y1').y - before.at.get('lead').y], 'His team keeps its place under him');
 b = layoutBoard({ kids, isLeaf, placed: { y3: [-500, -500] }, flows: {} });
 assert.deepEqual(p('y3'), { x: -500, y: -500 });assert.ok(!b.groups.find(g => g.parent === 'lead').keys.includes('y3'));
+// A block dragged as a whole: kept at its offset from its head, its people inside it, and it follows the head.
+b = layoutBoard({ kids, isLeaf, placed: { 'g:lead': [400, 300] }, flows: {} });
+const g = b.groups.find(x => x.parent === 'lead');
+assert.deepEqual([g.x - p('lead').x, g.y - p('lead').y], [400, 300]);
+assert.ok(p('y1').x >= g.x && p('y1').y >= g.y && p('y1').x + BOX_W <= g.x + g.w, 'Its people inside it');
+b = layoutBoard({ kids, isLeaf, placed: { 'g:lead': [400, 300], lead: [5000, 5000] }, flows: {} });
+assert.deepEqual([b.groups.find(x => x.parent === 'lead').x, b.groups.find(x => x.parent === 'lead').y], [5400, 5300], 'It follows its head');
 console.log('Passed org board layout: heads over teams, down, left and right, blocks of people, boxes put by hand with their teams.');
