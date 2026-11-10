@@ -66,7 +66,8 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
  // Dropping someone on a section of another workspace asks whether they move there or are added to it as well.
  function drop(node:string,target:string|null){
   const area=target?.startsWith('a:')?areaOf(target.slice(2)):undefined;
-  if(node.startsWith('u:')&&area&&workspacesFor(parent,chart,node.slice(2)).length&&!(chart.extras||[]).some(x=>x.userId===node.slice(2)&&x.areaId===area.id)){setChoice({node,target:target!});return}
+  // A person who already has a place, dropped on another section (with a workspace or not): move him there, or add him to it too.
+  if(node.startsWith('u:')&&area&&parent.get(node)&&!(chart.extras||[]).some(x=>x.userId===node.slice(2)&&x.areaId===area.id)){setChoice({node,target:target!});return}
   // A person dropped on a person while he already has a place: he moves under him, or answers to him as well.
   if(node.startsWith('u:')&&target?.startsWith('u:')&&parent.get(node)&&!(chart.bosses||[]).some(x=>'u:'+x.userId===node&&'u:'+x.managerId===target)){setChoice({node,target});return}
   void move(node,target);
@@ -206,10 +207,10 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
    <div className="area-foot"><button type="button" className="btn" onClick={()=>setChoice(null)}>إلغاء</button></div>
   </DialogContent></Dialog>;
   return <Dialog open onOpenChange={v=>{if(!v)setChoice(null)}}><DialogContent dir="rtl" className="office-dialog org-choice">
-   <DialogHeader><DialogTitle>{who} و{labelOf(choice.target)}</DialogTitle><DialogDescription>هو الآن في {wsLabel(workspacesFor(parent,chart,choice.node.slice(2))).replace(/ فقط$/,'')}. ماذا تريد؟</DialogDescription></DialogHeader>
+   <DialogHeader><DialogTitle>{who} و{labelOf(choice.target)}</DialogTitle><DialogDescription>هو الآن {parent.get(choice.node)?.startsWith('u:')?'يتبع '+labelOf(parent.get(choice.node)):'في '+labelOf(parent.get(choice.node))}. ماذا تريد؟</DialogDescription></DialogHeader>
    <div className="org-choice-options">
-    <button type="button" className="org-choice-opt" onClick={()=>{const c=choice;setChoice(null);void move(c.node,c.target)}}><b>نقله إلى {labelOf(choice.target)}</b><small>يترك مكانه الحالي ويفتح {ws} فقط.</small></button>
-    <button type="button" className="org-choice-opt" onClick={()=>{const c=choice;setChoice(null);void extra(c.node.slice(2),c.target.slice(2),true)}}><b>إضافته إلى {labelOf(choice.target)} أيضاً</b><small>يبقى في مكانه ويفتح {ws} كذلك؛ يظهر خط منه إلى القسم.</small></button></div>
+    <button type="button" className="org-choice-opt" onClick={()=>{const c=choice;setChoice(null);void move(c.node,c.target)}}><b>نقله إلى {labelOf(choice.target)}</b><small>{a?.workspace?`يترك مكانه الحالي ويفتح ${ws} فقط.`:'يترك مكانه الحالي ويصبح في هذا القسم.'}</small></button>
+    <button type="button" className="org-choice-opt" onClick={()=>{const c=choice;setChoice(null);void extra(c.node.slice(2),c.target.slice(2),true)}}><b>إضافته إلى {labelOf(choice.target)} أيضاً</b><small>{a?.workspace?`يبقى في مكانه ويفتح ${ws} كذلك؛ يظهر خط منه إلى القسم.`:'يبقى في مكانه ويُحسب في هذا القسم كذلك؛ يظهر خط منه إلى القسم.'}</small></button></div>
    <div className="area-foot"><button type="button" className="btn" onClick={()=>setChoice(null)}>إلغاء</button></div>
   </DialogContent></Dialog>})()}
  {areaEdit&&<AreaEditor area={areaEdit} chart={chart} members={context.members} busy={treeBusy} flow={areaEdit!=='new'?<><FlowPicker value={chart.flow?.['a:'+areaEdit.id]||'down'} onChange={d=>void setFlow('a:'+areaEdit.id,d)}/>{(chart.layout?.['a:'+areaEdit.id]||chart.layout?.['g:a:'+areaEdit.id])&&<button type="button" className="btn" onClick={()=>void placeBoxes({['a:'+areaEdit.id]:null,['g:a:'+areaEdit.id]:null})}>إعادته لمكانه التلقائي</button>}{strays('a:'+areaEdit.id).length>0&&<button type="button" className="btn" onClick={()=>gather('a:'+areaEdit.id)}>جمع من فيه في إطار واحد ({strays('a:'+areaEdit.id).length})</button>}</>:null} onSave={d=>void saveArea(d)} onDelete={a=>void deleteArea(a)} onClose={()=>setAreaEdit(null)}/>}

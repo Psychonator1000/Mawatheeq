@@ -264,7 +264,9 @@ try{
   await page.waitForTimeout(300);await page.screenshot({path:artifacts+'/team-area-dialog.png'});
   await ad.getByRole('button',{name:'إضافة القسم',exact:true}).click();await ad.waitFor({state:'hidden'});
   const area=tree.locator('.org-area[data-area="المحامون"]');await area.waitFor();
-  await box('salem.ui').dragTo(area);await page.getByText(/تحت قسم «المحامون» الآن/).waitFor();
+  // He already has a place (under ui_clerk): dropped on a section, he is asked to move there or be added to it too.
+  await box('salem.ui').dragTo(area);await page.getByRole('dialog').getByRole('button',{name:/إضافته إلى قسم «المحامون» أيضاً/}).waitFor();
+  await page.getByRole('dialog').getByRole('button',{name:/نقله إلى قسم «المحامون»/}).click();await page.getByText(/تحت قسم «المحامون» الآن/).waitFor();
   await under(await nodeOf('salem.ui'),await tree.locator('.org-area[data-area="المحامون"]').getAttribute('data-node'));
   assert.match(await box('ui_clerk').innerText(),/مسؤول عن شخص واحد/,'Oversees him through the section');
   await page.screenshot({path:artifacts+'/team-tree-area.png'});
@@ -278,7 +280,7 @@ try{
   // Workspace changes ask nothing (the owner asked): any browser question from here to the end of this step fails the test.
   const noAsk=d=>{throw new Error('Unexpected question: '+d.message())};page.on('dialog',noAsk);
   const ws=n=>tree.locator(`.org-area[data-area="${n}"]`);await ws('السكرتارية').waitFor();
-  await box('salem.ui').dragTo(ws('السكرتارية'));await page.getByText(/السكرتارية فقط/).first().waitFor();
+  await box('salem.ui').dragTo(ws('السكرتارية'));await page.getByRole('dialog').getByRole('button',{name:/نقله إلى قسم «السكرتارية»/}).click();await page.getByText(/السكرتارية فقط/).first().waitFor();
   assert.deepEqual((await pagesOf('salem.ui')).filter(x=>x!=='daily'),['secretary'],'Only the secretary workspace');
   await page.screenshot({path:artifacts+'/team-tree-workspaces.png'});
   await box('salem.ui').dragTo(ws('القضايا'));await page.getByRole('dialog').getByRole('button',{name:/نقله إلى قسم «القضايا»/}).click();await page.getByText(/حُدّثت صفحاته/).last().waitFor();
