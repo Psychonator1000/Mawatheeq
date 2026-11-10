@@ -34,7 +34,7 @@ await page.route('https://office-fixture.supabase.co/**',async route=>{
  const req=route.request();const url=new URL(req.url());
  if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-headers':'*'}});
  const name=url.pathname.split('/').pop();const body=req.postDataJSON();calls.push({name,action:body?.p_action});
- if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
+ if(!['mawatheeq_local_login','mawatheeq_local_request','mawatheeq_client_request','mawatheeq_office_request','mawatheeq_daily_request'].includes(name))return route.fulfill({status:400,json:{message:'Unexpected synthetic endpoint'}});
  const args=name==='mawatheeq_local_login'?[body.p_username,body.p_password]:[body.p_token,body.p_action,JSON.stringify(body.p_data||{})];
  try{await route.fulfill({json:await rpc(name,args)})}catch(e){await route.fulfill({status:400,json:{message:e.message,code:e.code||'P0001'}})}
 });
@@ -189,6 +189,18 @@ try{
   page.once('dialog',d=>void d.accept());await dlg.getByRole('button',{name:/^تطبيق على الحسابات المحددة/}).click();await dlg.waitFor({state:'hidden'});
   await db.exec('reset role');  const mail=async u=>(await db.query("select ma.permissions->'view'->>'ws:mail' v from mawatheeq_private.member_access ma join mawatheeq_private.accounts a on a.id=ma.user_id where a.username=$1",[u])).rows[0]?.v||null;
   assert.equal(await mail('ui_clerk'),'hide','Mail switched off for the ticked accounts');assert.equal(await mail('salem.ui'),null,'The unticked account keeps mail');await db.exec('set role anon');}
+ // «الهيكل الوظيفي»: salem.ui reports to ui_clerk; the chart nests him under ui_clerk, ui_clerk can no longer pick
+ // someone under him, and the line is saved.
+ {await page.getByRole('button',{name:'الهيكل الوظيفي',exact:true}).click();const dlg=page.getByRole('dialog');await dlg.locator('.team-chart').waitFor();
+  const row=who=>dlg.locator('.tc-row',{hasText:who});const boss=row('salem.ui').getByRole('combobox');
+  await boss.click();await boss.fill('ui_clerk');await page.getByRole('option',{name:/ui_clerk/}).click();
+  await dlg.locator('.tc-row.lead',{hasText:'ui_clerk'}).waitFor();await dlg.locator('li li .tc-row',{hasText:'salem.ui'}).waitFor();
+  const up=row('ui_clerk').getByRole('combobox');await up.click();await up.fill('salem');
+  assert.equal(await page.getByRole('option',{name:/salem\.ui/}).count(),0,'Nobody reports to someone under them');await page.keyboard.press('Escape');
+  await dlg.screenshot({path:artifacts+'/team-chart.png'});
+  await db.exec('reset role');const line=(await db.query("select a.username u,m.username boss from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.accounts m on m.id=t.manager_id")).rows;await db.exec('set role anon');
+  assert.deepEqual(line,[{u:'salem.ui',boss:'ui_clerk'}],'Saved');
+  await page.keyboard.press('Escape');await dlg.waitFor({state:'hidden'}).catch(()=>{});}
  // Every page in the side list can be hidden, the day's page and «ملفاتي الورقية» too: gone from that account's menu.
  {await page.getByRole('button',{name:'تطبيق على عدة حسابات',exact:true}).click();const dlg=page.getByRole('dialog');
   for(const name of ['مهام اليوم والتقرير','ملفاتي الورقية'])await dlg.getByRole('radiogroup',{name}).getByRole('radio',{name:'مخفي'}).click();

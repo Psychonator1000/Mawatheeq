@@ -13,6 +13,7 @@ import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emp
  type DailyPayload,type Mission,type MissionFilter,type Person,type ReportLine,type StoredReport} from '@/lib/daily-report';
 import {DateField,api} from './shared';
 import {FilterBox,SelectList} from './filter-select';
+import type {TeamInfo} from './team-chart';
 import {courtChoices} from '@/lib/court-names';
 import {COURTS} from '@/lib/choices';
 
@@ -38,11 +39,19 @@ const clock=(iso?:string|null)=>iso?new Intl.DateTimeFormat('ar-KW-u-nu-latn',{h
  */
 export default function DayDesk(p:Props){
  const today=todayISO(),[date,setDate]=useState(today),[who,setWho]=useState<string>(p.reviewer?'team':'me'),[filter,setFilter]=useState<MissionFilter>('all');
+ // «الهيكل الوظيفي»: an account with people under it does its own day and also reads their reports and performance, and
+ // those of everyone under them (the owner and admins read everyone's). The server sends a lead nobody else's report.
+ const [scope,setScope]=useState<TeamInfo|null>(null);
+ useEffect(()=>{if(p.reviewer)return;let on=true;dailyRequest<TeamInfo>('team').then(t=>{if(!on)return;setScope(t);if(t.leads)setWho(w=>w==='me'?'team':w)}).catch(()=>{});return()=>{on=false}},[p.reviewer]);
+ const lead=!p.reviewer&&!!scope?.leads,reviewer=p.reviewer||lead;
+ const teamIds=useMemo(()=>lead?new Set([...(scope?.below||[]),p.user.id]):null,[lead,scope,p.user.id]);
  const me=p.members.find(m=>m.id===p.user.id)||{...p.user,displayName:''},team=who==='team',self=who==='me'||who===p.user.id;
  const person:Person=team?'all':self?me:p.members.find(m=>m.id===who)||me;
- const missions=useMemo(()=>p.missionsOn?missionsFor({records:p.records,work:p.work,members:p.members,rules:p.rules,date,today,person,ownCasesOnly:p.ownCasesOnly&&self,viewerId:p.user.id}):[],
+ const everyMission=useMemo(()=>p.missionsOn?missionsFor({records:p.records,work:p.work,members:p.members,rules:p.rules,date,today,person,ownCasesOnly:p.ownCasesOnly&&self,viewerId:p.user.id}):[],
   // eslint-disable-next-line react-hooks/exhaustive-deps -- person follows `who`
   [p.missionsOn,p.records,p.work,p.members,p.rules,date,today,who,p.ownCasesOnly,p.user.id]);
+ // A lead's team view lists the sittings and tasks of his team only.
+ const missions=useMemo(()=>{if(!team||!teamIds)return everyMission;const names=new Set(p.members.filter(m=>teamIds.has(m.id)).map(m=>memberLabel(m)));return everyMission.filter(m=>names.has(m.who))},[everyMission,team,teamIds,p.members]);
  // The cases of the day's hearings come first when a hearing is added to the report by hand.
  const dayCases=useMemo(()=>[...new Set(missions.filter(m=>m.kind==='hearing'&&m.c).map(m=>m.c!.id))],[missions]);
  const [lateOpen,setLateOpen]=useState(false),[mode,setMode]=useState<Mode>('day'),[datesFilter,setDatesFilter]=useState<DatesFilter>('all');
@@ -65,11 +74,11 @@ export default function DayDesk(p:Props){
  const shown=missions.filter(m=>passesFilter(m,filter));
  const report=useOwnReport(p.canReport&&self,date,today,missions);
  const [list,setList]=useState<{reports:StoredReport[];expected:{userId:string;username:string;displayName:string}[]}|null>(null),[reading,setReading]=useState('');
- useEffect(()=>{if(!p.reviewer||self){setList(null);return}let on=true;setList(null);dailyRequest<typeof list>('list',{from:date,to:date}).then(d=>{if(on)setList(d)}).catch(e=>{if(on)toast.error((e as Error).message)});return()=>{on=false}},[p.reviewer,self,date]);
+ useEffect(()=>{if(!reviewer||self){setList(null);return}let on=true;setList(null);dailyRequest<typeof list>('list',{from:date,to:date}).then(d=>{if(on)setList(d)}).catch(e=>{if(on)toast.error((e as Error).message)});return()=>{on=false}},[reviewer,self,date]);
  const go=(d:string)=>{void report.flush();setDate(d);setReading('')};
  const pick=(v:string)=>{void report.flush();setWho(v);setReading('')};
  const added=(part:'hearings'|'tasks',line:ReportLine)=>{if(self&&p.canReport)report.add(part,line)};
- const people=p.members.filter(m=>m.enabled&&m.id!==p.user.id).sort((a,b)=>memberLabel(a).localeCompare(memberLabel(b),'ar'));
+ const people=p.members.filter(m=>m.enabled&&m.id!==p.user.id&&(!teamIds||teamIds.has(m.id))).sort((a,b)=>memberLabel(a).localeCompare(memberLabel(b),'ar'));
  const colleague=!self&&!team?list?.reports.find(r=>r.userId===who&&r.date===date):undefined;
  // The day's list as a numbered section of the page's single column (see «DayPath»).
  const missionsTitle=team?'جلسات ومهام المكتب':self?'جلساتي ومهامي':`جلسات ${memberLabel(person==='all'?undefined:person)} ومهامه`;
@@ -103,7 +112,7 @@ export default function DayDesk(p:Props){
  const name=memberLabel(person==='all'?undefined:person);
  // The day is one column read from the top: numbered sections, and for one's own report a bar fixed at the bottom
  // with what the report holds and the buttons to save and send it.
- const sections=team?<>{p.reviewer&&<TeamBoard rows={board} date={date} today={today} reading={reading} onRead={setReading} onDay={id=>pick(id===p.user.id?'me':id)} printedBy={p.printedBy} canManage={p.canManageTeam}/>}{missionsCol}</>
+ const sections=team?<>{reviewer&&<TeamBoard rows={board} date={date} today={today} reading={reading} onRead={setReading} onDay={id=>pick(id===p.user.id?'me':id)} printedBy={p.printedBy} canManage={p.canManageTeam}/>}{missionsCol}</>
   :self?<>{missionsCol}{p.canReport?<ReportEditor r={report} date={date} today={today} n={p.missionsOn?'٢':'١'} others={p.missionsOn} records={p.records} first={dayCases}/>
    // Without the report section the page says so, and how to turn it on, rather than leaving the report out silently.
    :<section className="day-sec" aria-label="التقرير اليومي غير مفعّل"><div className="day-sec-head"><h2><span className="day-sec-n" aria-hidden>٢</span>ما عملته اليوم</h2></div>
@@ -125,15 +134,15 @@ export default function DayDesk(p:Props){
   perf:'لكل محامٍ في الفترة: التقارير المرسلة، والجلسات التي حضرها ورحّلها، والأعمال، وما تأخر. اضغط صفاً لفتح يومه.',
  };
  const purpose=<p className="day-purpose"><Info size={15} aria-hidden/><span>{PURPOSE[mode]}</span>
-  {mode==='day'&&!self&&!team&&p.reviewer&&<button type="button" className="btn day-purpose-act" onClick={()=>pick('team')}><ChevronRight size={15}/> رجوع إلى الفريق</button>}</p>;
+  {mode==='day'&&!self&&!team&&reviewer&&<button type="button" className="btn day-purpose-act" onClick={()=>pick('team')}><ChevronRight size={15}/> رجوع إلى الفريق</button>}</p>;
  const sub=mode==='perf'?'أداء الفريق':mode==='calendar'?monthName(date):mode==='dates'?'المواعيد القادمة والفائتة':`${weekday(date)} ${formatDate(date)} · ${mode==='posting'?'ترحيل جلسات المكتب':team?'الفريق':self?(p.missionsOn?'قائمتك وتقريرك':'تقريرك'):name}`;
  return <div className="day-desk">
   <div className="page-head day-head"><h1>مهام اليوم والتقرير</h1><p className="subtitle" title={sub}>{sub}</p>
-   {p.missionsOn&&<div className="day-modes" role="tablist" aria-label="العرض">{([['day','اليوم'],...(p.canPost?[['posting','ترحيل الجلسات']]:[]),['dates','المواعيد'],['calendar','التقويم'],...(p.reviewer?[['perf','الأداء']]:[])] as [Mode,string][]).map(([k,l])=><button key={k} role="tab" aria-selected={mode===k} title={TAB_HINTS[k]} className={'work-chip'+(mode===k?' on':'')} onClick={()=>{void report.flush();setMode(k)}}>{l}</button>)}</div>}
-   <div className={'day-controls'+(p.reviewer?'':' solo')}>
+   {p.missionsOn&&<div className="day-modes" role="tablist" aria-label="العرض">{([['day','اليوم'],...(p.canPost?[['posting','ترحيل الجلسات']]:[]),['dates','المواعيد'],['calendar','التقويم'],...(reviewer?[['perf','الأداء']]:[])] as [Mode,string][]).map(([k,l])=><button key={k} role="tab" aria-selected={mode===k} title={TAB_HINTS[k]} className={'work-chip'+(mode===k?' on':'')} onClick={()=>{void report.flush();setMode(k)}}>{l}</button>)}</div>}
+   <div className={'day-controls'+(reviewer?'':' solo')}>
     {(mode==='day'||mode==='posting')&&<div className="day-nav" role="group" aria-label="اليوم">{date!==today&&<button className="btn day-back" aria-label="العودة لليوم" title="العودة لليوم" onClick={()=>go(today)}><CalendarCheck size={15}/><span>العودة لليوم</span></button>}<button className="icon-btn" aria-label="اليوم السابق" onClick={()=>go(shiftDays(date,-1))}><ChevronRight size={16}/></button>
      <DateField label="اختر يوماً" value={date} onChange={v=>v&&go(v)}/><button className="icon-btn" aria-label="اليوم التالي" onClick={()=>go(shiftDays(date,1))}><ChevronLeft size={16}/></button></div>}
-    {p.reviewer&&mode!=='posting'&&mode!=='perf'&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">الفريق (كل التقارير)</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
+    {reviewer&&mode!=='posting'&&mode!=='perf'&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">{lead?'فريقي':'الفريق (كل التقارير)'}</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
    </div></div>
   {purpose}
   <div className="day-grid solo">{mainCol}</div>

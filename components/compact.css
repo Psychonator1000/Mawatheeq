@@ -1482,3 +1482,14 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .bulk-foot{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:10px}
 @media(max-width:760px){.bulk-body{grid-template-columns:1fr;overflow:auto}.bulk-col{overflow:visible}}
 .ve-item{user-select:none;-webkit-user-select:none}
+
+/* «الهيكل الوظيفي»: the chart as an indented tree, each row its name and whom it reports to. */
+.team-chart-dialog{width:min(860px,calc(100vw - 32px));max-width:none}
+.team-chart,.team-chart ul{list-style:none;margin:0;padding:0}
+.team-chart{max-height:min(68vh,640px);overflow:auto;padding-inline-end:4px}
+.team-chart ul{margin-inline-start:14px;padding-inline-start:12px;border-inline-start:2px solid color-mix(in srgb,var(--brand) 22%,var(--border))}
+.tc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0;padding:6px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card)}
+.tc-row.lead{border-color:color-mix(in srgb,var(--brand) 35%,var(--border));background:color-mix(in srgb,var(--brand) 5%,var(--card))}
+.tc-who{display:flex;align-items:baseline;gap:8px;min-width:0;flex-wrap:wrap}.tc-who small{color:var(--muted-foreground)}
+.tc-boss{display:flex;align-items:center;gap:6px;flex:0 0 260px;font-size:13px}.tc-boss>span{color:var(--muted-foreground)}.tc-boss .filter-select-box{flex:1;min-width:0}
+@media(max-width:640px){.tc-row{flex-direction:column;align-items:stretch}.tc-boss{flex-basis:auto}}
