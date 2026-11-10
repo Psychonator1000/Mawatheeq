@@ -194,9 +194,10 @@ try{
  // ui_clerk can no longer be put under salem.ui; a click on a box opens what can be changed for that person.
  {await page.getByRole('tab',{name:'الهيكل',exact:true}).click();const tree=page.locator('.org-tree');await tree.waitFor();
   const box=u=>tree.locator(`.org-box[data-person="${u}"]`);
+  assert.equal(await box('ui_owner').count(),0,'The program\'s owner account is not a person in the tree');
   await box('salem.ui').dragTo(box('ui_clerk'));await page.getByText(/يتبع الآن/).waitFor();
   await tree.locator('li:has(> .org-box[data-person="ui_clerk"]) .org-box[data-person="salem.ui"]').waitFor();
-  assert.match(await box('ui_clerk').innerText(),/يشرف على شخص واحد/);
+  assert.match(await box('ui_clerk').innerText(),/مسؤول عن شخص واحد/);
   await db.exec('reset role');const line=(await db.query("select a.username u,m.username boss from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.accounts m on m.id=t.manager_id")).rows;await db.exec('set role anon');
   assert.deepEqual(line,[{u:'salem.ui',boss:'ui_clerk'}],'Saved');
   await page.screenshot({path:artifacts+'/team-tree.png'});
@@ -218,7 +219,7 @@ try{
   const area=tree.locator('.org-area[data-area="المحامون"]');await area.waitFor();
   await box('salem.ui').dragTo(area);await page.getByText(/تحت قسم «المحامون» الآن/).waitFor();
   await tree.locator('li:has(> .org-area[data-area="المحامون"]) .org-box[data-person="salem.ui"]').waitFor();
-  assert.match(await box('ui_clerk').innerText(),/يشرف على شخص واحد/,'Oversees him through the section');
+  assert.match(await box('ui_clerk').innerText(),/مسؤول عن شخص واحد/,'Oversees him through the section');
   await page.screenshot({path:artifacts+'/team-tree-area.png'});
   await db.exec('reset role');const inArea=(await db.query("select a.username u,t.manager_id,ar.name from mawatheeq_private.team_lines t join mawatheeq_private.accounts a on a.id=t.user_id join mawatheeq_private.team_areas ar on ar.id=t.area_id")).rows;await db.exec('set role anon');
   assert.deepEqual(inArea,[{u:'salem.ui',manager_id:null,name:'المحامون'}]);
