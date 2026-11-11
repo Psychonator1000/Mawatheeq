@@ -19,7 +19,11 @@ grant select,insert,update,delete on storage.objects to anon,authenticated;
 `);
 for (const file of fs.readdirSync('supabase/migrations').filter(x => x.endsWith('.sql')).sort()) await db.exec(fs.readFileSync('supabase/migrations/' + file, 'utf8'));
 await db.query(`insert into mawatheeq_private.accounts(username,password_hash,must_change_password,display_name) values
- ('owner',extensions.crypt($1,extensions.gen_salt('bf',4)),false,'المسؤول'),('amal',extensions.crypt($1,extensions.gen_salt('bf',4)),false,'أمل الرول')`, ['Fixture-password-123']);
+ ('owner',extensions.crypt($1,extensions.gen_salt('bf',4)),false,'المسؤول'),('amal',extensions.crypt($1,extensions.gen_salt('bf',4)),false,'ا/ أمل الرول')`, ['Fixture-password-123']);
+// Names are kept plain (owner, 11 November 2026): a courtesy title written before a name is dropped when it is saved.
+assert.equal((await db.query("select display_name from mawatheeq_private.accounts where username='amal'")).rows[0].display_name, 'أمل الرول');
+for (const [name, plain] of [['أ/ محمود عبدالعال', 'محمود عبدالعال'], ['ا. منال اباالقلوب', 'منال اباالقلوب'], ['المحامى يوسف الشطى', 'يوسف الشطى'], ['الأستاذة نجلاء', 'نجلاء'], ['احمد ابواليزيد', 'احمد ابواليزيد'], ['المحاسب', 'المحاسب'], ['المحامي', 'المحامي']])
+  assert.equal((await db.query('select mawatheeq_private.strip_title($1) v', [name])).rows[0].v, plain, name);
 await db.exec("insert into public.mawatheeq_members(user_id,role) select id,case when username='owner' then 'owner' else 'editor' end from mawatheeq_private.accounts");
 const rpc = async (name, args) => (await db.query(`select public.${name}(${args.map((_, i) => '$' + (i + 1)).join(',')}) result`, args)).rows[0].result;
 const login = u => rpc('mawatheeq_local_login', [u, 'Fixture-password-123']);

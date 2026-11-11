@@ -165,7 +165,8 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
 assert.equal((await office(admin.token,'context')).canManage,true);
 // Display names and owner-only switching to a staff account without its password.
 await office(admin.token,'set_display_name',{id:editor.user.id,displayName:'  ا/ محامٍ   تجريبي '});
-assert.equal((await office(admin.token,'context')).members.find(m=>m.id===editor.user.id).displayName,'ا/ محامٍ تجريبي');
+// Kept plain, without the courtesy title (owner, 11 November 2026): «أ/» is added where names are shown.
+assert.equal((await office(admin.token,'context')).members.find(m=>m.id===editor.user.id).displayName,'محامٍ تجريبي');
 await assert.rejects(()=>office(admin.token,'switch_user',{id:editor.user.id}),/كلمة مرور مؤقتة/,'a pending temporary password blocks switching');
 await office(admin.token,'set_member_password',{id:editor.user.id,password:'Permanent-password-123',mustChange:false});
 const fresh=await login('legal.editor','Permanent-password-123');

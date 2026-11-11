@@ -5,7 +5,8 @@ import {officeRequest} from '@/lib/local-auth';
 import {LEGAL_SECTIONS,type Permissions} from '@/lib/permissions';
 import type {Member} from '@/lib/office';
 import type {CaseRecord} from '@/lib/domain';
-import {generatePassword,personName,suggestUsername} from '@/lib/staff-accounts';
+import {generatePassword,personName,plainName,suggestUsername} from '@/lib/staff-accounts';
+import {lawyerKey} from '@/lib/lawyer-match';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from './ui/dialog';
 
 type Row={label:string;cases:string[];include:boolean;username:string;displayName:string};
@@ -14,12 +15,13 @@ const CASE_SECTIONS=LEGAL_SECTIONS.filter(s=>s!=='documents'&&s!=='daily');
 /** Creates one account per lawyer named on the cases. Each account gets a random password; the owner can switch
  *  into it without the password, and can set a password to hand over when the lawyer signs in alone. */
 export default function LawyerAccounts({members,records,onClose,onCreated}:{members:Member[];records:CaseRecord[];onClose:()=>void;onCreated:()=>void}){
- const linked=useMemo(()=>new Set(members.map(m=>(m.displayName||'').trim()).filter(Boolean)),[members]);
+ // Accounts already made, by name without its title («ا/ احمد» on the cases is the account «احمد»).
+ const linked=useMemo(()=>new Set(members.map(m=>lawyerKey(plainName(m.displayName||''))).filter(Boolean)),[members]);
  const [rows,setRows]=useState<Row[]>(()=>{
   const byLawyer=new Map<string,string[]>();
   for(const c of records){const label=(c.lawyer||'').replace(/\s+/g,' ').trim();if(label)byLawyer.set(label,[...(byLawyer.get(label)||[]),c.id])}
   const taken=members.map(m=>m.username);
-  return [...byLawyer].sort((a,b)=>b[1].length-a[1].length).filter(([label])=>!linked.has(label)).map(([label,cases])=>{const username=suggestUsername(label,taken);taken.push(username);return {label,cases,include:true,username,displayName:label}});
+  return [...byLawyer].sort((a,b)=>b[1].length-a[1].length).filter(([label])=>!linked.has(lawyerKey(plainName(label)))).map(([label,cases])=>{const username=suggestUsername(label,taken);taken.push(username);return {label,cases,include:true,username,displayName:plainName(label)}});
  });
  const [scope,setScope]=useState<'own'|'all'|'none'>('own'),[canEdit,setCanEdit]=useState(false),[busy,setBusy]=useState(false),[progress,setProgress]=useState(0),[failures,setFailures]=useState<string[]>([]);
  const chosen=rows.filter(r=>r.include);

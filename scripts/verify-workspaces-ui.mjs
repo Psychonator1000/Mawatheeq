@@ -70,7 +70,22 @@ try{
  await page.locator('.sec-agenda').getByRole('button',{name:/تنسيق موعد تجريبي/}).click();await page.getByRole('heading',{name:'تنسيق موعد تجريبي'}).first().waitFor();await page.keyboard.press('Escape');
  await page.reload();await page.getByRole('heading',{name:'أجندة اليوم',exact:true}).waitFor();
  await switchTo('القضايا');await page.evaluate(()=>{location.hash='work'});await page.getByText('تنسيق موعد تجريبي',{exact:true}).waitFor();
- await switchTo('التحصيل');await click('ملف تحصيل جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');
+ await switchTo('التحصيل');
+ // Payment-order PDFs are read in the background (owner, 11 November 2026): a bar sits at the foot of the page, nothing
+ // covers the page, and moving between the collections pages does not stop the reading.
+ {const pdf=text=>{const parts=['%PDF-1.4\n'],offsets=[];const objs=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',null,'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+   const stream=`BT /F1 12 Tf 20 100 Td (${text}) Tj ET`;objs[3]=`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+   objs.forEach((o,i)=>{offsets.push(parts.join('').length);parts.push(`${i+1} 0 obj\n${o}\nendobj\n`)});const xref=parts.join('').length;
+   parts.push(`xref\n0 ${objs.length+1}\n0000000000 65535 f \n${offsets.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')}trailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);return Buffer.from(parts.join(''),'latin1')};
+  await page.getByLabel('ملفات PDF لأوامر الأداء',{exact:true}).setInputFiles([{name:'order-one.pdf',mimeType:'application/pdf',buffer:pdf('SYNTHETIC ORDER ONE')},{name:'order-two.pdf',mimeType:'application/pdf',buffer:pdf('SYNTHETIC ORDER TWO')}]);
+  const bar=page.locator('.order-reading');await bar.waitFor();
+  assert.equal(await page.getByRole('dialog').count(),0,'Reading the orders does not cover the page');
+  await click('التحصيلات');await bar.waitFor();await click('ملفات التحصيل');
+  await bar.getByText(/اكتملت قراءة/).waitFor({timeout:240000});await screen('order-reading-bar');
+  await bar.getByRole('button',{name:/مراجعة وحفظ/}).click();const review=page.getByRole('dialog',{name:'ملفات تحصيل من أوامر الأداء'});await review.getByText('order-two.pdf').waitFor();
+  await review.getByRole('button',{name:'إغلاق'}).last().click();await review.waitFor({state:'detached'});await bar.waitFor();
+  await bar.getByRole('button',{name:'تجاهل'}).click();await bar.waitFor({state:'detached'});}
+ await click('ملف تحصيل جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');
  for(const [label,value] of [['المدعي (الموكل)','شركة اختبار التحصيل'],['المدعى عليه','خصم اختبار التحصيل'],['الرقم المدني للمدعى عليه','200000000001'],['الجنسية','كويتي'],['العنوان','عنوان تجريبي'],['الهاتف','50000000'],['الرقم المدني للمدعي','SYN-1'],['السجل التجاري للمدعي','SYN-2'],['رقم العقد / الحساب','SYN-ACCOUNT'],['مبلغ المطالبة (د.ك)','125.125'],['رقم أمر الأداء','1/2026'],['محكمة أمر الأداء','محكمة تجريبية'],['رقم الدعوى','1'],['سنة الدعوى','2026'],['محكمة الجلسة','محكمة تجريبية'],['رقم الدائرة','1'],['مرجع المصدر الذي تمت مطابقته','عقد تجريبي 1']])await field(label,value);
  await page.getByLabel('الدائرة',{exact:true}).selectOption({label:'تجاري كلي'});assert.equal(await page.getByLabel('رقم الدائرة',{exact:true}).inputValue(),'1','The circuit number stays when the kind is picked after it');
  for(const label of ['تاريخ رفض أمر الأداء','تاريخ التكليف بالوفاء','تاريخ كشف الحساب','تاريخ الجلسة'])await pickToday(label);

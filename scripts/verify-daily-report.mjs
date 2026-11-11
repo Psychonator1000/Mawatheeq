@@ -1,6 +1,8 @@
 // «مهام اليوم والتقرير»: whose missions are whose, late and done states, the report filling itself, the team view.
 import assert from 'node:assert/strict';
 import { performance, periods, lineText, agendaBetween, datesAhead, passesDates, cleanReport, emptyReport, missionsFor, namesPerson, passesFilter, readReport, reportCount, reportText, reportsHtml, teamDay, teamStatus, withDone } from '../lib/daily-report.ts';
+import { plainName, titled } from '../lib/staff-accounts.ts';
+import { matchLawyer } from '../lib/lawyer-match.ts';
 const today = '2026-11-09';
 const base = { code: '', autoNumber: '', client: 'شركة', clientGroup: '', opponent: 'خصم', role: '', type: 'حكم أول درجة', ruling: '', outcome: 'غير محدد', appealRecorded: '', appealConfirmation: '', date: '', notes: '', court: 'الكلية', lawyer: '', procedures: [] };
 const sitting = (date, followup, extra = {}) => ({ id: 'p' + date, date, kind: 'جلسة', venue: 'المحكمة', court: 'الكلية', decision: 'تأجيل', text: 'تأجيل', followup, ...extra });
@@ -108,4 +110,8 @@ assert.deepEqual([s1.sent, s1.drafts, s1.tasks], [0, 1, 1], 'A draft is not coun
 assert.ok(s1.lateNow >= 1, 'His sitting not posted is overdue');
 assert.equal(stats[0].userId, 'u2', 'Most reports sent first');
 assert.deepEqual(periods('2026-11-09').map(p => p.slice(2)), [['2026-11-08', '2026-11-09'], ['2026-11-01', '2026-11-09'], ['2026-10-01', '2026-10-31'], ['2026-10-11', '2026-11-09']]);
-console.log('Passed daily report: missions by person (named lawyer, assigned attendee, own cases), late and done states, filters, the report filling itself once, safe reading, text and print, team status.');
+// Names are plain and «أ/» is added when shown, however the title was written (owner, 11 November 2026).
+for (const n of ['ا/ احمد ابواليزيد', 'أ/ احمد ابواليزيد', 'ا. احمد ابواليزيد', 'الأستاذ احمد ابواليزيد', 'احمد ابواليزيد']) { assert.equal(plainName(n), 'احمد ابواليزيد', n); assert.equal(titled(n), 'أ/ احمد ابواليزيد', n); }
+assert.equal(titled('المحامى يوسف الشطى'), 'أ/ يوسف الشطى'); assert.equal(plainName('المحاسب'), 'المحاسب'); assert.equal(titled(''), '');
+assert.equal(matchLawyer('احمد ابواليزيد', ['ا/ احمد ابواليزيد', 'ا/ اسلام محمد']), 'ا/ احمد ابواليزيد', 'A plain account name still finds the cases written with the title');
+console.log('Passed daily report: missions by person (named lawyer, assigned attendee, own cases), late and done states, filters, the report filling itself once, safe reading, text and print, team status, names shown with «أ/».');

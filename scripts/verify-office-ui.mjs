@@ -157,7 +157,7 @@ try{
  await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_owner',exact:true})}).getByRole('button',{name:'تغيير كلمة مروري',exact:true}).waitFor();
  // Lawyer accounts from case lawyer names, then owner-only switching into the account and back.
  await go('حسابات المحامين');await page.getByLabel('اسم الدخول ا/ سالم تجريبي',{exact:true}).waitFor();await page.getByLabel('اسم الدخول ا/ سالم تجريبي',{exact:true}).fill('salem.ui');await go('إنشاء 1 حساب');
- await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText('ا/ سالم تجريبي',{exact:true}).waitFor();
+ await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText('سالم تجريبي',{exact:true}).waitFor();
  page.once('dialog',d=>void d.accept());await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'الدخول بحسابه',exact:true}).click();
  await page.locator('.switch-banner').getByText('salem.ui',{exact:true}).waitFor();
  // The account opens on its own first page, not on the owner's team page left in the address.

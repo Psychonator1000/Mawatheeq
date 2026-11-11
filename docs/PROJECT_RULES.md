@@ -87,6 +87,9 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 
 ## Employee workspaces
 
+- Names are kept plain (11 November 2026): account names lose any courtesy title written before them («ا/», «أ/», «ا.», «الأستاذ», «المحامي»; `strip_title()` on save, `plainName()` in the app) and «أ/» is added where the daily page shows them (`titled()`). Matching an account to case or roll lawyer names ignores the title on both sides.
+- Payment-order PDFs are read in the background (`lib/order-reading.ts`): a bar at the foot of the collections page shows the progress; the page stays usable and the review opens when the person chooses.
+
 - Selecting legal, secretary, collections, accounting or HR never grants authority. Department grants alone must not authorize the full legal case, client profile, document or other departments' records.
 - Keep case assignments shared across case-linked departments. HR profiles are independent of login accounts; only the owner and admins with the staff power administer users.
 - Secretary work reuses work_items. Collection papers no longer wait for a source review (owner, 11 November 2026: the team checks the data in the PDF step); generation checks the current file revision and the template's required fields, and preserves immutable output snapshots. Recorded reviews are kept but gate nothing.

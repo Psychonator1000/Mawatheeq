@@ -8,6 +8,20 @@ const LETTERS: Record<string, string> = {
 export function personName(label: string): string {
   return label.replace(/^\s*(?:(?:ال)?محام[يى]ة?|الأستاذ(?:ة)?|أ\s*[/.]|ا\s*[/.]|د\s*[/.])\s*/u, '').replace(/\s+/g, ' ').trim();
 }
+/**
+ * A person's name without the courtesy title written before it («أ/», «ا/», «أ.», «الأستاذ», «المحامي»…): names are
+ * kept plain and the title is added when they are shown (owner, 11 November 2026). Kept in step with
+ * mawatheeq_private.strip_title() on the server.
+ */
+export function plainName(name: string): string {
+  const whole = String(name || '').replace(/\s+/g, ' ').trim();
+  let s = whole;
+  for (let i = 0; i < 2; i++) s = s.replace(/^(?:(?:ال)?محام[يى](?:[ةه])?|(?:ال)?[أاإ]ستاذ(?:[ةه])?|[أاإ]\s*[/.])\s*/u, '').trim();
+  // A name that is nothing but a title (an account called «المحامي») stays as it is.
+  return s || whole;
+}
+/** The name as the office writes it: «أ/» and the plain name. */
+export const titled = (name: string) => { const p = plainName(name); return !p || /^(?:(?:ال)?محام[يى](?:[ةه])?|(?:ال)?[أاإ]ستاذ(?:[ةه])?)$/u.test(p) ? p : 'أ/ ' + p; };
 /** Usual Latin spellings of common names, since short vowels are not written in Arabic. */
 const NAMES: Record<string, string> = {
   'محمد': 'mohammad', 'احمد': 'ahmad', 'محمود': 'mahmoud', 'مصطفى': 'mustafa', 'يوسف': 'yousef', 'ابراهيم': 'ibrahim', 'اسماعيل': 'ismail',

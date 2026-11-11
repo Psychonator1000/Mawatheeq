@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
+import {titled} from '@/lib/staff-accounts';
 import {ChevronRight,ChevronLeft,Check,Save,Send,Printer,Copy,Plus,X,ArrowUpLeft,LoaderCircle,Gavel,ListChecks,CalendarClock,Hourglass,CalendarCheck,Info,UsersRound} from 'lucide-react';
 import {openWorkspace} from '@/lib/open-record';
 import {toast} from 'sonner';
@@ -328,7 +329,7 @@ function ReportBar({r,date,today,name,printedBy}:{r:OwnReport;date:string;today:
 }
 
 function ReportReader({r,printedBy}:{r:StoredReport;printedBy:string}){
- const payload=cleanReport(readReport(r.payload)),name=r.displayName||r.username;
+ const payload=cleanReport(readReport(r.payload)),name=r.displayName?titled(r.displayName):r.username;
  const print=()=>{if(!printHtml(reportsHtml([{name,date:formatDate(r.date),payload,sent:r.submittedAt?'أُرسل '+clock(r.submittedAt):'مسودة'}],printedBy,formatDate(todayISO()))))toast.error('تعذر فتح الطباعة.')};
  return <div className="day-report-body report-read">{REPORT_PARTS.map(({key,title},n)=>payload[key].length?<div key={key} className="report-part"><div className="report-part-head"><b>{ORDINALS[n]}: {title}</b><span className="report-count">{payload[key].length}</span></div>
   <ol>{payload[key].map((l,i)=><li key={i}>{lineText(l,key)}</li>)}</ol></div>:null)}
@@ -353,7 +354,7 @@ function TeamBoard({rows,date,today,reading,onRead,onDay,printedBy,canManage}:{r
    {rows&&rows.length>0&&<><span className="tag green">{sent.length} أُرسل</span><span className="tag">{rows.length-sent.length} لم يُرسل</span></>}
    <div className="actions"><button className="btn" disabled={!sent.length} onClick={printAll}><Printer size={15}/> طباعة المرسلة</button></div></div>
   {!rows?<p role="status" className="day-empty"><LoaderCircle className="spin" size={14}/> جارٍ تحميل التقارير…</p>
-  :open?<><button className="btn day-back" onClick={()=>onRead('')}><ChevronRight size={15}/> كل الفريق · {open.displayName||open.username}</button><ReportReader r={open} printedBy={printedBy}/></>
+  :open?<><button className="btn day-back" onClick={()=>onRead('')}><ChevronRight size={15}/> كل الفريق · {open.displayName?titled(open.displayName):open.username}</button><ReportReader r={open} printedBy={printedBy}/></>
   :!rows.length?<NoReporters canManage={canManage}/>
   :<div className="table-wrap"><table className="office-table team-board"><thead><tr><th>المحامي</th><th>التقرير</th><th>الجلسات</th><th>المهام</th><th>متأخر</th><th aria-label="إجراءات"></th></tr></thead>
    <tbody>{rows.map(r=><tr key={r.userId}><td><b>{r.name}</b></td>

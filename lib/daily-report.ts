@@ -1,6 +1,7 @@
 // «مهام اليوم والتقرير»: the day's missions of one person (or the whole team) taken from the cases and the office's
 // work, and that person's daily report, which fills itself with what was done and takes the rest by hand.
 import { caseCode, caseState, formatDate, type CaseRecord, type Rules } from './domain.ts';
+import { titled } from './staff-accounts.ts';
 import { clientName } from './clients.ts';
 import { normalizeSearch } from './case-browse.ts';
 import { isFiled, isSessionEntry, lastSitting, nextSitting, shiftDays } from './case-desk.ts';
@@ -73,7 +74,8 @@ export const lineText = (l: ReportLine, part: ReportPart) => (REPORT_PARTS.find(
 
 export const ref = (c: CaseRecord) => caseCode(c) || c.autoNumber || 'بلا كود';
 const parties = (c: CaseRecord) => `${clientName(c) || '—'} ضد ${c.opponent || '—'}`;
-export const memberLabel = (m?: { username: string; displayName?: string }) => m ? m.displayName || m.username : '';
+// Names show with «أ/» before them, added here (the names themselves are kept plain).
+export const memberLabel = (m?: { username: string; displayName?: string }) => m ? (m.displayName ? titled(m.displayName) : m.username) : '';
 
 /** Whether the lawyer named on a case is this person (by the name the office uses for them or their sign-in name). */
 export function namesPerson(lawyer: string, m: { username: string; displayName?: string }) {
@@ -196,7 +198,7 @@ export function teamDay({ expected, reports, date, today, records, work, members
     const all = member ? missionsFor({ records, work, members, rules, date, today, person: member, viewerId: t.userId }) : [];
     const on = all.filter(m => m.date === date), h = on.filter(m => m.kind === 'hearing'), k = on.filter(m => m.kind === 'task');
     return {
-      userId: t.userId, username: t.username, name: t.displayName || t.username, status: t.status, report: t.report,
+      userId: t.userId, username: t.username, name: t.displayName ? titled(t.displayName) : t.username, status: t.status, report: t.report,
       items: t.report ? reportCount(readReport(t.report.payload)) : 0,
       hearings: h.length, hearingsDone: h.filter(m => m.state === 'done').length, tasks: k.length, tasksDone: k.filter(m => m.state === 'done').length,
       late: all.filter(m => m.state === 'late').length,
@@ -302,7 +304,7 @@ export function performance({ people, reports, from, to, today, records, work, m
     const member = members.find(m => m.id === p.userId);
     const lateNow = member ? missionsFor({ records, work, members, rules, date: today, today, person: member, viewerId: p.userId }).filter(m => m.state === 'late').length : 0;
     return {
-      userId: p.userId, name: p.displayName || p.username, workDays, sent: sent.length, sameDay: sent.filter(r => kuwaitDay(r.submittedAt!) === r.date).length, drafts: mine.length - sent.length,
+      userId: p.userId, name: p.displayName ? titled(p.displayName) : p.username, workDays, sent: sent.length, sameDay: sent.filter(r => kuwaitDay(r.submittedAt!) === r.date).length, drafts: mine.length - sent.length,
       hearings: sum.hearings, tasks: sum.tasks, admin: sum.admin, external: sum.external, other: sum.other, posted: posted.get(p.username) || 0, lateNow,
       lastSent: sent.map(r => r.submittedAt!).sort().at(-1) || null,
     };

@@ -2,6 +2,7 @@
 // normalization the server uses (ي/ى, أ/ا, ة/ه, extra spaces).
 import type { CaseRecord } from './domain';
 import type { Permissions } from './permissions';
+import { plainName } from './staff-accounts.ts';
 
 // Kept in step with mawatheeq_private.normalized() on the server.
 export const lawyerKey = (v: unknown) => String(v ?? '').normalize('NFKC').replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
@@ -19,9 +20,10 @@ export function lawyerLabels(records: Pick<CaseRecord, 'lawyer'>[]): [string, nu
  * shortened or extended by whole words («ا/ ايه» ↔ «ا/ ايه زينهم»). Never guesses between several candidates.
  */
 export function matchLawyer(name: string, labels: string[]): string | undefined {
-  const k = lawyerKey(name); if (!k) return undefined;
-  const exact = labels.find(l => lawyerKey(l) === k); if (exact) return exact;
-  const near = labels.filter(l => { const lk = lawyerKey(l); return lk && (k.startsWith(lk + ' ') || lk.startsWith(k + ' ')); });
+  // Names compare without their courtesy title: the account «احمد» is the cases' «ا/ احمد».
+  const key = (v: string) => lawyerKey(plainName(v)), k = key(name); if (!k) return undefined;
+  const exact = labels.find(l => key(l) === k); if (exact) return exact;
+  const near = labels.filter(l => { const lk = key(l); return lk && (k.startsWith(lk + ' ') || lk.startsWith(k + ' ')); });
   return near.length === 1 ? near[0] : undefined;
 }
 
