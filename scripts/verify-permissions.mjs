@@ -186,7 +186,8 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
 {const lawyerScope={...noAccess,sections:['cases','work'],canEdit:true,lawyerNames:['  المحامي المثال ']};
  await assert.rejects(()=>office(admin.token,'create_member',{username:'bad_lawyers',password:'Temporary-password-123',permissions:{...lawyerScope,lawyerNames:'not a list'}}),/غير صالحة/);
  const own=await create('own_lawyer',lawyerScope);
- assert.deepEqual((await local(own.token,'access')).lawyerNames,['المحامي المثال'],'Names are stored trimmed');
+ // Stored trimmed and without the courtesy title (owner, 11 November 2026); the case's «المحامى  المثال» below is the same lawyer.
+ assert.deepEqual((await local(own.token,'access')).lawyerNames,['المثال'],'Names are stored trimmed, without the title');
  assert.deepEqual(await local(own.token,'cases_page'),[],'No case carries the name yet');
  const mine=await local(admin.token,'save_case',{case:{...visible,id:'lawyer-case',code:'MINE',lawyer:'المحامى  المثال',revision:0}});
  await local(admin.token,'save_case',{case:{...visible,id:'lawyer-other',code:'NOT-MINE',lawyer:'محامٍ آخر',revision:0}});
@@ -206,13 +207,13 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  await denied(()=>local(clerk.token,'cases_page'));
  const ctx=await office(admin.token,'context');const m=ctx.members.find(x=>x.username==='role_clerk');assert.equal(m.permissions.jobRole,'secretary');
  await office(admin.token,'set_member_access',{id:m.id,revision:m.permissions.revision,permissions:{...m.permissions,jobRole:'lawyer',sections:['cases'],lawyerNames:['المحامي المثال']}});
- const history=await office(admin.token,'access_history',{id:m.id});assert.equal(history[0].after.jobRole,'lawyer','The audit records the role');assert.deepEqual(history[0].after.lawyerNames,['المحامي المثال'],'Names still stored with a role');
+ const history=await office(admin.token,'access_history',{id:m.id});assert.equal(history[0].after.jobRole,'lawyer','The audit records the role');assert.deepEqual(history[0].after.lawyerNames,['المثال'],'Names still stored with a role (without the title)');
  // Newer roles are labels too; changing only the role keeps the pages and is audited.
  for(const role of ['counsel','callCenter','courier','sessionsClerk','officeAdmin','executionClerk','archivist']){
   const cur=(await office(admin.token,'context')).members.find(x=>x.username==='role_clerk').permissions;
   const saved=await office(admin.token,'set_member_access',{id:m.id,revision:cur.revision,permissions:{...cur,jobRole:role}});
   const now=(await office(admin.token,'context')).members.find(x=>x.username==='role_clerk').permissions;
-  assert.equal(now.jobRole,role,role+' is stored');assert.deepEqual(now.sections,['cases'],'Changing the role alone keeps the pages');assert.deepEqual(now.lawyerNames,['المحامي المثال']);
+  assert.equal(now.jobRole,role,role+' is stored');assert.deepEqual(now.sections,['cases'],'Changing the role alone keeps the pages');assert.deepEqual(now.lawyerNames,['المثال']);
   assert.equal((await office(admin.token,'access_history',{id:m.id}))[0].after.jobRole,role,'The audit records '+role);void saved;
  }
  const cur=(await office(admin.token,'context')).members.find(x=>x.username==='role_clerk').permissions;
