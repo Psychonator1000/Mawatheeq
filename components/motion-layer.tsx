@@ -4,7 +4,6 @@ import {motionAllowed,pointerEffectsOn,toggleSecretTheme,SECRET_WORDS,loadAppear
 import {toast} from 'sonner';
 import {createBackdrop,createBursts,type FxState} from './motion-fx';
 import {createPatternSheet,PATTERNED} from './pattern-field';
-import './motion.css';
 
 const RIPPLE='.btn,.icon-btn,.nav-button,.office-card,.stat,.workspace-option,.client-card,.person-card,.calendar-add,.account-menu-item,.notice-item,.choice,.my-work-item,.back-to-top,.text-link,.number-link,.legend-row,[role=tab],.att-cell,.chip-toggle,.rail-mark,.device-card,.ve-item';
 const STRONG='.btn.primary,.back-to-top,.workspace-option,.stat.featured';

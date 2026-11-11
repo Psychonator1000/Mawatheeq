@@ -1,10 +1,6 @@
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from './ui/dialog';
 
-/** Bump when adding tips so the account menu shows its dot again. */
-export const TIPS_VERSION='2026-10-12i';
-const KEY='mawatheeq.tips.seen';
-export const tipsUnseen=()=>{try{return localStorage.getItem(KEY)!==TIPS_VERSION}catch{return false}};
-export const markTipsSeen=()=>{try{localStorage.setItem(KEY,TIPS_VERSION)}catch{/* Still shown next time. */}};
+export {TIPS_VERSION,tipsUnseen,markTipsSeen} from '@/lib/tips-seen';
 
 /** Every keyboard shortcut in the app. They work when the cursor is not inside a text field. */
 export const SHORTCUTS:[string,string][]=[

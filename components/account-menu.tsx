@@ -1,9 +1,11 @@
-import {createContext,useContext,useState} from 'react';
+import {createContext,lazy,Suspense,useContext,useState} from 'react';
 import {ChevronDown,KeyRound,LayoutGrid,Lightbulb,LogOut,Moon,Palette,Sun} from 'lucide-react';
 import {loadAppearance,resolveTheme,saveAppearance} from '@/lib/appearance';
 import {Popover,PopoverContent,PopoverTrigger} from './ui/popover';
-import AppearanceDialog from './appearance-dialog';
-import TipsDialog,{markTipsSeen,tipsUnseen} from './tips';
+import {markTipsSeen,tipsUnseen} from '@/lib/tips-seen';
+// The two dialogs load when first opened, not with the page.
+const AppearanceDialog=lazy(()=>import('./appearance-dialog'));
+const TipsDialog=lazy(()=>import('./tips'));
 
 export type AccountActions={username:string;busy:boolean;onChangePassword:()=>void;onLogout:()=>void;onSwitchWorkspace?:()=>void};
 export const AccountContext=createContext<AccountActions|null>(null);
@@ -13,7 +15,7 @@ export default function AccountMenu() {
  const account=useContext(AccountContext),[open,setOpen]=useState(false),[appearance,setAppearance]=useState(false),[tips,setTips]=useState(false),[unseen,setUnseen]=useState(tipsUnseen);
  if(!account)return <div className="avatar" aria-hidden="true">م</div>;
  const run=(action:()=>void)=>{setOpen(false);action()};
- return <>{appearance&&<AppearanceDialog onClose={()=>setAppearance(false)}/>}{tips&&<TipsDialog onClose={()=>setTips(false)}/>}<Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><button className="account-chip account-trigger" aria-label={'حساب '+account.username} title="الحساب والمظهر وتسجيل الخروج"><span className="avatar" aria-hidden>{account.username.slice(0,1).toUpperCase()}</span><span className="account-chip-name" aria-hidden>{account.username}</span><ChevronDown size={14} aria-hidden className="account-chip-chevron"/>{unseen&&<span className="avatar-dot" aria-hidden/>}</button></PopoverTrigger>
+ return <><Suspense fallback={null}>{appearance&&<AppearanceDialog onClose={()=>setAppearance(false)}/>}{tips&&<TipsDialog onClose={()=>setTips(false)}/>}</Suspense><Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild><button className="account-chip account-trigger" aria-label={'حساب '+account.username} title="الحساب والمظهر وتسجيل الخروج"><span className="avatar" aria-hidden>{account.username.slice(0,1).toUpperCase()}</span><span className="account-chip-name" aria-hidden>{account.username}</span><ChevronDown size={14} aria-hidden className="account-chip-chevron"/>{unseen&&<span className="avatar-dot" aria-hidden/>}</button></PopoverTrigger>
  <PopoverContent align="end" dir="rtl" className="account-menu"><div className="account-menu-head"><small>مسجل الدخول باسم</small><b dir="ltr">{account.username}</b></div>
  {account.onSwitchWorkspace&&<button className="account-menu-item" onClick={()=>run(account.onSwitchWorkspace!)}><LayoutGrid size={16}/> تغيير مساحة العمل</button>}
  <button className="account-menu-item" onClick={()=>run(()=>setAppearance(true))}><Palette size={16}/> المظهر والحركة</button>

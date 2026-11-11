@@ -2,11 +2,13 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { RefreshCw } from 'lucide-react';
 import WorkspaceHub from '@/components/workspace-hub';
 import { AccountContext } from '@/components/account-menu';
-import MotionLayer from '@/components/motion-layer';
+// The moving background and pointer effects load after the first screen; their stylesheet stays in its place.
+import '@/components/motion.css';
 import { lazy, Suspense } from 'react';
 // Chat loads after sign-in, not with the login page.
 const Chat = lazy(() => import('@/components/chat'));
 const PaperFiles = lazy(() => import('@/components/paper-files'));
+const MotionLayer = lazy(() => import('@/components/motion-layer'));
 import ConnectionStatus from '@/components/connection-status';
 import {workspaceStorageKey} from '@/lib/departments';
 import { restoreSession, signIn, signOut, changePassword, localRequest, dailyRequest, sessionEvent, isSwitchedSession, returnToOwner, type LocalUser } from '@/lib/local-auth';
@@ -120,7 +122,7 @@ export default function SharedApp() {
   const passwordRequired = !!user?.mustChangePassword;
   const passwordForm = user && (passwordRequired || changingPassword);
   if (ready && user && !passwordForm) return <AccountContext.Provider value={{ username: user.username, busy, onChangePassword: () => { setChangingPassword(true); setMessage(''); setError(''); }, onLogout: () => void logout() }}>
-    <MotionLayer />
+    <Suspense fallback={null}><MotionLayer /></Suspense>
     <Suspense fallback={null}>{!toolOff(cachedAccess(),'chat')&&<Chat userId={user.id} />}{canSee(effectiveView(cachedAccess()||{}),'page:paper')&&<PaperFiles userId={user.id} />}</Suspense>
     <ConnectionStatus />
     {user.role !== 'owner' && isSwitchedSession() && <div className="switch-banner" role="status"><span>أنت الآن داخل حساب <b dir="ltr">{user.username}</b> بصلاحياته فقط.</span><button className="btn" disabled={busy} onClick={() => { setBusy(true); backToStaffList(); void returnToOwner().finally(() => setBusy(false)); }}>العودة إلى حسابي</button></div>}
@@ -128,7 +130,7 @@ export default function SharedApp() {
     {error && <div className="auth-message error" role="alert">{error}</div>}
   </AccountContext.Provider>;
 
-  return <><MotionLayer /><ConnectionStatus /><main className="auth-page"><section className="auth-card">
+  return <><Suspense fallback={null}><MotionLayer /></Suspense><ConnectionStatus /><main className="auth-page"><section className="auth-card">
     <BrandLogo full/><h1 className="sr-only">مواثيق</h1><p>مساحة المكتب المشتركة للأحكام والتنفيذ والمستندات.</p>
     {!ready ? <p role="status">جارٍ فتح مساحة العمل…</p> : passwordForm ? <>
       <h2>تغيير كلمة المرور</h2><p>{passwordRequired ? 'عيّن كلمة مرور خاصة بك لفتح مساحة المكتب.' : 'تُسجّل الجلسات الأخرى خروجها عند تغيير كلمة المرور.'}</p>

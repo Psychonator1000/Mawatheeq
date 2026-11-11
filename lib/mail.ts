@@ -47,7 +47,8 @@ export const PROVIDERS: Record<Provider, { label: string; imap: string; smtp: st
 };
 
 const MAIL_EVENT = 'mawatheeq-mail-changed';
-export const OPEN_MAIL_EVENT = 'mawatheeq-open-mail';
+import { OPEN_MAIL_EVENT } from './open-record';
+export { OPEN_MAIL_EVENT };
 const pendingKey = 'mawatheeq.mail-open';
 export const mailChanged = () => window.dispatchEvent(new Event(MAIL_EVENT));
 export function onMailChanged(fn: () => void) { window.addEventListener(MAIL_EVENT, fn); return () => window.removeEventListener(MAIL_EVENT, fn); }
