@@ -22,7 +22,7 @@ export function fileNames(items:WordItem[],names:Record<string,string>){
 export default function WordPreview({items,onClose}:{items:WordItem[];onClose:()=>void}){
  const [current,setCurrent]=useState(items[0]?.id||''),[names,setNames]=useState<Record<string,string>>(()=>Object.fromEntries(items.map(i=>[i.id,i.name])));
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[edited,setEdited]=useState<Set<string>>(new Set());
- const docs=useRef(new Map<string,WordDoc>()),shown=useRef(''),area=useRef<HTMLDivElement>(null),body=useRef<HTMLDivElement>(null),styles=useRef<HTMLDivElement>(null);
+ const docs=useRef(new Map<string,WordDoc>()),shown=useRef(''),area=useRef<HTMLDivElement>(null),body=useRef<HTMLDivElement>(null);
  const item=items.find(i=>i.id===current)||items[0],many=items.length>1;
  // The corrections on the page drawn now go into its Word file (before another paper is drawn, and before downloading).
  const keep=()=>{const d=docs.current.get(shown.current);if(d&&body.current)collectWord(d,body.current)};
@@ -33,8 +33,8 @@ export default function WordPreview({items,onClose}:{items:WordItem[];onClose:()
   (async()=>{
    let d=docs.current.get(item.id);
    if(!d){d=await openWord(item.blob);docs.current.set(item.id,d)}
-   if(!live||!body.current||!styles.current)return;
-   await renderWord(d,body.current,styles.current);shown.current=item.id;
+   if(!live||!body.current)return;
+   renderWord(d,body.current);shown.current=item.id;
   })().catch(e=>{if(live)setError((e as Error).message)}).finally(()=>{if(live)setLoading(false)});
   return()=>{live=false};
  // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -42,7 +42,7 @@ export default function WordPreview({items,onClose}:{items:WordItem[];onClose:()
  // The page is scaled down to fit the window's width (never a sideways scroll).
  useLayoutEffect(()=>{
   const box=area.current,page=body.current;if(!box||!page)return;
-  const fit=()=>{const sec=page.querySelector<HTMLElement>('section.docx'),raw=sec?parseFloat(sec.style.width):NaN,w=Number.isFinite(raw)?raw*(sec!.style.width.endsWith('pt')?4/3:1):794;page.style.zoom=String(Math.min(1,(box.clientWidth-8)/(w+48)))};
+  const fit=()=>{const w=parseFloat(page.querySelector<HTMLElement>('.wd-sheet')?.style.width||'')||794;page.style.zoom=String(Math.min(1,(box.clientWidth-8)/(w+32)))};
   const ro=new ResizeObserver(fit);ro.observe(box);fit();return()=>ro.disconnect();
  },[loading]);
  const final=fileNames(items,names);
@@ -68,7 +68,7 @@ export default function WordPreview({items,onClose}:{items:WordItem[];onClose:()
      onKeyDown={e=>{if(e.key==='Enter')e.preventDefault()}}>
      {loading&&<p className="word-preview-wait" role="status"><LoaderCircle className="spin" size={16}/> جارٍ تجهيز المعاينة…</p>}
      {error&&<p className="notice" role="alert">{error}</p>}
-     <div ref={styles} hidden/><div ref={body} className="word-preview-page" aria-label={'معاينة '+(final[item?.id]||'')}/>
+     <div ref={body} className="word-preview-page" aria-label={'معاينة '+(final[item?.id]||'')}/>
     </div>
    </div>
   </div>

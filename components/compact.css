@@ -1317,10 +1317,19 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .word-preview-name{margin:0;gap:2px}.word-preview-name-row{display:flex;align-items:center;gap:6px}.word-preview-name-row input{flex:1;min-width:0}.word-preview-name-row em{font-style:normal;color:var(--muted-foreground);direction:ltr;unicode-bidi:isolate}
 .word-preview-area{position:relative;flex:1 1 auto;min-height:0;overflow:auto;overflow-x:hidden;border-radius:10px;background:#8a8a8a}
 .word-preview-wait{position:absolute;inset-inline:0;top:12px;display:flex;justify-content:center;gap:6px;color:#fff;margin:0}
-.word-preview-page .docx-wrapper{background:transparent!important;padding:12px!important}
-.word-preview-page .docx-wrapper>section.docx{margin-bottom:12px!important;color:#000;box-shadow:0 2px 10px rgb(0 0 0/.35)}
-/* A text box's drawing is as tall as its anchor and would cover the text beside it: only its own text takes clicks. */
-.word-preview-page svg{pointer-events:none}.word-preview-page svg .word-edit{pointer-events:auto}
+.word-preview-page{padding:16px;width:max-content;margin-inline:auto}
+.wd-sheet{position:relative;color:#000;direction:ltr;text-align:start}
+.wd-pages,.wd-layer{position:absolute;inset:0;pointer-events:none}
+.wd-page{position:absolute;left:0;right:0;background:#fff;box-shadow:0 2px 10px rgb(0 0 0/.35)}
+.wd-flow{position:relative;z-index:2;pointer-events:none}
+.wd-p{margin-block:0;white-space:pre-wrap;overflow-wrap:break-word;min-height:0}
+.wd-tab{display:inline-block;white-space:pre}
+.wd-table{border-collapse:collapse;table-layout:fixed;margin-block:0}
+.wd-table td{overflow-wrap:break-word}
+.wd-hf{position:absolute;z-index:1}
+.wd-shape{pointer-events:none}.wd-shape svg{display:block}
+/* Only the editable text takes clicks: the empty lines that hold the boxes, and the boxes' frames, let them through. */
+.wd-sheet .word-edit{pointer-events:auto}
 .word-preview-page .word-edit{outline:none;cursor:text;border-radius:2px}
 .word-preview-page .word-edit:hover{background:rgb(255 230 150/.35)}
 .word-preview-page .word-edit:focus{background:rgb(255 230 150/.5);box-shadow:0 0 0 1px #d9a400}
