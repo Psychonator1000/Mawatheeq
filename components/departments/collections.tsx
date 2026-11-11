@@ -2,7 +2,7 @@ import {Fragment,lazy,Suspense,useCallback,useEffect,useMemo,useRef,useState,typ
 import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf,suggestions} from '@/lib/choices';
 import {Plus,FileCheck2,Scale,Link2,Trash2,UserPlus,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
 import BatchPrint from './batch-print';
-import WordPreview,{type WordItem} from './word-preview';
+import WordPreview,{paperName,type WordItem} from './word-preview';
 import CollectionImport from './collection-import';
 import OrderImport from './order-import';
 import {suggestedEvidence} from '@/lib/document-tools';
@@ -167,7 +167,7 @@ function CollectionEditor({opponents,initial,cases:loadedCases,access,statements
   // The automatic number above the order request and the one on its receipt are the same number.
   ...(key==='fileAutoNumber'&&(!r.payload.orderAuto||r.payload.orderAuto===r.payload.fileAutoNumber)?{orderAuto:String(value)}:key==='orderAuto'&&(!r.payload.fileAutoNumber||r.payload.fileAutoNumber===r.payload.orderAuto)?{fileAutoNumber:String(value)}:{}),...(key==='amount'?{amountWords:amountInWords(String(value))}:{})}}));
  async function mutate(action:string,data:Record<string,unknown>){setBusy(true);setError('');try{const r=await departmentRequest<CollectionRecord>(action,{workspace:'collections',id:saved.id,revision:saved.revision,...data});setSaved(r);setDraft(r);onChanged();toast.success('حُفظ ملف التحصيل')}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
- async function generate(kind:'claim'|'bundle'){setBusy(true);setError('');try{const key=saved.revision+kind;const outputId=intent.current[key]??=crypto.randomUUID();const output=await departmentRequest<{id:string;data:CollectionData;templateVersion:string}>('generate',{workspace:'collections',id:saved.id,revision:saved.revision,kind,outputId});if(output.templateVersion!=='office-word-v1')throw new Error('نسخة القالب غير مدعومة. حدّث الصفحة.');const {generateWord}=await import('@/lib/document-tools');setPreview([{id:output.id,kind,name:(saved.payload.defendant||'').trim()||saved.payload.code||'مستند',blob:await generateWord(kind,output.data)}]);setOutputVersion(v=>v+1)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
+ async function generate(kind:'claim'|'bundle'){setBusy(true);setError('');try{const key=saved.revision+kind;const outputId=intent.current[key]??=crypto.randomUUID();const output=await departmentRequest<{id:string;data:CollectionData;templateVersion:string}>('generate',{workspace:'collections',id:saved.id,revision:saved.revision,kind,outputId});if(output.templateVersion!=='office-word-v1')throw new Error('نسخة القالب غير مدعومة. حدّث الصفحة.');const {generateWord}=await import('@/lib/document-tools');setPreview([{id:output.id,kind,name:paperName((saved.payload.defendant||'').trim()||saved.payload.code||'مستند',kind),blob:await generateWord(kind,output.data)}]);setOutputVersion(v=>v+1)}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  const p=draft.payload,money=position(saved.payload,payments.map(x=>x.payload));
  const canSave=editable&&!busy&&(!!draft.caseId||allScope)&&(dirty||!saved.revision);
  const save=()=>{if(canSave)void mutate('save_record',{record:draft})};

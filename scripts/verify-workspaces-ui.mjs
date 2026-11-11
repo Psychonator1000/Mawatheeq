@@ -79,7 +79,7 @@ try{
  await page.getByRole('tab',{name:/^الحافظة والمستندات/}).click();await click('إضافة مستند للحافظة');await field('وصف المستند 1','عقد تجريبي تمت مراجعته');await click('حفظ ملف التحصيل');
  // No source review any more (owner, 11 November 2026): a saved file with its fields filled makes its papers at once.
  assert.equal(await page.getByRole('heading',{name:'مراجعة المصدر',exact:true}).count(),0);
- await downloadWord('إنشاء صحيفة Word','شركة اختبار التحصيل','خصم اختبار التحصيل');await downloadWord('إنشاء حافظة Word','عقد تجريبي تمت مراجعته','خصم اختبار التحصيل');
+ await downloadWord('إنشاء صحيفة Word','شركة اختبار التحصيل','خصم اختبار التحصيل - صحيفة دعوى');await downloadWord('إنشاء حافظة Word','عقد تجريبي تمت مراجعته','خصم اختبار التحصيل - حافظة');
  await screen('collections-review-desktop');
  // File statements (إفادات): a call that is not done yet becomes a due follow-up.
  await page.getByRole('tab',{name:/^إفادات الملف/}).click();await page.getByRole('combobox',{name:'إجراء التحصيل أو التنفيذ'}).click();await page.getByRole('option',{name:'اتصال بالخصم',exact:true}).click();
@@ -103,16 +103,19 @@ try{
  // Every chosen paper opens as it will print; it is corrected on the page and named before it downloads.
  {const files=[];const onDownload=d=>files.push(d);await click('معاينة وطباعة (1)');
  const dlg=page.getByRole('dialog',{name:'معاينة Word قبل التنزيل'});await dlg.locator('.word-edit').first().waitFor();
- assert.deepEqual(await dlg.locator('.word-preview-list b').allInnerTexts(),['خصم اختبار التحصيل - حافظة مستندات','خصم اختبار التحصيل - صحيفة الدعوى'],'Each paper is named after the opposite party');
+ assert.deepEqual(await dlg.locator('.word-preview-list b').allInnerTexts(),['خصم اختبار التحصيل - حافظة','خصم اختبار التحصيل - صحيفة دعوى'],'Each paper is named after the opposite party, then the paper');
  await dlg.locator('.word-preview-list button').nth(1).click();await dlg.locator('[data-t]').filter({hasText:'عنوان تجريبي'}).first().waitFor();
  const spot=dlg.locator('[data-t]').filter({hasText:'عنوان تجريبي'}).first();await spot.click();await page.keyboard.press('End');await page.keyboard.type(' مصحح قبل الطباعة');
  await screen('word-preview-desktop');
  await dlg.getByLabel('اسم ملف Word',{exact:true}).fill('صحيفة مخصصة');
+ // Several papers download as one folder (a zip): a «حافظة» folder and a «صحيفة دعوى» folder when both are printed.
  page.on('download',onDownload);await dlg.getByRole('button',{name:'تنزيل الكل (2)'}).click();
- for(let i=0;i<60&&files.length<2;i++)await page.waitForTimeout(250);page.off('download',onDownload);assert.equal(files.length,2,'one Word file per paper');
- assert.deepEqual(files.map(d=>d.suggestedFilename()).sort(),['خصم اختبار التحصيل - حافظة مستندات.docx','صحيفة مخصصة.docx'].sort());
- const claim=await wordXml(files.find(d=>d.suggestedFilename()==='صحيفة مخصصة.docx'));
- assert.ok(claim.includes('مصحح قبل الطباعة'),'The correction made on the page is in the downloaded claim');assert.equal(claim.includes('\uE000'),false,'No preview marks left in the file');
+ for(let i=0;i<60&&!files.length;i++)await page.waitForTimeout(250);await page.waitForTimeout(500);page.off('download',onDownload);assert.equal(files.length,1,'one folder for the batch');
+ assert.equal(files[0].suggestedFilename(),'حافظة وصحيفة.zip');
+ {const chunks=[];for await(const c of await files[0].createReadStream())chunks.push(c);const PizZip=(await import('pizzip')).default,zip=new PizZip(Buffer.concat(chunks));
+  assert.deepEqual(Object.keys(zip.files).filter(n=>n.endsWith('.docx')).sort(),['حافظة/خصم اختبار التحصيل - حافظة.docx','صحيفة دعوى/صحيفة مخصصة.docx'].sort());
+  const claim=zip.file('صحيفة دعوى/صحيفة مخصصة.docx').asUint8Array(),xml=new PizZip(claim).file('word/document.xml').asText();
+  assert.ok(xml.includes('مصحح قبل الطباعة'),'The correction made on the page is in the downloaded claim');assert.equal(xml.includes('\uE000'),false,'No preview marks left in the file');}
  await page.setViewportSize({width:390,height:844});await screen('word-preview-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'The preview fits a phone');await page.setViewportSize({width:1440,height:1000});
  await dlg.getByRole('button',{name:'إغلاق'}).last().click();await dlg.waitFor({state:'detached'});}
  await screen('collections-batch-desktop');await click('ملفات التحصيل');

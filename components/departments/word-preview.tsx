@@ -7,6 +7,9 @@ import {collectWord,openWord,renderWord,safeFileName,wordBlob,type WordDoc} from
 
 export type WordItem={id:string;name:string;kind:'claim'|'bundle';blob:Blob};
 const KIND_LABEL={claim:'صحيفة الدعوى',bundle:'حافظة مستندات'};
+/** The word each paper's file name ends with, and the folder its batch downloads into (owner, 11 November 2026). */
+export const PAPER={bundle:'حافظة',claim:'صحيفة دعوى'} as const;
+export const paperName=(who:string,kind:'claim'|'bundle')=>`${who} - ${PAPER[kind]}`;
 
 /** Each paper's file name (without «.docx»); a name used twice gets «(2)», «(3)»… so no download replaces another. */
 export function fileNames(items:WordItem[],names:Record<string,string>){
@@ -51,9 +54,12 @@ export default function WordPreview({items,onClose}:{items:WordItem[];onClose:()
   setBusy(true);
   try{
    keep();
-   // One after another: browsers drop downloads that start at the same moment.
-   for(const [i,it] of list.entries()){saveBlob(blobOf(it),final[it.id]+'.docx');if(i<list.length-1)await new Promise(r=>setTimeout(r,350))}
-   toast.success(list.length>1?`نُزّل ${list.length} ملفات Word.`:'نُزّل ملف Word.');
+   if(list.length===1){saveBlob(blobOf(list[0]),final[list[0].id]+'.docx');toast.success('نُزّل ملف Word.');return}
+   // Several papers download as one folder (a .zip) named after the paper: «حافظة»; with both papers, a folder for each.
+   const PizZip=(await import('pizzip')).default,zip=new PizZip(),both=new Set(list.map(it=>it.kind)).size>1;
+   for(const it of list)zip.file((both?PAPER[it.kind]+'/':'')+final[it.id]+'.docx',new Uint8Array(await blobOf(it).arrayBuffer()),{binary:true});
+   saveBlob(zip.generate({type:'blob',mimeType:'application/zip',compression:'STORE'}),(both?`${PAPER.bundle} و${PAPER.claim.split(' ')[0]}`:PAPER[list[0].kind])+'.zip');
+   toast.success(`نُزّل ${list.length} ملفات Word في مجلد واحد.`);
   }catch(e){setError((e as Error).message)}finally{setBusy(false)}
  }
  return <Dialog open onOpenChange={o=>{if(!o&&!busy)onClose()}}><DialogContent dir="rtl" className="office-dialog word-preview-dialog" onOpenAutoFocus={e=>e.preventDefault()}>
