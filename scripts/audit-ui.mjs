@@ -53,7 +53,10 @@ async function audit(name){
    const sticking=all.filter(e=>{const b=e.getBoundingClientRect();return (b.right>innerWidth+2||b.left<-2)&&!clipped(e)&&!e.closest('[data-sonner-toaster],[role=dialog] [data-radix-scroll-area-viewport]')}).slice(0,6).map(e=>path(e)+' «'+(e.innerText||'').slice(0,30).replace(/\s+/g,' ')+'» '+Math.round(e.getBoundingClientRect().left)+'→'+Math.round(e.getBoundingClientRect().right));
    const unnamed=all.filter(e=>e.matches('button,[role=button],a[href]')&&!name(e)).slice(0,6).map(path);
    const unlabeled=all.filter(e=>e.matches('input:not([type=hidden]):not([type=file]),select,textarea')&&!(e.getAttribute('aria-label')||e.getAttribute('aria-labelledby')||e.closest('label')||(e.id&&document.querySelector(`label[for="${CSS.escape(e.id)}"]`))||e.getAttribute('title'))).slice(0,6).map(e=>path(e)+' '+(e.getAttribute('placeholder')||e.type));
-   const cut=all.filter(e=>e.matches('button,.btn,.tag,th')&&e.scrollWidth>e.clientWidth+2&&getComputedStyle(e).overflow!=='visible').slice(0,6).map(e=>path(e)+' «'+e.innerText.slice(0,30)+'»');
+   // Clipped text: what the element holds (its text and icons) is wider than its box. Measured on the content itself, so a
+   // decorative layer kept off to the side (the primary buttons' shine, waiting for the pointer) does not count.
+   const contentWidth=e=>{const r=document.createRange();r.selectNodeContents(e);return r.getBoundingClientRect().width};
+   const cut=all.filter(e=>e.matches('button,.btn,.tag,th')&&e.scrollWidth>e.clientWidth+2&&getComputedStyle(e).overflow!=='visible'&&contentWidth(e)>e.clientWidth+2).slice(0,6).map(e=>path(e)+' «'+e.innerText.slice(0,30)+'»');
    const ids={};for(const e of document.querySelectorAll('[id]'))ids[e.id]=(ids[e.id]||0)+1;
    const dup=Object.entries(ids).filter(([,n])=>n>1).map(([k])=>k).slice(0,5);
    const imgs=[...document.querySelectorAll('img')].filter(i=>vis(i)&&!i.hasAttribute('alt')).length;
