@@ -1,11 +1,11 @@
 'use client';
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
-import {FolderTree,Maximize2,Minus,Plus,UsersRound} from 'lucide-react';
+import {Building2,FolderTree,Maximize2,Minus,Plus,UsersRound} from 'lucide-react';
 import type {Member} from '@/lib/office';
 import {WORKSPACE_LABELS,rolesLabel,type JobRole} from '@/lib/permissions';
 import {inferRoles,ROLE_ICONS} from './permission-editor';
 import {normalizeSearch} from '@/lib/case-browse';
-import {nodesBelow,parents,peopleBelow,peopleCount,type TeamArea,type TeamChart} from '@/lib/team';
+import {isOnline,nodesBelow,parents,peopleBelow,peopleCount,type TeamArea,type TeamChart} from '@/lib/team';
 import {BOX_W,freeSpot,layoutBoard,obstacles,snap,type Flow} from '@/lib/org-layout';
 
 const name=(m:Member)=>m.displayName||m.username;
@@ -125,14 +125,15 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    title={movable?'اضغط لعرض خياراته. اسحبه إلى أي مكان، أو إلى وسط صندوق شخص ليتبعه، أو إلى وسط قسم ليدخله':'اضغط لعرض خياراته'}>
    
    {team>0&&<UsersRound size={14} aria-hidden className="org-icon"/>}
+   {isOnline(chart,m.id)&&<span className="org-online" title="متصل الآن" aria-label="متصل الآن"/>}
    <b>{name(m)}</b><small dir="ltr">{m.username}</small>
    <span className="org-meta">{roles.length?rolesLabel(roles):'بلا دور'}{!m.enabled&&' · موقوف'}</span>
    {team>0&&<span className="org-team">مسؤول عن {peopleCount(team)}</span>}{also.length>0&&<span className="org-also">أيضاً في: {also.join('، ')}</span>}
    {target&&<span className="org-drop-label">{drag!.key.startsWith('a:')?'تحته':'يتبعه'}</span>}</button>};
- const areaBox=(a:TeamArea)=>{const key='a:'+a.id,count=peopleBelow(parent,key).size,Icon=a.role&&ROLE_ICONS[a.role as JobRole]||FolderTree,p=board.at.get(key),target=drag?.target===key;
+ const areaBox=(a:TeamArea)=>{const key='a:'+a.id,count=peopleBelow(parent,key).size,Icon=a.role==='branch'?Building2:a.role&&ROLE_ICONS[a.role as JobRole]||FolderTree,p=board.at.get(key),target=drag?.target===key;
   return <button type="button" key={a.id} data-area={a.name} data-node={key} aria-pressed={selected===key} onPointerDown={e=>start(e,key,true,true)}
    onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onPickArea(a)}}}
-   className={'org-box org-area'+(selected===key?' on':'')+(target?' drop':'')+(moving.has(key)?' dragging':'')}
+   className={'org-box org-area'+(a.role==='branch'?' org-branch':'')+(selected===key?' on':'')+(target?' drop':'')+(moving.has(key)?' dragging':'')}
    style={p?{left:p.x-origin.x,top:p.y-origin.y,...shift(key)}:undefined}
    title="قسم: اضغط لتسميته أو نقله أو حذفه. اسحبه إلى أي مكان، أو أفلت في وسطه موظفين">
    <Icon size={15} aria-hidden className="org-icon"/><b>{a.name}</b>

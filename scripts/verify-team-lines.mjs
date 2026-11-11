@@ -138,4 +138,11 @@ await denied(()=>daily(lead.token,'add_boss',{userId:b.id,managerId:lead.id}));
 chart=await daily(owner.token,'set_manager',{userId:other.id,managerId:lead.id});assert.deepEqual(chart.bosses,[],'Now his main line');
 await assert.rejects(()=>daily(owner.token,'add_boss',{userId:other.id,managerId:lead.id}),/يتبعه أصلاً/);
 chart=await daily(owner.token,'add_boss',{userId:other.id,managerId:head.id});chart=await daily(owner.token,'remove_boss',{userId:other.id,managerId:head.id});assert.deepEqual(chart.bosses,[]);
+// Who is online: a ping marks a person as seen; only whoever sees the whole chart is told; anyone may ping.
+await daily(a.token,'ping');await daily(b.token,'ping');
+chart=await daily(owner.token,'team');assert.ok(chart.seen[a.id]&&chart.seen[b.id],'Seen after a ping');assert.ok(chart.now,'With the server time');
+assert.equal((await daily(lead.token,'team')).seen,undefined,'A lead is not told who is online');
+// A branch: a holder box with any name, holding sections and people.
+chart=await daily(owner.token,'save_area',{name:'فرع الكويت',role:'branch'});const branch=chart.areas.find(x=>x.name==='فرع الكويت');assert.equal(branch.role,'branch');
+chart=await daily(owner.token,'save_area',{id:branch.id,name:'فرع الكويت الرئيسي',role:'branch'});assert.equal(chart.areas.find(x=>x.id===branch.id).name,'فرع الكويت الرئيسي','Renamed');
 console.log('Passed team lines: leads read their team down the line and themselves, the head reads the leads and their teams, nobody reads above or beside, no loops, only the owner or a staff admin changes the lines; sections hold people and sections, whoever a section sits under oversees everyone in it, sections move without loops and their people move up when one is removed.');

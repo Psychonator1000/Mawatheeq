@@ -9,7 +9,7 @@ const Chat = lazy(() => import('@/components/chat'));
 const PaperFiles = lazy(() => import('@/components/paper-files'));
 import ConnectionStatus from '@/components/connection-status';
 import {workspaceStorageKey} from '@/lib/departments';
-import { restoreSession, signIn, signOut, changePassword, localRequest, sessionEvent, isSwitchedSession, returnToOwner, type LocalUser } from '@/lib/local-auth';
+import { restoreSession, signIn, signOut, changePassword, localRequest, dailyRequest, sessionEvent, isSwitchedSession, returnToOwner, type LocalUser } from '@/lib/local-auth';
 import type { Permissions } from '@/lib/permissions';
 import { cachedUser, cachedAccess, rememberUser, rememberAccess } from '@/lib/boot-cache';
 import { canSee, effectiveView, toolOff } from '@/lib/view-map';
@@ -32,6 +32,18 @@ export default function SharedApp() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const generation = useRef(0);
+
+  // «Online» on «فريق المكتب»: the open app says it is here once a minute while it is in front of the person (not when the
+  // owner is looking through someone else's account). Older servers without it are simply not told.
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId || isSwitchedSession()) return;
+    const ping = () => { if (!document.hidden) void dailyRequest('ping').catch(() => undefined); };
+    ping();
+    const timer = window.setInterval(ping, 60000);
+    document.addEventListener('visibilitychange', ping);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', ping); };
+  }, [userId]);
 
   useEffect(() => {
     let active = true;

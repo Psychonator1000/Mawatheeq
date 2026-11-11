@@ -14,7 +14,11 @@ export type TeamExtra = { userId: string; areaId: string };
 export type TeamBoss = { userId: string; managerId: string };
 /** `layout`: boxes put by hand on the board; `flow`: heads whose branch grows to the left or right. */
 export type TeamChart = { lines: TeamLine[]; areas: TeamArea[]; extras?: TeamExtra[]; order?: Record<string, number>;
-  layout?: Record<string, [number, number]>; flow?: Record<string, 'left' | 'right'>; bosses?: TeamBoss[] };
+  layout?: Record<string, [number, number]>; flow?: Record<string, 'left' | 'right'>; bosses?: TeamBoss[];
+  /** When each person's app last said it was open (the owner and admins only), and the server's time to compare with. */
+  seen?: Record<string, string>; now?: string };
+/** Online: the app said so within the last two and a half minutes. */
+export const isOnline = (chart: TeamChart, userId: string) => { const t = chart.seen?.[userId]; return !!t && Date.parse(chart.now || new Date().toISOString()) - Date.parse(t) < 150000; };
 /** What an account oversees (`below`, at any depth), and the whole chart for whoever may change it or reads every report. */
 export type TeamInfo = TeamChart & { all: boolean; leads: boolean; canManage: boolean; below: string[] };
 export const EMPTY_CHART: TeamChart = { lines: [], areas: [], extras: [] };
@@ -41,6 +45,7 @@ export const peopleBelow = (parent: Map<string, string>, key: string) => new Set
 export const peopleCount = (n: number) => n === 1 ? 'شخص واحد' : n === 2 ? 'شخصين' : n % 100 >= 3 && n % 100 <= 10 ? `${n} أشخاص` : `${n} شخصاً`;
 /** A section's name to start from, for the kind of work it is for. */
 export const AREA_NAMES: Record<string, string> = {
+  branch: 'فرع جديد',
   manager: 'الإدارة', lawyer: 'المحامون', traineeLawyer: 'المحامون المتدربون', counsel: 'المستشارون', legalResearcher: 'الباحثون القانونيون',
   translator: 'الترجمة', secretary: 'السكرتارية', receptionist: 'الاستقبال', sessionsClerk: 'إداريو الجلسات', executionClerk: 'إداريو التنفيذ',
   collections: 'التحصيل', callCenter: 'الكول سنتر', accountant: 'المحاسبة', hr: 'الموارد البشرية', archivist: 'الأرشيف', dataEntry: 'إدخال البيانات',

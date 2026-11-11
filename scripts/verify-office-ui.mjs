@@ -209,9 +209,19 @@ try{
   // The board fits the screen: the page itself does not scroll past it, and the board stays inside the page's card.
   {const m=await page.evaluate(()=>{const b=document.querySelector('.org-tree').getBoundingClientRect(),c=document.querySelector('.office-staff').getBoundingClientRect();return {page:document.scrollingElement.scrollHeight-innerHeight,inside:b.bottom<=c.bottom+1}});
    assert.ok(m.page<=2,'No page scroll past the board ('+m.page+')');assert.ok(m.inside,'Inside the card');await page.screenshot({path:artifacts+'/team-board-fits.png'});}
+  // Online: salem.ui's app said it is open a moment ago, so his box has a green dot and his panel says «متصل الآن».
+  await db.exec('reset role');await db.query("insert into mawatheeq_private.presence(user_id,last_seen) select id,now() from mawatheeq_private.accounts where username='salem.ui' on conflict (user_id) do update set last_seen=now()");await db.exec('set role anon');
+  // A branch: an empty holder box named at will («فرع جديد», renamed «فرع الكويت»), removed again.
+  await page.getByRole('button',{name:'إضافة فرع',exact:true}).click();{const bd=page.getByRole('dialog');assert.equal(await bd.getByLabel('اسم الفرع').inputValue(),'فرع جديد');
+   await bd.getByLabel('اسم الفرع').fill('فرع الكويت');await bd.getByRole('button',{name:'إضافة الفرع',exact:true}).click();await bd.waitFor({state:'hidden'});}
+  await page.locator('.org-branch[data-area="فرع الكويت"]').waitFor();
   // Kept after a reload: the page reads back where every box was put.
   await page.reload();await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();await page.locator('.org-tree-wrap').waitFor();
   await page.locator('.org-canvas [data-person="salem.ui"]').waitFor({timeout:8000});
+  await page.locator('.org-canvas [data-person="salem.ui"] .org-online').waitFor();await page.locator('.org-branch[data-area="فرع الكويت"]').waitFor();
+  await page.locator('.org-canvas [data-person="salem.ui"]').click();await page.locator('.org-panel').getByText('متصل الآن').waitFor();await page.locator('.org-panel').getByRole('button',{name:'إغلاق'}).click();
+  await page.screenshot({path:artifacts+'/team-online-branch.png'});
+  await page.locator('.org-branch[data-area="فرع الكويت"]').click();page.once('dialog',d=>void d.accept());await page.getByRole('dialog').getByRole('button',{name:'حذف الفرع'}).click();await page.locator('.org-branch').waitFor({state:'detached'});
   // The tree as a map: the wheel zooms (around the pointer), the buttons too, and dragging an empty spot moves it.
   {const zv=page.locator('.org-zoom-value');await page.locator('.org-zoom').getByRole('button',{name:'تصغير'}).click();assert.notEqual(await zv.innerText(),'100٪');
    const view=page.locator('.org-tree'),t=await view.boundingBox();await page.mouse.move(t.x+t.width/2,t.y+120);await page.mouse.wheel(0,-300);
