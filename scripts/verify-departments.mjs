@@ -237,6 +237,16 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  cf=await action(office,'collections','review_file',cf,{caseRevision:(await local(owner.token,'cases_page')).find(c=>c.id===visible.id).revision,attested:true});
  cf=await save(office,'collections',{...cf,payload:{...cf.payload,clientEntityId:ent}});
  assert.equal(cf.payload.clientEntityId,ent);assert.ok(cf.review&&cf.review.recordRevision===cf.revision,'Linking the client keeps the source review');
+ // The client's own claim details («بيانات الصحيفة» on its profile) go into every claim for it, in place of the file's
+ // own (owner, 11 November 2026); a file not linked to a client takes the profile with its creditor's name.
+ await db.exec('reset role');
+ await db.query(`update mawatheeq_private.client_entities set payload=payload||'{"claimDetails":{"companyAddress":"Synthetic HQ","email":"claims@synthetic.test","companyCivil":"1111111","companyRegister":"22222"}}' where id=$1`,[ent]);await db.exec('set role anon');
+ {const out=await action(office,'collections','generate',cf,{kind:'claim',outputId:uuid(300)});
+  assert.deepEqual([out.data.companyAddress,out.data.email,out.data.companyCivil,out.data.companyRegister],['Synthetic HQ','claims@synthetic.test','1111111','22222'],'The claim carries the client\'s details');
+  await db.exec('reset role');
+  const by=async q=>(await db.query('select mawatheeq_private.claim_details($1::jsonb) v',[JSON.stringify(q)])).rows[0].v;
+  assert.equal((await by({company:' Synthetic  Telecom '})).email,'claims@synthetic.test','An unlinked file finds the client by name');
+  assert.deepEqual(await by({company:'Unknown Co'}),{},'No client, no details');await db.exec('set role anon');}
  // Several parties: extra plaintiffs and defendants are kept with their details; an extra plaintiff may link to a client file.
  {const many=await save(office,'collections',{...cf,payload:{...cf.payload,plaintiffs:[{id:'p1',name:' Second plaintiff ',civilId:'280010100001',clientEntityId:ent}],defendants:[{id:'d1',name:'Second defendant',phone:'99990000',clientEntityId:ent},{id:'d2',name:'Third defendant'}]}});
   assert.deepEqual(many.payload.plaintiffs.map(x=>[x.name,x.clientEntityId]),[['Second plaintiff',ent]],'Extra plaintiffs are trimmed and keep their client link');
@@ -329,7 +339,7 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  await assert.rejects(()=>dept(owner.token,'archive','backup_page',{kind:'records'}),/./,'Backups use the existing department backup');
  assert.ok((await dept(owner.token,'collections','backup_page',{kind:'records'})).some(r=>r.workspace==='archive'),'Backups include archive records');}
 const backup=await dept(owner.token,'collections','backup_page',{kind:'outputs'});
-assert.equal(backup.length,7,'Three papers from the file (one before any review), two prepared before filing, two claims without the phone or the identity numbers');assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
+assert.equal(backup.length,8,'Three papers from the file (one before any review), two prepared before filing, two claims without the phone or the identity numbers, one claim with its client\'s details');assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
 await office(owner.token,'set_member_access',{id:collector.user.id,revision:collector.member.permissions?.revision||1,permissions:grants([])});
 await assert.rejects(()=>dept(collector.token,'collections','records_page'),e=>e.code==='28000','Grant changes revoke active department sessions');
 // The records list checks access with the permissions read once (department_visible_with): the same answer as the

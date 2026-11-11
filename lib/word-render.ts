@@ -10,7 +10,7 @@ import type PizZipType from 'pizzip';
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-const PAGE_GAP = 16;
+export const PAGE_GAP = 16;
 const tw = (v: number) => v / 15; // twentieths of a point → px
 const emu = (v: number) => v / 9525; // EMU → px
 const num = (v: string | null | undefined, d = 0) => { const n = Number(v); return v != null && v !== '' && Number.isFinite(n) ? n : d; };

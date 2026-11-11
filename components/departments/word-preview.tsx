@@ -1,9 +1,9 @@
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
-import {Download,FileText,LoaderCircle} from 'lucide-react';
+import {Download,FileText,LoaderCircle,Printer} from 'lucide-react';
 import {toast} from 'sonner';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '../ui/dialog';
 import {saveBlob} from '../shared';
-import {collectWord,openWord,renderWord,safeFileName,wordBlob,type WordDoc} from '@/lib/word-preview';
+import {collectWord,openWord,printWords,renderWord,safeFileName,wordBlob,type WordDoc} from '@/lib/word-preview';
 
 export type WordItem={id:string;name:string;kind:'claim'|'bundle';blob:Blob};
 const KIND_LABEL={claim:'صحيفة الدعوى',bundle:'حافظة مستندات'};
@@ -62,9 +62,19 @@ export default function WordPreview({items,onClose}:{items:WordItem[];onClose:()
    toast.success(`نُزّل ${list.length} ملفات Word في مجلد واحد.`);
   }catch(e){setError((e as Error).message)}finally{setBusy(false)}
  }
+ // Straight to the printer, as drawn here (with the corrections), one paper or all of them.
+ async function print(list:WordItem[]){
+  setBusy(true);
+  try{
+   keep();
+   const ready:WordDoc[]=[];
+   for(const it of list){let d=docs.current.get(it.id);if(!d){d=await openWord(it.blob);docs.current.set(it.id,d)}ready.push(d)}
+   await printWords(ready);
+  }catch(e){setError((e as Error).message)}finally{setBusy(false)}
+ }
  return <Dialog open onOpenChange={o=>{if(!o&&!busy)onClose()}}><DialogContent dir="rtl" className="office-dialog word-preview-dialog" onOpenAutoFocus={e=>e.preventDefault()}>
   <DialogHeader><DialogTitle><FileText size={18} aria-hidden/> معاينة Word قبل التنزيل</DialogTitle>
-   <DialogDescription>{many?`${items.length} مستندات. `:''}انقر على أي نص في الصفحة لتعديله، ثم نزّل الملف نظيفاً كما تراه. الحقول الفارغة نقاط تُكتب باليد.</DialogDescription></DialogHeader>
+   <DialogDescription>{many?`${items.length} مستندات. `:''}انقر على أي نص في الصفحة لتعديله، ثم اطبعه مباشرة أو نزّله نظيفاً كما تراه. الحقول الفارغة نقاط تُكتب باليد.</DialogDescription></DialogHeader>
   <div className={'word-preview'+(many?' many':'')}>
    {many&&<ol className="word-preview-list" aria-label="المستندات">{items.map(it=><li key={it.id} className={it.id===item?.id?'on':''}>
     <button type="button" onClick={()=>pick(it.id)} aria-current={it.id===item?.id}><b><bdi>{final[it.id]}</bdi></b><small>{KIND_LABEL[it.kind]}{edited.has(it.id)?' · معدّل':''}</small></button></li>)}</ol>}
@@ -79,6 +89,8 @@ export default function WordPreview({items,onClose}:{items:WordItem[];onClose:()
    </div>
   </div>
   <div className="actions word-preview-actions">
+   <button className="btn" disabled={busy||loading} onClick={()=>void print(many?items:[item])}><Printer size={16}/> {many?`طباعة الكل (${items.length})`:'طباعة'}</button>
+   {many&&<button className="btn" disabled={busy||loading} onClick={()=>void print([item])}>طباعة هذا فقط</button>}
    {many?<><button className="btn primary" disabled={busy||loading} onClick={()=>void download(items)}><Download size={16}/> تنزيل الكل ({items.length})</button><button className="btn" disabled={busy||loading} onClick={()=>void download([item])}>تنزيل هذا الملف فقط</button></>
     :<button className="btn primary" disabled={busy||loading} onClick={()=>void download(items)}><Download size={16}/> تنزيل Word</button>}
    <button className="btn" disabled={busy} onClick={onClose}>إغلاق</button></div>

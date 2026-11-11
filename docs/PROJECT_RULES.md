@@ -88,6 +88,8 @@ The owner requested on 25 September 2026 that Mawatheeq run through GitHub with 
 ## Employee workspaces
 
 - Names are kept plain (11 November 2026): account names lose any courtesy title written before them («ا/», «أ/», «ا.», «الأستاذ», «المحامي»; `strip_title()` on save, `plainName()` in the app) and «أ/» is added where the daily page shows them (`titled()`). Matching an account to case or roll lawyer names ignores the title on both sides.
+- «بيانات الصحيفة» (11 November 2026): a client profile's claim details (`payload.claimDetails`: address, e-mail, civil number, commercial register) go into every claim for that client, in place of the collection file's own (`claim_details()` when the claim is generated: the linked client, or the one profile named as the file's creditor). They are entered on the client's profile, never written into the code.
+- Papers print straight from the preview («طباعة»): the pages as drawn, one A4 sheet each (`printWords()` in `lib/word-preview.ts`).
 - Payment-order PDFs are read in the background (`lib/order-reading.ts`): a bar at the foot of the collections page shows the progress; the page stays usable and the review opens when the person chooses.
 
 - Selecting legal, secretary, collections, accounting or HR never grants authority. Department grants alone must not authorize the full legal case, client profile, document or other departments' records.

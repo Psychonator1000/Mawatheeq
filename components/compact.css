@@ -1640,3 +1640,17 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .order-reading-bar i{display:block;height:100%;background:var(--brand,#7a2335);transition:width .3s}
 .order-reading-acts{display:flex;gap:6px}.order-reading-acts .btn{min-height:30px;padding:3px 10px;font-size:12.5px}
 @media(max-width:560px){.order-reading{grid-template-columns:1fr}.order-reading-bar{grid-row:auto}}
+
+/* Printing the papers straight from the preview: drawn off screen, and only they print, one A4 sheet a page. */
+#wd-print-root{position:fixed;left:-100000px;top:0}
+.wd-print-page{position:relative;overflow:hidden;background:#fff}
+.wd-print-page .wd-page{box-shadow:none}
+@media print{
+ html.wd-printing body>*:not(#wd-print-root){display:none!important}
+ html.wd-printing,html.wd-printing body{background:#fff!important;margin:0!important;padding:0!important}
+ html.wd-printing #wd-print-root{position:static;left:auto}
+ html.wd-printing #wd-print-root *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ html.wd-printing .wd-print-page{break-after:page}
+ html.wd-printing .wd-print-page:last-child{break-after:auto}
+ @page{size:A4;margin:0}
+}

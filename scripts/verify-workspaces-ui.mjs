@@ -122,6 +122,13 @@ try{
  await dlg.locator('.word-preview-list button').nth(1).click();await dlg.locator('[data-t]').filter({hasText:'عنوان تجريبي'}).first().waitFor();
  const spot=dlg.locator('[data-t]').filter({hasText:'عنوان تجريبي'}).first();await spot.click();await page.keyboard.press('End');await page.keyboard.type(' مصحح قبل الطباعة');
  await screen('word-preview-desktop');
+ // Straight to the printer from the preview: only the papers print, one A4 sheet a page, with the correction made.
+ await page.evaluate(()=>{window.print=()=>{window.__printed=[...document.querySelectorAll('#wd-print-root .wd-print-page')].length}});
+ await dlg.getByRole('button',{name:'طباعة الكل (2)'}).click();await page.waitForFunction(()=>window.__printed>=3);
+ assert.ok(await page.locator('#wd-print-root').getByText('مصحح قبل الطباعة').count()>0,'The printed claim has the correction');
+ assert.equal(await page.locator('#wd-print-root [contenteditable]').count(),0,'Nothing is editable on the printed sheets');
+ await page.emulateMedia({media:'print'});await page.pdf({path:artifacts+'/printed-papers.pdf',format:'A4',printBackground:true,preferCSSPageSize:true});await page.emulateMedia({media:'screen'});
+ await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));await page.locator('#wd-print-root').waitFor({state:'detached'});
  await dlg.getByLabel('اسم ملف Word',{exact:true}).fill('صحيفة مخصصة');
  // Several papers download as one folder (a zip): a «حافظة» folder and a «صحيفة دعوى» folder when both are printed.
  page.on('download',onDownload);await dlg.getByRole('button',{name:'تنزيل الكل (2)'}).click();

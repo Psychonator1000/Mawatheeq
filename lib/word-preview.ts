@@ -2,7 +2,7 @@
 // edits are written back into the same Word file, so what is downloaded keeps the template's layout, fonts and boxes.
 // Each piece of text (each <w:t>) is drawn as <span data-t="n">; reading the spans back gives each piece's new text.
 import type PizZipType from 'pizzip';
-import { renderDocument } from './word-render';
+import { PAGE_GAP, renderDocument } from './word-render';
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const MC = 'http://schemas.openxmlformats.org/markup-compatibility/2006';
@@ -71,4 +71,31 @@ export function wordBlob(doc: WordDoc): Blob {
 export function safeFileName(name: string, fallback = 'مستند') {
   const clean = name.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/[. ]+$/, '').slice(0, 120);
   return clean || fallback;
+}
+
+/**
+ * Prints the papers as they are drawn here, straight to the printer (no Word file to open): each paper's pages are cut
+ * from its drawing onto A4 sheets, and only they print. Corrections made on the page are already in the documents.
+ */
+export async function printWords(docs: WordDoc[]) {
+  document.getElementById('wd-print-root')?.remove();
+  const root = document.createElement('div'); root.id = 'wd-print-root'; root.setAttribute('aria-hidden', 'true');
+  document.body.append(root);
+  for (const doc of docs) {
+    const host = document.createElement('div'); root.append(host);
+    const l = renderDocument(doc.zip, doc.dom, doc.texts, host), sheet = host.querySelector<HTMLElement>('.wd-sheet')!;
+    const h = (l.height - (l.pages - 1) * PAGE_GAP) / l.pages, pages: HTMLElement[] = [];
+    for (let i = 0; i < l.pages; i++) {
+      const page = document.createElement('div'); page.className = 'wd-print-page';
+      Object.assign(page.style, { width: l.width + 'px', height: h + 'px' });
+      const copy = sheet.cloneNode(true) as HTMLElement; Object.assign(copy.style, { position: 'absolute', left: '0', top: -(i * (h + PAGE_GAP)) + 'px' });
+      page.append(copy); pages.push(page);
+    }
+    host.replaceWith(...pages);
+  }
+  for (const el of Array.from(root.querySelectorAll('[contenteditable]'))) el.removeAttribute('contenteditable');
+  await document.fonts?.ready;
+  const done = () => { document.documentElement.classList.remove('wd-printing'); root.remove(); window.removeEventListener('afterprint', done); };
+  document.documentElement.classList.add('wd-printing'); window.addEventListener('afterprint', done);
+  window.print();
 }

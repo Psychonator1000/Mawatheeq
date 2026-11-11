@@ -4,7 +4,11 @@ export type ClientEntity = {
   id: string; name: string; kind: 'organization' | 'individual' | 'group' | 'unknown';
   sector: 'telecom' | 'insurance' | 'other'; contacts: ClientContact[]; aliases: string[];
   notes: string; needsReview: boolean; revision?: number;
+  /** «بيانات الصحيفة»: what every claim for this client states about it, in place of the collection file's own. */
+  claimDetails?: ClaimDetails;
 };
+export type ClaimDetails = { companyAddress?: string; email?: string; companyCivil?: string; companyRegister?: string };
+export const CLAIM_DETAILS: [keyof ClaimDetails, string][] = [['companyAddress', 'الكائن مقرها في (العنوان)'], ['email', 'البريد الإلكتروني'], ['companyCivil', 'الرقم المدني للجهة'], ['companyRegister', 'رقم السجل التجاري']];
 export const CLIENT_KINDS = { organization: 'شركة / جهة', individual: 'فرد', group: 'أطراف مشتركة / ورثة', unknown: 'تحتاج تحديد' };
 export const CLIENT_SECTORS = { other: 'عام', insurance: 'تأمين', telecom: 'اتصالات' };
 export function emptyClient(): ClientEntity {

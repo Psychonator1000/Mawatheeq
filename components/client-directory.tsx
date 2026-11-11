@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import RecordWindow, { useListNav, type WindowNav, type Enter } from './record-window';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
-import { CLIENT_KINDS, CLIENT_SECTORS, emptyClient, emptyContact, type ClientEntity } from '@/lib/clients';
+import { CLAIM_DETAILS, CLIENT_KINDS, CLIENT_SECTORS, emptyClient, emptyContact, type ClientEntity } from '@/lib/clients';
 import type { CaseRecord } from '@/lib/domain';
 import { formatDate,caseCode} from '@/lib/domain';
 import { normalizeSearch } from '@/lib/case-browse';
@@ -68,6 +68,10 @@ export function ClientEditor({ entity, clients, records = [], canMerge, canColle
       <Field label="ملاحظات عن الموكل" value={draft.notes} onChange={v => set('notes', v)} wide multiline/>
       <label className="checkbox-line wide"><input type="checkbox" checked={draft.needsReview} onChange={e => set('needsReview', e.target.checked)}/> هوية الجهة أو بياناتها تحتاج مراجعة</label>
     </div>
+    {draft.kind !== 'individual' && <><div className="client-section-heading"><h3>بيانات الصحيفة</h3></div>
+    <p className="subtitle">تُكتب كما هي في كل صحيفة دعوى لهذا الموكل (من ملفات التحصيل)، بدلاً مما في ملف التحصيل. الحقل الفارغ يُترك لما في الملف.</p>
+    <div className="form-grid">{CLAIM_DETAILS.map(([k, label]) => <Field key={k} label={label} value={draft.claimDetails?.[k] || ''} wide={k === 'companyAddress'}
+      onChange={v => set('claimDetails', { ...(draft.claimDetails || {}), [k]: v })}/>)}</div></>}
     {duplicate && <div className="notice">يوجد ملف آخر بهذا الاسم: {duplicate.name}. راجع الملف الموجود قبل إنشاء جهة جديدة؛ تشابه الأسماء وحده لا يثبت أنها الجهة نفسها.</div>}
     <div className="client-section-heading"><h3>الأشخاص المرتبطون بالموكل</h3><button type="button" className="btn" onClick={addPerson}><Plus size={16}/> إضافة شخص</button></div>
     <p className="subtitle">أضف موظف الشركة الذي يطلب الدعوى أو يتابعها، أو الممثل القانوني، مع صفته. يمكن للشخص نفسه تمثيل أكثر من جهة في ملفات منفصلة.</p>
