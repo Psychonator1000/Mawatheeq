@@ -411,7 +411,23 @@ try{
   recs=await dept('collections','records_page');assert.equal(byCode('W-3').caseId,'ui-case-1','Linked from the case');await page.keyboard.press('Escape');
   // The client profile lists its collection files.
   await page.getByRole('button',{name:/^الموكلون/}).first().click();await page.locator('.client-card').filter({hasText:'شركة تجريبية للاتصالات'}).click();
-  await page.getByText(/^ملفات التحصيل \(\d+\)$/).waitFor();await page.locator('.entity-collections').getByText('ملف W-2').waitFor();await screen('client-collections');await page.keyboard.press('Escape');}
+  await page.getByText(/^ملفات التحصيل \(\d+\)$/).waitFor();await page.locator('.entity-collections').getByText('ملف W-2').waitFor();await screen('client-collections');await page.keyboard.press('Escape');
+  // «مراجعة سريعة»: client files marked for review, confirmed in one click, and a likely duplicate merged into its twin.
+  await db.exec('reset role');
+  await db.query(`insert into mawatheeq_private.client_entities(payload) values('{"name":"مؤسسة المراجعة السريعة","kind":"unknown","sector":"other","aliases":[],"contacts":[],"notes":"","needsReview":true}'),('{"name":"شركة تجريبية للاتصالات (Test)","kind":"unknown","sector":"other","aliases":[],"contacts":[],"notes":"","needsReview":true}')`);
+  await db.exec("update mawatheeq_private.client_entities set payload=payload||jsonb_build_object('id',id::text) where payload->>'id' is null;set role anon");
+  await page.reload();await page.getByRole('heading',{name:'الموكلون',level:1}).waitFor();
+  await page.getByRole('button',{name:/^مراجعة سريعة/}).click();const rv=page.locator('.client-review');
+  const quick=rv.locator('tr',{hasText:'مؤسسة المراجعة السريعة'}),twin=rv.locator('tr',{hasText:'شركة تجريبية للاتصالات (Test)'});
+  await quick.waitFor();await twin.locator('.client-dup').waitFor({timeout:5000});assert.match(await twin.locator('.client-dup').innerText(),/شركة تجريبية للاتصالات/,'The likely twin is named beside it');await screen('client-review');
+  await quick.getByLabel('نوع مؤسسة المراجعة السريعة').selectOption('organization');await quick.getByRole('button',{name:'تأكيد'}).click();await quick.waitFor({state:'detached'});
+  await twin.getByRole('button',{name:'دمج'}).click();await page.getByRole('alertdialog').getByRole('button',{name:/تأكيد أنهما الجهة نفسها/}).click();await twin.waitFor({state:'detached'});
+  await db.exec('reset role');
+  const ents=(await db.query("select payload->>'name' name,payload->>'kind' kind,(payload->>'needsReview')::boolean review,merged_into from mawatheeq_private.client_entities where payload->>'name' in ('مؤسسة المراجعة السريعة','شركة تجريبية للاتصالات (Test)')")).rows;
+  await db.exec('set role anon');
+  assert.deepEqual(ents.find(e=>e.name==='مؤسسة المراجعة السريعة'),{name:'مؤسسة المراجعة السريعة',kind:'organization',review:false,merged_into:null},'Confirmed with its kind');
+  assert.ok(ents.find(e=>e.name==='شركة تجريبية للاتصالات (Test)').merged_into,'The duplicate is merged into its twin');
+  await page.getByRole('button',{name:'عرض البطاقات'}).click();}
  for(const name of ['السكرتارية','التحصيل','المحاسبة','الموارد البشرية','الأرشيف']){
   await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero, .sec-agenda, .work-desk').first().waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
  }

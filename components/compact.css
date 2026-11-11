@@ -1486,8 +1486,6 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .day-bar{position:sticky;bottom:0;z-index:3;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 18px;border-top:1px solid var(--border);background:color-mix(in srgb,var(--brand) 5%,var(--card));flex-shrink:0}
 .day-bar .day-summary{margin:0;padding:0;background:none}.day-bar .day-summary>b{display:none}
 .day-bar>.actions{margin-inline-start:auto;display:flex;gap:6px;align-items:center}.day-bar .btn{min-height:36px;white-space:nowrap}
-.team-board th,.team-board td{vertical-align:middle;white-space:nowrap}.team-board td .ok{color:#2f7d57;font-weight:600}.team-board td.late{color:#a32e38;font-weight:700}
-.team-board .team-board-acts{display:flex;gap:6px;justify-content:flex-end}.team-board-acts .btn{min-height:32px;padding:3px 10px}
 @container day (max-width:760px){.day-path{overflow:visible;height:auto}.day-path-body{overflow:visible}.day-purpose{height:auto}.day-purpose>span{white-space:normal}.day-path-body{padding:0 10px 10px}.day-bar{padding:8px 10px}.day-bar .day-summary{display:none}.day-bar>.actions{margin-inline-start:0;flex:1}.day-bar>.actions .btn.primary{flex:1}}
 
 /* «تطبيق على عدة حسابات»: what to change (each row: no change / shown / hidden) beside whom to change it for. */
@@ -1662,3 +1660,33 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 /* «الأداء»: the custom from–to range, in one tight row under the period chips. */
 .perf-range{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:end;margin:4px 0}.perf-range .field{margin:0;min-width:150px}
 .page-head .actions:has(.backup-due){flex-wrap:wrap;min-width:0;max-width:100%}
+
+/* «مراجعة سريعة» of client files: one tight row a client, the duplicate beside it, confirm or open at the end. */
+.client-review{display:grid;gap:8px}
+.client-review-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}.client-review-bar .btn{margin-inline-start:auto}
+.client-review-table td{vertical-align:middle}.client-review-table td small{display:block;color:var(--muted-foreground);font-size:11px}
+.client-review-table select,.client-review-table [role=combobox]{min-width:110px}
+.client-dup{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.client-review-acts{white-space:nowrap}.client-review-acts .btn{min-height:30px;padding:3px 10px}
+
+/* The team's day on one screen (owner, 11 November 2026): the team's tiles and the office's sittings and tasks side by
+   side across the whole width, each scrolling inside its own column, so the page itself never scrolls. */
+.day-path.team-day .day-path-body{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(400px,1.1fr);gap:0;overflow:hidden;padding:0}
+.day-path.team-day .day-sec{max-width:none;margin:0;min-height:0;overflow:auto;padding:0 14px 12px;border:0}
+.day-path.team-day .day-sec+.day-sec{border-top:0;border-inline-start:1px solid var(--border);padding-top:0}
+.day-path.team-day .day-sec-head{padding:8px 0 6px}
+.team-chips{flex:1 1 auto}
+.team-search{min-height:30px;padding:3px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);font:inherit;font-size:13px;width:150px}
+.team-tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px}
+.team-tile{position:relative;display:flex;border:1px solid var(--border);border-radius:10px;background:var(--card);border-inline-start:3px solid #c0392b}
+.team-tile.s-draft{border-inline-start-color:#c98a1a}.team-tile.s-sent{border-inline-start-color:#2f7d57}
+.team-tile-main{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:2px;align-items:center;padding:4px 8px;padding-inline-end:28px;border:0;background:none;font:inherit;text-align:start;cursor:pointer;border-radius:10px}
+.team-tile-main:hover{background:color-mix(in srgb,var(--brand,#7a2335) 6%,transparent)}
+.team-tile-name{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.team-tile-status{font-size:10.5px;padding:0 6px;white-space:nowrap}
+.team-tile-stats{display:flex;flex-wrap:wrap;align-items:center;gap:2px 7px;font-size:11.5px;color:var(--muted-foreground)}
+.team-tile-stats>span{display:inline-flex;align-items:center;gap:2px}.team-tile-stats b{color:var(--foreground);font-weight:600}.team-tile-stats b.ok{color:#2f7d57}.team-tile-stats .late,.team-tile-stats .late b{color:#a32e38;font-weight:700}
+.team-tile-day{position:absolute;top:4px;inset-inline-end:4px;width:22px;height:22px}
+@container day (max-width:760px){.day-path.team-day .day-path-body{display:block;overflow:visible}.day-path.team-day .day-sec{overflow:visible}.day-path.team-day .day-sec+.day-sec{border-inline-start:0;border-top:1px dashed var(--border)}}
+.day-path.team-day .day-chips .work-chip{padding:2px 9px;min-height:28px}
+.day-path.team-day .day-sec-head{gap:6px 8px}

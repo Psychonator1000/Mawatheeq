@@ -122,13 +122,13 @@ export default function DayDesk(p:Props){
     <div className="day-empty day-empty-action"><p>التقرير اليومي غير مفعّل لهذا الحساب، لذلك لا يظهر هنا ما يُكتب ويُرسل. يفعّله المسؤول من «فريق المكتب» ← «تعديل الصلاحيات» على الحساب ← الضغط على «مهام اليوم والتقرير» في المعاينة حتى يصبح «ظاهر»، ثم الحفظ. ولترحيل الجلسات وإتمام المهام يُفعَّل معه «السماح بالتعديل».</p></div></section>}</>
   :<>{missionsCol}<section className="day-sec" aria-label="تقرير الزميل"><div className="day-sec-head"><h2><span className="day-sec-n" aria-hidden>{p.missionsOn?'٢':'١'}</span>تقرير {name}</h2>{colleague&&<span className={'tag '+(colleague.submittedAt?'green':'amber')}>{colleague.submittedAt?'أُرسل '+clock(colleague.submittedAt):'مسودة'}</span>}</div>
    {!list?<p role="status" className="day-empty"><LoaderCircle className="spin" size={14}/> جارٍ التحميل…</p>:colleague?<ReportReader r={colleague} printedBy={p.printedBy}/>:<p className="day-empty">لم يكتب تقريراً لهذا اليوم.</p>}</section></>;
- const dayPath=<section className="panel day-path" aria-label={team?'يوم الفريق':self?(p.canReport?'تقريري اليومي':'يومي'):'يوم '+name}>
+ const dayPath=<section className={'panel day-path'+(team?' team-day':'')} aria-label={team?'يوم الفريق':self?(p.canReport?'تقريري اليومي':'يومي'):'يوم '+name}>
   <div className="day-path-body">{sections}</div>
   {self&&p.canReport&&<ReportBar r={report} date={date} today={today} name={memberLabel(me)} printedBy={p.printedBy}/>}</section>;
  const mainCol=mode==='perf'?<Performance p={p} onPick={id=>{setWho(id===p.user.id?'me':id);setMode('day')}}/>:mode==='posting'?postingCol:mode==='dates'?datesCol:mode==='calendar'?calendarCol:dayPath;
  // Under the head of every view, one line that says what the view is for and what to press.
  const PURPOSE:Record<Mode,string>={
-  day:team?'لكل محامٍ تقريره وجلساته ومهامه وما تأخر عليه، وتحتها جلسات ومهام المكتب. «يومه» يفتح قائمته وتقريره.'
+  day:team?'لكل محامٍ بطاقة: تقريره وجلساته ومهامه وما تأخر عليه، وبجانبها جلسات ومهام المكتب. اضغط البطاقة لقراءة التقرير، والسهم لفتح يومه.'
    :self?(p.missionsOn&&p.canReport?'أنجز جلساتك ومهامك من القائمة، وأضف ما عملته خارجها، ثم أرسل التقرير من الشريط في الأسفل.':p.canReport?'أضف ما عملته اليوم بالأزرار، ثم أرسل التقرير من الشريط في الأسفل.':'جلساتك ومهامك في هذا اليوم. التقرير اليومي غير مفعّل لهذا الحساب (التفاصيل في القسم الثاني).')
    :`يوم ${name}: جلساته ومهامه، وتقريره.`,
   posting:`كل جلسات المكتب في هذا اليوم (${posting.length}). اضغط «ترحيل» في كل جلسة لتسجيل ما تم فيها وتحديد الجلسة القادمة.`,
@@ -357,23 +357,35 @@ function NoReporters({canManage}:{canManage?:boolean}){
  return <div className="day-empty day-empty-action"><p>لا أحد مكلف بالتقرير اليومي بعد. ليظهر محامٍ هنا: «فريق المكتب» ← «تعديل الصلاحيات» على حسابه ← اضغط «مهام اليوم والتقرير» في المعاينة لمنحه.</p>
   {canManage&&<button type="button" className="btn primary" onClick={()=>openWorkspace('team')}><UsersRound size={15}/> فتح فريق المكتب</button>}</div>;
 }
-/** «الفريق اليوم»: a row a person — their report, the day's sittings and tasks, what is late — to read or open their day. */
+/**
+ * «الفريق اليوم»: one small tile a person (their report, the day's sittings and tasks, what is late), many to a row, so
+ * the whole team shows at once however large it grows; chips pick out who has not written, drafts, sent or has late
+ * work, and a search finds a name. A tile opens that person's report (or their day when there is none).
+ */
+type TeamFilter='all'|'none'|'draft'|'sent'|'late';
 function TeamBoard({rows,date,today,reading,onRead,onDay,printedBy,canManage}:{rows:TeamDayRow[]|null;date:string;today:string;reading:string;onRead:(id:string)=>void;onDay:(id:string)=>void;printedBy:string;canManage?:boolean}){
+ const [filter,setFilter]=useState<TeamFilter>('all'),[q,setQ]=useState('');
  const sent=rows?.filter(r=>r.status==='sent')||[],open=rows?.find(r=>r.userId===reading)?.report;
  const printAll=()=>{if(!sent.length)return;if(!printHtml(reportsHtml(sent.map(r=>({name:r.name,date:formatDate(date),payload:cleanReport(readReport(r.report!.payload)),sent:'أُرسل '+clock(r.report!.submittedAt)})),printedBy,formatDate(todayISO()))))toast.error('تعذر فتح الطباعة.')};
- const done=(d:number,all:number,word:string)=>all?<span className={d===all?'ok':''}>{d} من {all} {word}</span>:<span className="muted">—</span>;
+ const pass=(r:TeamDayRow,f:TeamFilter)=>f==='all'||(f==='late'?r.late>0:r.status===f);
+ const count=(f:TeamFilter)=>rows?.filter(r=>pass(r,f)).length||0;
+ const shown=(rows||[]).filter(r=>pass(r,filter)&&(!q.trim()||normalizeSearch(r.name+' '+r.username).includes(normalizeSearch(q))));
+ const chips:[TeamFilter,string][]=[['all','الكل'],['none','لم يكتب'],['draft','مسودة'],['sent','أُرسل'],['late','متأخر عليه']];
+ const frac=(d:number,all:number)=>all?<b className={d===all?'ok':''}>{d}/{all}</b>:<b className="muted">—</b>;
  return <section className="day-sec day-board" aria-label="تقارير الفريق">
   <div className="day-sec-head"><h2><span className="day-sec-n" aria-hidden>١</span>الفريق {date===today?'اليوم':'في هذا اليوم'}</h2>
-   {rows&&rows.length>0&&<><span className="tag green">{sent.length} أُرسل</span><span className="tag">{rows.length-sent.length} لم يُرسل</span></>}
-   <div className="actions"><button className="btn" disabled={!sent.length} onClick={printAll}><Printer size={15}/> طباعة المرسلة</button></div></div>
+   {rows&&rows.length>0&&!open&&<div className="work-chips day-chips team-chips" role="group" aria-label="تصفية الفريق">{chips.map(([k,l])=><button key={k} type="button" className={'work-chip'+(filter===k?' on':'')+(k==='late'?' late':'')} aria-pressed={filter===k} onClick={()=>setFilter(k)}>{l}<b>{count(k)}</b></button>)}</div>}
+   <div className="actions">{rows&&rows.length>8&&!open&&<input className="team-search" type="search" aria-label="بحث عن شخص في الفريق" placeholder="ابحث عن اسم…" value={q} onChange={e=>setQ(e.target.value)}/>}
+    <button className="btn" disabled={!sent.length} onClick={printAll}><Printer size={15}/> طباعة المرسلة</button></div></div>
   {!rows?<p role="status" className="day-empty"><LoaderCircle className="spin" size={14}/> جارٍ تحميل التقارير…</p>
   :open?<><button className="btn day-back" onClick={()=>onRead('')}><ChevronRight size={15}/> كل الفريق · {open.displayName?titled(open.displayName):open.username}</button><ReportReader r={open} printedBy={printedBy}/></>
   :!rows.length?<NoReporters canManage={canManage}/>
-  :<div className="table-wrap"><table className="office-table team-board"><thead><tr><th>المحامي</th><th>التقرير</th><th>الجلسات</th><th>المهام</th><th>متأخر</th><th aria-label="إجراءات"></th></tr></thead>
-   <tbody>{rows.map(r=><tr key={r.userId}><td><b>{r.name}</b></td>
-    <td><span className={'tag '+(r.status==='sent'?'green':r.status==='draft'?'amber':'red')}>{STATUS_LABELS[r.status]}{r.status==='sent'&&' '+clock(r.report!.submittedAt)}</span>{r.report&&<small className="muted"> {r.items} بند</small>}</td>
-    <td>{done(r.hearingsDone,r.hearings,'رُحّلت')}</td><td>{done(r.tasksDone,r.tasks,'منجزة')}</td>
-    <td className={r.late?'late':''}>{r.late||<span className="muted">—</span>}</td>
-    <td className="team-board-acts"><button type="button" className="btn" disabled={!r.report} onClick={()=>onRead(r.userId)}>اقرأ التقرير</button><button type="button" className="btn" onClick={()=>onDay(r.userId)}>يومه <ArrowUpLeft size={14}/></button></td></tr>)}</tbody></table></div>}
+  :!shown.length?<p className="day-empty">لا أحد بهذا التصنيف.</p>
+  :<ul className="team-tiles">{shown.map(r=><li key={r.userId} className={'team-tile s-'+r.status+(r.late?' has-late':'')}>
+    <button type="button" className="team-tile-main" onClick={()=>r.report?onRead(r.userId):onDay(r.userId)} title={r.report?`اقرأ التقرير (البنود: ${r.items})`:'لم يكتب تقريراً: افتح يومه'}>
+     <span className="team-tile-name" title={r.name}>{r.name}</span>
+     <span className="team-tile-stats"><span className={'tag team-tile-status '+(r.status==='sent'?'green':r.status==='draft'?'amber':'red')}>{STATUS_LABELS[r.status]}{r.status==='sent'&&' '+clock(r.report!.submittedAt)}</span><span title="الجلسات: رُحّلت من المطلوبة" aria-label="الجلسات"><Gavel size={12} aria-hidden/>{frac(r.hearingsDone,r.hearings)}</span><span title="المهام: أُنجزت من المطلوبة" aria-label="المهام"><ListChecks size={12} aria-hidden/>{frac(r.tasksDone,r.tasks)}</span>
+      {r.late>0&&<span className="late" title="متأخر الآن" aria-label="متأخر"><Hourglass size={12} aria-hidden/><b>{r.late}</b></span>}</span></button>
+    <button type="button" className="icon-btn team-tile-day" aria-label={'يوم '+r.name} title="يومه: قائمته وتقريره" onClick={()=>onDay(r.userId)}><ArrowUpLeft size={14}/></button></li>)}</ul>}
  </section>;
 }
