@@ -22,7 +22,7 @@ const iso=(v:unknown)=>{
  * become opening entries marked as carried over. Files are not linked to cases here: a file's automatic number belongs
  * to its payment order, not to a case, so a case is linked from the file once the lawsuit is filed.
  */
-export default function CollectionImport({files,clients=[],onDone}:{files:CollectionRecord[];clients?:{id:string;name:string}[];onDone:()=>void}) {
+export default function CollectionImport({files,clients=[],onDone,label='استيراد Excel',onImported}:{files:CollectionRecord[];clients?:{id:string;name:string}[];onDone:()=>void;label?:string;onImported?:(ids:string[])=>void}) {
  const [orderList,setOrderList]=useState(false),[plan,setPlan]=useState<Plan|null>(null),[name,setName]=useState(''),[skipped,setSkipped]=useState(0),[busy,setBusy]=useState(false),[done,setDone]=useState(0),[errors,setErrors]=useState<string[]>([]);
  async function read(f:File){
   try{
@@ -39,13 +39,13 @@ export default function CollectionImport({files,clients=[],onDone}:{files:Collec
   }catch(e){toast.error((e as Error).message)}
  }
  async function apply(){
-  if(!plan)return;setBusy(true);const failed:string[]=[];let n=0;
+  if(!plan)return;setBusy(true);const failed:string[]=[],made:string[]=[];let n=0;
   const one=async({file,caseId}:Plan[number])=>{
    try{
     const base={...blankDocument(),...file.payload,amountWords:file.payload.amount?amountInWords(file.payload.amount):''};
     // An order list's file is a lawsuit to prepare: the client is linked and the bundle's documents are listed.
     const payload=orderList?{...base,clientEntityId:guessClient(base.company,clients),evidence:orderEvidence(base)}:{...base,evidence:[]};
-    const rec=await departmentRequest<CollectionRecord>('save_record',{workspace:'collections',record:{...newDepartmentRecord('collections','file',payload),caseId}});
+    const rec=await departmentRequest<CollectionRecord>('save_record',{workspace:'collections',record:{...newDepartmentRecord('collections','file',payload),caseId}});made.push(rec.id);
     const date=file.payload.arrivalDate||todayISO();
     for(const [type,amount,label] of [['payment',file.paid,'إجمالي المدفوعات المنقول'],['expense',file.expenses,'إجمالي المصروفات المنقول']] as const)
      if(amount)await departmentRequest('save_record',{workspace:'collections',record:{...newDepartmentRecord('collections','payment',{type,date,amount,method:'',reference:'استيراد '+file.payload.code,notes:label}),caseId,subjectId:rec.id}});
@@ -56,18 +56,19 @@ export default function CollectionImport({files,clients=[],onDone}:{files:Collec
   for(let i=0;i<plan.length;i+=4)await Promise.all(plan.slice(i,i+4).map(one));
   setBusy(false);setErrors(failed);
   if(plan.length-failed.length)toast.success(`استُورد ${plan.length-failed.length} ملف.`);
+  if(made.length)onImported?.(made);
   if(!failed.length){setPlan(null);onDone()}
  }
  const withMoney=plan?.filter(p=>p.file.paid||p.file.expenses).length||0;
  return <>
-  <label className="btn"><Upload size={16}/> استيراد Excel<input type="file" accept={EXCEL_ACCEPT} className="upload-input" aria-label="ملف Excel للتحصيل" onChange={e=>{const f=e.target.files?.[0];if(f)void read(f);e.target.value=''}}/></label>
+  <label className="btn"><Upload size={16}/> {label}<input type="file" accept={EXCEL_ACCEPT} className="upload-input" aria-label="ملف Excel للتحصيل" onChange={e=>{const f=e.target.files?.[0];if(f)void read(f);e.target.value=''}}/></label>
   {plan&&<EditorDialog title="استيراد ملفات من Excel" description={`${name} · تُضاف الملفات الجديدة فقط؛ الملفات الموجودة بالرقم نفسه لا تتغير.`} busy={busy} onClose={()=>{setPlan(null);if(done)onDone()}}>
    <div className="import-summary" role="status">
     <div><b>{plan.length}</b><span>ملف جديد</span></div><div><b>{skipped}</b><span>موجود مسبقاً (يُتجاوز)</span></div>
     <div><b>{plan?.filter(p=>p.file.autoNumber).length||0}</b><span>بالرقم الآلي لأمر الأداء</span></div><div><b>{withMoney}</b><span>ملف له مدفوعات أو مصروفات منقولة</span></div>
    </div>
    {orderList?<p className="subtitle">كشف أوامر أداء: يُنشأ لكل أمر ملف تحت الرفع، مرتبط بالموكل، و«تاريخ الحكم» يُحفظ تاريخاً لرفض أمر الأداء. تُستكمل بيانات الإيصال وكشف الحساب من ملف PDF للأمر أو يدوياً، وبيانات الدعوى بعد رفعها.</p>:<p className="subtitle">«سبب المديونية» يُحفظ كرقم العميل لدى الموكل، و«الرقم الآلى - ملف» كما ورد. الملفات غير المرتبطة تُربط بقضيتها لاحقاً من الملف أو من القضية.</p>}
-   <div className="table-wrap import-list"><table className="office-table"><thead><tr><th>رقم الملف</th><th>الموكل</th><th>الخصم</th><th>الحالة</th><th>المطالبة</th><th>الورود</th><th>الرقم الآلي لأمر الأداء</th></tr></thead><tbody>{plan.slice(0,200).map(({file:f})=><tr key={f.payload.code}><td>{f.payload.code}</td><td>{f.payload.company}</td><td>{f.payload.defendant}<small>{f.payload.civilId}</small></td><td>{f.payload.fileStatus||'—'}</td><td>{f.payload.amount||'—'}</td><td className="nowrap">{f.payload.arrivalDate?formatDate(f.payload.arrivalDate):'—'}</td><td>{f.payload.fileAutoNumber||'—'}</td></tr>)}</tbody></table>{plan.length>200&&<p className="subtitle">و{plan.length-200} ملف آخر.</p>}</div>
+   <div className="table-wrap import-list"><table className="office-table"><thead><tr><th>رقم الملف</th><th>الموكل</th><th>الخصم</th><th>الحالة</th><th>المطالبة</th><th>الورود</th><th>الرقم الآلي لأمر الأداء</th></tr></thead><tbody>{plan.slice(0,200).map(({file:f})=><tr key={f.row}><td>{f.payload.code}</td><td>{f.payload.company}</td><td>{f.payload.defendant}<small>{f.payload.civilId}</small></td><td>{f.payload.fileStatus||'—'}</td><td>{f.payload.amount||'—'}</td><td className="nowrap">{f.payload.arrivalDate?formatDate(f.payload.arrivalDate):'—'}</td><td>{f.payload.fileAutoNumber||'—'}</td></tr>)}</tbody></table>{plan.length>200&&<p className="subtitle">و{plan.length-200} ملف آخر.</p>}</div>
    {errors.length>0&&<div className="notice" role="alert"><b>لم تُستورد {errors.length} ملفات:</b><ul className="import-issues">{errors.map(e=><li key={e}>{e}</li>)}</ul></div>}
    {busy&&<p role="status"><LoaderCircle className="spin" size={16}/> جارٍ الاستيراد… {done}/{plan.length}</p>}
    <div className="actions"><button className="btn primary" disabled={busy||!plan.length||!!errors.length} onClick={()=>void apply()}><Check size={16}/> استيراد {plan.length} ملف</button><button className="btn" disabled={busy} onClick={()=>{setPlan(null);if(done)onDone()}}>إغلاق</button></div>

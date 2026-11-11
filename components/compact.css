@@ -1305,21 +1305,27 @@ fieldset.ve-locked :is(input,textarea,select,button,[role=combobox]){cursor:not-
 .roll-fields-clear{justify-self:start;align-self:center}
 :root .roll-fields-toggle{align-self:flex-end;min-height:34px;padding:4px 12px;white-space:nowrap}
 @media(max-width:700px){.roll-fields{grid-template-columns:1fr 1fr}.roll-fields .roll-title-field{grid-column:1/-1}}
-/* Review before printing: one bar per file, opened to correct what prints; fields in a tight grid. */
-.print-check{display:grid;gap:6px;max-height:min(60vh,620px);overflow:auto;padding-inline-end:4px}
-.print-check-file{border:1px solid var(--border);border-radius:12px;background:var(--card)}
-.print-check-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;background:none;font:inherit;text-align:start;cursor:pointer}
-.print-check-head span:nth-child(2){margin-inline-end:auto}.print-check-head em{font-style:normal;color:var(--muted-foreground);margin:0 4px}
-.print-check-toggle{font-size:12px;color:var(--brand,#7a2335);font-weight:600}
-.print-check-body{display:grid;gap:8px;padding:0 10px 10px}
-.print-check-body fieldset{border:0;border-top:1px solid var(--border);margin:0;padding:6px 0 0}.print-check-body legend{font-size:12px;font-weight:700;color:var(--brand,#7a2335);padding:0 4px}
-.print-check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px 8px}
-.print-check-grid .field{margin:0;gap:2px}.print-check-grid .field span{font-size:11px}
-.print-check-grid input,.print-check-evidence input{min-height:30px;padding:3px 8px;font-size:13px;border:1px solid var(--border);border-radius:8px;background:var(--card);font-family:inherit;min-width:0}
-.print-check-grid .needs-check input{border-color:#dc2626;background:color-mix(in srgb,#ef4444 8%,var(--card))}
-.print-check-evidence{display:grid;gap:4px}.print-check-evidence .evidence-row{display:grid;grid-template-columns:auto minmax(0,1fr) 140px 64px;gap:6px;align-items:center}
-.print-check-attest{margin:6px 0}
-@media(max-width:700px){.print-check-evidence .evidence-row{grid-template-columns:auto minmax(0,1fr)}.print-check-evidence .evidence-row input[type=date],.print-check-evidence .evidence-row input[type=number]{grid-column:2}}
+/* «معاينة Word قبل التنزيل»: the papers drawn as they will print, their text editable in place. */
+.office-dialog.word-preview-dialog{width:calc(100vw - 24px)!important;max-width:1180px!important;height:calc(100dvh - 24px);max-height:none!important;display:flex!important;flex-direction:column;gap:8px;overflow:hidden}
+.word-preview{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:1fr;gap:8px}
+.word-preview.many{grid-template-columns:minmax(180px,250px) 1fr}
+.word-preview-list{margin:0;padding:0;list-style:none;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--card)}
+.word-preview-list button{display:grid;gap:1px;width:100%;padding:6px 10px;border:0;border-bottom:1px solid var(--border);background:none;font:inherit;text-align:start;cursor:pointer}
+.word-preview-list b{font-size:13px;overflow-wrap:anywhere}.word-preview-list small{font-size:11px;color:var(--muted-foreground)}
+.word-preview-list li.on button{background:color-mix(in srgb,var(--brand,#7a2335) 12%,transparent);box-shadow:inset -3px 0 0 var(--brand,#7a2335)}
+.word-preview-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:6px}
+.word-preview-name{margin:0;gap:2px}.word-preview-name-row{display:flex;align-items:center;gap:6px}.word-preview-name-row input{flex:1;min-width:0}.word-preview-name-row em{font-style:normal;color:var(--muted-foreground);direction:ltr;unicode-bidi:isolate}
+.word-preview-area{position:relative;flex:1 1 auto;min-height:0;overflow:auto;overflow-x:hidden;border-radius:10px;background:#8a8a8a}
+.word-preview-wait{position:absolute;inset-inline:0;top:12px;display:flex;justify-content:center;gap:6px;color:#fff;margin:0}
+.word-preview-page .docx-wrapper{background:transparent!important;padding:12px!important}
+.word-preview-page .docx-wrapper>section.docx{margin-bottom:12px!important;color:#000;box-shadow:0 2px 10px rgb(0 0 0/.35)}
+/* A text box's drawing is as tall as its anchor and would cover the text beside it: only its own text takes clicks. */
+.word-preview-page svg{pointer-events:none}.word-preview-page svg .word-edit{pointer-events:auto}
+.word-preview-page .word-edit{outline:none;cursor:text;border-radius:2px}
+.word-preview-page .word-edit:hover{background:rgb(255 230 150/.35)}
+.word-preview-page .word-edit:focus{background:rgb(255 230 150/.5);box-shadow:0 0 0 1px #d9a400}
+.word-preview-actions{margin:0}
+@media(max-width:760px){.word-preview.many{grid-template-columns:1fr;grid-template-rows:minmax(0,120px) 1fr}}
 /* «مهام اليوم والتقرير»: a bar for the day and the person, then the missions and the report side by side, each scrolling inside. */
 .day-desk{display:flex;flex-direction:column;gap:0;height:calc(100dvh - var(--legal-desk-offset,150px));min-height:460px}
 .day-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}

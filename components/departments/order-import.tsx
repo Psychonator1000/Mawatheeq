@@ -61,7 +61,7 @@ export default function OrderImport({files,clients,onDone}:{files:CollectionReco
    catch(e){failed.push(`${i.file.name}: ${(e as Error).message}`)}
   }
   setSaving(false);
-  if(made)toast.success(`حُفظ ${made} ملف تحصيل. راجع المصدر في كل ملف، ثم اطبعه من «طباعة جماعية».`);
+  if(made)toast.success(`حُفظ ${made} ملف تحصيل. اطبعها من «طباعة الحافظة والدعوى».`);
   if(failed.length)toast.error(failed.join(' · '));else{setItems(null);onDone()}
  }
  const close=()=>{stop.current?.abort();setItems(null);if(ready.length===0)onDone()};

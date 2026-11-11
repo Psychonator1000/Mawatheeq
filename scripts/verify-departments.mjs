@@ -70,7 +70,8 @@ await denied(()=>action(collector,'collections','history',hiddenFile));
 await denied(()=>save(reader,'collections',{...file,payload:{...file.payload,notes:'Denied'}}));
 await denied(()=>action(hr,'collections','history',file));
 await denied(()=>action(collector,'accounting','history',file));
-await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(100)}),e=>e.code==='PT409');
+// Papers no longer wait for a source review (owner, 11 November 2026); only a stale copy of the file is refused.
+await assert.rejects(()=>action(collector,'collections','generate',{...file,revision:file.revision+1},{kind:'claim',outputId:uuid(100)}),e=>e.code==='PT409');
 await assert.rejects(()=>action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:false}));
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
 assert.equal(file.review.reviewer,'collector');assert.equal(file.review.recordRevision,file.revision);
@@ -82,12 +83,12 @@ let staleFile=file;file=await save(collector,'collections',{...file,payload:{...
 assert.equal(file.review,null);
 await assert.rejects(()=>save(collector,'collections',staleFile),e=>e.code==='PT409');
 assert.equal((await action(collector,'collections','outputs',file)).length,1);
+await action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(110)});
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
 visible=await local(owner.token,'save_case',{case:{...visible,notes:'Changed main case'}});
-await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'bundle',outputId:uuid(102)}),e=>e.code==='PT409');
+await action(collector,'collections','generate',file,{kind:'bundle',outputId:uuid(102)});
 await assert.rejects(()=>action(collector,'collections','review_file',file,{caseRevision:visible.revision-1,attested:true}),e=>e.code==='PT409');
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
-await action(collector,'collections','generate',file,{kind:'bundle',outputId:uuid(102)});
 // Papers are prepared before the lawsuit is filed («تحت الرفع»): no lawsuit number, court, circuit or hearing date yet.
 file=await save(collector,'collections',{...file,payload:{...file.payload,lawsuitNumber:'',lawsuitYear:'',hearingCourt:'',hearingCircuit:'',hearingDate:'',hearingDay:''}});
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
@@ -328,7 +329,7 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  await assert.rejects(()=>dept(owner.token,'archive','backup_page',{kind:'records'}),/./,'Backups use the existing department backup');
  assert.ok((await dept(owner.token,'collections','backup_page',{kind:'records'})).some(r=>r.workspace==='archive'),'Backups include archive records');}
 const backup=await dept(owner.token,'collections','backup_page',{kind:'outputs'});
-assert.equal(backup.length,6,'Two papers from the reviewed file, two prepared before filing, two claims without the phone or the identity numbers');assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
+assert.equal(backup.length,7,'Three papers from the file (one before any review), two prepared before filing, two claims without the phone or the identity numbers');assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
 await office(owner.token,'set_member_access',{id:collector.user.id,revision:collector.member.permissions?.revision||1,permissions:grants([])});
 await assert.rejects(()=>dept(collector.token,'collections','records_page'),e=>e.code==='28000','Grant changes revoke active department sessions');
 // The records list checks access with the permissions read once (department_visible_with): the same answer as the

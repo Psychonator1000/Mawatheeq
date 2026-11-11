@@ -23,7 +23,8 @@ await db.exec("insert into public.mawatheeq_members(user_id,role) select id,'own
 const rpc=async(name,args)=>(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
 const login=await rpc('mawatheeq_local_login',['ui_owner','Synthetic-password-123']);
 for(let i=0;i<25;i++)await rpc('mawatheeq_local_request',[login.token,'save_case',JSON.stringify({case:{id:'ui-case-'+i,code:'TEST-'+i,autoNumber:String(1000+i),client:'شركة اختبار الواجهة',clientGroup:'شركة اختبار الواجهة',opponent:'خصم تجريبي '+i,date:'2026-09-01',type:i===0?'':'حكم أول درجة',outcome:'لصالحنا',ruling:'حكم تجريبي لا يمثل بيانات حقيقية',notificationDate:'2026-09-10',appealConfirmation:'لا يوجد',procedures:[],revision:0}})]);
-const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
+// A UTF-8 locale, as on the office's computers: Chromium on Linux names Arabic downloads «download» without one.
+const browser=await chromium.launch({headless:true,args:['--no-sandbox'],env:{...process.env,LANG:'C.UTF-8',LC_ALL:'C.UTF-8'},...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
 const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
 const page=await context.newPage();const errors=[];const calls=[];
 supportFilterSelects(page.locator('body'));
@@ -48,11 +49,15 @@ const screen=async name=>page.screenshot({path:artifacts+'/'+name+'.png',fullPag
 async function enter(name){await click('فتح '+name);await page.getByRole('button',{name:'تحديث',exact:true}).waitFor();}
 async function switchTo(name){await page.getByRole('button',{name:/^حساب /}).click();await click('تغيير مساحة العمل');await click('فتح '+name);}
 async function pickToday(label){await page.getByRole('dialog').getByRole('button',{name:label,exact:true}).click();await page.locator('.date-popover').getByRole('button',{name:'اليوم',exact:true}).click();}
-async function downloadWord(button,expected){
- const promise=page.waitForEvent('download');await click(button);const download=await promise;
- const stream=await download.createReadStream();const chunks=[];for await(const chunk of stream)chunks.push(chunk);
- const PizZip=(await import('pizzip')).default;const xml=new PizZip(Buffer.concat(chunks)).file('word/document.xml').asText();
+// A paper opens as it will print («معاينة Word قبل التنزيل»), named after the opposite party, then downloads clean.
+async function wordXml(download){const chunks=[];for await(const chunk of await download.createReadStream())chunks.push(chunk);const PizZip=(await import('pizzip')).default;return new PizZip(Buffer.concat(chunks)).file('word/document.xml').asText()}
+async function downloadWord(button,expected,name){
+ await click(button);const dlg=page.getByRole('dialog',{name:'معاينة Word قبل التنزيل'});await dlg.locator('.word-edit').first().waitFor();
+ assert.equal(await dlg.getByLabel('اسم ملف Word',{exact:true}).inputValue(),name,'The paper is named after the opposite party');
+ const promise=page.waitForEvent('download');await dlg.getByRole('button',{name:'تنزيل Word'}).click();const download=await promise;
+ assert.equal(download.suggestedFilename(),name+'.docx');const xml=await wordXml(download);
  assert.ok(xml.includes(expected),'Word contains entered party data');assert.equal(xml.includes('{{'),false,'No unresolved template placeholders');
+ await dlg.getByRole('button',{name:'إغلاق'}).last().click();await dlg.waitFor({state:'detached'});
 }
 try{
  await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await click('فتح مساحة العمل');
@@ -72,10 +77,9 @@ try{
  // The hearing day follows the hearing date (a choice, not typed).
  await page.waitForFunction(()=>/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)$/.test(document.querySelector('input[role=combobox][aria-label="يوم الجلسة"]')?.value||''));
  await page.getByRole('tab',{name:/^الحافظة والمستندات/}).click();await click('إضافة مستند للحافظة');await field('وصف المستند 1','عقد تجريبي تمت مراجعته');await click('حفظ ملف التحصيل');
- await page.getByRole('heading',{name:'مراجعة المصدر',exact:true}).waitFor();await page.getByText('لا يمكن الإنشاء بعد: سجّل «مراجعة المصدر» أعلاه أولاً.').first().waitFor();assert.equal(await page.getByRole('button',{name:'إنشاء صحيفة Word',exact:true}).isDisabled(),true);
- await page.getByRole('checkbox',{name:'راجعت البيانات الحالية وطابقتها مع المصدر المسجل.',exact:true}).check();await click('تسجيل مراجعة المصدر');
- await page.getByText(/راجع ui_owner هذه النسخة/).waitFor();
- await downloadWord('إنشاء صحيفة Word','شركة اختبار التحصيل');await downloadWord('إنشاء حافظة Word','عقد تجريبي تمت مراجعته');
+ // No source review any more (owner, 11 November 2026): a saved file with its fields filled makes its papers at once.
+ assert.equal(await page.getByRole('heading',{name:'مراجعة المصدر',exact:true}).count(),0);
+ await downloadWord('إنشاء صحيفة Word','شركة اختبار التحصيل','خصم اختبار التحصيل');await downloadWord('إنشاء حافظة Word','عقد تجريبي تمت مراجعته','خصم اختبار التحصيل');
  await screen('collections-review-desktop');
  // File statements (إفادات): a call that is not done yet becomes a due follow-up.
  await page.getByRole('tab',{name:/^إفادات الملف/}).click();await page.getByRole('combobox',{name:'إجراء التحصيل أو التنفيذ'}).click();await page.getByRole('option',{name:'اتصال بالخصم',exact:true}).click();
@@ -86,20 +90,31 @@ try{
  await page.locator('.position-tile').filter({hasText:'إجمالي المسدد'}).getByText('25.125').waitFor();await page.locator('.position-tile').filter({hasText:'الباقي'}).getByText('100.000').waitFor();await screen('collections-money-desktop');
  // Follow-up fields: changing the file status keeps the source review.
  await page.getByRole('tab',{name:/^بيانات الملف/}).click();await page.getByRole('combobox',{name:'حالة الملف'}).click();await page.getByRole('option',{name:'تحصيل ودي',exact:true}).click();await click('حفظ ملف التحصيل');
- await page.locator('[data-record-window]').getByText('تمت المراجعة',{exact:true}).first().waitFor();
  await click('إغلاق الملف');await page.locator('.sec-agenda').getByText('لم يرد على الاتصال').waitFor();await page.getByRole('button',{name:'المتابعات المستحقة (1)'}).click();await page.locator('.work-desk-body').getByText('لم يرد على الاتصال').waitFor();await click('ملفات التحصيل');
  await screen('collections-desktop');assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+2),true,'Collections desk fits the screen');
- await click('طباعة جماعية');await page.locator('.batch-table').getByText('جاهز',{exact:true}).waitFor();await click('الاثنان معاً');await click('تحديد كل الجاهز');
- // A last look before printing: the file is opened, a field corrected, and the correction saved and reviewed again.
- {const files=[];const onDownload=d=>files.push(d);page.on('download',onDownload);await click('إنشاء ملف الطباعة (1)');
- const check=page.getByRole('dialog');await check.getByRole('heading',{name:'مراجعة قبل الطباعة'}).waitFor();
- // One chosen file opens by itself.
- await check.getByLabel('العنوان',{exact:true}).fill('عنوان مصحح قبل الطباعة');
- assert.equal(await check.getByRole('button',{name:'حفظ وإنشاء ملف الطباعة'}).isDisabled(),true,'A correction needs the source confirmed');
- await check.getByRole('checkbox',{name:/راجعتُ تعديلات 1 ملف/}).check();await click('حفظ وإنشاء ملف الطباعة');
- for(let i=0;i<60&&files.length<2;i++)await page.waitForTimeout(250);page.off('download',onDownload);assert.equal(files.length,2,'batch print downloads one file per paper type');assert.deepEqual(files.map(d=>d.suggestedFilename().split('-2')[0]).sort(),['Mawatheeq-bundles','Mawatheeq-claims']);
- const claim=files.find(d=>d.suggestedFilename().startsWith('Mawatheeq-claims')),chunks=[];for await(const c of await claim.createReadStream())chunks.push(c);
- const PizZip=(await import('pizzip')).default;assert.ok(new PizZip(Buffer.concat(chunks)).file('word/document.xml').asText().includes('عنوان مصحح قبل الطباعة'),'The correction made before printing is in the printed claim');}
+ await click('طباعة الحافظة والدعوى');await page.locator('.batch-table').getByText('جاهز',{exact:true}).waitFor();
+ // A client's Excel list of payment orders (a title row, then the headings) makes files right here, chosen for printing.
+ {const X=require(require.resolve('xlsx',{paths:[process.cwd()]}));const w=X.utils.book_new();
+  X.utils.book_append_sheet(w,X.utils.aoa_to_sheet([['11/7/26'],['المدعى','المدعى عليه','الرقم المدنى','رقم العقد','الرقم الالى','مبلغ المطالبة','تاريخ الحكم','العنوان'],['شركة اختبار التحصيل','SYNTHETIC ORDER','281010100009','C-9','250000009',99.5,'11/30/25','عنوان كشف تجريبي']]),'Sheet1');
+  await page.getByLabel('ملف Excel للتحصيل',{exact:true}).setInputFiles({name:'orders.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(X.write(w,{type:'array',bookType:'xlsx'}))});
+  const dlg=page.getByRole('dialog');await dlg.getByText('SYNTHETIC ORDER').first().waitFor();await dlg.getByRole('button',{name:'استيراد 1 ملف'}).click();await dlg.waitFor({state:'detached'});
+  await page.getByRole('checkbox',{name:'تحديد SYNTHETIC ORDER'}).waitFor();assert.equal(await page.getByRole('checkbox',{name:'تحديد SYNTHETIC ORDER'}).isChecked(),true,'Files made from Excel are chosen for printing');}
+ await click('الاثنان معاً');await click('تحديد كل الجاهز');
+ // Every chosen paper opens as it will print; it is corrected on the page and named before it downloads.
+ {const files=[];const onDownload=d=>files.push(d);await click('معاينة وطباعة (1)');
+ const dlg=page.getByRole('dialog',{name:'معاينة Word قبل التنزيل'});await dlg.locator('.word-edit').first().waitFor();
+ assert.deepEqual(await dlg.locator('.word-preview-list b').allInnerTexts(),['خصم اختبار التحصيل - حافظة مستندات','خصم اختبار التحصيل - صحيفة الدعوى'],'Each paper is named after the opposite party');
+ await dlg.locator('.word-preview-list button').nth(1).click();await dlg.locator('[data-t]').filter({hasText:'عنوان تجريبي'}).first().waitFor();
+ const spot=dlg.locator('[data-t]').filter({hasText:'عنوان تجريبي'}).first();await spot.click();await page.keyboard.press('End');await page.keyboard.type(' مصحح قبل الطباعة');
+ await screen('word-preview-desktop');
+ await dlg.getByLabel('اسم ملف Word',{exact:true}).fill('صحيفة مخصصة');
+ page.on('download',onDownload);await dlg.getByRole('button',{name:'تنزيل الكل (2)'}).click();
+ for(let i=0;i<60&&files.length<2;i++)await page.waitForTimeout(250);page.off('download',onDownload);assert.equal(files.length,2,'one Word file per paper');
+ assert.deepEqual(files.map(d=>d.suggestedFilename()).sort(),['خصم اختبار التحصيل - حافظة مستندات.docx','صحيفة مخصصة.docx'].sort());
+ const claim=await wordXml(files.find(d=>d.suggestedFilename()==='صحيفة مخصصة.docx'));
+ assert.ok(claim.includes('مصحح قبل الطباعة'),'The correction made on the page is in the downloaded claim');assert.equal(claim.includes('\uE000'),false,'No preview marks left in the file');
+ await page.setViewportSize({width:390,height:844});await screen('word-preview-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'The preview fits a phone');await page.setViewportSize({width:1440,height:1000});
+ await dlg.getByRole('button',{name:'إغلاق'}).last().click();await dlg.waitFor({state:'detached'});}
  await screen('collections-batch-desktop');await click('ملفات التحصيل');
  await switchTo('المحاسبة');await page.getByRole('heading',{name:'الدفاتر اليومية',exact:true}).waitFor();await click('دفتر الحركات');await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await field('المبلغ','125.125');await field('مرجع القيد / رقم الإيصال','SYN-FEE-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');await page.getByRole('cell',{name:/SYN-FEE-UI/}).waitFor();
  await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await page.getByLabel('نوع القيد',{exact:true}).selectOption('receipt');await field('المبلغ','25.025');await field('مرجع القيد / رقم الإيصال','SYN-RECEIPT-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');
