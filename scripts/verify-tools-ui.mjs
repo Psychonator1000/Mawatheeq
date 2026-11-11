@@ -249,7 +249,7 @@ assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.b
 await page.getByRole('button',{name:'حساب tools_owner'}).click();await page.getByRole('button',{name:'المظهر والحركة'}).click();
 await page.getByRole('radio',{name:'أصفر مشمس'}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()),'#a57400','Yellow theme applies');
 assert.equal(await page.getByRole('radio',{name:/أبيض وذهبي|أسود وذهبي/}).count(),0,'one gold theme, not two');
-await page.getByRole('radio',{name:'ساكورا',exact:true}).check();assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'rose');assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.ambient-canvas')).display),'block','Sakura draws falling petals');
+await page.getByRole('radio',{name:'ساكورا',exact:true}).check();assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'rose');await page.locator('.ambient-canvas').waitFor({state:'attached'});assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.ambient-canvas')).display),'block','Sakura draws falling petals');
 await page.getByRole('radio',{name:'ذهبي',exact:true}).check();assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(11, 10, 8)','Gold is black and gold by default');
 await page.getByRole('radio',{name:'فاتح',exact:true}).check();assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'ivory','Gold in light mode is white and gold');await page.getByRole('radio',{name:/^حسب السمة/}).check();
 await page.getByRole('radio',{name:'أزرق سماوي'}).check();await page.getByRole('radio',{name:/يراعات مضيئة/}).check();
@@ -501,7 +501,7 @@ await motion.getByRole('tabpanel').waitFor();
  await motion.keyboard.press('Alt+ArrowRight');await motion.waitForTimeout(500);assert.equal(await code(),first,'Alt+→ returns to the previous case');}
 await motion.waitForTimeout(1300);
 assert.equal(await motion.locator('.ripple-host').count(),0,'Press ripples remove themselves');
-assert.equal(await motion.locator('canvas.burst-canvas').count(),1);assert.equal(await motion.locator('.ambient-canvas').isVisible(),true,'The constellation backdrop is drawn');
+await motion.locator('canvas.burst-canvas').waitFor({state:'attached'});assert.equal(await motion.locator('canvas.burst-canvas').count(),1);assert.equal(await motion.locator('.ambient-canvas').isVisible(),true,'The constellation backdrop is drawn');
 // Rows scrolled into view rise in as one piece, then drop the effect class.
 await motion.keyboard.press('Escape');await motion.setViewportSize({width:1280,height:620});await motion.goto(base+'#cases');await motion.reload();await motion.getByRole('button',{name:/فتح القضية/}).first().waitFor({state:'attached'});
 // A short list box, so some of the fixture's few (compact) rows start out of view, as in a real register; the list is
@@ -521,7 +521,7 @@ assert.equal(await motion.evaluate(()=>document.documentElement.dataset.motion),
 // Light mode turns the heavy effects off while the app keeps working.
 await motion.evaluate(()=>{const k='mawatheeq.appearance.v1',a=JSON.parse(localStorage.getItem(k)||'{}');localStorage.setItem(k,JSON.stringify({...a,performance:'lite'}))});await motion.reload();await motion.waitForTimeout(800);
 assert.equal(await motion.evaluate(()=>document.documentElement.dataset.perf),'lite');
-assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.ambient-canvas')).display),'none','light mode stops the animated backdrop');
+await motion.locator('.ambient-canvas').waitFor({state:'attached'});assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.ambient-canvas')).display),'none','light mode stops the animated backdrop');
 assert.equal(await motion.evaluate(()=>getComputedStyle(document.querySelector('.topbar')).backdropFilter),'none','light mode drops glass blur');
 await lively.close();
 // Staff chat: the owner writes to a colleague with a case reference; the colleague sees the unread badge, opens the
