@@ -145,4 +145,9 @@ assert.equal((await daily(lead.token,'team')).seen,undefined,'A lead is not told
 // A branch: a holder box with any name, holding sections and people.
 chart=await daily(owner.token,'save_area',{name:'فرع الكويت',role:'branch'});const branch=chart.areas.find(x=>x.name==='فرع الكويت');assert.equal(branch.role,'branch');
 chart=await daily(owner.token,'save_area',{id:branch.id,name:'فرع الكويت الرئيسي',role:'branch'});assert.equal(chart.areas.find(x=>x.id===branch.id).name,'فرع الكويت الرئيسي','Renamed');
+// «كود القضية» for someone who opens no case: found by its code (or automatic number), only id, code and court.
+await db.exec('reset role');await db.query("insert into public.mawatheeq_cases(id,payload,revision) values('find-1','{\"code\":\"7701\",\"autoNumber\":\"99887766\",\"court\":\"المحكمة الكلية - تجاري / 3\",\"client\":\"Secret Client\"}'::jsonb,1)");await db.exec('set role anon');
+const found=await daily(a.token,'find_case',{q:'770'});assert.deepEqual(found,[{id:'find-1',code:'7701',autoNumber:'99887766',court:'المحكمة الكلية - تجاري / 3',insurance:false}],'Only id, code and court');
+assert.equal((await daily(a.token,'find_case',{q:'99887766'})).length,1,'By the automatic number');
+assert.deepEqual(await daily(a.token,'find_case',{q:''}),[]);
 console.log('Passed team lines: leads read their team down the line and themselves, the head reads the leads and their teams, nobody reads above or beside, no loops, only the owner or a staff admin changes the lines; sections hold people and sections, whoever a section sits under oversees everyone in it, sections move without loops and their people move up when one is removed.');

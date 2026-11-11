@@ -35,7 +35,8 @@ export function useListHost(open:boolean,input:React.RefObject<HTMLInputElement|
  * the options (or empty when `empty` is given). A saved value that is not on the list shows as written until another
  * one is picked. The input carries the chosen value in `data-value`.
  */
-export function FilterBox({label,value,onChange,options,empty,placeholder='اكتب للبحث أو اختر',disabled=false,className='',id}:{label:string;value:string;onChange:(v:string)=>void;options:FilterOption[];empty?:string;placeholder?:string;disabled?:boolean;className?:string;id?:string}) {
+export function FilterBox({label,value,onChange,options,empty,placeholder='اكتب للبحث أو اختر',disabled=false,className='',id,onQuery}:{label:string;value:string;onChange:(v:string)=>void;options:FilterOption[];empty?:string;placeholder?:string;disabled?:boolean;className?:string;id?:string;
+ /** Told what is typed, to bring in more options (a search on the server). */ onQuery?:(q:string)=>void}) {
  const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[active,setActive]=useState(0);
  const listId=useId(),input=useRef<HTMLInputElement>(null),list=useRef<HTMLUListElement>(null),closing=useRef<ReturnType<typeof setTimeout>>(undefined);
  const {host,aim}=useListHost(open,input,list,query);
@@ -56,7 +57,7 @@ export function FilterBox({label,value,onChange,options,empty,placeholder='اك�
  return <span className={'filter-select-box '+className}>
   <input ref={input} id={id} role="combobox" aria-label={label} aria-expanded={open} aria-controls={listId} aria-autocomplete="list" data-value={value} value={text} disabled={disabled} autoComplete="off"
    placeholder={open?(current?.label||placeholder):placeholder} onFocus={()=>{clearTimeout(closing.current);show();setQuery('');setActive(0)}} onClick={show}
-   onChange={e=>{setQuery(e.target.value);show();setActive(0)}} onKeyDown={onKey} onBlur={()=>{closing.current=setTimeout(()=>{setOpen(false);setQuery('')},120)}}/>
+   onChange={e=>{setQuery(e.target.value);onQuery?.(e.target.value);show();setActive(0)}} onKeyDown={onKey} onBlur={()=>{closing.current=setTimeout(()=>{setOpen(false);setQuery('')},120)}}/>
   <ChevronDown size={15} aria-hidden className="filter-select-chevron"/>
   {open&&host&&createPortal(<ul ref={list} id={listId} role="listbox" className="filter-select-list" dir="rtl">{shown.length?shown.map((o,i)=><li key={o.value+'|'+i} role="option" data-value={o.value} aria-selected={o.value===value} className={i===active?'active':''}
     onMouseDown={e=>{e.preventDefault();pick(o)}} onMouseEnter={()=>setActive(i)}><b>{o.label}</b>{o.hint&&<small>{o.hint}</small>}</li>)

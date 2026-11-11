@@ -28,7 +28,7 @@ const today=day(0);
 const sitting=(id,date,decision,followup)=>({id,kind:'جلسة',date,court:'المحكمة الكلية',venue:'المحكمة',decision,text:decision,followup});
 const seed=[
  {id:'desk-due',code:'DESK-DUE',procedures:[sitting('p1',day(-7),'تأجيل للإعلان',today)]},
- {id:'desk-missed',code:'DESK-MISSED',procedures:[sitting('p2',day(-9),'تأجيل لتقديم مستندات',day(-2))]},
+ {id:'desk-missed',code:'DESK-MISSED',court:'المحكمة الكلية - تجاري / 3',procedures:[sitting('p2',day(-9),'تأجيل لتقديم مستندات',day(-2))]},
  {id:'desk-struck',code:'DESK-STRUCK',contractNumber:'ع-1',procedures:[sitting('p3',day(-10),'شطب الدعوى','')]},
  {id:'desk-study',code:'DESK-STUDY',workflow:'study',procedures:[]},
 ];
@@ -131,6 +131,11 @@ try{
   const open=p2.getByRole('button',{name:'فتح القضايا',exact:true});if(await open.count())await open.click();
   const own=p2.getByRole('region',{name:'تقريري اليومي'});await own.waitFor();assert.equal(await p2.locator('.day-missions').count(),0,'No missions column');
   assert.deepEqual(await p2.locator('.nav-button').allInnerTexts().then(t=>t.map(x=>x.trim()).filter(x=>/سجل الأحكام|ترحيل|المهام والجلسات/.test(x))),[],'No case pages');
+  // He opens no case, yet names the hearing he attended by its code: found on the server, its court filled from it.
+  await own.getByRole('button',{name:'إضافة سطر: الجلسات التي تم حضورها'}).click();{const pick=own.getByRole('combobox',{name:'كود القضية'}).last();
+   await pick.click();await pick.fill('DESK-MI');await p2.getByRole('option',{name:/DESK-MISSED/}).click();
+   assert.equal(await pick.getAttribute('data-value'),'desk-missed','Linked to the case');
+   assert.equal(await own.getByRole('combobox',{name:'المحكمة / الدائرة'}).last().getAttribute('data-value'),(await caseOf('desk-missed')).court||'','Its court and circuit');}
   await own.getByRole('button',{name:'إضافة سطر: الأعمال والمراجعات الخارجية'}).click();await own.getByPlaceholder('الجهة التي تمت مراجعتها').fill('وزارة العدل — شهادة');await own.getByRole('button',{name:'حفظ',exact:true}).click();await own.getByText('مسودة محفوظة').waitFor();
   await p2.screenshot({path:artifacts+'/daily-reporter.png'});await other.close();}
  await page.getByLabel('تقرير من').selectOption('team');const sent=page.locator('.team-board tr',{hasText:'ui_reporter'});await sent.getByText('مسودة').waitFor();await sent.getByRole('button',{name:'اقرأ التقرير'}).click();await page.getByText('وزارة العدل — شهادة').waitFor();

@@ -13,6 +13,7 @@ import {MISSION_FILTERS,MISSION_KINDS,REPORT_PARTS,STATUS_LABELS,cleanReport,emp
  type DailyPayload,type Mission,type MissionFilter,type Person,type ReportLine,type StoredReport} from '@/lib/daily-report';
 import {DateField,api} from './shared';
 import {FilterBox,SelectList} from './filter-select';
+import {normalizeSearch} from '@/lib/case-browse';
 import type {TeamInfo} from '@/lib/team';
 import {courtChoices} from '@/lib/court-names';
 import {COURTS} from '@/lib/choices';
@@ -273,12 +274,24 @@ function ReportEditor({r,date,today,n,others,records,first}:{r:OwnReport;date:st
  const byId=useMemo(()=>new Map(records.map(c=>[c.id,c])),[records]);
  const caseOptions=useMemo(()=>{const head=new Set(first);return [...first.map(id=>byId.get(id)).filter((c):c is CaseRecord=>!!c),...records.filter(c=>!head.has(c.id))]
   .map(c=>({value:c.id,label:caseRef(c),hint:`${clientName(c)||'—'} ضد ${c.opponent||'—'}${c.court?' · '+c.court:''}`,terms:[c.autoNumber,c.caseNumber].filter(Boolean).join(' ')}))},[records,first,byId]);
+ // Cases this account does not open are found on the server by their code (or automatic number): only the code and the
+ // court come back, enough to name the hearing and its circuit.
+ const [found,setFound]=useState<Map<string,{id:string;code:string;autoNumber:string;court:string;insurance:boolean}>>(()=>new Map());
+ const lookup=useRef<ReturnType<typeof setTimeout>>(undefined);
+ const search=(q:string)=>{clearTimeout(lookup.current);const t=q.trim();if(!t)return;
+  const n=normalizeSearch(t);if(caseOptions.some(o=>normalizeSearch(o.label+' '+o.terms).includes(n)))return;
+  lookup.current=setTimeout(()=>{dailyRequest<{id:string;code:string;autoNumber:string;court:string;insurance:boolean}[]>('find_case',{q:t}).then(list=>{if(list.length)setFound(old=>{const m=new Map(old);for(const c of list)if(!byId.has(c.id))m.set(c.id,c);return m})}).catch(()=>{})},250)};
+ const foundRef=(c:{code:string;autoNumber:string;insurance:boolean})=>caseCode({code:c.code,insurance:c.insurance})||c.autoNumber||'بلا كود';
+ const allCases=useMemo(()=>[...caseOptions,...[...found.values()].map(c=>({value:c.id,label:foundRef(c),hint:c.court||'',terms:c.autoNumber}))],[caseOptions,found]);
+ // The case's code and court: from the cases this account opens, or from the search.
+ const caseInfo=(id:string)=>{const c=byId.get(id);if(c)return {label:caseRef(c),court:String(c.court||'')};const f=found.get(id);return f?{label:foundRef(f),court:f.court}:undefined};
  const courts=useMemo(()=>{const n=new Map<string,number>();for(const c of records){const v=String(c.court||'').trim();if(v)n.set(v,(n.get(v)||0)+1)}
   for(const v of courtChoices([...n.keys()],COURTS))if(!n.has(v))n.set(v,0);return [...n].sort((a,b)=>b[1]-a[1]).map(([v])=>({value:v,label:v}))},[records]);
  const lineField=(k:ReportPart,j:number,l:ReportLine,f:LineField,label:string)=>{
-  if(k==='hearings'&&f==='text'){const id=lineCase(l);return <FilterBox key={f} label={label} placeholder={label+' (اكتب للبحث)'} value={byId.has(id)?id:l.text} disabled={ro} options={caseOptions}
-   onChange={v=>{const c=byId.get(v);if(c)setLine(k,j,{caseId:c.id,text:caseRef(c),court:l.court||String(c.court||'')})}}/>}
-  if(k==='hearings'&&f==='court'){const own=byId.get(lineCase(l))?.court;return <FilterBox key={f} label={label} placeholder={label} value={l.court||''} disabled={ro}
+  if(k==='hearings'&&f==='text'){const id=lineCase(l);return <FilterBox key={f} label={label} placeholder={label+' (اكتب للبحث)'} value={caseInfo(id)?id:l.text} disabled={ro} options={allCases} onQuery={search}
+   // Picking the case fills its court and circuit from it (still free to change after).
+   onChange={v=>{const c=caseInfo(v);if(c)setLine(k,j,{caseId:v,text:c.label,court:c.court||l.court||''})}}/>}
+  if(k==='hearings'&&f==='court'){const own=caseInfo(lineCase(l))?.court;return <FilterBox key={f} label={label} placeholder={label} value={l.court||''} disabled={ro}
    options={own&&!courts.some(o=>o.value===own)?[{value:own,label:own},...courts]:courts} onChange={v=>setLine(k,j,{court:v})}/>}
   return <input key={f} aria-label={label} placeholder={label} value={l[f]||''} disabled={ro} onChange={e=>setLine(k,j,{[f]:e.target.value})}/>};
  const setLine=(k:ReportPart,i:number,v:Partial<ReportLine>)=>r.set({...r.payload,[k]:r.payload[k].map((l,j)=>j===i?{...l,...v}:l)});
