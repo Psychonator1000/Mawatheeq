@@ -215,6 +215,10 @@ try{
   await page.getByRole('button',{name:'إضافة فرع',exact:true}).click();{const bd=page.getByRole('dialog');assert.equal(await bd.getByLabel('اسم الفرع').inputValue(),'فرع جديد');
    await bd.getByLabel('اسم الفرع').fill('فرع الكويت');await bd.getByRole('button',{name:'إضافة الفرع',exact:true}).click();await bd.waitFor({state:'hidden'});}
   await page.locator('.org-branch[data-area="فرع الكويت"]').waitFor();
+  // Everything in a branch sits inside one box drawn around it: salem.ui dropped into the branch is inside that box.
+  await page.locator('.org-canvas [data-person="salem.ui"]').dragTo(page.locator('.org-branch[data-area="فرع الكويت"]'));await page.getByText(/تحت فرع|تحت قسم «فرع الكويت»/).first().waitFor();
+  {let z=null,p=null;for(let i=0;i<30;i++){z=await page.locator('.org-zones rect').first().boundingBox().catch(()=>null);p=await page.locator('.org-canvas [data-person="salem.ui"]').boundingBox();if(z&&p&&p.y+p.height<=z.y+z.height)break;await page.waitForTimeout(100)}
+   assert.ok(z&&p.x>=z.x&&p.x+p.width<=z.x+z.width&&p.y>=z.y&&p.y+p.height<=z.y+z.height,'Inside the branch\'s box');await page.locator('.org-zoom').getByRole('button',{name:'ملاءمة الهيكل للشاشة'}).click();await page.waitForTimeout(500);await page.screenshot({path:artifacts+'/team-branch-zone.png'});await page.locator('.org-zoom-value').click();}
   // Kept after a reload: the page reads back where every box was put.
   await page.reload();await page.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).waitFor();await page.locator('.org-tree-wrap').waitFor();
   await page.locator('.org-canvas [data-person="salem.ui"]').waitFor({timeout:8000});

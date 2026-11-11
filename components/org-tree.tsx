@@ -44,6 +44,9 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
   return k},[byKey,parent,chart.order]);
  const placed=useMemo(()=>chart.layout||{},[chart.layout]);
  const isLeaf=(key:string)=>key.startsWith('u:')&&!kids.get(key)?.length;
+ // Holders (a branch, or a section of no particular work or workspace: a company or office named at will) are drawn as
+ // a frame around everything in them, their name set in the frame's top edge.
+ const holder=(a?:TeamArea)=>!!a&&(a.role==='branch'||(!a.role&&!a.workspace));
  // Not placed yet: people with nobody above or under them and never put on the board by hand wait in the tray.
  const loose=(kids.get('')||[]).filter(k=>isLeaf(k)&&!placed[k]);
  const board=useMemo(()=>{const k=new Map(kids);k.set('',(kids.get('')||[]).filter(x=>!(x.startsWith('u:')&&!kids.get(x)?.length&&!placed[x])));
@@ -133,16 +136,17 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
  const areaBox=(a:TeamArea)=>{const key='a:'+a.id,count=peopleBelow(parent,key).size,Icon=a.role==='branch'?Building2:a.role&&ROLE_ICONS[a.role as JobRole]||FolderTree,p=board.at.get(key),target=drag?.target===key;
   return <button type="button" key={a.id} data-area={a.name} data-node={key} aria-pressed={selected===key} onPointerDown={e=>start(e,key,true,true)}
    onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onPickArea(a)}}}
-   className={'org-box org-area'+(a.role==='branch'?' org-branch':'')+(selected===key?' on':'')+(target?' drop':'')+(moving.has(key)?' dragging':'')}
+   className={'org-box org-area'+(a.role==='branch'?' org-branch':'')+(holder(a)?' org-holder':'')+(selected===key?' on':'')+(target?' drop':'')+(moving.has(key)?' dragging':'')}
    style={p?{left:p.x-origin.x,top:p.y-origin.y,...shift(key)}:undefined}
-   title="قسم: اضغط لتسميته أو نقله أو حذفه. اسحبه إلى أي مكان، أو أفلت في وسطه موظفين">
+   title={holder(a)?`${a.name}: ${count?peopleCount(count):'فارغ'}. اضغط لتسميته أو حذفه، واسحبه لنقل كل ما فيه، أو أفلت في وسطه موظفين وأقساماً`:'قسم: اضغط لتسميته أو نقله أو حذفه. اسحبه إلى أي مكان، أو أفلت في وسطه موظفين'}>
    <Icon size={15} aria-hidden className="org-icon"/><b>{a.name}</b>
-   <span className="org-meta">{count?peopleCount(count):'فارغ — أفلت فيه موظفين'}</span>{a.workspace&&<span className="org-team" title={`من فيه يفتح ${WORKSPACE_LABELS[a.workspace]} فقط`}>مساحة {WORKSPACE_LABELS[a.workspace].split(' (')[0]}</span>}
+   {holder(a)?null:<><span className="org-meta">{count?peopleCount(count):'فارغ — أفلت فيه موظفين'}</span>{a.workspace&&<span className="org-team" title={`من فيه يفتح ${WORKSPACE_LABELS[a.workspace]} فقط`}>مساحة {WORKSPACE_LABELS[a.workspace].split(' (')[0]}</span>}
+   </>}
    {target&&<span className="org-drop-label">داخله</span>}</button>};
 
  // The lines, measured from the boxes after every layout change, in the board's own (unzoomed) units: each head to the
  // people and sections under him (to a block as a whole), then a person's other sections (arrow) and other bosses (circle).
- const [lines,setLines]=useState<Line[]>([]),[size,setSize]=useState({w:0,h:0});
+ const [lines,setLines]=useState<Line[]>([]),[size,setSize]=useState({w:0,h:0}),[zones,setZones]=useState<{id:string;x:number;y:number;w:number;h:number}[]>([]);
  useLayoutEffect(()=>{const el=canvas.current;if(!el)return;
   const draw=()=>{const z=zoomRef.current,box=el.getBoundingClientRect();
    const rect=(k:string)=>{const r=el.querySelector<HTMLElement>(`[data-node="${k}"]`)?.getBoundingClientRect();return r&&{l:(r.left-box.left)/z,t:(r.top-box.top)/z,r:(r.right-box.left)/z,b:(r.bottom-box.top)/z}};
@@ -158,11 +162,19 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
    const curve=(a:R,b:R)=>{const x1=(a.l+a.r)/2,y1=a.b,x2=(b.l+b.r)/2,below=b.t>a.b,y2=below?b.t:b.b,k=Math.max(44,Math.abs(x2-x1)*0.12);
     return below?`M${x1},${y1} C${x1},${y1+k} ${x2},${y2-k} ${x2},${y2}`:`M${x1},${y1} C${x1},${y1+k} ${x2},${Math.max(y1,y2)+k} ${x2},${y2}`};
    const out:Line[]=[],grouped=new Set(board.groups.flatMap(g=>g.keys));
-   for(const g of board.groups){const a=rect(g.parent),c=block(g.parent);if(a&&c)out.push({id:'g'+g.parent,d:elbow(a,c,board.flow(g.parent)),kind:'tree',on:false})}
-   for(const [k,up] of parent){if(grouped.has(k))continue;const a=rect(up),c=rect(k);if(a&&c)out.push({id:'t'+k,d:elbow(a,c,board.flow(up)),kind:'tree',on:false})}
+   const inFrame=(up:string)=>up.startsWith('a:')&&holder(chart.areas.find(x=>'a:'+x.id===up));
+   for(const g of board.groups){if(inFrame(g.parent))continue;const a=rect(g.parent),c=block(g.parent);if(a&&c)out.push({id:'g'+g.parent,d:elbow(a,c,board.flow(g.parent)),kind:'tree',on:false})}
+   for(const [k,up] of parent){if(grouped.has(k)||inFrame(up))continue;const a=rect(up),c=rect(k);if(a&&c)out.push({id:'t'+k,d:elbow(a,c,board.flow(up)),kind:'tree',on:false})}
    for(const x of chart.extras||[]){const a=rect('u:'+x.userId),b=rect('a:'+x.areaId);if(a&&b)out.push({id:'x'+x.userId+x.areaId,d:curve(a,b),kind:'area',on:selected===x.userId||selected==='a:'+x.areaId})}
    for(const x of chart.bosses||[]){const a=rect('u:'+x.userId),b=rect('u:'+x.managerId);if(a&&b)out.push({id:'b'+x.userId+x.managerId,d:curve(a,b),kind:'boss',on:selected===x.userId||selected===x.managerId})}
-   setSize({w:el.offsetWidth,h:el.offsetHeight});setLines(out)};
+   // A branch (a company or office) is drawn as one big box around itself and everything under it, at any depth.
+   const zs:{id:string;x:number;y:number;w:number;h:number}[]=[];
+   // Holders only: branches, and sections of no particular work or workspace (a company or office named at will).
+   for(const a of chart.areas)if(holder(a)){const key='a:'+a.id,head=rect(key);if(!head)continue;let L=head.l,Rr=head.r,B=head.b;
+    for(const k of [key,...nodesBelow(parent,key)])for(const q of [rect(k),block(k)])if(q){L=Math.min(L,q.l);Rr=Math.max(Rr,q.r);B=Math.max(B,q.b)}
+    // The top edge runs through the middle of the name, as a title set in the frame.
+    const top=(head.t+head.b)/2;zs.push({id:a.id,x:L-26,y:top,w:Rr-L+52,h:B-top+30})}
+   setSize({w:el.offsetWidth,h:el.offsetHeight});setLines(out);setZones(zs)};
   draw();const ro=new ResizeObserver(draw);ro.observe(el);return()=>ro.disconnect()},[board,chart,members,search,selected,zoom,drag,origin,parent]);
  // The selected person (or section) is brought into sight with the boxes his lines go to, when they fit together.
  useLayoutEffect(()=>{if(!selected)return;const el=canvas.current,v=view.current;if(!el||!v)return;
@@ -195,6 +207,7 @@ export default function OrgTree({members,chart,search,selected,onPick,onPickArea
     onClick={()=>{if(window.confirm('إرجاع كل الصناديق إلى ترتيبها التلقائي؟ تبقى التبعية والأقسام كما هي، ويُلغى ما نقلته يدوياً فقط.'))onPlace(Object.fromEntries(Object.keys(placed).map(k=>[k,null])))}}>ترتيب تلقائي</button>}</div>
   <div className={'org-tree'+(panning?' panning':'')+(drag?.moved?' moving':'')} ref={view} aria-label="الهيكل الوظيفي" onPointerDown={pan}>
   <div className="org-canvas" ref={canvas} style={{zoom,width:w,height:h}}>
+   {zones.length>0&&<svg className="org-zones" width={size.w} height={size.h} aria-hidden>{[...zones].sort((a,b)=>b.w*b.h-a.w*a.h).map(z=><rect key={z.id} x={z.x} y={z.y} width={z.w} height={z.h} rx={26}/>)}</svg>}
    <svg className="org-links" width={size.w} height={size.h} aria-hidden>
     <defs><marker id="org-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker>
      <marker id="org-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8"><circle cx="5" cy="5" r="4"/></marker></defs>

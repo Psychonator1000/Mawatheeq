@@ -1607,3 +1607,13 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .org-box.org-area.org-branch{border-width:2px;border-color:var(--brand);background:color-mix(in srgb,var(--brand) 20%,var(--card))}
 .org-box.org-area.org-branch>b{font-size:15px}
 .office-staff>.panel-head .actions{gap:6px}.office-staff>.panel-head .actions .btn{padding:5px 10px;font-size:13px;min-height:32px}.office-staff>.panel-head .staff-view .seg-opt{padding:3px 10px}
+/* A branch's box around everything in it: shaded, under the lines and boxes; branches inside branches nest. */
+.org-zones{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:0}
+.org-zones rect{fill:color-mix(in srgb,var(--brand) 6%,transparent);stroke:color-mix(in srgb,var(--brand) 45%,var(--border));stroke-width:2}
+/* A holder's name set in the top edge of its frame (----[ مواثيق ]----): a pill on the line, the line hidden behind it. */
+.org-canvas>.org-box.org-area.org-holder{height:40px;min-height:0;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 14px;border-radius:999px;border:2px solid color-mix(in srgb,var(--brand) 55%,var(--border));background:var(--card);box-shadow:0 4px 14px -8px rgb(40 20 15/.35)}
+.org-canvas>.org-box.org-area.org-holder>b{font-size:15px;grid-column:auto}
+.org-canvas>.org-box.org-area.org-holder>.org-icon{grid-row:auto;grid-column:auto}
+.org-holder-count{font-size:11.5px;color:var(--muted-foreground);white-space:nowrap}
+.org-canvas>.org-box.org-area.org-holder.org-branch{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,var(--card))}
+.org-canvas>.org-box.org-area.org-holder>b{overflow:visible;text-overflow:clip;white-space:nowrap}
