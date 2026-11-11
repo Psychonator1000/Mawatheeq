@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { fieldsToCheck, fillEmpty, guessClient, orderPayload, pagesText } from '../lib/order-import.ts';
 import { blankDocument } from '../lib/document-fields.ts';
 import { isOrderList, mapOrderList } from '../lib/collections.ts';
+import { companyDetails } from '../lib/company-details.ts';
 const good = { ...blankDocument(), orderAuto: '251234567', orderNumber: '612345/2025', company: 'شركة الاختبار', defendant: 'خالد سالم عبدالله', civilId: '290010100123',
   address: 'حولي - ق 1', amount: '512.25', account: '1234567890', demandDate: '2024-11-06', statementDate: '2024-04-08', receiptNumber: 'F0123456', receiptFee: '12.806', receiptDate: '2025-04-23', court: 'جزئي العاصمة' };
 assert.deepEqual(fieldsToCheck(good), [], 'A complete order needs no checking');
@@ -45,4 +46,9 @@ assert.equal(fillEmpty({ ...fromList, evidence: [{ id: 'x', included: true, date
  const xml = new PizZip(t.bundle, { base64: true }).file('word/document.xml').asText();
  assert.ok(xml.includes('{{company}}</w:t><w:tab/><w:t>مدعية') && xml.includes('{{defendant}}</w:t><w:tab/><w:t>مدعى عليه'), 'The roles follow a tab');
  assert.equal(/\{\{(?:company|defendant)\}\} {5,}/.test(xml), false, 'No run of spaces after a party\'s name');}
-console.log('Passed order import: fields to check, client from the creditor\'s name, new file details and bundle documents, client lists of payment orders, completing files made from a list.');
+// Ooredoo's own details are always the same on its claims (owner, 11 November 2026); other companies have none here.
+for (const name of ['الشركة الوطنية للاتصالات المتنقلة', 'الشركة الوطنيه للإتصالات المتنقلة', 'Ooredoo']) assert.equal(companyDetails(name)?.companyRegister, '73211', name);
+assert.equal(companyDetails('شركة الإتصالات الكويتية ( Stc)'), undefined);
+{const PizZip=createRequire(import.meta.url)('pizzip');const claim=new PizZip(JSON.parse(fs.readFileSync('lib/data/templates.json','utf8')).claim,{base64:true}).file('word/document.xml').asText();
+ const at=k=>claim.indexOf('{{'+k+'}}');assert.ok(at('company')<at('companyAddress')&&at('companyAddress')<at('email')&&at('email')<at('companyCivil'),'The claim states the company, its address, email, then its civil and register numbers');}
+console.log('Passed order import: fields to check, client from the creditor\'s name, new file details and bundle documents, client lists of payment orders, completing files made from a list, Ooredoo\'s fixed details.');

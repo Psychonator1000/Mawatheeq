@@ -189,7 +189,8 @@ function paragraph(ctx: Ctx, p: Element, host: HTMLElement, editable: boolean): 
   if (pp.pageBreak) el.dataset.break = '1';
   const f = styleRun(el, ctx, mark, '');
   const lh = lineHeight(host, pp, f);
-  s.lineHeight = lh + 'px'; s.fontWeight = ''; s.textDecorationLine = ''; s.backgroundColor = pp.shd || '';
+  // The paragraph mark's own look (colour, underline…) is not its text's: only its size and font set the line.
+  s.lineHeight = lh + 'px'; s.fontWeight = ''; s.fontStyle = ''; s.color = ''; s.textDecorationLine = ''; s.textDecorationStyle = ''; s.textTransform = ''; s.backgroundColor = pp.shd || '';
   const field: FieldState = { depth: 0, instr: '', showing: false };
   const runs = (parent: Element) => {
     for (const c of kids(parent)) {
