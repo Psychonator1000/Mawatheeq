@@ -32,6 +32,7 @@ export default function OfficeWork({canModerate=false,items,context,records,onCh
  const [layout,setLayout]=useState<'list'|'calendar'>('list'),[month,setMonth]=useState(todayISO().slice(0,7)),[rollDate,setRollDate]=useState(addDays(todayISO(),1));
  const today=todayISO(),caseMap=useMemo(()=>new Map(records.map(c=>[c.id,c])),[records]);
  const filtered=items.filter(w=>{const b=workBucket(w,today),c=caseMap.get(w.caseId);return (bucket==='active'?b!=='closed':!bucket||b===bucket)&&(!assignee||w.assigneeId===assignee)&&(!kind||w.kind===kind)&&normalizeSearch([w.title,w.notes,c?.code,c?.autoNumber,c?.opponent,c&&clientName(c)].join(' ')).includes(normalizeSearch(search))}).sort((a,b)=>(a.dueDate+a.dueTime).localeCompare(b.dueDate+b.dueTime)||a.id.localeCompare(b.id));
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- back to the first page when the filters change
  useEffect(()=>setPage(1),[search,bucket,assignee,kind]);
  const {nav,step,enter,openItem:setEditing}=useListNav(filtered,editing,setEditingRaw);
  const size=compact?50:20,pages=Math.max(1,Math.ceil(filtered.length/size)),current=Math.min(page,pages);

@@ -147,7 +147,13 @@ try{
  // «الأداء»: one row a person; the owner's sent report counts, the reporter's draft does not; a row opens that person's day.
  await page.getByRole('tab',{name:'الأداء'}).click();const perf=page.locator('.perf-table tbody tr',{hasText:'ui_reporter'});await perf.waitFor();
  assert.match(await page.locator('.perf-table tbody tr',{hasText:'ui_owner'}).innerText(),/1 من/,'The owner sent one report');assert.match(await perf.innerText(),/0 من[\s\S]*مسودة|مسودة[\s\S]*0 من/,'The reporter has a draft, none sent');
- await perf.click();await page.getByRole('tab',{name:'اليوم',selected:true}).waitFor();await page.getByRole('region',{name:'تقرير الزميل'}).getByText('وزارة العدل — شهادة').waitFor();
+ // Any from–to range, and one person's reports over it printed together (one report a page).
+await page.getByRole('button',{name:'فترة مخصصة'}).click();await page.locator('.perf-range').waitFor();await perf.waitFor();
+{await page.evaluate(()=>{window.__printedPerson='';window.__mawatheeqPrint=h=>{window.__printedPerson=h}});
+ await page.locator('.perf-table tbody tr',{hasText:'ui_owner'}).getByRole('button',{name:/تقاريره/}).click();await page.waitForFunction(()=>window.__printedPerson);
+ assert.match(await page.evaluate(()=>window.__printedPerson),/تقرير الأعمال اليومية/,'The person\'s reports print');await page.evaluate(()=>{delete window.__mawatheeqPrint});}
+assert.equal(await page.getByRole('tab',{name:'الأداء',selected:true}).count(),1,'Printing a person\'s reports stays on the performance view');
+await perf.click();await page.getByRole('tab',{name:'اليوم',selected:true}).waitFor();await page.getByRole('region',{name:'تقرير الزميل'}).getByText('وزارة العدل — شهادة').waitFor();
  await page.setViewportSize({width:390,height:844});await screen('posting-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'No horizontal page scroll on phones');
  assert.deepEqual(errors,[],'No page errors');
  console.log('Passed cases desk: posting a sitting, posting errors, stayed cases, roll, contracts, a consultation and filing a case under study.');

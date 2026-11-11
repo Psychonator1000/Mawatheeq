@@ -11,6 +11,7 @@ import {peekSnapshot,readSnapshot,writeSnapshot} from '@/lib/boot-cache';
 export function useRecords<P>(workspace:Department) {
  // A copy already read in this visit shows at once (no loading line); the server's copy replaces it when it comes.
  const [rows,setRows]=useState<DepartmentRecord<P>[]>(()=>peekSnapshot<DepartmentRecord<P>[]>('dept:'+workspace)||[]),[loading,setLoading]=useState(()=>!peekSnapshot('dept:'+workspace)),[error,setError]=useState(''),[version,setVersion]=useState(0);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader resets its state before fetching
  useEffect(()=>{let active=true,fresh=false;setLoading(!peekSnapshot('dept:'+workspace));setError('');
   // Show the last copy at once while the server's copy loads.
   void readSnapshot<DepartmentRecord<P>[]>('dept:'+workspace).then(r=>{if(active&&r&&!fresh){setRows(r);setLoading(false)}});

@@ -13,6 +13,8 @@ export type WordDoc = {
   texts: Element[];
   /** A text box is stored twice (the drawing and an older copy for old Word); an edit goes to both. */
   twins: Map<number, number[]>;
+  /** New lines typed into a piece of text: the line breaks and the lines after the first, kept beside that piece. */
+  extras: Map<number, Element[]>;
 };
 
 export async function openWord(data: ArrayBuffer | Blob): Promise<WordDoc> {
@@ -27,21 +29,53 @@ export async function openWord(data: ArrayBuffer | Blob): Promise<WordDoc> {
     const a = part('Choice'), b = part('Fallback');
     if (a.length && a.length === b.length) a.forEach((n, i) => { twins.set(n, [b[i]]); twins.set(b[i], [n]); });
   }
-  return { zip, dom, texts, twins };
+  return { zip, dom, texts, twins, extras: new Map() };
 }
 
 /** Draws the document into `body` and makes its text editable. */
 export function renderWord(doc: WordDoc, body: HTMLElement) {
-  return renderDocument(doc.zip, doc.dom, doc.texts, body);
+  return renderDocument(doc.zip, doc.dom, doc.texts, body, drawn(doc));
+}
+/** The pieces of text with the lines typed into them (each drawn as part of its piece), and the line breaks typed. */
+function drawn(doc: WordDoc) {
+  const index = new Map(doc.texts.map((t, i) => [t, i])), breaks = new Set<Element>();
+  for (const [i, els] of doc.extras) for (const el of els) if (el.localName === 'br') breaks.add(el); else index.set(el, i);
+  return { index, breaks };
+}
+/** A piece's text as it now stands, the lines typed into it included. */
+const textOf = (doc: WordDoc, i: number) => [doc.texts[i], ...(doc.extras.get(i) || [])].map(el => el.localName === 'br' ? '\n' : el.textContent || '').join('');
+const XML = 'http://www.w3.org/XML/1998/namespace';
+/** Writes a piece's text: its first line in the piece itself, then a Word line break and a text for every other line. */
+function writeText(doc: WordDoc, i: number, text: string) {
+  const t = doc.texts[i]; if (!t) return;
+  for (const el of doc.extras.get(i) || []) el.remove();
+  doc.extras.delete(i);
+  const [first, ...rest] = text.split('\n');
+  t.textContent = first; t.setAttributeNS(XML, 'xml:space', 'preserve');
+  if (!rest.length) return;
+  const made: Element[] = []; let after: Element = t;
+  for (const line of rest) {
+    const br = doc.dom.createElementNS(W, 'w:br'), next = doc.dom.createElementNS(W, 'w:t');
+    next.setAttributeNS(XML, 'xml:space', 'preserve'); next.textContent = line;
+    after.after(br, next); after = next; made.push(br, next);
+  }
+  doc.extras.set(i, made);
 }
 
 /** Reads the drawn text back into the document: each piece takes its span's text; typed text joins the piece before it. */
 export function collectWord(doc: WordDoc, body: HTMLElement) {
   const out = new Map<number, string>();
   for (const block of Array.from(body.querySelectorAll<HTMLElement>('.word-edit'))) {
-    let last: number | null = null;
-    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    let last: number | null = null, endsWithBreak = false;
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      // A line break typed (Enter) or kept from an earlier one belongs to the piece before it.
+      if (n.nodeType === Node.ELEMENT_NODE) {
+        if ((n as Element).tagName === 'BR' && !(n as HTMLElement).dataset.fixed && last !== null) { out.set(last, (out.get(last) || '') + '\n'); endsWithBreak = true; }
+        continue;
+      }
+      if (!(n as Text).data) continue;
+      endsWithBreak = false;
       const el = n.parentElement!, owner = el.closest<HTMLElement>('[data-t]');
       if (el.closest('[data-fixed]') && !owner) continue;
       const at: number | null = owner ? Number(owner.dataset.t) : last;
@@ -49,16 +83,15 @@ export function collectWord(doc: WordDoc, body: HTMLElement) {
       out.set(at, (out.get(at) || '') + (n as Text).data);
       last = at;
     }
+    // The browser keeps an extra break at the end of a line ended by Enter, only so the new line shows.
+    if (endsWithBreak && last !== null) out.set(last, out.get(last)!.replace(/\n$/, ''));
     // Pieces whose spans were deleted entirely become empty.
     for (const span of Array.from(block.querySelectorAll<HTMLElement>('[data-t]'))) if (!out.has(Number(span.dataset.t))) out.set(Number(span.dataset.t), '');
   }
   // A changed piece also changes its twin (when only one of the two is drawn, or the other was left as it was).
   const final = new Map(out);
-  for (const [i, text] of out) if (text !== doc.texts[i]?.textContent) for (const j of doc.twins.get(i) || []) final.set(j, text);
-  for (const [i, text] of final) {
-    const t = doc.texts[i]; if (!t || t.textContent === text) continue;
-    t.textContent = text; t.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
-  }
+  for (const [i, text] of out) if (doc.texts[i] && text !== textOf(doc, i)) for (const j of doc.twins.get(i) || []) final.set(j, text);
+  for (const [i, text] of final) if (doc.texts[i] && textOf(doc, i) !== text) writeText(doc, i, text);
 }
 
 /** The clean Word file, with every edit made so far. */
@@ -83,7 +116,7 @@ export async function printWords(docs: WordDoc[]) {
   document.body.append(root);
   for (const doc of docs) {
     const host = document.createElement('div'); root.append(host);
-    const l = renderDocument(doc.zip, doc.dom, doc.texts, host), sheet = host.querySelector<HTMLElement>('.wd-sheet')!;
+    const l = renderDocument(doc.zip, doc.dom, doc.texts, host, drawn(doc)), sheet = host.querySelector<HTMLElement>('.wd-sheet')!;
     const h = (l.height - (l.pages - 1) * PAGE_GAP) / l.pages, pages: HTMLElement[] = [];
     for (let i = 0; i < l.pages; i++) {
       const page = document.createElement('div'); page.className = 'wd-print-page';

@@ -22,9 +22,7 @@ await db.exec("insert into public.mawatheeq_members(user_id,role) select id,'own
 const rpc=async(name,args)=>(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
 const local=(token,action,data={})=>rpc('mawatheeq_local_request',[token,action,JSON.stringify(data)]);
 const office=(token,action,data={})=>rpc('mawatheeq_office_request',[token,action,JSON.stringify(data)]);
-const dept=(token,workspace,action,data={})=>rpc('mawatheeq_department_request',[token,action,JSON.stringify({...data,workspace})]);
 const login=(username,password='Synthetic-password-123')=>rpc('mawatheeq_local_login',[username,password]);
-const denied=fn=>assert.rejects(fn,e=>e.code==='42501');
 // Fast case reads: each case keeps its light form and normalized lawyer name; the reads return the same as before.
 const owner=await login('owner');
 const day=n=>{const d=new Date();d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};

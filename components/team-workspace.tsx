@@ -18,6 +18,7 @@ import {ALL_POWERS,powersOf,type Permissions} from '@/lib/permissions';
 export default function TeamWorkspace({access,owner}:{access:Permissions;owner:boolean}) {
  const [context,setContext]=useState<OfficeContext|null>(null),[records,setRecords]=useState<CaseRecord[]>([]);
  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[version,setVersion]=useState(0);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader resets its state before fetching
  useEffect(()=>{let active=true;setLoading(true);setError('');
   Promise.all([officeRequest<OfficeContext>('context'),api('/api/cases').then((d:{cases:CaseRecord[]})=>d.cases).catch(()=>[] as CaseRecord[])])
    .then(([ctx,cases])=>{if(active){setContext(ctx);setRecords(cases)}}).catch(e=>{if(active)setError((e as Error).message)}).finally(()=>{if(active)setLoading(false)});

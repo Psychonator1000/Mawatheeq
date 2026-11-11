@@ -121,6 +121,8 @@ try{
  assert.deepEqual(await dlg.locator('.word-preview-list b').allInnerTexts(),['خصم اختبار التحصيل - حافظة','خصم اختبار التحصيل - صحيفة دعوى'],'Each paper is named after the opposite party, then the paper');
  await dlg.locator('.word-preview-list button').nth(1).click();await dlg.locator('[data-t]').filter({hasText:'عنوان تجريبي'}).first().waitFor();
  const spot=dlg.locator('[data-t]').filter({hasText:'عنوان تجريبي'}).first();await spot.click();await page.keyboard.press('End');await page.keyboard.type(' مصحح قبل الطباعة');
+ // Enter starts a new line, written into Word as a line break.
+ await page.keyboard.press('Enter');await page.keyboard.type('سطر جديد');
  await screen('word-preview-desktop');
  // Straight to the printer from the preview: only the papers print, one A4 sheet a page, with the correction made.
  await page.evaluate(()=>{window.print=()=>{window.__printed=[...document.querySelectorAll('#wd-print-root .wd-print-page')].length}});
@@ -137,7 +139,7 @@ try{
  {const chunks=[];for await(const c of await files[0].createReadStream())chunks.push(c);const PizZip=(await import('pizzip')).default,zip=new PizZip(Buffer.concat(chunks));
   assert.deepEqual(Object.keys(zip.files).filter(n=>n.endsWith('.docx')).sort(),['حافظة/خصم اختبار التحصيل - حافظة.docx','صحيفة دعوى/صحيفة مخصصة.docx'].sort());
   const claim=zip.file('صحيفة دعوى/صحيفة مخصصة.docx').asUint8Array(),xml=new PizZip(claim).file('word/document.xml').asText();
-  assert.ok(xml.includes('مصحح قبل الطباعة'),'The correction made on the page is in the downloaded claim');assert.equal(xml.includes('\uE000'),false,'No preview marks left in the file');}
+  assert.ok(xml.includes('مصحح قبل الطباعة'),'The correction made on the page is in the downloaded claim');assert.match(xml,/<w:br\/><w:t[^>]*>سطر جديد<\/w:t>/,'The new line follows a Word line break');assert.equal(xml.includes('\uE000'),false,'No preview marks left in the file');}
  await page.setViewportSize({width:390,height:844});await screen('word-preview-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'The preview fits a phone');await page.setViewportSize({width:1440,height:1000});
  await dlg.getByRole('button',{name:'إغلاق'}).last().click();await dlg.waitFor({state:'detached'});}
  await screen('collections-batch-desktop');await click('ملفات التحصيل');

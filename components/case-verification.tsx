@@ -17,8 +17,10 @@ export default function CaseVerification({record,dirty,canManage,canEdit=true,ca
  const [sourceType,setSourceType]=useState('court_record'),[sourceReference,setSourceReference]=useState('');
  const [preview,setPreview]=useState<{url:string;name:string}|null>(null);
  const load=async()=>{setError('');setConfirmed(false);setPreview(null);try{const [next,documents]=await Promise.all([officeRequest<CaseFile>('case_file',{caseId:record.id}),canEditDocuments?api('/api/documents'):Promise.resolve({documents:[]})]);setFile(next);setDocs(documents.documents.filter((d:SavedDocument)=>d.fileKey));setConfirmed(false);setLoaded(n=>n+1)}catch(e){setError((e as Error).message)}};
+ // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps -- reloads when the record changes; load reads it
  useEffect(()=>{if(record.revision)void load()},[record.id,record.revision]);
  useEffect(()=>()=>{if(preview)URL.revokeObjectURL(preview.url)},[preview]);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- any change asks for the confirmation again
  useEffect(()=>{setConfirmed(false)},[scope,decision,chosen,notes,noticeDate,method,recipient,result,sourceType,sourceReference,record.revision]);
  const disabled=!canEdit||busy||dirty||!record.revision||!!record.archived;
  const chooseDocument=(id:string)=>{setDocumentId(id);setUpload(null);const e=file?.evidence.find(x=>x.documentId===id);if(e){setKind(e.kind);setReference(e.reference);setPages(e.pages)}};

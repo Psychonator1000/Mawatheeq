@@ -34,7 +34,7 @@ type Style = { type: string; basedOn?: string; pPr?: Element; rPr?: Element; tbl
 type Anchor = { el: HTMLElement; para: HTMLElement | null; page?: number; h: { rel: string; off?: number; align?: string }; v: { rel: string; off?: number; align?: string }; w: number; h2: number; behind: boolean };
 type Ctx = {
   styles: Map<string, Style>; defaultPara?: string; pDefault?: Element; rDefault?: Element; theme: Record<string, string>;
-  index: Map<Element, number> | null; anchors: Anchor[]; page?: number; zip: PizZipType; rels: Map<string, string>; dir: string; tblStyle?: string;
+  index: Map<Element, number> | null; breaks?: Set<Element>; anchors: Anchor[]; page?: number; zip: PizZipType; rels: Map<string, string>; dir: string; tblStyle?: string;
 };
 
 const HIGHLIGHT: Record<string, string> = { yellow: '#ffff00', green: '#00ff00', cyan: '#00ffff', magenta: '#ff00ff', blue: '#0000ff', red: '#ff0000', darkBlue: '#000080', darkCyan: '#008080', darkGreen: '#008000', darkMagenta: '#800080', darkRed: '#800000', darkYellow: '#808000', darkGray: '#808080', lightGray: '#c0c0c0', black: '#000000', white: '#ffffff' };
@@ -234,7 +234,9 @@ function run(ctx: Ctx, r: Element, base: RPr, pp: PPr, out: HTMLElement, host: H
       const span = document.createElement('span'); span.className = 'wd-tab'; span.dataset.fixed = ''; span.textContent = ' ';
       styleRun(span, ctx, rp, ''); span.style.textDecorationLine = ''; out.append(span);
     } else if (name === 'br' || name === 'cr') {
-      if (wv(c, 'type') === 'page') out.dataset.breakAfter = '1'; else out.append(document.createElement('br'));
+      // A line break typed in the preview stays editable (it can be deleted); the template's own are fixed.
+      if (wv(c, 'type') === 'page') out.dataset.breakAfter = '1';
+      else { const br = document.createElement('br'); if (!ctx.breaks?.has(c)) br.dataset.fixed = ''; out.append(br); }
     } else if (name === 'noBreakHyphen') {
       const span = document.createElement('span'); span.dataset.fixed = ''; span.textContent = '‑'; styleRun(span, ctx, rp, ''); out.append(span);
     } else if (name === 'drawing') drawing(ctx, c, out, host);
@@ -408,7 +410,7 @@ function layoutTabs(root: HTMLElement, scale: number) {
 export type Layout = { pages: number; width: number; height: number };
 
 /** Draws the document into `host`. */
-export function renderDocument(zip: PizZipType, dom: Document, texts: Element[], host: HTMLElement): Layout {
+export function renderDocument(zip: PizZipType, dom: Document, texts: Element[], host: HTMLElement, drawn?: { index: Map<Element, number>; breaks: Set<Element> }): Layout {
   const read = (path: string) => { const f = zip.file(path); return f ? new DOMParser().parseFromString(f.asText(), 'application/xml') : null; };
   const relsOf = (part: string) => {
     const m = new Map<string, string>(), x = read(part.replace(/([^/]+)$/, '_rels/$1.rels'));
@@ -430,12 +432,12 @@ export function renderDocument(zip: PizZipType, dom: Document, texts: Element[],
     theme[k + 'Bidi'] = kid(f, 'cs')?.getAttribute('typeface') || kids(f, 'font').find(x => x.getAttribute('script') === 'Arab')?.getAttribute('typeface') || '';
   }
   const rels = relsOf('word/document.xml');
-  const index = new Map(texts.map((t, i) => [t, i]));
+  const index = drawn?.index || new Map(texts.map((t, i) => [t, i]));
   const body = kid(dom.documentElement, 'body')!, sect = kid(body, 'sectPr') || deep(body, 'sectPr');
   const pg = kid(sect, 'pgSz'), mg = kid(sect, 'pgMar');
   const W_ = tw(num(wv(pg, 'w'), 11906)), H = tw(num(wv(pg, 'h'), 16838));
   const m = { top: tw(num(wv(mg, 'top'), 1440)), bottom: tw(num(wv(mg, 'bottom'), 1440)), left: tw(num(wv(mg, 'left'), 1440)), right: tw(num(wv(mg, 'right'), 1440)), header: tw(num(wv(mg, 'header'), 720)), footer: tw(num(wv(mg, 'footer'), 720)) };
-  const ctx: Ctx = { styles, defaultPara, pDefault: kid(kid(defs, 'pPrDefault'), 'pPr'), rDefault: kid(kid(defs, 'rPrDefault'), 'rPr'), theme, index, anchors: [], zip, rels, dir: 'rtl' };
+  const ctx: Ctx = { styles, defaultPara, pDefault: kid(kid(defs, 'pPrDefault'), 'pPr'), rDefault: kid(kid(defs, 'rPrDefault'), 'rPr'), theme, index, breaks: drawn?.breaks, anchors: [], zip, rels, dir: 'rtl' };
 
   host.replaceChildren();
   const sheet = document.createElement('div'); sheet.className = 'wd-sheet'; sheet.style.width = W_ + 'px'; host.append(sheet);

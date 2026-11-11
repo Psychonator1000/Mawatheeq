@@ -22,12 +22,11 @@ await db.exec("insert into public.mawatheeq_members(user_id,role) select id,'own
 const rpc=async(name,args)=>(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
 const local=(token,action,data={})=>rpc('mawatheeq_local_request',[token,action,JSON.stringify(data)]);
 const office=(token,action,data={})=>rpc('mawatheeq_office_request',[token,action,JSON.stringify(data)]);
-const dept=(token,workspace,action,data={})=>rpc('mawatheeq_department_request',[token,action,JSON.stringify({...data,workspace})]);
 const login=(username,password='Synthetic-password-123')=>rpc('mawatheeq_local_login',[username,password]);
 const denied=fn=>assert.rejects(fn,e=>e.code==='42501');
 const owner=await login('owner');
 let visible=await local(owner.token,'save_case',{case:{id:'workspace-visible',code:'WS-1',autoNumber:'1001',client:'Synthetic Client',clientGroup:'Synthetic Client',opponent:'Synthetic Opponent',date:'2026-10-01',procedures:[],revision:0}});
-const hidden=await local(owner.token,'save_case',{case:{...visible,id:'workspace-hidden',code:'WS-2',opponent:'Hidden Opponent',revision:0}});
+await local(owner.token,'save_case',{case:{...visible,id:'workspace-hidden',code:'WS-2',opponent:'Hidden Opponent',revision:0}});
 const grants=sections=>({sections,caseScope:'selected',caseIds:[visible.id],canEdit:true,canExport:true});
 // Synthetic account provisioning avoids repeatedly benchmarking bcrypt in WASM.
 // Production account creation/defaults/rotation are covered by test:permissions/local-auth.

@@ -10,6 +10,7 @@ export default function PageNavigation({ page, pages, total, onChange }: {
   const [jump, setJump] = useState(String(current));
   const [error, setError] = useState('');
   const inputId = useId(), errorId = useId();
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- the jump box follows the current page
   useEffect(() => { setJump(String(current)); setError(''); }, [current, count]);
   return <nav className="pagination" aria-label="صفحات السجلات">
     <span className="page-summary" aria-live="polite">{total} سجل • الصفحة <span className="mono">{current} / {count}</span></span>

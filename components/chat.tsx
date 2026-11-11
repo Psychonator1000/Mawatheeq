@@ -134,6 +134,7 @@ function Conversation({conv,me,onBack,onInfo,onChanged,onDirect,onLeave}:{onLeav
   // Edits and deletions of recent messages are picked up by a full reload every sixth check.
   let n=0;let t=0;const tick=()=>{if(!document.hidden)void load(++n%6===0);t=window.setTimeout(tick,pollEvery(FAST,20000))};t=window.setTimeout(tick,pollEvery(FAST,20000));const live=()=>void load(false);addEventListener(LIVE_EVENT.chat,live);return()=>{clearTimeout(t);removeEventListener(LIVE_EVENT.chat,live)}},[load]);
  useEffect(()=>{const el=scroller.current;if(el)el.scrollTop=el.scrollHeight},[messages.length]);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- the suggestions clear when there is nothing to suggest
  useEffect(()=>{if(!trigger){setSuggest([]);return}const t=window.setTimeout(()=>{void chatRequest<ChatRef[]>('search',{q:trigger.query||(trigger.char==='@'?'ا':'')}).then(r=>{setSuggest(triggerRefs(trigger.char,r).slice(0,8));setPick(0)}).catch(()=>setSuggest([]))},trigger.query?220:0);return()=>clearTimeout(t)},[trigger]);
  function onType(v:string){setText(v);const caret=input.current?.selectionStart??v.length;setTrigger(typedTrigger(v,caret));setRefs(r=>r.filter(x=>v.includes(refToken(x))))}
  function choose(r:ChatRef){if(!trigger)return;const before=text.slice(0,trigger.start),after=text.slice(trigger.start+1+trigger.query.length);const token=refToken(r)+' ';

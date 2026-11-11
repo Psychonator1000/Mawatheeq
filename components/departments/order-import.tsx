@@ -37,8 +37,8 @@ export function OrderReadingPanel({files,clients,onDone}:{files:CollectionRecord
  // The client is taken from the file this order completes, or guessed from the creditor's name, until it is chosen.
  const clientOf=(i:OrderItem)=>i.client??(existingFile(i.data)?.payload.clientEntityId||guessClient(i.data?.company||'',clients));
  const ready=items.filter(i=>i.status==='ready'&&!i.skip),done=items.filter(i=>i.status==='ready'||i.status==='failed').length;
- const current=items.find(i=>i.status==='reading'),waiting=items.filter(i=>i.status==='waiting').length;
- const overall=items.length?Math.round((done+(current?current.progress/100:0))/items.length*100):0;
+ const reading=items.filter(i=>i.status==='reading'),current=reading[0],waiting=items.filter(i=>i.status==='waiting').length;
+ const overall=items.length?Math.round((done+reading.reduce((t,i)=>t+i.progress/100,0))/items.length*100):0;
  async function create(){
   setSaving(true);const failed:string[]=[],saved:string[]=[];let made=0;
   for(const i of ready){
@@ -63,7 +63,7 @@ export function OrderReadingPanel({files,clients,onDone}:{files:CollectionRecord
   <div className="order-reading" role="status" aria-label="قراءة أوامر الأداء">
    <div className="order-reading-text">{running?<LoaderCircle className="spin" size={15}/>:<FileText size={15}/>}
     <b>{allDone?`اكتملت قراءة ${items.length===1?'أمر الأداء':orders(items.length)}`:`قراءة أوامر الأداء: ${done} من ${items.length}`}</b>
-    <small>{current?`${current.file.name} · ${current.message}`:allDone?`جاهز للمراجعة: ${ready.length}${items.some(i=>i.status==='failed')?` · تعذرت القراءة: ${items.filter(i=>i.status==='failed').length}`:''}`:waiting?'متوقفة':''}</small></div>
+    <small>{current?(reading.length>1?`يقرأ ${orders(reading.length)} معاً: ${reading.map(i=>i.file.name).join('، ')}`:`${current.file.name} · ${current.message}`):allDone?`جاهز للمراجعة: ${ready.length}${items.some(i=>i.status==='failed')?` · تعذرت القراءة: ${items.filter(i=>i.status==='failed').length}`:''}`:waiting?'متوقفة':''}</small></div>
    <div className="order-reading-bar" aria-hidden><i style={{width:overall+'%'}}/></div>
    <div className="order-reading-acts">
     <button type="button" className="btn primary" disabled={!ready.length&&!items.some(i=>i.status==='failed')} onClick={()=>orderReading.open(true)}><Eye size={14}/> مراجعة وحفظ{ready.length?` (${ready.length})`:''}</button>

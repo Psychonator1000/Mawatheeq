@@ -8,7 +8,7 @@ import {normalizeSearch} from '@/lib/case-browse';
 import {lawyerLabels,matchLawyer,visibleCases} from '@/lib/lawyer-match';
 import PageNavigation from './page-navigation';
 import ViewEditor from './view-editor';
-import {LayoutDashboard,FolderSearch,CalendarDays,BarChart3,FileCheck2,ListChecks,Users2,FileText,type LucideIcon as Ic} from 'lucide-react';
+import {LayoutDashboard,CalendarDays,BarChart3,FileCheck2,ListChecks,Users2,FileText,type LucideIcon as Ic} from 'lucide-react';
 
 /** Each page as a card: an icon and one line on what it holds. */
 const SECTION_ICONS:Record<Section,Ic>={overview:LayoutDashboard,cases:Scale,clients:Building2,deadlines:CalendarDays,analytics:BarChart3,verification:FileCheck2,work:ListChecks,conflicts:Users2,documents:FileText,daily:ClipboardList,secretary:ConciergeBell,collections:HandCoins,accounting:Calculator,hr:Users,archive:Archive};

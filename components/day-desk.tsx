@@ -76,6 +76,7 @@ export default function DayDesk(p:Props){
  const shown=missions.filter(m=>passesFilter(m,filter));
  const report=useOwnReport(p.canReport&&self,date,today,missions);
  const [list,setList]=useState<{reports:StoredReport[];expected:{userId:string;username:string;displayName:string}[]}|null>(null),[reading,setReading]=useState('');
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader resets its state before fetching
  useEffect(()=>{if(!reviewer||self){setList(null);return}let on=true;setList(null);dailyRequest<typeof list>('list',{from:date,to:date}).then(d=>{if(on)setList(d)}).catch(e=>{if(on)toast.error((e as Error).message)});return()=>{on=false}},[reviewer,self,date]);
  const go=(d:string)=>{void report.flush();setDate(d);setReading('')};
  const pick=(v:string)=>{void report.flush();setWho(v);setReading('')};
@@ -198,6 +199,7 @@ function DoneForm({w,onClose,onSaved}:{w:WorkItem;onClose:()=>void;onSaved:(note
 
 function AddTask({date,members,assignee,reviewer,onSaved}:{date:string;members:Member[];assignee:string;reviewer:boolean;onSaved:()=>void}){
  const [open,setOpen]=useState(false),[title,setTitle]=useState(''),[to,setTo]=useState(assignee),[busy,setBusy]=useState(false);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- follows the assignee passed in
  useEffect(()=>setTo(assignee),[assignee]);
  async function save(){if(!title.trim())return;setBusy(true);
   try{await officeRequest('save_work',{item:{id:crypto.randomUUID(),revision:0,caseId:'',title:title.trim(),kind:'task',dueDate:date,dueTime:'',assigneeId:to,priority:'normal',status:'open',location:'',notes:'',completionNote:''}});
@@ -213,10 +215,12 @@ type OwnReport=ReturnType<typeof useOwnReport>;
 function useOwnReport(on:boolean,date:string,today:string,missions:Mission[]){
  const [state,setState]=useState<{date:string;payload:DailyPayload;saved:string;revision:number;submittedAt:string|null;loading:boolean;busy:boolean;error:string}>({date,payload:emptyReport(),saved:'',revision:0,submittedAt:null,loading:on,busy:false,error:''});
  const cur=useRef(state);useEffect(()=>{cur.current=state});
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader resets its state before fetching
  useEffect(()=>{if(!on)return;let live=true;setState(s=>({...s,date,loading:true,error:''}));
   dailyRequest<{report:StoredReport|null}>('mine',{date}).then(d=>{if(!live)return;const payload=readReport(d.report?.payload);setState({date,payload,saved:JSON.stringify(cleanReport(payload)),revision:d.report?.revision||0,submittedAt:d.report?.submittedAt||null,loading:false,busy:false,error:''})})
    .catch(e=>{if(live)setState(s=>({...s,loading:false,error:(e as Error).message}))});return()=>{live=false}},[on,date]);
  // What was done that day (sittings posted, tasks closed) comes into the report by itself.
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- lines are marked done as the missions change
  useEffect(()=>{if(on&&!state.loading&&state.date===date)setState(s=>{const next=withDone(s.payload,missions);return next===s.payload?s:{...s,payload:next}})},[on,missions,state.loading,state.date,date]);
  const dirty=JSON.stringify(cleanReport(state.payload))!==state.saved;
  async function save(submit=false,payload=cur.current.payload){
@@ -236,28 +240,37 @@ function useOwnReport(on:boolean,date:string,today:string,missions:Mission[]){
 /** «الأداء»: each person's work over a period, for the owner and the admins who read reports. A row opens that person's day. */
 function Performance({p,onPick}:{p:Props;onPick:(userId:string)=>void}){
  const today=todayISO(),options=periods(today),[period,setPeriod]=useState(options[0][0]);
- const chosen=options.find(o=>o[0]===period)||options[0],from=chosen[2],to=chosen[3],range={name:chosen[1]};
+ // «فترة مخصصة»: any from–to range (from the first of this month to today until changed).
+ const [customFrom,setCustomFrom]=useState(today.slice(0,8)+'01'),[customTo,setCustomTo]=useState(today);
+ const custom=period==='custom',chosen=options.find(o=>o[0]===period)||options[0];
+ const from=custom?(customFrom<=customTo?customFrom:customTo):chosen[2],to=custom?(customFrom<=customTo?customTo:customFrom):chosen[3],range={name:custom?'فترة مخصصة':chosen[1]};
  // The figures for the period asked, worked out once when its reports arrive (a slower answer for an earlier period never shows).
- const [got,setGot]=useState<{key:string;rows?:PersonStats[];error?:string}>({key:''});
+ const [got,setGot]=useState<{key:string;rows?:PersonStats[];reports?:StoredReport[];error?:string}>({key:''});
  const {records,work,members,rules}=p;
  useEffect(()=>{let on=true;const key=from+'|'+to;
-  dailyRequest<TeamList>('list',{from,to}).then(d=>{if(on)setGot({key,rows:performance({people:d.expected,reports:d.reports,from,to,today:todayISO(),records,work,members,rules})})}).catch(e=>{if(on)setGot({key,error:(e as Error).message})});
+  dailyRequest<TeamList>('list',{from,to}).then(d=>{if(on)setGot({key,reports:d.reports,rows:performance({people:d.expected,reports:d.reports,from,to,today:todayISO(),records,work,members,rules})})}).catch(e=>{if(on)setGot({key,error:(e as Error).message})});
   return()=>{on=false}},[from,to,records,work,members,rules]);
  const current=got.key===from+'|'+to?got:{key:''},error=current.error||'',rows=current.rows||[],data=current.rows;
  const label=`${range.name} · ${formatDate(from)} – ${formatDate(to)}`;
  const total=rows.reduce((t,r)=>({sent:t.sent+r.sent,due:t.due+r.workDays,hearings:t.hearings+r.hearings,posted:t.posted+r.posted,late:t.late+r.lateNow}),{sent:0,due:0,hearings:0,posted:0,late:0});
  const print=()=>{if(!printHtml(performanceHtml(rows,label,p.printedBy,formatDate(today))))toast.error('تعذر فتح الطباعة.')};
+ // One person's reports over the period, one report a page, oldest first.
+ const printPerson=(r:PersonStats)=>{const list=(current.reports||[]).filter(x=>x.userId===r.userId&&x.date>=from&&x.date<=to).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!list.length){toast.error('لا تقارير لهذا الشخص في هذه الفترة.');return}
+  if(!printHtml(reportsHtml(list.map(x=>({name:r.name,date:formatDate(x.date),payload:cleanReport(readReport(x.payload)),sent:x.submittedAt?'أُرسل '+clock(x.submittedAt):'مسودة لم تُرسل'})),p.printedBy,formatDate(today))))toast.error('تعذر فتح الطباعة.')};
  return <section className="panel day-missions" aria-label="الأداء"><div className="day-col-head"><h2>الأداء</h2>
-   <div className="work-chips day-chips" role="group" aria-label="الفترة">{options.map(([k,l])=><button key={k} className={'work-chip'+(period===k?' on':'')} aria-pressed={period===k} onClick={()=>setPeriod(k)}>{l}</button>)}</div>
+   <div className="work-chips day-chips" role="group" aria-label="الفترة">{options.map(([k,l])=><button key={k} className={'work-chip'+(period===k?' on':'')} aria-pressed={period===k} onClick={()=>setPeriod(k)}>{l}</button>)}<button className={'work-chip'+(custom?' on':'')} aria-pressed={custom} onClick={()=>setPeriod('custom')}>فترة مخصصة</button></div>
+   {custom&&<div className="perf-range"><DateField label="من" value={customFrom} onChange={v=>v&&setCustomFrom(v)}/><DateField label="إلى" value={customTo} onChange={v=>v&&setCustomTo(v)}/></div>}
    <div className="actions"><button className="btn" disabled={!rows.length} onClick={print}><Printer size={15}/> طباعة</button></div></div>
   {error?<p className="day-empty" role="alert">{error}</p>:!data?<p className="day-empty" role="status"><LoaderCircle className="spin" size={14}/> جارٍ الحساب…</p>:!rows.length?<NoReporters canManage={p.canManageTeam}/>:<>
   <div className="perf-totals"><span><strong>{total.due?Math.round(100*total.sent/total.due):0}%</strong> من التقارير المطلوبة أُرسلت</span><span><strong>{total.hearings}</strong> جلسة في التقارير</span><span><strong>{total.posted}</strong> جلسة رُحّلت في القضايا</span><span className={total.late?'late':''}><strong>{total.late}</strong> متأخر الآن</span></div>
-  <div className="day-list"><table className="office-table perf-table"><thead><tr><th>المحامي</th><th>التقارير المرسلة</th><th>في اليوم نفسه</th><th>جلسات حضرها</th><th>جلسات رحّلها</th><th>أعمال إدارية</th><th>مراجعات خارجية</th><th>مهام منجزة</th><th>متأخر الآن</th><th>آخر تقرير</th></tr></thead>
+  <div className="day-list"><table className="office-table perf-table"><thead><tr><th>المحامي</th><th>التقارير المرسلة</th><th>في اليوم نفسه</th><th>جلسات حضرها</th><th>جلسات رحّلها</th><th>أعمال إدارية</th><th>مراجعات خارجية</th><th>مهام منجزة</th><th>متأخر الآن</th><th>آخر تقرير</th><th aria-label="تقارير الفترة"/></tr></thead>
    <tbody>{rows.map(r=>{const pct=r.workDays?Math.min(100,Math.round(100*r.sent/r.workDays)):0;return <tr key={r.userId} tabIndex={0} onClick={()=>onPick(r.userId)} onKeyDown={e=>{if(e.key==='Enter')onPick(r.userId)}} title="فتح يومه وتقريره">
     <td><b>{r.name}</b>{r.drafts>0&&<small>{r.drafts} مسودة لم تُرسل</small>}</td>
     <td><span className="perf-rate"><i style={{width:pct+'%'}} className={pct>=90?'good':pct>=60?'mid':'low'}/></span><span>{r.sent} من {r.workDays}</span></td>
     <td className="mono">{r.sameDay}</td><td className="mono">{r.hearings}</td><td className="mono">{r.posted}</td><td className="mono">{r.admin}</td><td className="mono">{r.external}</td><td className="mono">{r.tasks}</td>
-    <td className={'mono'+(r.lateNow?' late':'')}>{r.lateNow}</td><td>{r.lastSent?formatDate(r.lastSent.slice(0,10))+' '+clock(r.lastSent):'—'}</td></tr>})}</tbody></table></div></>}
+    <td className={'mono'+(r.lateNow?' late':'')}>{r.lateNow}</td><td>{r.lastSent?formatDate(r.lastSent.slice(0,10))+' '+clock(r.lastSent):'—'}</td>
+    <td><button type="button" className="btn" disabled={!r.sent&&!r.drafts} title="طباعة كل تقاريره في هذه الفترة" onClick={e=>{e.stopPropagation();printPerson(r)}} onKeyDown={e=>e.stopPropagation()}><Printer size={14}/> تقاريره</button></td></tr>})}</tbody></table></div></>}
  </section>;
 }
 

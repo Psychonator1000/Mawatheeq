@@ -81,7 +81,7 @@ export default function WordPreview({items,onClose}:{items:WordItem[];onClose:()
    <div className="word-preview-main">
     <label className="field word-preview-name"><span>اسم ملف Word</span><span className="word-preview-name-row"><input aria-label="اسم ملف Word" value={names[item?.id]??''} maxLength={120} onChange={e=>{const v=e.target.value;setNames(n=>({...n,[item.id]:v}))}} placeholder="اسم الملف"/><em>.docx</em></span></label>
     <div className="word-preview-area" ref={area} onInput={()=>setEdited(s=>s.has(item.id)?s:new Set(s).add(item.id))}
-     onKeyDown={e=>{if(e.key==='Enter')e.preventDefault()}}>
+     onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();document.execCommand('insertLineBreak')}}}>
      {loading&&<p className="word-preview-wait" role="status"><LoaderCircle className="spin" size={16}/> جارٍ تجهيز المعاينة…</p>}
      {error&&<p className="notice" role="alert">{error}</p>}
      <div ref={body} className="word-preview-page" aria-label={'معاينة '+(final[item?.id]||'')}/>

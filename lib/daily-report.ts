@@ -109,7 +109,19 @@ function ownerOf(work: WorkItem[], members: Member[], person: Person, ownCasesOn
   };
 }
 
-export function missionsFor({ records, work, members, rules, date, today, person, ownCasesOnly = false, viewerId = '' }: Input): Mission[] {
+/** What a case holds for a day, worked out once and shared by everyone's list (the whole team's day reads every case). */
+type CaseFacts = { next?: string; last?: ReturnType<typeof lastSitting>; posted?: NonNullable<CaseRecord['procedures']>[number]; followups: NonNullable<CaseRecord['procedures']>; state: ReturnType<typeof caseState> };
+export type FactsCache = Map<CaseRecord, CaseFacts>;
+function factsOf(c: CaseRecord, rules: Rules | undefined, date: string, cache?: FactsCache): CaseFacts {
+  const hit = cache?.get(c); if (hit) return hit;
+  const procs = c.procedures || [];
+  const f: CaseFacts = { next: nextSitting(c) || undefined, last: lastSitting(c), posted: procs.filter(p => isSessionEntry(p) && p.date === date).at(-1),
+    followups: procs.filter(p => !isSessionEntry(p) && p.kind !== 'قيد الدعوى' && p.followup === date), state: caseState(c, rules, date) };
+  cache?.set(c, f);
+  return f;
+}
+
+export function missionsFor({ records, work, members, rules, date, today, person, ownCasesOnly = false, viewerId = '', facts }: Input & { facts?: FactsCache }): Mission[] {
   const all = person === 'all', isToday = date === today, from = isToday ? shiftDays(date, -14) : date;
   const who = (id?: string) => memberLabel(members.find(m => m.id === id));
   const attendee = new Map<string, WorkItem>();
@@ -119,24 +131,24 @@ export function missionsFor({ records, work, members, rules, date, today, person
   const live = records.filter(c => isFiled(c) && !c.archived);
   for (const c of live) {
     // Sittings: the one due that day (or overdue), and the one already posted that day.
-    const next = nextSitting(c), last = lastSitting(c);
+    const k = factsOf(c, rules, date, facts), next = k.next, last = k.last;
     if (next && next >= from && next <= date) {
       const o = caseOwner(c, next);
       if (o.mine) out.push({ key: 'h:' + c.id + ':' + next, kind: 'hearing', date: next, time: String(last?.nextTime || attendee.get(c.id + '|' + next)?.dueTime || ''), title: ref(c), sub: parties(c), place: String(last?.court || c.court || ''), state: next < today ? 'late' : 'open', result: '', c, who: o.who });
     }
-    const posted = (c.procedures || []).filter(p => isSessionEntry(p) && p.date === date).at(-1);
+    const posted = k.posted;
     if (posted) {
       const o = caseOwner(c, date);
       const decision = String(posted.text || posted.decision || ''), next = posted.followup ? 'الجلسة القادمة ' + formatDate(posted.followup) : '';
       if (o.mine) out.push({ key: 'h:' + c.id + ':' + date, kind: 'hearing', date, time: '', title: ref(c), sub: parties(c), place: String(posted.court || c.court || ''), state: 'done', result: [decision, next].filter(Boolean).join(' · '), decision, next, c, who: o.who });
     }
     // Follow-ups set on a procedure other than a sitting (a sitting's own next date is its posting).
-    for (const p of c.procedures || []) if (!isSessionEntry(p) && p.kind !== 'قيد الدعوى' && p.followup === date) {
+    for (const p of k.followups) {
       const o = caseOwner(c, date);
       if (o.mine) out.push({ key: 'f:' + c.id + ':' + p.id, kind: 'followup', date, time: '', title: ref(c), sub: p.text || parties(c), place: '', state: 'open', result: '', c, who: o.who });
     }
     // Appeal deadlines: due within the warning days, or passed in the last week (still worth a look).
-    const s = caseState(c, rules, date);
+    const s = k.state;
     if ((s.alert === 'خلال خمسة أيام' || (s.alert === 'انتهت المهلة' && (s.remaining ?? -99) >= -7)) && s.due) {
       const o = caseOwner(c, date);
       if (o.mine) out.push({ key: 'd:' + c.id, kind: 'deadline', date: String(s.due), time: '', title: ref(c), sub: parties(c), place: s.alert === 'انتهت المهلة' ? 'انتهت المهلة' : `يبقى ${s.remaining} يوم`, state: s.alert === 'انتهت المهلة' ? 'late' : 'open', result: '', c, who: o.who });
@@ -193,9 +205,11 @@ export function teamDay({ expected, reports, date, today, records, work, members
   expected: { userId: string; username: string; displayName: string }[]; reports: StoredReport[]; date: string; today: string;
   records: CaseRecord[]; work: WorkItem[]; members: Member[]; rules?: Rules;
 }): TeamDayRow[] {
+  // Each case is read once for the whole team, not once a person.
+  const facts: FactsCache = new Map();
   return teamStatus(expected, reports, date).map(t => {
     const member = members.find(m => m.id === t.userId);
-    const all = member ? missionsFor({ records, work, members, rules, date, today, person: member, viewerId: t.userId }) : [];
+    const all = member ? missionsFor({ records, work, members, rules, date, today, person: member, viewerId: t.userId, facts }) : [];
     const on = all.filter(m => m.date === date), h = on.filter(m => m.kind === 'hearing'), k = on.filter(m => m.kind === 'task');
     return {
       userId: t.userId, username: t.username, name: t.displayName ? titled(t.displayName) : t.username, status: t.status, report: t.report,
@@ -298,11 +312,12 @@ export function performance({ people, reports, from, to, today, records, work, m
   // Sittings posted in the period, by the account that recorded them.
   const posted = new Map<string, number>();
   for (const c of records) for (const p of c.procedures || []) if (isSessionEntry(p) && p.recordedBy && p.date >= from && p.date <= to) posted.set(p.recordedBy, (posted.get(p.recordedBy) || 0) + 1);
+  const facts: FactsCache = new Map();
   return everyone.map(p => {
     const mine = reports.filter(r => r.userId === p.userId && r.date >= from && r.date <= to), sent = mine.filter(r => r.submittedAt);
     const sum = mine.reduce((t, r) => { const s = daySummary(readReport(r.payload)); for (const k of Object.keys(t) as ReportPart[]) t[k] += s[k]; return t; }, { hearings: 0, tasks: 0, admin: 0, external: 0, other: 0, pending: 0 } as Record<ReportPart, number>);
     const member = members.find(m => m.id === p.userId);
-    const lateNow = member ? missionsFor({ records, work, members, rules, date: today, today, person: member, viewerId: p.userId }).filter(m => m.state === 'late').length : 0;
+    const lateNow = member ? missionsFor({ records, work, members, rules, date: today, today, person: member, viewerId: p.userId, facts }).filter(m => m.state === 'late').length : 0;
     return {
       userId: p.userId, name: p.displayName ? titled(p.displayName) : p.username, workDays, sent: sent.length, sameDay: sent.filter(r => kuwaitDay(r.submittedAt!) === r.date).length, drafts: mine.length - sent.length,
       hearings: sum.hearings, tasks: sum.tasks, admin: sum.admin, external: sum.external, other: sum.other, posted: posted.get(p.username) || 0, lateNow,

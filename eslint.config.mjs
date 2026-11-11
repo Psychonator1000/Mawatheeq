@@ -35,7 +35,8 @@ const eslintConfig = defineConfig([
       "jsx-a11y/role-has-required-aria-props": "warn",
       "jsx-a11y/role-supports-aria-props": "warn",
       // Destructuring a field away ('{field, ...rest}') is how records drop keys on purpose.
-      "@typescript-eslint/no-unused-vars": ["warn", { ignoreRestSiblings: true, caughtErrors: "none" }],
+      // A parameter kept for its place in a signature is named with a leading «_».
+      "@typescript-eslint/no-unused-vars": ["warn", { ignoreRestSiblings: true, caughtErrors: "none", argsIgnorePattern: "^_" }],
       "@typescript-eslint/no-unused-expressions": "warn",
       // Data loaders intentionally reset loading/error state before fetching.
       "react-hooks/set-state-in-effect": "warn",

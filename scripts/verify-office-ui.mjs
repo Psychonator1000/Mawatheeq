@@ -156,7 +156,7 @@ try{
  assert.equal(await staff.getByLabel('كلمة المرور الجديدة',{exact:true}).count(),0,'a permanent password is not forced to change');
  await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_owner',exact:true})}).getByRole('button',{name:'تغيير كلمة مروري',exact:true}).waitFor();
  // Lawyer accounts from case lawyer names, then owner-only switching into the account and back.
- await go('حسابات المحامين');await page.getByLabel('اسم الدخول ا/ سالم تجريبي',{exact:true}).waitFor();await page.getByLabel('اسم الدخول ا/ سالم تجريبي',{exact:true}).fill('salem.ui');await go('إنشاء 1 حساب');
+ await go('حسابات المحامين');await page.getByLabel('اسم الدخول سالم تجريبي',{exact:true}).waitFor();await page.getByLabel('اسم الدخول سالم تجريبي',{exact:true}).fill('salem.ui');await go('إنشاء 1 حساب');
  await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByText('سالم تجريبي',{exact:true}).waitFor();
  page.once('dialog',d=>void d.accept());await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'الدخول بحسابه',exact:true}).click();
  await page.locator('.switch-banner').getByText('salem.ui',{exact:true}).waitFor();
@@ -349,7 +349,7 @@ try{
  await page.getByRole('row').filter({has:page.getByText('salem.ui',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
  await page.getByRole('checkbox',{name:'محامٍ',exact:true,checked:true}).waitFor();await page.getByRole('button',{name:/تعديل التفاصيل/}).click();
  assert.equal(await page.getByRole('radio',{name:/قضاياه فقط/}).isChecked(),true,'Bulk lawyer accounts see their own cases by name');
- assert.equal(await page.getByRole('checkbox',{name:'قضايا ا/ سالم تجريبي'}).isChecked(),true);
+ assert.equal(await page.getByRole('checkbox',{name:'قضايا سالم تجريبي'}).isChecked(),true);
  await page.getByText(/يرى 5 قضية الآن/).waitFor();await page.screenshot({path:artifacts+'/lawyer-scope.png'});await page.keyboard.press('Escape');
  // Delegated admin: «مدير» ticks every power the owner holds; the owner unticks backups.
  await go('إضافة موظف');await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_deputy');await page.getByLabel('كلمة المرور',{exact:true}).fill('Deputy-synthetic-123');

@@ -21,23 +21,33 @@ const set = (next: Partial<State>) => { state = { ...state, ...next }; listeners
 
 export function patchOrder(id: string, v: Partial<OrderItem>) { set({ items: state.items.map(i => i.id === id ? { ...i, ...v } : i) }); }
 
+// Two orders are read at once on a computer with the room for it (4 or more cores and 4 GB or more of memory), one at a
+// time on a weaker one, so the page stays smooth (each reading has its own text-recognition engine).
+function lanes() {
+  const cores = navigator.hardwareConcurrency || 2, memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+  return cores >= 4 && memory >= 4 ? 2 : 1;
+}
+
 async function run() {
   if (state.running) return;
   const { extractPDF } = await import('./pdf-reader'); const { extractFields } = await import('./document-fields');
   const ctrl = new AbortController(); stopper = ctrl; set({ running: true });
-  try {
-    for (let next = state.items.find(i => i.status === 'waiting'); next && !ctrl.signal.aborted; next = state.items.find(i => i.status === 'waiting')) {
-      const item = next;
-      patchOrder(item.id, { status: 'reading', progress: 0, message: 'تجهيز القراءة…' });
+  // Each lane takes the next order still waiting (marked as being read at once, so no two lanes take the same one).
+  const lane = async () => {
+    for (let item = state.items.find(i => i.status === 'waiting'); item && !ctrl.signal.aborted; item = state.items.find(i => i.status === 'waiting')) {
+      const it = item;
+      patchOrder(it.id, { status: 'reading', progress: 0, message: 'تجهيز القراءة…' });
       try {
-        const pages = await extractPDF(item.file, (p, message) => patchOrder(item.id, { progress: p, message }), ctrl.signal, PAGES);
-        patchOrder(item.id, { status: 'ready', progress: 100, data: extractFields(pagesText(pages), item.file.name) });
+        const pages = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: p, message }), ctrl.signal, PAGES);
+        patchOrder(it.id, { status: 'ready', progress: 100, data: extractFields(pagesText(pages), it.file.name) });
       } catch (e) {
-        if (ctrl.signal.aborted) { patchOrder(item.id, { status: 'waiting', progress: 0, message: 'أُوقفت القراءة' }); break; }
-        patchOrder(item.id, { status: 'failed', error: (e as Error).message });
+        if (ctrl.signal.aborted) { patchOrder(it.id, { status: 'waiting', progress: 0, message: 'أُوقفت القراءة' }); break; }
+        patchOrder(it.id, { status: 'failed', error: (e as Error).message });
       }
     }
-  } finally { stopper = null; set({ running: false }); }
+  };
+  try { await Promise.all(Array.from({ length: lanes() }, lane)); }
+  finally { stopper = null; set({ running: false }); }
 }
 
 export const orderReading = {

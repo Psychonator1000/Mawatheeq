@@ -21,8 +21,6 @@ await db.query("insert into mawatheeq_private.accounts(username,password_hash,mu
 await db.exec("insert into public.mawatheeq_members(user_id,role) select id,'owner' from mawatheeq_private.accounts;set role anon");
 const rpc=async(name,args)=>(await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) result`,args)).rows[0].result;
 const local=(token,action,data={})=>rpc('mawatheeq_local_request',[token,action,JSON.stringify(data)]);
-const office=(token,action,data={})=>rpc('mawatheeq_office_request',[token,action,JSON.stringify(data)]);
-const client=(token,action,data={})=>rpc('mawatheeq_client_request',[token,action,JSON.stringify(data)]);
 const login=(username,password='Fixture-password-123')=>rpc('mawatheeq_local_login',[username,password]);
 // The archive follows the cases: one paper file per case code (insurance «ARC-T»), created and kept in step automatically.
 const admin=await login('admin');

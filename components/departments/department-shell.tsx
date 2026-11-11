@@ -30,6 +30,7 @@ export default function DepartmentWorkspace({workspace,access}:{workspace:Depart
   const ctx=peekSnapshot<OfficeContext>('dept-context:secretary'),w=peekSnapshot<WorkItem[]>('dept-work:secretary');return ctx&&w?{c,ctx,w}:null};
  const [cases,setCases]=useState<CaseSummary[]>(()=>kept()?.c||[]),[context,setContext]=useState<OfficeContext|null>(()=>kept()?.ctx||null),[work,setWork]=useState<WorkItem[]>(()=>kept()?.w||[]);
  const [version,setVersion]=useState(0),[loading,setLoading]=useState(()=>!kept()),[error,setError]=useState(''),[selected,setSelected]=useState<CaseSummary|null>(null);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- the loader resets its state before fetching
  useEffect(()=>{let active=true;setLoading(!kept()&&workspace!=='hr');setError('');
   // The last copy shows at once while the server's copy loads (for the secretary desk with its office and work lists).
   let fresh=false;
