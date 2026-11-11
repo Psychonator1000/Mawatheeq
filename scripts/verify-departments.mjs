@@ -95,10 +95,15 @@ await action(collector,'collections','generate',file,{kind:'claim',outputId:uuid
 await action(collector,'collections','generate',file,{kind:'bundle',outputId:uuid(107)});
 file=await save(collector,'collections',{...file,payload:{...file.payload,phone:''}});
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
-await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(105)}),/phone/);
-file=await save(collector,'collections',{...file,payload:{...file.payload,civilId:''}});
+// Not in the office's own claims, so not required (owner, 11 November 2026): the phone and the identity numbers are left
+// as a dotted blank; the parties, address, amounts, contract, payment order and demand date still are.
+await action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(105)});
+file=await save(collector,'collections',{...file,payload:{...file.payload,civilId:'',companyCivil:'',companyRegister:'',court:'',rejectedDate:'',statementDate:''}});
 file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
-await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(103)}),/civilId/);
+await action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(103)});
+file=await save(collector,'collections',{...file,payload:{...file.payload,address:''}});
+file=await action(collector,'collections','review_file',file,{caseRevision:visible.revision,attested:true});
+await assert.rejects(()=>action(collector,'collections','generate',file,{kind:'claim',outputId:uuid(108)}),/address/);
 file=await action(collector,'collections','archive_record',file,{archived:true});
 await denied(()=>action(collector,'collections','generate',file,{kind:'bundle',outputId:uuid(104)}));
 file=await action(collector,'collections','archive_record',file,{archived:false});
@@ -323,7 +328,7 @@ await denied(()=>dept(hr.token,'hr','backup_page',{kind:'records'}));
  await assert.rejects(()=>dept(owner.token,'archive','backup_page',{kind:'records'}),/./,'Backups use the existing department backup');
  assert.ok((await dept(owner.token,'collections','backup_page',{kind:'records'})).some(r=>r.workspace==='archive'),'Backups include archive records');}
 const backup=await dept(owner.token,'collections','backup_page',{kind:'outputs'});
-assert.equal(backup.length,4,'Two papers from the reviewed file, two prepared before filing');assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
+assert.equal(backup.length,6,'Two papers from the reviewed file, two prepared before filing, two claims without the phone or the identity numbers');assert.equal(backup[0].payload.address,collectionData.address,'Output snapshot survives edits');
 await office(owner.token,'set_member_access',{id:collector.user.id,revision:collector.member.permissions?.revision||1,permissions:grants([])});
 await assert.rejects(()=>dept(collector.token,'collections','records_page'),e=>e.code==='28000','Grant changes revoke active department sessions');
 // The records list checks access with the permissions read once (department_visible_with): the same answer as the

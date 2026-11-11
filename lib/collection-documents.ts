@@ -9,7 +9,9 @@ export const COLLECTION_LABELS=Object.fromEntries(COLLECTION_FIELDS.flatMap(([,f
 // The papers are prepared before the lawsuit is filed («تحت الرفع»): its number, court, circuit and hearing date are
 // written in after filing, so they are not required here (the server checks the same lists).
 const required={
- claim:['company','defendant','civilId','nationality','address','amount','amountWords','account','phone','orderNumber','court','rejectedDate','demandDate','statementDate','companyCivil','companyRegister'],
+// Only what the office's own claims carry (owner's example, 11 November 2026): identity numbers, the phone, the payment
+// order's court and rejection date and the statement's date are left as a dotted blank to fill in by hand when unknown.
+ claim:['company','defendant','nationality','address','amount','amountWords','account','orderNumber','demandDate'],
  bundle:['company','defendant'],
 };
 /** Empty fields each document still needs, by field key: which documents ask for it. */
