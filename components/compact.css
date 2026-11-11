@@ -1671,22 +1671,52 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 
 /* The team's day on one screen (owner, 11 November 2026): the team's tiles and the office's sittings and tasks side by
    side across the whole width, each scrolling inside its own column, so the page itself never scrolls. */
-.day-path.team-day .day-path-body{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(400px,1.1fr);gap:0;overflow:hidden;padding:0}
+.day-path.team-day .day-path-body{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(420px,1fr);gap:0;overflow:hidden;padding:0}
 .day-path.team-day .day-sec{max-width:none;margin:0;min-height:0;overflow:auto;padding:0 14px 12px;border:0}
 .day-path.team-day .day-sec+.day-sec{border-top:0;border-inline-start:1px solid var(--border);padding-top:0}
 .day-path.team-day .day-sec-head{padding:8px 0 6px}
 .team-chips{flex:1 1 auto}
 .team-search{min-height:30px;padding:3px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);font:inherit;font-size:13px;width:150px}
-.team-tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px}
-.team-tile{position:relative;display:flex;border:1px solid var(--border);border-radius:10px;background:var(--card);border-inline-start:3px solid #c0392b}
-.team-tile.s-draft{border-inline-start-color:#c98a1a}.team-tile.s-sent{border-inline-start-color:#2f7d57}
-.team-tile-main{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:2px;align-items:center;padding:4px 8px;padding-inline-end:28px;border:0;background:none;font:inherit;text-align:start;cursor:pointer;border-radius:10px}
-.team-tile-main:hover{background:color-mix(in srgb,var(--brand,#7a2335) 6%,transparent)}
-.team-tile-name{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.team-tile-status{font-size:10.5px;padding:0 6px;white-space:nowrap}
-.team-tile-stats{display:flex;flex-wrap:wrap;align-items:center;gap:2px 7px;font-size:11.5px;color:var(--muted-foreground)}
-.team-tile-stats>span{display:inline-flex;align-items:center;gap:2px}.team-tile-stats b{color:var(--foreground);font-weight:600}.team-tile-stats b.ok{color:#2f7d57}.team-tile-stats .late,.team-tile-stats .late b{color:#a32e38;font-weight:700}
-.team-tile-day{position:absolute;top:4px;inset-inline-end:4px;width:22px;height:22px}
+/* «الفريق اليوم»: one line a person, its parts in columns shared by every line (so the names, bars and stories line up
+   down the page), and two lines across when the column is wide; a narrow screen stacks each person into a small card. */
+.day-board{container:team/inline-size}
+.team-stories{--team-row:[name] minmax(120px,200px) [status] max-content [h] minmax(64px,110px) [t] minmax(64px,110px) [late] minmax(0,max-content) [line] minmax(0,1fr) [day] 26px;
+  list-style:none;margin:0;padding:0;display:grid;grid-template-columns:var(--team-row);column-gap:10px;row-gap:3px;align-items:stretch}
+.team-story{grid-column:span 7;display:grid;grid-template-columns:subgrid;align-items:center;border:1px solid var(--border);border-radius:8px;background:var(--card);border-inline-start:3px solid #c0392b;min-height:32px}
+.team-story.s-draft{border-inline-start-color:#c98a1a}.team-story.s-sent{border-inline-start-color:#2f7d57}
+.team-story-main{grid-column:1/7;display:grid;grid-template-columns:subgrid;align-items:center;align-self:stretch;padding:3px 8px;border:0;background:none;font:inherit;text-align:start;cursor:pointer;border-radius:7px;min-width:0}
+.team-story-main:hover{background:color-mix(in srgb,var(--brand,#7a2335) 6%,transparent)}
+.team-story-head,.team-story-meters{display:contents}
+.team-story-name{grid-column:1;min-width:0;font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.team-story-status{grid-column:2;justify-self:start;font-size:11px;padding:0 7px;white-space:nowrap}
+.team-meter{display:inline-flex;align-items:center;gap:4px;min-width:0;font-size:11.5px;color:var(--muted-foreground)}
+.team-meter:nth-child(1){grid-column:3}.team-meter:nth-child(2){grid-column:4}
+.team-meter-label{display:none}
+.team-meter i{flex:1;min-width:22px;height:5px;border-radius:3px;background:color-mix(in srgb,var(--muted-foreground) 18%,transparent);overflow:hidden;display:block}
+.team-meter s{display:block;height:100%;background:#c98a1a;border-radius:3px}
+.team-meter.full s{background:#2f7d57}
+.team-meter b{color:var(--foreground);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:22px}
+.team-meter.full b{color:#2f7d57}.team-meter.none{opacity:.5}.team-meter.none b{color:var(--muted-foreground)}
+.team-story-late{grid-column:5;display:inline-flex;align-items:center;gap:3px;color:#a32e38;font-weight:700;white-space:nowrap;font-size:11.5px}
+.team-story-line{grid-column:6;min-width:0;font-size:12px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.team-story.s-none .team-story-line{color:color-mix(in srgb,var(--foreground) 72%,transparent)}
+.team-story-day{grid-column:7;width:22px;height:22px;justify-self:center}
+.team-story-cols{grid-column:span 7;display:grid;grid-template-columns:subgrid;padding:0 11px;font-size:11px;color:var(--muted-foreground);position:sticky;top:0;z-index:1;background:var(--card)}
+.team-story-cols span:nth-child(5){grid-column:6}.team-story-cols+.team-story-cols{display:none}
+@container team (min-width:1250px){.team-stories{grid-template-columns:var(--team-row) var(--team-row);column-gap:14px}.team-story-cols+.team-story-cols{display:grid}}
+@container team (min-width:601px) and (max-width:950px){
+ .team-stories{--team-row:[name] minmax(110px,170px) [status] max-content [h] max-content [t] max-content [late] minmax(0,max-content) [line] minmax(0,1fr) [day] 26px;column-gap:9px}
+ .team-meter i{display:none}
+}
+@container team (max-width:600px){
+ .team-stories{grid-template-columns:1fr;row-gap:5px}
+ .team-story-cols,.team-story-cols+.team-story-cols{display:none}
+ .team-story{grid-column:auto;display:flex;align-items:stretch}
+ .team-story-main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;padding:5px 9px}
+ .team-story-head,.team-story-meters{display:flex;align-items:center;gap:6px 10px;grid-column:1/-1;min-width:0}
+ .team-story-name{flex:1}.team-story-meters{gap:6px 14px}.team-meter{flex:1}.team-meter-label{display:inline}
+ .team-story-line{grid-column:1/-1}.team-story-day{align-self:flex-start;margin:5px}
+}
 @container day (max-width:760px){.day-path.team-day .day-path-body{display:block;overflow:visible}.day-path.team-day .day-sec{overflow:visible}.day-path.team-day .day-sec+.day-sec{border-inline-start:0;border-top:1px dashed var(--border)}}
 .day-path.team-day .day-chips .work-chip{padding:2px 9px;min-height:28px}
 .day-path.team-day .day-sec-head{gap:6px 8px}

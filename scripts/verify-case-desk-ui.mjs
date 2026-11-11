@@ -104,7 +104,7 @@ try{
  await nav('مهام اليوم والتقرير');assert.equal(await page.locator('.nav-section',{hasText:'الجلسات والمواعيد'}).locator('xpath=following-sibling::*[1]').locator('.nav-button').count(),2,'One page for the day, plus posting errors');
  const mission=code=>page.locator('.mission',{hasText:code});await mission('DESK-STUDY').waitFor();
  assert.match(await mission('DESK-MISSED').getAttribute('class'),/late/,'A sitting not posted is late');assert.match(await mission('DESK-DUE').getAttribute('class'),/done/,'A sitting posted today is done');
- await page.getByText('لا أحد مكلف بالتقرير اليومي').waitFor({state:'detached'}).catch(()=>{});await page.locator('.team-tile',{hasText:'ui_reporter'}).waitFor();await screen('daily-team');
+ await page.getByText('لا أحد مكلف بالتقرير اليومي').waitFor({state:'detached'}).catch(()=>{});await page.locator('.team-story',{hasText:'ui_reporter'}).waitFor();await screen('daily-team');
  await mission('DESK-STUDY').getByRole('button',{name:'ترحيل'}).click();await page.getByLabel('قرار جلسة DESK-STUDY').selectOption('شطب الدعوى');await mission('DESK-STUDY').getByRole('button',{name:/حفظ في القضية/}).click();
  await page.getByText('رُحّلت جلسة DESK-STUDY').waitFor();await page.waitForFunction(()=>document.querySelector('.mission:has(.mission-main b)')&&[...document.querySelectorAll('.mission')].some(m=>m.textContent.includes('DESK-STUDY')&&m.classList.contains('done')));
  assert.equal((await caseOf('desk-study')).procedures.at(-1).decision,'شطب الدعوى','Posted into the case');
@@ -138,13 +138,15 @@ try{
    assert.equal(await own.getByRole('combobox',{name:'المحكمة / الدائرة'}).last().getAttribute('data-value'),(await caseOf('desk-missed')).court||'','Its court and circuit');}
   await own.getByRole('button',{name:'إضافة سطر: الأعمال والمراجعات الخارجية'}).click();await own.getByPlaceholder('الجهة التي تمت مراجعتها').fill('وزارة العدل — شهادة');await own.getByRole('button',{name:'حفظ',exact:true}).click();await own.getByText('مسودة محفوظة').waitFor();
   await p2.screenshot({path:artifacts+'/daily-reporter.png'});await other.close();}
- await page.getByLabel('تقرير من').selectOption('team');const sent=page.locator('.team-tile',{hasText:'ui_reporter'});await sent.getByText('مسودة').waitFor();
- // The team's day on one screen: tiles beside the office's list, the page itself not scrolling; chips pick out a status.
+ await page.getByLabel('تقرير من').selectOption('team');const sent=page.locator('.team-story',{hasText:'ui_reporter'});await sent.getByText('مسودة').waitFor();
+ // Each card tells the person's day: what the report holds so far, and the sittings and tasks as bars.
+ await sent.locator('.team-story-line',{hasText:/^التقرير: .*خارجي 1/}).waitFor();assert.equal(await sent.locator('.team-meter').count(),2,'Sittings and tasks bars');
+ // The team's day on one screen: cards beside the office's list, the page itself not scrolling; chips pick out a status.
  {const box=await page.evaluate(()=>{const [a,b]=[...document.querySelectorAll('.team-day .day-sec')].map(e=>e.getBoundingClientRect());return {side:!!(a&&b)&&Math.abs(a.top-b.top)<4&&a.width>200&&b.width>200,fits:document.documentElement.scrollHeight<=innerHeight+2,wide:a&&b?Math.round(a.width+b.width):0,screen:innerWidth}});
   assert.ok(box.side,'The team and the office list sit side by side');assert.ok(box.fits,'The page does not scroll');assert.ok(box.wide>box.screen*0.75,'The two columns use the width of the screen');
-  await page.locator('.team-chips').getByRole('button',{name:/^مسودة/}).click();assert.ok(await page.locator('.team-tile').count()>=1);assert.equal(await page.locator('.team-tile:not(.s-draft)').count(),0,'Only drafts are shown');
+  await page.locator('.team-chips').getByRole('button',{name:/^مسودة/}).click();assert.ok(await page.locator('.team-story').count()>=1);assert.equal(await page.locator('.team-story:not(.s-draft)').count(),0,'Only drafts are shown');
   await page.screenshot({path:artifacts+'/team-day.png'});await page.locator('.team-chips').getByRole('button',{name:/^الكل/}).click();}
- await sent.locator('.team-tile-main').click();await page.getByText('وزارة العدل — شهادة').waitFor();
+ await sent.locator('.team-story-main').click();await page.getByText('وزارة العدل — شهادة').waitFor();
 
  // The views of the page: all the day's sittings, the dates ahead, the month — and a day of the month opens that day.
  await page.getByRole('tab',{name:'ترحيل الجلسات'}).click();await page.getByRole('region',{name:'ترحيل الجلسات'}).locator('.mission',{hasText:'DESK-DUE'}).waitFor();

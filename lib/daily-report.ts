@@ -196,10 +196,15 @@ export function teamStatus(expected: { userId: string; username: string; display
     .sort((a, b) => ({ none: 0, draft: 1, sent: 2 })[a.status] - ({ none: 0, draft: 1, sent: 2 })[b.status] || (a.displayName || a.username).localeCompare(b.displayName || b.username, 'ar'));
 }
 export const STATUS_LABELS = { sent: 'أُرسل', draft: 'مسودة', none: 'لم يُكتب' } as const;
-/** One row of «الفريق اليوم»: the person's report, the day's sittings and tasks (done of all), and what is late now. */
+/**
+ * One row of «الفريق اليوم»: the person's report (and what is in it), the day's sittings and tasks (done of all), the
+ * next thing still open on the day, and what is late now.
+ */
 export type TeamDayRow = {
   userId: string; username: string; name: string; status: 'sent' | 'draft' | 'none'; report?: StoredReport; items: number;
+  summary: Record<ReportPart, number> | null; notes: boolean;
   hearings: number; hearingsDone: number; tasks: number; tasksDone: number; late: number;
+  next: { kind: 'hearing' | 'task'; time: string; text: string } | null;
 };
 export function teamDay({ expected, reports, date, today, records, work, members, rules }: {
   expected: { userId: string; username: string; displayName: string }[]; reports: StoredReport[]; date: string; today: string;
@@ -211,11 +216,13 @@ export function teamDay({ expected, reports, date, today, records, work, members
     const member = members.find(m => m.id === t.userId);
     const all = member ? missionsFor({ records, work, members, rules, date, today, person: member, viewerId: t.userId, facts }) : [];
     const on = all.filter(m => m.date === date), h = on.filter(m => m.kind === 'hearing'), k = on.filter(m => m.kind === 'task');
+    const payload = t.report ? readReport(t.report.payload) : null, up = on.find(m => m.state === 'open' && (m.kind === 'hearing' || m.kind === 'task'));
     return {
       userId: t.userId, username: t.username, name: t.displayName ? titled(t.displayName) : t.username, status: t.status, report: t.report,
-      items: t.report ? reportCount(readReport(t.report.payload)) : 0,
+      items: payload ? reportCount(payload) : 0, summary: payload ? daySummary(payload) : null, notes: !!payload?.notes.trim(),
       hearings: h.length, hearingsDone: h.filter(m => m.state === 'done').length, tasks: k.length, tasksDone: k.filter(m => m.state === 'done').length,
       late: all.filter(m => m.state === 'late').length,
+      next: up ? { kind: up.kind as 'hearing' | 'task', time: up.time, text: up.place || up.title } : null,
     };
   });
 }
