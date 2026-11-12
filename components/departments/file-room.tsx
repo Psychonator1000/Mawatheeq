@@ -14,6 +14,8 @@ import {Empty} from '../shared';
 
 type Tab='inbox'|'daily'|'cases'|'orders'|'setup';
 const KEYS=Object.keys(ROOTS) as RootKey[];
+/** Opens a file; a file moved or refused by the browser is said, not thrown. */
+const openSafe=(f:Pick<FileItem,'handle'>)=>{openFile(f).catch(e=>toast.error('تعذر فتح الملف: '+(e as Error).message))};
 const size=(n:number)=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
 const when=(t:number)=>{const d=new Date(t),iso=d.toISOString().slice(0,10),today=todayISO();return (iso===today?'اليوم':formatDate(iso))+' '+d.toTimeString().slice(0,5)};
 // «عدد ملفات» with the right number form.
@@ -27,7 +29,7 @@ const filesAr=(n:number)=>n===0?'لا ملفات':n===1?'ملف واحد':n===2?
 export default function FileRoom({cases,access}:{cases:CaseSummary[];access:Permissions}){
  const [roots,setRoots]=useState<Roots|null>(null),[ok,setOk]=useState<Record<string,boolean>>({}),[tab,setTab]=useState<Tab>('inbox'),[tick,setTick]=useState(0);
  const reload=useCallback(()=>setTick(t=>t+1),[]);
- useEffect(()=>{let live=true;loadRoots().then(async r=>{const o:Record<string,boolean>={};for(const k of KEYS)if(r[k])o[k]=await allowed(r[k]!);if(live){setRoots(r);setOk(o);if(!KEYS.some(k=>r[k]))setTab('setup')}});return()=>{live=false}},[tick]);
+ useEffect(()=>{let live=true;loadRoots().then(async r=>{const o:Record<string,boolean>={};for(const k of KEYS)if(r[k])o[k]=await allowed(r[k]!);if(live){setRoots(r);setOk(o);if(!KEYS.some(k=>r[k]))setTab('setup')}}).catch(()=>{if(live){setRoots({});setTab('setup')}});return()=>{live=false}},[tick]);
  const ready=(k:RootKey)=>!!roots?.[k]&&ok[k];
  const missing=KEYS.filter(k=>!roots?.[k]),blocked=KEYS.filter(k=>roots?.[k]&&!ok[k]);
  async function allowAll(){const o={...ok};for(const k of blocked)o[k]=await allowed(roots![k]!,true);setOk(o)}
@@ -72,7 +74,7 @@ function InboxTab({roots,ready,cases,canEdit,onChanged}:{roots:Roots;ready:(k:Ro
   return()=>{live=false}},[roots,ready]);
  useEffect(()=>{if(!open){
   // eslint-disable-next-line react-hooks/set-state-in-effect -- no file chosen: no preview
-  setPreview('');return}let url='';open.handle.getFile().then(f=>{url=URL.createObjectURL(f);setPreview(url)});return()=>{if(url)URL.revokeObjectURL(url)}},[open]);
+  setPreview('');return}let url='',live=true;open.handle.getFile().then(f=>{if(!live)return;url=URL.createObjectURL(f);setPreview(url)}).catch(()=>{if(live)setPreview('')});return()=>{live=false;if(url)URL.revokeObjectURL(url)}},[open]);
  const caseOptions=useMemo(()=>cases.filter(c=>!c.archived&&caseCode(c)).map(c=>({value:caseCode(c),label:caseCode(c),hint:`${tidyName(clientName(c))} ضد ${tidyName(c.opponent||'—')}`})),[cases]);
  const theCase=cases.find(c=>caseCode(c)===code);
  if(!files)return <p className="day-empty" role="status"><LoaderCircle className="spin" size={14}/> جارٍ قراءة الوارد…</p>;
@@ -95,7 +97,7 @@ function InboxTab({roots,ready,cases,canEdit,onChanged}:{roots:Roots;ready:(k:Ro
       <span>{canEdit&&<input type="checkbox" aria-label={'تحديد '+f.name} checked={picked.has(f.name)} onChange={e=>setPicked(p=>{const n=new Set(p);if(e.target.checked)n.add(f.name);else n.delete(f.name);return n})}/>}</span>
       <span className="story-name"><FileText size={14} aria-hidden/><b><bdi>{f.name}</bdi></b></span><span className="story-num">{when(f.modified)}</span><span className="muted">{size(f.size)}</span></div></li>)}</ul></div>
    <aside className="file-inbox-side" aria-label="الملف المختار">{!open?<p className="day-empty">اختر ملفاً من القائمة لمعاينته وترتيبه.</p>:<>
-    <div className="file-preview-head"><b><bdi>{open.name}</bdi></b><button type="button" className="icon-btn" aria-label="فتح في نافذة" title="فتح في نافذة" onClick={()=>void openFile(open)}><ExternalLink size={15}/></button></div>
+    <div className="file-preview-head"><b><bdi>{open.name}</bdi></b><button type="button" className="icon-btn" aria-label="فتح في نافذة" title="فتح في نافذة" onClick={()=>openSafe(open)}><ExternalLink size={15}/></button></div>
     {preview&&/\.pdf$/i.test(open.name)?<iframe className="file-preview" title={'معاينة '+open.name} src={preview}/>:preview&&/\.(png|jpe?g)$/i.test(open.name)?<img className="file-preview" alt={'معاينة '+open.name} src={preview}/>:<p className="day-empty">لا معاينة لهذا النوع؛ افتحه في نافذة.</p>}
     {canEdit&&<div className="file-actions">
      {ready('cases')&&<fieldset className="file-action"><legend><Scale size={14} aria-hidden/> إلى ملف قضية</legend>
@@ -122,7 +124,7 @@ function DailyTab({dir}:{dir:FileSystemDirectoryHandle}){
  useEffect(()=>{let live=true;dailyCounts(dir).then(d=>{if(live){setDays(d);const last=[...d.keys()].sort().at(-1);if(last)setDay(last)}}).catch(e=>toast.error((e as Error).message));return()=>{live=false}},[dir]);
  useEffect(()=>{const h=day&&days?.get(day)?.handle;if(!h){
   // eslint-disable-next-line react-hooks/set-state-in-effect -- no day chosen: nothing to list
-  setFiles([]);return}let live=true;filesIn(h).then(f=>{if(live)setFiles(f)});return()=>{live=false}},[day,days]);
+  setFiles([]);return}let live=true;filesIn(h).then(f=>{if(live)setFiles(f)}).catch(()=>{if(live)setFiles([])});return()=>{live=false}},[day,days]);
  if(!days)return <p className="day-empty" role="status"><LoaderCircle className="spin" size={14}/> جارٍ قراءة المسح اليومي…</p>;
  const keys=[...days.keys()].sort(),total=keys.reduce((n,k)=>n+days.get(k)!.count,0),month=todayISO().slice(0,7);
  const last14=Array.from({length:14},(_,i)=>{const d=new Date(now-(13-i)*86400000).toISOString().slice(0,10);return {label:formatDate(d).slice(0,5),value:days.get(d)?.count||0,tone:(d===day?'amber':'brand') as 'amber'|'brand',on:d===day,onClick:()=>setDay(d)}});
@@ -133,7 +135,7 @@ function DailyTab({dir}:{dir:FileSystemDirectoryHandle}){
   </PulseStrip>
   <div className="file-day-pick"><label className="field"><span>اليوم</span><select aria-label="اليوم" value={day} onChange={e=>setDay(e.target.value)}>{[...keys].reverse().map(k=><option key={k} value={k}>{formatDate(k)} ({days.get(k)!.count})</option>)}</select></label></div>
   {!files.length?<Empty title="لا ملفات في هذا اليوم" text="اختر يوماً آخر."/>:<ul className="story-list file-lines" aria-label={'ملفات '+formatDate(day)}><li className="story-head" aria-hidden><span/><span>الملف</span><span>الوقت</span><span>الحجم</span></li>
-   {files.map(f=><li key={f.name}><button type="button" className="story-row e-green" onClick={()=>void openFile(f)}><span/><span className="story-name"><FileText size={14} aria-hidden/><b><bdi>{f.name}</bdi></b></span><span className="story-num">{new Date(f.modified).toTimeString().slice(0,5)}</span><span className="muted">{size(f.size)}</span></button></li>)}</ul>}
+   {files.map(f=><li key={f.name}><button type="button" className="story-row e-green" onClick={()=>openSafe(f)}><span/><span className="story-name"><FileText size={14} aria-hidden/><b><bdi>{f.name}</bdi></b></span><span className="story-num">{new Date(f.modified).toTimeString().slice(0,5)}</span><span className="muted">{size(f.size)}</span></button></li>)}</ul>}
  </>;
 }
 
@@ -162,7 +164,7 @@ function CasesTab({dir,cases}:{dir:FileSystemDirectoryHandle;cases:CaseSummary[]
     <span className="line-meter m-grey"><i aria-hidden><s className="t-brand" style={{width:f.count/most*100+'%'}}/></i><b>{f.count}</b></span>
     <span className="story-num">{f.latest?formatDate(new Date(f.latest).toISOString().slice(0,10)):'—'}</span>
     <span className="line-story">{[filesAr(f.count),bad?`${bad===1?'اسم واحد':bad===2?'اسمان':bad+' أسماء'} لا ${bad===1?'ينتهي':'تنتهي'} بالكود`:'',!c?'تحقق من الكود':''].filter(Boolean).join(' · ')}</span></button>
-    {open===f.name&&<ul className="file-sublist" aria-label={'ملفات '+f.name}>{(f.files||[]).map(x=><li key={x.name}><button type="button" className="text-link" onClick={()=>void openFile(x)}><FileText size={13} aria-hidden/> <bdi>{x.name}</bdi></button><small className={endsWithCode(x.name,f.name)?'muted':'file-misnamed'}>{endsWithCode(x.name,f.name)?formatDate(new Date(x.modified).toISOString().slice(0,10)):'لا ينتهي بالكود'}</small></li>)}</ul>}</li>)}</ul>}
+    {open===f.name&&<ul className="file-sublist" aria-label={'ملفات '+f.name}>{(f.files||[]).map(x=><li key={x.name}><button type="button" className="text-link" onClick={()=>openSafe(x)}><FileText size={13} aria-hidden/> <bdi>{x.name}</bdi></button><small className={endsWithCode(x.name,f.name)?'muted':'file-misnamed'}>{endsWithCode(x.name,f.name)?formatDate(new Date(x.modified).toISOString().slice(0,10)):'لا ينتهي بالكود'}</small></li>)}</ul>}</li>)}</ul>}
   {rows.length>shown.length&&shown.length===300&&<p className="subtitle">تُعرض أول 300 مجلد؛ ابحث للوصول إلى غيرها.</p>}
  </>;
 }
@@ -184,6 +186,6 @@ function OrdersTab({dir}:{dir:FileSystemDirectoryHandle}){
     <span className="line-meter m-grey"><i aria-hidden><s className="t-brand" style={{width:f.count/most*100+'%'}}/></i><b>{f.count}</b></span>
     <span className="story-num">{f.latest?formatDate(new Date(f.latest).toISOString().slice(0,10)):'—'}</span>
     <span className="line-story">{filesAr(f.count)}{(f.files||[]).filter(x=>x.modified>=week).length?' · هذا الأسبوع: '+(f.files||[]).filter(x=>x.modified>=week).length:''}</span></button>
-    {open===f.name&&<ul className="file-sublist" aria-label={'ملفات '+f.name}>{(f.files||[]).map(x=><li key={x.name}><button type="button" className="text-link" onClick={()=>void openFile(x)}><FileText size={13} aria-hidden/> <bdi>{x.name}</bdi></button><small className="muted">{formatDate(new Date(x.modified).toISOString().slice(0,10))}</small></li>)}</ul>}</li>)}</ul>}
+    {open===f.name&&<ul className="file-sublist" aria-label={'ملفات '+f.name}>{(f.files||[]).map(x=><li key={x.name}><button type="button" className="text-link" onClick={()=>openSafe(x)}><FileText size={13} aria-hidden/> <bdi>{x.name}</bdi></button><small className="muted">{formatDate(new Date(x.modified).toISOString().slice(0,10))}</small></li>)}</ul>}</li>)}</ul>}
  </>;
 }
