@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useMemo,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {FolderInput,FolderOpen,FolderPlus,FolderTree,Inbox,CalendarDays,Scale,Building2,LoaderCircle,RefreshCw,ExternalLink,ShieldCheck,FileText,ArrowLeftRight} from 'lucide-react';
 import {toast} from 'sonner';
 import type {CaseSummary} from '@/lib/departments';
@@ -65,6 +65,12 @@ function Setup({roots,ok,onSaved}:{roots:Roots;ok:Record<string,boolean>;onSaved
 }
 
 /** «الوارد»: what the scanner put on the share, to file by day, into a case or into a company's payment orders. */
+/** A PDF preview that empties itself before it is taken away: Chrome's PDF viewer, removed while showing a document, raises an error in the page. */
+function PdfFrame({title,src}:{title:string;src:string}){
+ const ref=useRef<HTMLIFrameElement>(null);
+ useLayoutEffect(()=>{const f=ref.current;return()=>{if(f)f.src='about:blank'}},[]);
+ return <iframe ref={ref} className="file-preview" title={title} src={src}/>;
+}
 function InboxTab({roots,ready,cases,canEdit,onChanged}:{roots:Roots;ready:(k:RootKey)=>boolean;cases:CaseSummary[];canEdit:boolean;onChanged:()=>void}){
  const [files,setFiles]=useState<FileItem[]|null>(null),[open,setOpen]=useState<FileItem|null>(null),[busy,setBusy]=useState(false),[picked,setPicked]=useState<Set<string>>(new Set());
  const [title,setTitle]=useState(''),[code,setCode]=useState(''),[company,setCompany]=useState(''),[keep,setKeep]=useState(true),[preview,setPreview]=useState('');
@@ -74,7 +80,10 @@ function InboxTab({roots,ready,cases,canEdit,onChanged}:{roots:Roots;ready:(k:Ro
   return()=>{live=false}},[roots,ready]);
  useEffect(()=>{if(!open){
   // eslint-disable-next-line react-hooks/set-state-in-effect -- no file chosen: no preview
-  setPreview('');return}let url='',live=true;snapshot(open).then(f=>{if(!live)return;url=URL.createObjectURL(f);setPreview(url)}).catch(()=>{if(live)setPreview('')});return()=>{live=false;if(url)URL.revokeObjectURL(url)}},[open]);
+  setPreview('');return}let url='',live=true;snapshot(open).then(f=>{if(!live)return;url=URL.createObjectURL(f);setPreview(url)}).catch(()=>{if(live)setPreview('')});return()=>{live=false;
+  // Released a while after the preview closes: the PDF viewer may still be loading it, and a link taken from under it
+  // raises an error in the page (seen in Chrome when a document is filed straight from its preview).
+  if(url){const u=url;setTimeout(()=>URL.revokeObjectURL(u),30000)}}},[open]);
  const caseOptions=useMemo(()=>cases.filter(c=>!c.archived&&caseCode(c)).map(c=>({value:caseCode(c),label:caseCode(c),hint:`${tidyName(clientName(c))} ضد ${tidyName(c.opponent||'—')}`})),[cases]);
  const theCase=cases.find(c=>caseCode(c)===code);
  if(!files)return <p className="day-empty" role="status"><LoaderCircle className="spin" size={14}/> جارٍ قراءة الوارد…</p>;
@@ -98,7 +107,7 @@ function InboxTab({roots,ready,cases,canEdit,onChanged}:{roots:Roots;ready:(k:Ro
       <span className="story-name"><FileText size={14} aria-hidden/><b><bdi>{f.name}</bdi></b></span><span className="story-num">{when(f.modified)}</span><span className="muted">{size(f.size)}</span></div></li>)}</ul></div>
    <aside className="file-inbox-side" aria-label="الملف المختار">{!open?<p className="day-empty">اختر ملفاً من القائمة لمعاينته وترتيبه.</p>:<>
     <div className="file-preview-head"><b><bdi>{open.name}</bdi></b><button type="button" className="icon-btn" aria-label="فتح في نافذة" title="فتح في نافذة" onClick={()=>openSafe(open)}><ExternalLink size={15}/></button></div>
-    {preview&&/\.pdf$/i.test(open.name)?<iframe className="file-preview" title={'معاينة '+open.name} src={preview}/>:preview&&/\.(png|jpe?g)$/i.test(open.name)?<img className="file-preview" alt={'معاينة '+open.name} src={preview}/>:<p className="day-empty">لا معاينة لهذا النوع؛ افتحه في نافذة.</p>}
+    {preview&&/\.pdf$/i.test(open.name)?<PdfFrame title={'معاينة '+open.name} src={preview}/>:preview&&/\.(png|jpe?g)$/i.test(open.name)?<img className="file-preview" alt={'معاينة '+open.name} src={preview}/>:<p className="day-empty">لا معاينة لهذا النوع؛ افتحه في نافذة.</p>}
     {canEdit&&<div className="file-actions">
      {ready('cases')&&<fieldset className="file-action"><legend><Scale size={14} aria-hidden/> إلى ملف قضية</legend>
       <label className="field"><span>اسم المستند</span><input value={title} onChange={e=>setTitle(e.target.value)} placeholder="مثل: صحيفة الدعوى، حكم أول درجة"/></label>
