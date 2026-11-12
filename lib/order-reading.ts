@@ -15,8 +15,14 @@ export type OrderItem = {
 };
 type State = { items: OrderItem[]; running: boolean; open: boolean };
 
-// The order, the court receipt, the office's bundle list and the account statement are the first four pages.
-const PAGES = 4;
+// The order, the court receipt, the office's bundle list and the account statement are the first four pages. Nothing is
+// read from the bundle list (checked on real orders, 12 November 2026), so it is read only when the other three leave a
+// field missing (an order whose pages come in another order). Each page's numbers pass (an extra reading of dates and
+// codes, a third of the time) runs only when the page's own numbers are still missing after the main reading.
+const PAGES = 4, FIRST = [1, 2, 4], SPARE = [3];
+const NUMBERS: Record<number, (keyof DocumentData)[]> = { 1: ['civilId', 'orderNumber', 'amount'], 2: ['receiptDate', 'receiptNumber', 'receiptFee'], 4: ['statementDate'] };
+const EXPECTED: (keyof DocumentData)[] = ['company', 'defendant', 'civilId', 'amount', 'orderNumber', 'receiptDate', 'receiptNumber', 'receiptFee', 'statementDate'];
+const empty = (d: DocumentData, k: keyof DocumentData) => !String(d[k] ?? '').trim();
 let state: State = { items: [], running: false, open: false };
 let stopper: AbortController | null = null;
 const listeners = new Set<() => void>();
@@ -58,8 +64,14 @@ async function run() {
         const it = item;
         patchOrder(it.id, { status: 'reading', progress: 0, message: 'تجهيز القراءة…' });
         try {
-          const pages = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: p, message }), ctrl.signal, PAGES, engine);
-          patchOrder(it.id, { status: 'ready', progress: 100, data: extractFields(pagesText(pages), it.file.name) });
+          const name = it.file.name, wantNumbers = (page: number, text: string) => { const f = extractFields(text, name); return (NUMBERS[page] || []).some(k => empty(f, k)); };
+          let pages = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: p * .9, message }), ctrl.signal, PAGES, engine, { pages: FIRST, wantNumbers });
+          let data = extractFields(pagesText(pages), name);
+          if (EXPECTED.some(k => empty(data, k))) {
+            const more = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: 90 + p * .1, message }), ctrl.signal, PAGES, engine, { pages: SPARE });
+            pages = [...pages, ...more].sort((a, b) => a.page - b.page); data = extractFields(pagesText(pages), name);
+          }
+          patchOrder(it.id, { status: 'ready', progress: 100, data });
         } catch (e) {
           if (ctrl.signal.aborted) { patchOrder(it.id, { status: 'waiting', progress: 0, message: 'أُوقفت القراءة' }); break; }
           patchOrder(it.id, { status: 'failed', error: (e as Error).message });

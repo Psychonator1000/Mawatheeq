@@ -24,7 +24,10 @@ function interruptible<T>(promise:Promise<T>,signal:AbortSignal,milliseconds=120
  * `shared`: the engines belong to the caller and outlive this file (`drop` is told when one breaks). `dpi`/`pixels`: the
  * resolution of a scanned page and its cap (lower on a weaker computer).
  */
-export type ReadOptions={digits?:()=>Promise<Worker>;shared?:boolean;drop?:()=>void;dpi?:number;pixels?:number};
+export type ReadOptions={digits?:()=>Promise<Worker>;shared?:boolean;drop?:()=>void;dpi?:number;pixels?:number;
+  /** Only these pages (1-based), in this order; otherwise the first `maxPages`. */ pages?:number[];
+  /** Whether a page's numbers pass is still needed, given what the pages read so far say; without it, it runs whenever
+   *  the page has numbers or dates in it. */ wantNumbers?:(page:number,textSoFar:string)=>boolean};
 // The same renderer/OCR pipeline is used by the browser and the source-PDF regression check.
 // `maxPages` reads only the first pages, for bundles whose data is at the front (a payment order's first four pages).
 export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCanvasElement,getWorker:(progress:(value:number)=>void)=>Promise<Worker>,onProgress:Progress,signal:AbortSignal,maxPages=Infinity,opts:ReadOptions={}){
@@ -34,10 +37,13 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
   let renderTask:ReturnType<Awaited<ReturnType<PDFDocumentProxy['getPage']>>['render']>|undefined;
   const cancel=()=>{renderTask?.cancel();if(worker){void worker.terminate().catch(()=>{});opts.drop?.();}};
   signal.addEventListener('abort',cancel,{once:true});
-  const total=Math.min(pdf.numPages,maxPages);
+  const list=(opts.pages?opts.pages.filter(n=>n>=1&&n<=pdf.numPages):Array.from({length:Math.min(pdf.numPages,maxPages)},(_,n)=>n+1));
+  const total=list.length;
   try{
-    for(let i=1;i<=total;i++){
-      check(signal);onProgress((i-1)/total*100,`قراءة الصفحة ${i} من ${total}`);
+    for(let at=1;at<=total;at++){
+      // `at` counts the pages read (for the progress), `i` is the page itself.
+      const i=list[at-1];
+      check(signal);onProgress((at-1)/total*100,`قراءة الصفحة ${at} من ${total}`);
       const page=await interruptible(pdf.getPage(i),signal);
       let canvas:HTMLCanvasElement|undefined;
       try{
@@ -59,13 +65,13 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
           renderTask=page.render({canvasContext:ctx,viewport,canvas,background:'#ffffff'});
           await interruptible(renderTask.promise,signal);
           await worker.setParameters({tessedit_pageseg_mode:'3' as PSM,preserve_interword_spaces:'0',user_defined_dpi:String(Math.round(scale*72))});
-          onProgress((i-.75)/total*100,`قراءة النص المصوّر في الصفحة ${i} من ${total}`);
-          ocrProgress=p=>onProgress((i-.75+.4*p)/total*100,`قراءة النص المصوّر في الصفحة ${i} من ${total}`);
+          onProgress((at-.75)/total*100,`قراءة النص المصوّر في الصفحة ${at} من ${total}`);
+          ocrProgress=p=>onProgress((at-.75+.4*p)/total*100,`قراءة النص المصوّر في الصفحة ${at} من ${total}`);
           let result=await interruptible(worker.recognize(canvas,{rotateAuto:true}),signal);
           text=cleanDocumentText(result.data.text);confidence=result.data.confidence;
           if((confidence<50||!assessText(text).usable)&&text.length<4000){
-            onProgress((i-.35)/total*100,`تحسين قراءة الصفحة ${i} من ${total}`);
-            ocrProgress=p=>onProgress((i-.35+.3*p)/total*100,`تحسين قراءة الصفحة ${i} من ${total}`);
+            onProgress((at-.35)/total*100,`تحسين قراءة الصفحة ${at} من ${total}`);
+            ocrProgress=p=>onProgress((at-.35+.3*p)/total*100,`تحسين قراءة الصفحة ${at} من ${total}`);
             await worker.setParameters({tessedit_pageseg_mode:'11' as PSM});
             const retry=await interruptible(worker.recognize(canvas,{rotateAuto:true}),signal);
             const a=assessText(text),b=assessText(retry.data.text);
@@ -73,7 +79,7 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
               result=retry;text=cleanDocumentText(result.data.text);confidence=result.data.confidence;
             }
           }
-          if(needsNumericReading(text)){
+          if(needsNumericReading(text)&&(!opts.wantNumbers||opts.wantNumbers(i,[...pages.filter(p=>!p.warning).map(p=>`الصفحة ${p.page}\n${p.text}`),`الصفحة ${i}\n${text}`].join('\n\n')))){
             // Latin date stamps and receipt codes need a separate recognition pass.
             // Render at scanner resolution then smooth the enlargement so small
             // digits in one-bit image masks do not become jagged blocks.
@@ -84,8 +90,8 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
               renderTask=page.render({canvas:small,canvasContext:small.getContext('2d')!,viewport:scanView,background:'#ffffff'});
               await interruptible(renderTask.promise,signal);
               ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(small,0,0,canvas.width,canvas.height);
-              onProgress((i-.3)/total*100,`تدقيق الأرقام والتواريخ في الصفحة ${i}`);
-              ocrProgress=p=>onProgress((i-.3+.25*p)/total*100,`تدقيق الأرقام والتواريخ في الصفحة ${i}`);
+              onProgress((at-.3)/total*100,`تدقيق الأرقام والتواريخ في الصفحة ${at}`);
+              ocrProgress=p=>onProgress((at-.3+.25*p)/total*100,`تدقيق الأرقام والتواريخ في الصفحة ${at}`);
               const digits=opts.digits?await interruptible(opts.digits(),signal):worker;
               if(!opts.digits)await worker.reinitialize('eng');
               await digits.setParameters({tessedit_pageseg_mode:'11' as PSM,user_defined_dpi:String(Math.round(scale*72))});
@@ -104,13 +110,13 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
         if(worker){await worker.terminate().catch(()=>{});worker=undefined;opts.drop?.();}
         pages.push({page:i,text:'',method:'ocr',warning:`تعذرت قراءة هذه الصفحة؛ راجع الأصل. ${e instanceof Error?e.message:''}`});
       }finally{ocrProgress=()=>{};if(canvas)canvas.width=canvas.height=0;page.cleanup();renderTask=undefined;}
-      onProgress(i/total*100,`اكتملت الصفحة ${i} من ${total}`);
+      onProgress(at/total*100,`اكتملت الصفحة ${at} من ${total}`);
     }
     check(signal);return pages;
   }finally{signal.removeEventListener('abort',cancel);if(worker&&!opts.shared)await worker.terminate().catch(()=>{});}
 }
 
-export async function extractPDF(file:File|Blob,onProgress:Progress,signal:AbortSignal,maxPages=Infinity,engine?:OcrEngine){
+export async function extractPDF(file:File|Blob,onProgress:Progress,signal:AbortSignal,maxPages=Infinity,engine?:OcrEngine,plan:Pick<ReadOptions,'pages'|'wantNumbers'>={}){
   check(signal);onProgress(0,'تجهيز قارئ PDF واللغة العربية…');
   const pdfjs=await import('pdfjs-dist');
   // The worker is loaded through a small patch for browsers without Map.getOrInsertComputed.
@@ -124,7 +130,7 @@ export async function extractPDF(file:File|Blob,onProgress:Progress,signal:Abort
   try{
     const pdf=await interruptible(task.promise,signal);
     if(engine)return await readPDFPages(pdf,()=>document.createElement('canvas'),async progress=>{engine.progress=progress;return engine.main()},onProgress,signal,maxPages,
-      {digits:engine.digits,shared:true,drop:engine.drop,dpi:engine.dpi,pixels:engine.pixels});
+      {digits:engine.digits,shared:true,drop:engine.drop,dpi:engine.dpi,pixels:engine.pixels,...plan});
     return await readPDFPages(pdf,()=>document.createElement('canvas'),async progress=>makeWorker(['ara','eng'],progress),onProgress,signal,maxPages);
   }catch(e){
     if(signal.aborted)throw aborted();
