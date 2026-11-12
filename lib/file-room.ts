@@ -139,9 +139,17 @@ export const fileToCase = async (item: FileItem, cases: FileSystemDirectoryHandl
   place(item, await subdir(cases, [code]), caseFileName(title, code, item.name), keep);
 export const fileToOrders = async (item: FileItem, orders: FileSystemDirectoryHandle, company: string, keep: boolean) =>
   place(item, await subdir(orders, [company]), item.name, keep);
+/**
+ * A document's bytes held in memory. A viewer given the file itself keeps reading it from the share, and once the file
+ * is filed (moved) the browser refuses those reads with an error in the page; a copy in memory stays readable.
+ */
+export async function snapshot(item: Pick<FileItem, 'handle'>): Promise<Blob> {
+  const f = await item.handle.getFile();
+  return new Blob([await f.arrayBuffer()], { type: f.type || (/\.pdf$/i.test(f.name) ? 'application/pdf' : '') });
+}
 /** Opens a document in a new tab (the browser's own viewer). */
 export async function openFile(item: Pick<FileItem, 'handle'>) {
-  const f = await item.handle.getFile(), url = URL.createObjectURL(f);
+  const url = URL.createObjectURL(await snapshot(item));
   window.open(url, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 /** Whether a file name ends with a case code (what the cases folder expects). */

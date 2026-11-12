@@ -16,6 +16,8 @@ import {attendsCourt,type Member,type WorkItem} from '@/lib/office';
 import {SelectList} from './filter-select';
 import {NUMBER_FIELDS,ROLL_FIELDS,ROLL_SORTS,modesFor,passesRollRules,rollOptions,rollValue,ruleActive,sortRoll,splitValues,type RollField,type RollItem,type RollMode,type RollRule,type RollSort} from '@/lib/roll-filter';
 import {normalizeSearch} from '@/lib/case-browse';
+import {PulseStrip,PulseTile,type PulsePart} from './pulse';
+import {ageOf,consultationLine,sinceAr,stayLine,type When} from '@/lib/desk-line';
 
 type Props={page:DeskPage;records:CaseRecord[];rules?:Rules;clients:ClientEntity[];work:WorkItem[];members:Member[];canEdit:boolean;canCreate:boolean;canExport:boolean;printedBy:string;
  onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onNew:(c:CaseRecord)=>void;
@@ -208,14 +210,39 @@ function Statements(p:Props){
 
 type Consultation={type:string;subject:string;requester:string;status:ConsultationStatus;receivedDate:string;dueDate:string;answer:string;fee:string};
 const consultationOf=(c:CaseRecord):Consultation=>({type:'',subject:'',requester:'',status:'new',receivedDate:'',dueDate:'',answer:'',fee:'',...(c.consultation as Partial<Consultation>||{})});
+/** The lawyers of a list as a tile's parts (the four with most cases, then those without one), each picking out its cases. */
+function lawyerParts(rs:CaseRecord[],on:string,set:(v:string)=>void):PulsePart[]{
+ const l=(c:CaseRecord)=>String(c.lawyer||'').trim(),counts=[...new Set(rs.map(l).filter(Boolean))].map(n=>[n,rs.filter(c=>l(c)===n).length] as const).sort((a,b)=>b[1]-a[1]),tones=['brand','blue','amber','green'] as const,none=rs.filter(c=>!l(c)).length;
+ return [...counts.slice(0,4).map(([n,v],k)=>({label:n,value:v,tone:tones[k],on:on===n,onClick:()=>set(on===n?'':n)})),...(none?[{label:'بلا محامٍ',value:none,tone:'red' as const,on:on==='-',onClick:()=>set(on==='-'?'':'-')}]:[])];
+}
+const byLawyer=(on:string)=>(c:CaseRecord)=>!on||(on==='-'?!String(c.lawyer||'').trim():String(c.lawyer||'').trim()===on);
+const WHEN_PARTS:[When,string,PulsePart['tone']][]=[['late','فات موعده','red'],['today','اليوم','amber'],['week','خلال أسبوع','blue'],['later','لاحقاً','green'],['none','بلا موعد','grey']];
+function CaseLineCell({c}:{c:CaseRecord}){return <span><b className="nowrap">{ref(c)}</b> <small className="muted">{parties(c)}</small></span>}
+
 function Consultations(p:Props){
- const [editing,setEditing]=useState<CaseRecord|null>(null),[status,setStatus]=useState('open');
- const list=p.records.filter(c=>workflowOf(c)==='consultation'&&!c.archived&&(status==='all'||(status==='open'?!['answered','closed'].includes(consultationOf(c).status):consultationOf(c).status===status)));
+ const [editing,setEditing]=useState<CaseRecord|null>(null),[status,setStatus]=useState('open'),[when,setWhen]=useState(''),[lawyer,setLawyer]=useState('');
  const today=todayISO(),label=(s:string)=>CONSULTATION_STATUSES.find(x=>x[0]===s)?.[1]||s;
+ const live=p.records.filter(c=>workflowOf(c)==='consultation'&&!c.archived),isOpen=(c:CaseRecord)=>!['answered','closed'].includes(consultationOf(c).status);
+ const base=live.filter(c=>status==='all'||(status==='open'?isOpen(c):consultationOf(c).status===status));
+ const line=(c:CaseRecord)=>consultationLine(consultationOf(c),String(c.lawyer||'').trim(),today);
+ const list=base.filter(c=>(!when||line(c).when===when)&&byLawyer(lawyer)(c));
  return <Panel title="الاستشارات" note="كل استشارة مرتبطة بملف الموكل، ولها موعد رد ومحامٍ مسؤول. الاستشارة التي تتحول إلى دعوى تنتقل إلى «قضايا تحت الدراسة»."
   actions={p.canCreate&&<button className="btn primary" onClick={()=>setEditing({...emptyCase(),workflow:'consultation',type:'',consultation:{status:'new',receivedDate:today}})}><Plus size={16}/> استشارة جديدة</button>}>
-  <div className="desk-toolbar"><OfficeSelect label="الحالة" value={status} onChange={setStatus} options={[['open','المفتوحة'],...CONSULTATION_STATUSES,['all','الكل']] as [string,string][]}/><span className="tag">{list.length} استشارة</span></div>
-  {!list.length?<Empty title="لا توجد استشارات" text={p.canCreate?'أضف استشارة جديدة من الزر أعلاه.':'لا توجد استشارات ضمن صلاحيتك.'}/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>الموكل</th><th>الموضوع</th><th>النوع</th><th>المحامي</th><th>الورود</th><th>موعد الرد</th><th>الحالة</th><th/></tr></thead><tbody>{list.map(c=>{const k=consultationOf(c),late=k.dueDate&&k.dueDate<today&&!['answered','closed'].includes(k.status);return <tr key={c.id}><td><b>{clientName(c)||'—'}</b>{k.requester&&<small>{k.requester}</small>}</td><td>{k.subject||'—'}</td><td>{k.type||'—'}</td><td>{String(c.lawyer||'—')}</td><td className="nowrap">{formatDate(k.receivedDate)}</td><td className="nowrap">{formatDate(k.dueDate)}{late&&<small className="office-alert">متأخرة</small>}</td><td><span className={'tag '+(k.status==='answered'||k.status==='closed'?'green':late?'red':'amber')}>{label(k.status)}</span></td><td><button className="btn" onClick={()=>setEditing(c)}>فتح</button></td></tr>})}</tbody></table></div>}
+  {!!live.length&&<PulseStrip label="ملخص الاستشارات">
+   <PulseTile title={status==='all'?'كل الاستشارات':'المفتوحة'} value={status==='all'?live.length:live.filter(isOpen).length} sub={status==='all'?'اضغط للمفتوحة فقط':'اضغط لعرض الكل'} on={status==='all'} onClick={()=>{setStatus(status==='all'?'open':'all');setWhen('')}}
+    parts={CONSULTATION_STATUSES.map(([k,l],i)=>({label:l,value:live.filter(c=>consultationOf(c).status===k).length,tone:(['amber','blue','green','grey'] as const)[i],on:status===k,onClick:()=>{setStatus(status===k?'open':k);setWhen('')}}))}/>
+   <PulseTile title="موعد الرد" parts={WHEN_PARTS.map(([k,l,t])=>({label:l,value:base.filter(c=>line(c).when===k).length,tone:t,on:when===k,onClick:()=>setWhen(when===k?'':k)}))}/>
+   <PulseTile title="المحامي" parts={lawyerParts(base,lawyer,setLawyer)}/>
+  </PulseStrip>}
+  {!list.length?<Empty title="لا توجد استشارات" text={live.length?'لا استشارات بهذا التصنيف.':p.canCreate?'أضف استشارة جديدة من الزر أعلاه.':'لا توجد استشارات ضمن صلاحيتك.'}/>:<ul className="story-list consult-lines" aria-label="الاستشارات"><li className="story-head" aria-hidden><span>الموكل</span><span>الموضوع</span><span>المحامي</span><span>موعد الرد</span><span>الحالة</span><span>باختصار</span><span/></li>
+   {list.map(c=>{const k=consultationOf(c),l=line(c);return <li key={c.id}><div className={'story-row e-'+l.edge}>
+    <span><b>{clientName(c)||'—'}</b>{k.requester&&<small className="muted"> · {k.requester}</small>}</span>
+    <span>{k.subject||'—'}{k.type&&<small className="muted"> · {k.type}</small>}</span>
+    <span>{String(c.lawyer||'—')}</span>
+    <span className="story-num">{formatDate(k.dueDate)||'—'}</span>
+    <span><span className={'tag '+(k.status==='answered'||k.status==='closed'?'green':l.edge==='red'?'red':'amber')}>{label(k.status)}</span></span>
+    <span className="line-story">{l.story}</span>
+    <button className="btn" onClick={()=>setEditing(c)}>فتح</button></div></li>})}</ul>}
   {editing&&<ConsultationEditor c={editing} p={p} onClose={()=>setEditing(null)}/>}
  </Panel>;
 }
@@ -258,20 +285,30 @@ function Judgments(p:Props){
   {!rows.length?<Empty title="لا أحكام في هذه الفترة"/>:<div className="table-wrap"><table className="office-table"><thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map(j=><tr key={j.c.id+j.date+j.level}><td className="nowrap">{formatDate(j.date)}</td><td>{j.level||'—'}{!j.current&&<small>درجة سابقة</small>}</td><td><CaseCell c={j.c} onOpen={p.onOpen}/></td><td>{j.caseNumber||'—'}</td><td>{parties(j.c)}</td><td>{j.court||'—'}</td><td><span className={'tag '+(j.outcome.startsWith('لصالحنا')?'green':j.outcome.startsWith('غير')?'red':'')}>{j.outcome||'—'}</span></td><td>{j.ruling||'—'}</td></tr>)}</tbody></table></div>}
  </Panel>;
 }
-function ContractRow({c,p}:{c:CaseRecord;p:Props}){
+function ContractRow({c,p,today}:{c:CaseRecord;p:Props;today:string}){
  const [number,setNumber]=useState(''),[date,setDate]=useState(''),[busy,setBusy]=useState(false);
  async function save(extra:Partial<CaseRecord>){setBusy(true);try{p.onSaved(await saveCase({...c,...extra},p.clients));toast.success('حُفظ في ملف القضية')}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
- return <tr><td><CaseCell c={c} onOpen={p.onOpen}/></td><td>{String(c.lawyer||'—')}</td><td>{p.canEdit?<input aria-label={'رقم العقد '+ref(c)} value={number} onChange={e=>setNumber(e.target.value)} placeholder="رقم العقد"/>:'—'}</td><td>{p.canEdit&&<DateField label={'تاريخ العقد '+ref(c)} value={date} onChange={setDate}/>}</td>
-  <td>{p.canEdit&&<div className="actions"><button className="btn primary" disabled={busy||!number.trim()} onClick={()=>void save({contractNumber:number.trim(),contractDate:date})}><CheckCircle2 size={15}/> حفظ العقد</button><button className="btn" disabled={busy} onClick={()=>{if(window.confirm(`القضية ${ref(c)} لا تحتاج عقد أتعاب (مثلاً قضايا مجانية أو ضمن عقد عام)؟`))void save({contractWaived:true})}}>لا يلزم عقد</button></div>}</td></tr>;
+ const age=ageOf(String(c.date||''),today);
+ return <li><div className={'story-row e-'+(age==='older'?'red':age==='quarter'?'amber':'grey')}><CaseLineCell c={c}/><span>{String(c.lawyer||'—')}</span>
+  <span className="line-story">{[String(c.court||''),c.date?'الحكم '+sinceAr(String(c.date),today):'بلا تاريخ'].filter(Boolean).join(' · ')}</span>
+  {p.canEdit?<span className="contract-form"><input aria-label={'رقم العقد '+ref(c)} value={number} onChange={e=>setNumber(e.target.value)} placeholder="رقم العقد"/><DateField label={'تاريخ العقد '+ref(c)} value={date} onChange={setDate}/>
+   <button className="btn primary" disabled={busy||!number.trim()} onClick={()=>void save({contractNumber:number.trim(),contractDate:date})}><CheckCircle2 size={15}/> حفظ العقد</button><button className="btn" disabled={busy} onClick={()=>{if(window.confirm(`القضية ${ref(c)} لا تحتاج عقد أتعاب (مثلاً قضايا مجانية أو ضمن عقد عام)؟`))void save({contractWaived:true})}}>لا يلزم عقد</button></span>
+   :<button className="btn" onClick={()=>p.onOpen(c)}>فتح</button>}</div></li>;
 }
 function NoContract(p:Props){
- const rows=withoutContract(p.records),groups=[...new Set(rows.map(c=>clientName(c)||'بلا موكل'))].sort();
- const [client,setClient]=useState('');
- const shown=rows.filter(c=>!client||(clientName(c)||'بلا موكل')===client);
+ const rows=withoutContract(p.records),groups=[...new Set(rows.map(c=>clientName(c)||'بلا موكل'))].sort(),today=todayISO();
+ const [client,setClient]=useState(''),[lawyer,setLawyer]=useState(''),[age,setAge]=useState('');
+ const ofClient=rows.filter(c=>!client||(clientName(c)||'بلا موكل')===client),shown=ofClient.filter(c=>byLawyer(lawyer)(c)&&(!age||ageOf(String(c.date||''),today)===age));
+ const top=groups.map(g=>[g,rows.filter(c=>(clientName(c)||'بلا موكل')===g).length] as const).sort((a,b)=>b[1]-a[1]),tones=['brand','blue','amber','green'] as const;
  return <Panel title="القضايا بدون عقود" note="قضايا مفتوحة لم يُسجل لها عقد أتعاب. سجّل رقم العقد هنا أو من ملف القضية، أو علّمها «لا يلزم عقد»."
   actions={p.canExport&&!!shown.length&&<button className="btn" onClick={()=>print(p.canExport,'القضايا بدون عقود',client||'كل الموكلين',['القضية','الأطراف','المحكمة','المحامي'],shown.map(c=>[ref(c),parties(c),String(c.court||''),String(c.lawyer||'')]),p.printedBy,[12,42,26,18])}><Printer size={15}/> طباعة</button>}>
+  {!!rows.length&&<PulseStrip label="ملخص القضايا بلا عقود">
+   <PulseTile title="الموكلون" value={rows.length} sub="قضية بلا عقد" parts={[...top.slice(0,4).map(([g,n],k)=>({label:g,value:n,tone:tones[k],on:client===g,onClick:()=>setClient(client===g?'':g)})),...(top.length>4?[{label:`${top.length-4} غيرهم`,value:top.slice(4).reduce((a,[,n])=>a+n,0),tone:'grey' as const}]:[])]}/>
+   <PulseTile title="منذ الحكم" parts={([['month','خلال شهر','grey'],['quarter','حتى 3 أشهر','amber'],['older','أقدم','red'],['none','بلا تاريخ','grey']] as const).map(([k,l,t])=>({label:l,value:ofClient.filter(c=>ageOf(String(c.date||''),today)===k).length,tone:t,on:age===k,onClick:()=>setAge(age===k?'':k)}))}/>
+   <PulseTile title="المحامي" parts={lawyerParts(ofClient,lawyer,setLawyer)}/>
+  </PulseStrip>}
   <div className="desk-toolbar"><OfficeSelect label="الموكل" value={client} onChange={setClient} options={[['',`كل الموكلين (${groups.length})`],...groups.map(g=>[g,`${g} (${rows.filter(c=>(clientName(c)||'بلا موكل')===g).length})`] as [string,string])]}/><span className="tag amber">{shown.length} قضية بلا عقد</span></div>
-  {!shown.length?<Empty title="كل القضايا لها عقود" text="لا توجد قضايا مفتوحة بلا عقد أتعاب."/>:<div className="table-wrap"><table className="office-table desk-table"><thead><tr><th>القضية</th><th>المحامي</th><th>رقم العقد</th><th>تاريخ العقد</th><th/></tr></thead><tbody>{shown.slice(0,100).map(c=><ContractRow key={c.id} c={c} p={p}/>)}</tbody></table>{shown.length>100&&<p className="subtitle">تُعرض أول 100 قضية؛ اختر موكلاً لتضييق القائمة.</p>}</div>}
+  {!shown.length?<Empty title={rows.length?'لا قضايا بهذا التصنيف':'كل القضايا لها عقود'} text={rows.length?'اضغط التصنيف المختار مرة أخرى لإلغائه.':'لا توجد قضايا مفتوحة بلا عقد أتعاب.'}/>:<><ul className={'story-list contract-lines'+(p.canEdit?' can-edit':'')} aria-label="القضايا بدون عقود"><li className="story-head" aria-hidden><span>القضية</span><span>المحامي</span><span>باختصار</span><span>{p.canEdit?'العقد':''}</span></li>{shown.slice(0,100).map(c=><ContractRow key={c.id} c={c} p={p} today={today}/>)}</ul>{shown.length>100&&<p className="subtitle">تُعرض أول 100 قضية؛ اختر موكلاً لتضييق القائمة.</p>}</>}
  </Panel>;
 }
 function FileDialog({c,p,onClose}:{c:CaseRecord;p:Props;onClose:()=>void}){
@@ -287,18 +324,40 @@ function FileDialog({c,p,onClose}:{c:CaseRecord;p:Props;onClose:()=>void}){
  </EditorDialog>;
 }
 function Study(p:Props){
- const list=p.records.filter(c=>workflowOf(c)==='study'&&!c.archived),[filing,setFiling]=useState<CaseRecord|null>(null);
+ const list=p.records.filter(c=>workflowOf(c)==='study'&&!c.archived),[filing,setFiling]=useState<CaseRecord|null>(null),[lawyer,setLawyer]=useState(''),[age,setAge]=useState(''),today=todayISO();
+ const since=(c:CaseRecord)=>consultationOf(c).receivedDate||'',shown=list.filter(c=>byLawyer(lawyer)(c)&&(!age||ageOf(since(c),today)===age));
  return <Panel title="قضايا تحت الدراسة" note="قضايا يدرسها المكتب قبل رفعها: الوقائع والمستندات والرأي. عند القيد تنتقل إلى سجل القضايا بجلستها الأولى."
   actions={p.canCreate&&<button className="btn primary" onClick={()=>p.onNew({...emptyCase(),workflow:'study',type:'',outcome:''})}><Plus size={16}/> قضية تحت الدراسة</button>}>
-  {!list.length?<Empty title="لا توجد قضايا تحت الدراسة" text="أضف قضية للدراسة، أو حوّل استشارة إلى قضية."/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>القضية</th><th>الموضوع</th><th>المحامي</th><th>منذ</th><th/></tr></thead><tbody>{list.map(c=>{const k=consultationOf(c);return <tr key={c.id}><td><CaseCell c={c} onOpen={p.onOpen}/></td><td>{String(c.subject||k.subject||'—')}</td><td>{String(c.lawyer||'—')}</td><td className="nowrap">{formatDate(k.receivedDate||'')}</td><td><div className="actions"><button className="btn" onClick={()=>p.onOpen(c)}>فتح</button>{p.canEdit&&<button className="btn primary" onClick={()=>setFiling(c)}><FileSignature size={15}/> قيد الدعوى</button>}</div></td></tr>})}</tbody></table></div>}
+  {!!list.length&&<PulseStrip label="ملخص القضايا تحت الدراسة">
+   <PulseTile title="منذ متى تُدرس" value={list.length} sub="قضية تحت الدراسة" parts={([['month','خلال شهر','green'],['quarter','حتى 3 أشهر','amber'],['older','أقدم','red'],['none','بلا تاريخ','grey']] as const).map(([k,l,t])=>({label:l,value:list.filter(c=>ageOf(since(c),today)===k).length,tone:t,on:age===k,onClick:()=>setAge(age===k?'':k)}))}/>
+   <PulseTile title="المحامي" parts={lawyerParts(list,lawyer,setLawyer)}/>
+  </PulseStrip>}
+  {!shown.length?<Empty title={list.length?'لا قضايا بهذا التصنيف':'لا توجد قضايا تحت الدراسة'} text={list.length?'اضغط التصنيف المختار مرة أخرى لإلغائه.':'أضف قضية للدراسة، أو حوّل استشارة إلى قضية.'}/>:<ul className="story-list study-lines" aria-label="قضايا تحت الدراسة"><li className="story-head" aria-hidden><span>القضية</span><span>الموضوع</span><span>المحامي</span><span>باختصار</span><span/></li>
+   {shown.map(c=>{const k=consultationOf(c),a=ageOf(since(c),today);return <li key={c.id}><div className={'story-row e-'+(a==='older'?'red':a==='quarter'?'amber':a==='month'?'green':'grey')}><CaseLineCell c={c}/>
+    <span>{String(c.subject||k.subject||'—')}</span><span>{String(c.lawyer||'—')}</span>
+    <span className="line-story">{[since(c)?'تُدرس '+sinceAr(since(c),today):'بلا تاريخ ورود',String(c.lawyer||'').trim()?'':'بلا محامٍ مسؤول'].filter(Boolean).join(' · ')}</span>
+    <span className="row-actions"><button className="btn" onClick={()=>p.onOpen(c)}>فتح</button>{p.canEdit&&<button className="btn primary" onClick={()=>setFiling(c)}><FileSignature size={15}/> قيد الدعوى</button>}</span></div></li>})}</ul>}
   {filing&&<FileDialog c={filing} p={p} onClose={()=>setFiling(null)}/>}
  </Panel>;
 }
 function Stayed(p:Props){
- const today=todayISO();
+ const today=todayISO(),[reason,setReason]=useState(''),[when,setWhen]=useState(''),[lawyer,setLawyer]=useState('');
  const rows=p.records.map(c=>({c,s:stayOf(c)})).filter((r):r is {c:CaseRecord;s:NonNullable<ReturnType<typeof stayOf>>}=>!!r.s).sort((a,b)=>(a.s.since||'').localeCompare(b.s.since||''));
+ const kind=(s:{reason:string;manual:boolean})=>s.manual?'إيقاف يدوي':s.reason.startsWith('شطب')?'شطب':s.reason.startsWith('وقف')?'وقف':'انقطاع سير الخصومة';
+ const line=(r:{s:NonNullable<ReturnType<typeof stayOf>>})=>stayLine(r.s,renewalDeadline(r.s),today);
+ const shown=rows.filter(r=>(!reason||kind(r.s)===reason)&&(!when||line(r).when===when)&&byLawyer(lawyer)(r.c));
+ const kinds=[...new Set(rows.map(r=>kind(r.s)))];
  return <Panel title="القضايا الموقوفة" note="قضايا موقوفة أو مشطوبة حسب آخر جلسة، أو موقوفة يدوياً من ملف القضية. المشطوبة تُجدَّد عادة خلال 60 يوماً من الشطب؛ التاريخ أدناه للتذكير ويؤكده المحامي."
-  actions={p.canExport&&!!rows.length&&<button className="btn" onClick={()=>print(p.canExport,'القضايا الموقوفة',formatDate(today),['القضية','الأطراف','السبب','منذ','موعد التجديد','المحامي'],rows.map(r=>[ref(r.c),parties(r.c),r.s.reason,formatDate(r.s.since),formatDate(renewalDeadline(r.s)),String(r.c.lawyer||'')]),p.printedBy,[9,30,18,9,10,14])}><Printer size={15}/> طباعة</button>}>
-  {!rows.length?<Empty title="لا توجد قضايا موقوفة"/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>القضية</th><th>السبب</th><th>منذ</th><th>التجديد قبل</th><th>المحامي</th><th/></tr></thead><tbody>{rows.map(({c,s})=>{const due=renewalDeadline(s),left=due?daysBetween(today,due):null;return <tr key={c.id}><td><CaseCell c={c} onOpen={p.onOpen}/></td><td>{s.reason}{s.manual&&<small>إيقاف يدوي</small>}</td><td className="nowrap">{formatDate(s.since)}</td><td className="nowrap">{due?<>{formatDate(due)} <span className={'tag '+(left!==null&&left<0?'red':left!==null&&left<=14?'amber':'')}>{left!==null&&left<0?`فات منذ ${-left} يوم`:`${left} يوم`}</span></>:'—'}</td><td>{String(c.lawyer||'—')}</td><td><button className="btn" onClick={()=>p.onOpen(c)}><ArrowUpLeft size={15}/> فتح</button></td></tr>})}</tbody></table></div>}
+  actions={p.canExport&&!!shown.length&&<button className="btn" onClick={()=>print(p.canExport,'القضايا الموقوفة',formatDate(today),['القضية','الأطراف','السبب','منذ','موعد التجديد','المحامي'],shown.map(r=>[ref(r.c),parties(r.c),r.s.reason,formatDate(r.s.since),formatDate(renewalDeadline(r.s)),String(r.c.lawyer||'')]),p.printedBy,[9,30,18,9,10,14])}><Printer size={15}/> طباعة</button>}>
+  {!!rows.length&&<PulseStrip label="ملخص القضايا الموقوفة">
+   <PulseTile title="السبب" value={rows.length} sub="قضية موقوفة أو مشطوبة" parts={kinds.map((k,i)=>({label:k,value:rows.filter(r=>kind(r.s)===k).length,tone:(['red','amber','blue','grey'] as const)[i%4],on:reason===k,onClick:()=>setReason(reason===k?'':k)}))}/>
+   <PulseTile title="موعد التجديد" parts={WHEN_PARTS.map(([k,l,t])=>({label:k==='none'?'لا يلزم موعد':l,value:rows.filter(r=>line(r).when===k).length,tone:t,on:when===k,onClick:()=>setWhen(when===k?'':k)}))}/>
+   <PulseTile title="المحامي" parts={lawyerParts(rows.map(r=>r.c),lawyer,setLawyer)}/>
+  </PulseStrip>}
+  {!shown.length?<Empty title={rows.length?'لا قضايا بهذا التصنيف':'لا توجد قضايا موقوفة'}/>:<ul className="story-list stayed-lines" aria-label="القضايا الموقوفة"><li className="story-head" aria-hidden><span>القضية</span><span>السبب</span><span>التجديد قبل</span><span>المحامي</span><span>باختصار</span><span/></li>
+   {shown.map(r=>{const {c,s}=r,l=line(r),due=renewalDeadline(s);return <li key={c.id}><div className={'story-row e-'+l.edge}><CaseLineCell c={c}/>
+    <span>{s.reason}</span><span className="story-num">{due?formatDate(due):'—'}</span><span>{String(c.lawyer||'—')}</span>
+    <span className="line-story">{l.story}</span>
+    <button className="btn" onClick={()=>p.onOpen(c)}><ArrowUpLeft size={15}/> فتح</button></div></li>})}</ul>}
  </Panel>;
 }

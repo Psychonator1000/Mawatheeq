@@ -7,7 +7,7 @@ import type {Permissions} from '@/lib/permissions';
 import {clientName,tidyName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
 import {formatDate,todayISO,caseCode} from '@/lib/domain';
-import {ROOTS,allowed,dailyCounts,endsWithCode,fileToCase,fileToDaily,fileToOrders,filesIn,folderSummaries,loadRoots,openFile,pickRoot,saveRoots,supported,type FileItem,type Folder,type RootKey,type Roots} from '@/lib/file-room';
+import {ROOTS,allowed,dailyCounts,endsWithCode,fileToCase,fileToDaily,fileToOrders,filesIn,folderSummaries,loadRoots,openFile,pickRoot,saveRoots,snapshot,supported,type FileItem,type Folder,type RootKey,type Roots} from '@/lib/file-room';
 import {DayBars,PulseStrip,PulseTile} from '../pulse';
 import {FilterBox} from '../filter-select';
 import {Empty} from '../shared';
@@ -74,7 +74,7 @@ function InboxTab({roots,ready,cases,canEdit,onChanged}:{roots:Roots;ready:(k:Ro
   return()=>{live=false}},[roots,ready]);
  useEffect(()=>{if(!open){
   // eslint-disable-next-line react-hooks/set-state-in-effect -- no file chosen: no preview
-  setPreview('');return}let url='',live=true;open.handle.getFile().then(f=>{if(!live)return;url=URL.createObjectURL(f);setPreview(url)}).catch(()=>{if(live)setPreview('')});return()=>{live=false;if(url)URL.revokeObjectURL(url)}},[open]);
+  setPreview('');return}let url='',live=true;snapshot(open).then(f=>{if(!live)return;url=URL.createObjectURL(f);setPreview(url)}).catch(()=>{if(live)setPreview('')});return()=>{live=false;if(url)URL.revokeObjectURL(url)}},[open]);
  const caseOptions=useMemo(()=>cases.filter(c=>!c.archived&&caseCode(c)).map(c=>({value:caseCode(c),label:caseCode(c),hint:`${tidyName(clientName(c))} ضد ${tidyName(c.opponent||'—')}`})),[cases]);
  const theCase=cases.find(c=>caseCode(c)===code);
  if(!files)return <p className="day-empty" role="status"><LoaderCircle className="spin" size={14}/> جارٍ قراءة الوارد…</p>;

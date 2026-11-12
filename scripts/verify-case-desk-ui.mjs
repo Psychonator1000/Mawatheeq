@@ -79,20 +79,20 @@ try{
  {const row=page.locator('tr',{hasText:'DESK-MISSED'}).first();await row.getByRole('combobox').first().click();const list=page.locator('.filter-select-list');await list.waitFor();
   const hidden=await list.evaluate(ul=>[...ul.querySelectorAll('li')].filter(li=>{const r=li.getBoundingClientRect(),box=ul.getBoundingClientRect();if(r.bottom>innerHeight||r.top<box.top||r.bottom>box.bottom)return false;const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !hit||!ul.contains(hit)}).map(li=>li.textContent));
   assert.deepEqual(hidden,[],'No option of an open list is covered');await screen('posting-errors-list');await page.keyboard.press('Escape');}
- await nav('القضايا الموقوفة');await page.locator('tr',{hasText:'DESK-STRUCK'}).waitFor();await page.locator('tr',{hasText:'DESK-DUE'}).waitFor();
+ await nav('القضايا الموقوفة');await page.locator('.story-row',{hasText:'DESK-STRUCK'}).waitFor();await page.locator('.story-row',{hasText:'DESK-DUE'}).waitFor();await screen('stayed');
  assert.equal(await page.locator('.nav-button',{hasText:/مواعيد الجلسات|^الأحكام/}).count(),0,'The sessions roll and judgments issued open as windows from the register, not the sidebar');await nav('سجل الأحكام');await click('رول الجلسات');const win=page.getByRole('dialog');await win.getByRole('heading',{name:'مواعيد الجلسات (رول)',exact:true}).waitFor();await win.getByText('لا جلسات في هذه الفترة').waitFor();await screen('sessions-roll-window');await page.keyboard.press('Escape');await win.waitFor({state:'detached'});
  await click('الأحكام الصادرة');await win.getByRole('heading',{name:'الأحكام الصادرة',exact:true}).waitFor();await win.getByText('لا أحكام في هذه الفترة').waitFor();await page.keyboard.press('Escape');await win.waitFor({state:'detached'});await page.getByRole('heading',{level:1,name:'سجل الأحكام',exact:true}).waitFor();
- await nav('القضايا بدون عقود');await page.locator('tr',{hasText:'DESK-MISSED'}).waitFor();assert.equal(await page.locator('tr',{hasText:'DESK-STRUCK'}).count(),0,'Cases with a contract are not listed');
- const contract=page.locator('tr',{hasText:'DESK-MISSED'});await contract.getByLabel('رقم العقد DESK-MISSED').fill('ع-77');await contract.getByRole('button',{name:'حفظ العقد'}).click();
+ await nav('القضايا بدون عقود');await page.locator('.story-row',{hasText:'DESK-MISSED'}).waitFor();assert.equal(await page.locator('.story-row',{hasText:'DESK-STRUCK'}).count(),0,'Cases with a contract are not listed');await screen('no-contract');
+ const contract=page.locator('.story-row',{hasText:'DESK-MISSED'});await contract.getByLabel('رقم العقد DESK-MISSED').fill('ع-77');await contract.getByRole('button',{name:'حفظ العقد'}).click();
  await page.getByText('حُفظ في ملف القضية').waitFor();assert.equal((await caseOf('desk-missed')).contractNumber,'ع-77');
 
  await nav('الاستشارات');await click('استشارة جديدة');const dialog=page.getByRole('dialog');
  const client=dialog.getByLabel('الموكل',{exact:true});await client.click();const options=await dialog.locator('.filter-select-list [role=option] b').allTextContents();await client.press('Escape');assert.ok(options.includes('شركة اختبار المكتب'),'Clients can be picked');
  await client.selectOption({label:'شركة اختبار المكتب'});await dialog.getByLabel('موضوع الاستشارة',{exact:true}).fill('مراجعة عقد إيجار تجريبي');await dialog.getByRole('button',{name:'حفظ',exact:true}).click();
- await page.getByText('حُفظت الاستشارة').waitFor();await page.locator('tr',{hasText:'مراجعة عقد إيجار تجريبي'}).waitFor();await screen('consultations');
+ await page.getByText('حُفظت الاستشارة').waitFor();await page.locator('.story-row',{hasText:'مراجعة عقد إيجار تجريبي'}).waitFor();await screen('consultations');
  assert.equal(await count('سجل الأحكام','3'),'3','Consultations stay out of the judgments register');
 
- await nav('قضايا تحت الدراسة');const study=page.locator('tr',{hasText:'DESK-STUDY'});await study.getByRole('button',{name:'قيد الدعوى'}).click();
+ await nav('قضايا تحت الدراسة');const study=page.locator('.story-row',{hasText:'DESK-STUDY'});await study.waitFor();await screen('study');await study.getByRole('button',{name:'قيد الدعوى'}).click();
  const filing=page.getByRole('dialog');await filing.getByLabel('رقم القضية',{exact:true}).fill('123/2026');
  await filing.getByRole('button',{name:/^موعد الجلسة الأولى/}).click();await page.locator('.date-popover').getByRole('button',{name:'اليوم',exact:true}).click();
  await filing.getByRole('button',{name:'قيد الدعوى',exact:true}).click();await page.getByText(/قُيدت الدعوى DESK-STUDY/).waitFor();

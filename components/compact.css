@@ -2030,5 +2030,13 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .move-lines{--cols:[date] max-content [file] minmax(150px,1.2fr) [move] max-content [story] minmax(0,1.6fr) [who] max-content [open] max-content}
 .story-list .story-row .row-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
 .story-list .nowrap{white-space:nowrap}
+.verify-lines{--cols:[code] max-content [parties] minmax(180px,1.4fr) [date] max-content [state] max-content [story] minmax(0,1.6fr) [open] max-content}
+.party-lines{--cols:[code] max-content [found] minmax(170px,1.3fr) [parties] minmax(180px,1.3fr) [date] max-content [open] max-content}
+.party-found{display:flex;flex-direction:column;gap:2px}.party-found .tag{margin-inline-start:4px}
+.consult-lines{--cols:[client] minmax(150px,1.1fr) [subject] minmax(140px,1.2fr) [lawyer] max-content [due] max-content [state] max-content [story] minmax(0,1.4fr) [open] max-content}
+.study-lines{--cols:[case] minmax(200px,1.4fr) [subject] minmax(140px,1fr) [lawyer] max-content [story] minmax(0,1.2fr) [open] max-content}
+.stayed-lines{--cols:[case] minmax(200px,1.4fr) [reason] max-content [due] max-content [lawyer] max-content [story] minmax(0,1.6fr) [open] max-content}
+.contract-lines{--cols:[case] minmax(200px,1.5fr) [lawyer] max-content [story] minmax(0,1fr) [form] max-content}
+.contract-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.contract-form>input{width:120px;min-height:34px;border:1px solid var(--border);border-radius:10px;padding:4px 10px;background:var(--card);color:inherit;font:inherit}.contract-form .field{margin:0;min-width:140px}.contract-form .field>span:first-child,.contract-form .field>label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .move-lines .story-row.void .move-type{text-decoration:line-through;color:var(--muted-foreground)}
 .story-row.void-row{opacity:.6;text-decoration:line-through}

@@ -84,3 +84,20 @@ assert.deepEqual([withLawyer, without, blank].map(c => matchesCaseFilters(c, f({
 assert.deepEqual([withLawyer, without, blank].map(c => matchesCaseFilters(c, f({ fileStatus: 'منتهي' }))), [false, true, false]);
 assert.deepEqual([withLawyer, without, blank].map(c => matchesCaseFilters(c, f({ fileStatus: '-' }))), [false, false, true]);
 console.log('Lawyer and file-status filters pick the right cases.');
+
+// The cases desk pages' lines.
+const { stayLine, consultationLine, whenOf, ageOf } = await import('../lib/desk-line.ts');
+let sl = stayLine({ reason: 'شطب الدعوى', since: '2026-10-01', manual: false }, '2026-11-30', today);
+assert.equal(sl.story, 'شُطبت منذ 42 يوماً · تُجدّد قبل 30/11/2026 · باقي 18 يوماً'); assert.equal(sl.edge, 'amber');
+sl = stayLine({ reason: 'شطب الدعوى', since: '2026-09-01', manual: false }, '2026-10-31', today);
+assert.equal(sl.story, 'شُطبت منذ 72 يوماً · فات موعد التجديد منذ 12 يوماً'); assert.equal(sl.edge, 'red');
+sl = stayLine({ reason: 'موقوفة', since: '2026-11-10', manual: true }, '', today);
+assert.equal(sl.story, 'أُوقفت يدوياً · موقوفة منذ يومين · لا موعد تجديد'); assert.equal(sl.edge, 'grey');
+let kl = consultationLine({ status: 'new', receivedDate: '2026-11-05', dueDate: '2026-11-10' }, 'أحمد', today);
+assert.equal(kl.story, 'وردت منذ 7 أيام · تأخر الرد يومين'); assert.equal(kl.edge, 'red');
+kl = consultationLine({ status: 'study', receivedDate: '2026-11-12', dueDate: '2026-11-15' }, '', today);
+assert.equal(kl.story, 'وردت منذ اليوم · الرد خلال 3 أيام · بلا محامٍ مسؤول'); assert.equal(kl.edge, 'amber');
+assert.equal(consultationLine({ status: 'answered', receivedDate: '', dueDate: '2026-11-01' }, 'أحمد', today).edge, 'green');
+assert.deepEqual(['2026-11-11', '2026-11-12', '2026-11-19', '2026-11-20', ''].map(d => whenOf(d, today)), ['late', 'today', 'week', 'later', 'none']);
+assert.deepEqual(['2026-11-01', '2026-09-01', '2026-01-01', ''].map(d => ageOf(d, today)), ['month', 'quarter', 'older', 'none']);
+console.log('Cases desk lines are right too.');
