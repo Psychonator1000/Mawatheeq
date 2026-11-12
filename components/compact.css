@@ -1703,7 +1703,8 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
 .team-story-day{grid-column:7;width:22px;height:22px;justify-self:center}
 .team-story-cols{grid-column:span 7;display:grid;grid-template-columns:subgrid;padding:0 11px;font-size:11px;color:var(--muted-foreground);position:sticky;top:0;z-index:1;background:var(--card)}
 .team-story-cols span:nth-child(5){grid-column:6}.team-story-cols+.team-story-cols{display:none}
-@container team (min-width:1250px){.team-stories{grid-template-columns:var(--team-row) var(--team-row);column-gap:14px}.team-story-cols+.team-story-cols{display:grid}}
+@container team (min-width:1500px){.team-stories{--team-row:[name] minmax(110px,180px) [status] max-content [h] max-content [t] max-content [late] minmax(0,max-content) [line] minmax(0,1fr) [day] 26px;grid-template-columns:var(--team-row) var(--team-row);column-gap:9px}
+ .team-story:nth-child(odd of .team-story){margin-inline-end:12px}.team-meter i{display:none}.team-story-cols+.team-story-cols{display:grid}}
 @container team (min-width:601px) and (max-width:950px){
  .team-stories{--team-row:[name] minmax(110px,170px) [status] max-content [h] max-content [t] max-content [late] minmax(0,max-content) [line] minmax(0,1fr) [day] 26px;column-gap:9px}
  .team-meter i{display:none}
@@ -1718,5 +1719,25 @@ body:has(#instant-screen:not(.leaving)) #root{visibility:hidden}
  .team-story-line{grid-column:1/-1}.team-story-day{align-self:flex-start;margin:5px}
 }
 @container day (max-width:760px){.day-path.team-day .day-path-body{display:block;overflow:visible}.day-path.team-day .day-sec{overflow:visible}.day-path.team-day .day-sec+.day-sec{border-inline-start:0;border-top:1px dashed var(--border)}}
+/* Without the office's list beside it (a person without «المهام»), the team takes the whole width. */
+.day-path.team-day .day-path-body:not(:has(>.day-sec+.day-sec)){grid-template-columns:minmax(0,1fr)}
+/* The office's sittings and tasks beside the team, in the team's style: a line each with its state on the edge (late red,
+   still open amber, done green), the case and its parties on one line and the court and lawyer under them. */
+.day-path.team-day .day-missions .day-list{display:flex;flex-direction:column;gap:3px}
+.day-path.team-day .mission{border:1px solid var(--border);border-inline-start:3px solid #c98a1a;border-radius:8px;background:var(--card);padding:3px 8px}
+.day-path.team-day .mission:last-child{border-bottom:1px solid var(--border)}
+.day-path.team-day .mission.late{border-inline-start-color:#c0392b;background:color-mix(in srgb,#a32e38 4%,var(--card))}
+.day-path.team-day .mission.done{border-inline-start-color:#2f7d57;opacity:.8}
+.day-path.team-day .mission-line{grid-template-columns:24px 46px minmax(0,1fr) auto;grid-template-areas:"k t m a" "k t p a";gap:0 7px;row-gap:0}
+.day-path.team-day .mission-kind{grid-area:k;font-size:0;gap:0;padding:4px;justify-content:center}
+.day-path.team-day .mission-time{grid-area:t;font-size:12px}
+.day-path.team-day .mission-main{grid-area:m;flex-direction:row;align-items:baseline;gap:7px}
+.day-path.team-day .mission-main b{flex:none;max-width:60%;font-size:13px}.day-path.team-day .mission-main small{flex:1;min-width:0}
+.day-path.team-day .mission-place{grid-area:p;flex-direction:row;gap:5px;font-size:11.5px;color:var(--muted-foreground)}
+.day-path.team-day .mission-place small{font-size:11.5px}.day-path.team-day .mission-place small.after::before{content:'· '}
+.day-path.team-day .mission-line>:last-child:not(.mission-place){grid-area:a}
+.day-path.team-day .mission .btn{min-height:28px;padding:2px 10px;font-size:12.5px}
+.day-path.team-day .mission-result{max-width:120px;font-size:12px}
+.day-path.team-day .late-fold{border:1px solid color-mix(in srgb,#a32e38 30%,var(--border));border-radius:8px;padding:5px 9px}
 .day-path.team-day .day-chips .work-chip{padding:2px 9px;min-height:28px}
 .day-path.team-day .day-sec-head{gap:6px 8px}

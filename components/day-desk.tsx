@@ -128,7 +128,7 @@ export default function DayDesk(p:Props){
  const mainCol=mode==='perf'?<Performance p={p} onPick={id=>{setWho(id===p.user.id?'me':id);setMode('day')}}/>:mode==='posting'?postingCol:mode==='dates'?datesCol:mode==='calendar'?calendarCol:dayPath;
  // Under the head of every view, one line that says what the view is for and what to press.
  const PURPOSE:Record<Mode,string>={
-  day:team?'لكل محامٍ سطر يحكي يومه باختصار: تقريره وما فيه، وجلساته ومهامه، وما تأخر عليه، والتالي عليه. وبجانب الفريق جلسات ومهام المكتب. اضغط السطر لقراءة التقرير، والسهم لفتح يومه.'
+  day:team?'لكل محامٍ سطر يحكي يومه باختصار: تقريره وما فيه، وجلساته ومهامه، وما تأخر عليه، والتالي عليه.'+(p.missionsOn?' وبجانب الفريق جلسات ومهام المكتب.':'')+' اضغط السطر لقراءة التقرير، والسهم لفتح يومه.'
    :self?(p.missionsOn&&p.canReport?'أنجز جلساتك ومهامك من القائمة، وأضف ما عملته خارجها، ثم أرسل التقرير من الشريط في الأسفل.':p.canReport?'أضف ما عملته اليوم بالأزرار، ثم أرسل التقرير من الشريط في الأسفل.':'جلساتك ومهامك في هذا اليوم. التقرير اليومي غير مفعّل لهذا الحساب (التفاصيل في القسم الثاني).')
    :`يوم ${name}: جلساته ومهامه، وتقريره.`,
   posting:`كل جلسات المكتب في هذا اليوم (${posting.length}). اضغط «ترحيل» في كل جلسة لتسجيل ما تم فيها وتحديد الجلسة القادمة.`,
@@ -162,7 +162,7 @@ function MissionRow({m,p,showWho,onDone}:{m:Mission;p:Props;showWho:boolean;onDo
   <div className="mission-line"><span className={'mission-kind k-'+m.kind} title={MISSION_KINDS[m.kind]}><Icon size={14}/>{MISSION_KINDS[m.kind]}</span>
    <span className="mission-time mono">{m.state==='late'||m.kind==='deadline'?formatDate(m.date):m.time||''}</span>
    <button type="button" className="mission-main" disabled={!m.c} onClick={()=>m.c&&p.onOpen(m.c)}><b>{m.title}</b><small>{m.sub}</small></button>
-   <span className="mission-place">{m.place}{showWho&&m.who&&<small>{m.who}</small>}</span>
+   <span className="mission-place">{m.place}{showWho&&m.who&&<small className={m.place?'after':undefined}>{m.who}</small>}</span>
    {m.state==='done'?<span className="mission-result" title={m.result}><Check size={14}/> {m.result||'تم'}</span>:action}</div>
   {open&&m.kind==='hearing'&&m.c&&<PostForm c={m.c} date={m.date} p={p} onClose={()=>setOpen(false)} onPosted={(decision,next)=>onDone('hearings',{key:m.key,text:m.title,court:m.place,result:decision,next})}/>}
   {open&&m.kind==='task'&&m.work&&<DoneForm w={m.work} onClose={()=>setOpen(false)} onSaved={note=>{onDone('tasks',{key:m.key,text:m.title,result:note});p.onWorkChanged()}}/>}
