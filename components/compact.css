@@ -2022,3 +2022,7 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .file-misnamed{color:#94650f;font-weight:600}
 .file-day-pick{display:flex;gap:10px}.file-day-pick .field{min-width:220px}
 @media(max-width:1000px){.file-inbox{grid-template-columns:1fr}}
+.due-lines{--cols:[date] max-content [file] minmax(150px,1.2fr) [action] minmax(140px,1fr) [who] max-content [story] minmax(0,1.2fr) [open] max-content}
+.pay-lines{--cols:[date] max-content [file] minmax(150px,1.2fr) [amount] max-content [story] minmax(0,1.6fr) [open] max-content}
+.story-list .story-row .btn{min-height:28px;padding:2px 10px}
+.story-row.void-row{opacity:.6;text-decoration:line-through}

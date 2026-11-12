@@ -2,7 +2,7 @@ import {Fragment,lazy,Suspense,useCallback,useEffect,useMemo,useRef,useState,typ
 import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf,suggestions} from '@/lib/choices';
 import {Plus,FileCheck2,Scale,Link2,Trash2,UserPlus,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
 import BatchPrint from './batch-print';
-import {Meter,PulseStrip,PulseTile} from '../pulse';
+import {DayBars,Meter,PulseStrip,PulseTile} from '../pulse';
 import {collectionLine} from '@/lib/collection-line';
 import WordPreview,{paperName,type WordItem} from './word-preview';
 import CollectionImport from './collection-import';
@@ -88,9 +88,9 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  }
  const open=(id:string)=>{const f=fileOf(id);if(f){setView('files');setEditing(f)}};
  const dueSorted=[...due].sort((a,b)=>a.payload.reviewDate.localeCompare(b.payload.reviewDate));
- // One screen: the day's follow-ups and totals beside the follow-ups and payments; the files take the whole width
- // (owner, 12 November 2026: «make use of the entire space»), their tiles already giving the totals and follow-ups.
- return <><div className={'work-desk-grid'+(view==='files'||view==='print'?' solo':'')}>
+ // Every collections page takes the whole width (owner, 12 November 2026: «make use of the entire space»): its tiles
+ // give the totals and follow-ups the side panel used to.
+ return <><div className="work-desk-grid solo">
  <div className="work-desk-aside"><section className="panel sec-agenda" aria-label="اليوم في التحصيل">
   <div className="sec-agenda-head"><div><h2>اليوم في التحصيل</h2><small>{formatDate(today)} · {active.length} ملف نشط</small></div></div>
   <div className="desk-stats">
@@ -139,25 +139,57 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  {editing&&<CollectionEditor key={editing.id} clients={clients} opponents={opponents} related={sameDebtor(editing)} onOpenFile={setEditing} nav={nav} onNavigate={step} enter={enter} initial={editing} cases={cases} access={access} statements={statementsOf.get(editing.id)||[]} payments={paymentsOf.get(editing.id)||[]} assignees={assignees} batches={batches} tags={tags} onClose={()=>setEditing(null)} onChanged={reload}/>}</>;
 }
 
-/** Statements whose review date has come and that are not done yet, oldest first. */
+/** Statements whose review date has come and that are not done yet, oldest first: how late each is, for which file and debtor. */
 function DueList({due,fileOf,onOpen,canPrint}:{due:StatementRecord[];fileOf:(id:string)=>CollectionRecord|undefined;onOpen:(id:string)=>void;canPrint:boolean}) {
- const list=[...due].sort((a,b)=>a.payload.reviewDate.localeCompare(b.payload.reviewDate));
- const cat=(id:string)=>STATEMENT_CATEGORIES.find(c=>c[0]===id)?.[1]||id,st=(id:string)=>STATEMENT_STATUSES.find(c=>c[0]===id)?.[1]||id;
- return <section className="panel"><div className="panel-head"><div><h2>المتابعات المستحقة</h2><p className="panel-note">إفادات غير منجزة أو مؤجلة حان تاريخ مراجعتها.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('المتابعات المستحقة',formatDate(todayISO()),['تاريخ المراجعة','الملف','الخصم','النوع','الإجراء','الحالة','الموظف'],list.map(s=>{const f=fileOf(s.subjectId);return [formatDate(s.payload.reviewDate),f?.payload.code||'',f?.payload.defendant||'',cat(s.payload.category),s.payload.action+' — '+s.payload.text,st(s.payload.status),s.createdBy]}),formatDate(todayISO()),''))}><Printer size={15}/> طباعة</button>}</div>
-  <div className="panel-body">{!list.length?<Empty title="لا توجد متابعات مستحقة" text="كل الإفادات المستحقة منجزة."/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>تاريخ المراجعة</th><th>الملف</th><th>النوع</th><th>الإجراء</th><th>الحالة</th><th>الموظف</th><th/></tr></thead><tbody>{list.map(s=>{const f=fileOf(s.subjectId);return <tr key={s.id}><td className="nowrap">{formatDate(s.payload.reviewDate)}</td><td><b>{f?.payload.code||'—'}</b><small>{f?.payload.company} / {f?.payload.defendant}</small></td><td>{cat(s.payload.category)}</td><td><b>{s.payload.action}</b><small>{s.payload.text}</small></td><td><span className={'tag '+(s.payload.status==='postponed'?'':'amber')}>{st(s.payload.status)}</span></td><td>{s.createdBy}</td><td><button className="btn" onClick={()=>onOpen(s.subjectId)}>فتح الملف</button></td></tr>})}</tbody></table></div>}</div></section>;
+ const [cat,setCat]=useState(''),[who,setWho]=useState(''),today=todayISO();
+ const catName=(id:string)=>STATEMENT_CATEGORIES.find(c=>c[0]===id)?.[1]||id,st=(id:string)=>STATEMENT_STATUSES.find(c=>c[0]===id)?.[1]||id;
+ const all=[...due].sort((a,b)=>a.payload.reviewDate.localeCompare(b.payload.reviewDate));
+ const late=(s:StatementRecord)=>Math.max(0,Math.round((Date.parse(today)-Date.parse(s.payload.reviewDate))/86400000));
+ const lateAr=(n:number)=>n===0?'مستحقة اليوم':n===1?'متأخرة يوماً واحداً':n===2?'متأخرة يومين':n%100>=3&&n%100<=10?`متأخرة ${n} أيام`:`متأخرة ${n} يوماً`;
+ const list=all.filter(s=>(!cat||s.payload.category===cat)&&(!who||s.createdBy===who));
+ const cats=STATEMENT_CATEGORIES.map(([id,l])=>[id,l,all.filter(s=>s.payload.category===id).length] as const).filter(([,,n])=>n);
+ const people=[...new Set(all.map(s=>s.createdBy))].map(p=>[p,all.filter(s=>s.createdBy===p).length] as const).sort((a,b)=>b[1]-a[1]),tones=['brand','blue','amber','green'] as const;
+ return <section className="panel"><div className="panel-head"><div><h2>المتابعات المستحقة</h2><p className="panel-note">إفادات غير منجزة أو مؤجلة حان تاريخ مراجعتها.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('المتابعات المستحقة',formatDate(todayISO()),['تاريخ المراجعة','الملف','الخصم','النوع','الإجراء','الحالة','الموظف'],list.map(s=>{const f=fileOf(s.subjectId);return [formatDate(s.payload.reviewDate),f?.payload.code||'',f?.payload.defendant||'',catName(s.payload.category),s.payload.action+' — '+s.payload.text,st(s.payload.status),s.createdBy]}),formatDate(todayISO()),''))}><Printer size={15}/> طباعة</button>}</div>
+  {!!all.length&&<PulseStrip label="ملخص المتابعات">
+   <PulseTile title="كم تأخرت" value={all.length} sub="متابعة مستحقة" parts={[{label:'اليوم',value:all.filter(s=>late(s)===0).length,tone:'amber'},{label:'حتى أسبوع',value:all.filter(s=>late(s)>0&&late(s)<=7).length,tone:'red'},{label:'أكثر من أسبوع',value:all.filter(s=>late(s)>7).length,tone:'brand'}]}/>
+   <PulseTile title="النوع" parts={cats.map(([id,l,n],k)=>({label:l,value:n,tone:tones[k%4],on:cat===id,onClick:()=>setCat(cat===id?'':id)}))}/>
+   <PulseTile title="سجّلها" parts={people.slice(0,4).map(([p,n],k)=>({label:p||'—',value:n,tone:tones[k%4],on:who===p,onClick:()=>setWho(who===p?'':p)}))}/>
+  </PulseStrip>}
+  <div className="panel-body">{!list.length?<Empty title="لا توجد متابعات مستحقة" text={all.length?'لا متابعات بهذا التصنيف.':'كل الإفادات المستحقة منجزة.'}/>:<ul className="story-list due-lines" aria-label="المتابعات المستحقة"><li className="story-head" aria-hidden><span>المراجعة</span><span>الملف</span><span>الإجراء</span><span>سجّلها</span><span>باختصار</span><span/></li>
+   {list.map(s=>{const f=fileOf(s.subjectId),n=late(s);return <li key={s.id}><div className={'story-row e-'+(n>7?'red':n>0?'amber':'green')}>
+    <span className="story-num">{formatDate(s.payload.reviewDate)}</span>
+    <span><b>{f?.payload.code||'—'}</b> <small className="muted">{tidyName(f?.payload.company||'')} ضد {tidyName(f?.payload.defendant||'—')}</small></span>
+    <span><b>{s.payload.action}</b>{s.payload.text&&<small className="muted"> · {s.payload.text}</small>}</span>
+    <span>{s.createdBy||'—'}</span>
+    <span className="line-story">{[lateAr(n),catName(s.payload.category),st(s.payload.status)].join(' · ')}</span>
+    <button className="btn" onClick={()=>onOpen(s.subjectId)}>فتح الملف</button></div></li>})}</ul>}</div></section>;
 }
 
-/** All payments across visible files, filtered by type and dates, with totals. */
+/** All payments across visible files, filtered by type and dates, with totals, month by month and per type. */
 function PaymentsList({payments,fileOf,onOpen,canPrint}:{payments:PaymentRecord[];fileOf:(id:string)=>CollectionRecord|undefined;onOpen:(id:string)=>void;canPrint:boolean}) {
  const [type,setType]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[showVoid,setShowVoid]=useState(false);
  const list=payments.filter(p=>(!type||p.payload.type===type)&&(!from||p.payload.date>=from)&&(!to||p.payload.date<=to)&&(showVoid||p.payload.status!=='void')).sort((a,b)=>b.payload.date.localeCompare(a.payload.date));
  const amount=(p:PaymentRecord)=>Number(p.payload.amountMinor||fils(p.payload.amount));
- const sum=(t:string)=>list.filter(p=>p.payload.status!=='void'&&p.payload.type===t).reduce((n,p)=>n+amount(p),0);
+ const live=payments.filter(p=>p.payload.status!=='void'&&(!from||p.payload.date>=from)&&(!to||p.payload.date<=to));
+ const sum=(t:string,l=list)=>l.filter(p=>p.payload.status!=='void'&&p.payload.type===t).reduce((n,p)=>n+amount(p),0);
  const typeLabel=(t:string)=>PAYMENT_TYPES.find(x=>x[0]===t)?.[1]||t;
+ // The last six months, what came in each (payments and outside settlements, in dinars).
+ const months=Array.from({length:6},(_,i)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-(5-i));const k=d.toISOString().slice(0,7);
+  return {label:formatDate(k+'-01').slice(3),value:Math.round(payments.filter(p=>p.payload.status!=='void'&&p.payload.type!=='expense'&&p.payload.date.startsWith(k)).reduce((n,p)=>n+amount(p),0)/1000),tone:(i===5?'amber':'green') as 'amber'|'green'}});
+ const pick=(t:string)=>()=>setType(type===t?'':t);
  return <section className="panel"><div className="panel-head"><div><h2>التحصيلات</h2><p className="panel-note">الدفعات والسداد الخارجي والمصروفات في كل الملفات المتاحة لك.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('التحصيلات',(from||to)?`من ${formatDate(from)||'البداية'} إلى ${formatDate(to)||'اليوم'}`:'كل الفترات',['التاريخ','الملف','الخصم','النوع','المبلغ (د.ك)','الطريقة','المرجع'],list.filter(p=>p.payload.status!=='void').map(p=>{const f=fileOf(p.subjectId);return [formatDate(p.payload.date),f?.payload.code||'',f?.payload.defendant||'',typeLabel(p.payload.type),kwd(amount(p)),p.payload.method,p.payload.reference]}),formatDate(todayISO()),'',[['الدفعات',kwd(sum('payment'))],['السداد الخارجي',kwd(sum('external'))],['المصروفات',kwd(sum('expense'))]]))}><Printer size={15}/> طباعة</button>}</div>
+  <PulseStrip label="ملخص التحصيلات">
+   <PulseTile title="الحركات" value={kwd(sum('payment',live)+sum('external',live))} sub="د.ك حُصّلت" parts={[{label:'الدفعات',value:Math.round(sum('payment',live)/1000),tone:'green',on:type==='payment',onClick:pick('payment')},{label:'السداد الخارجي',value:Math.round(sum('external',live)/1000),tone:'blue',on:type==='external',onClick:pick('external')},{label:'المصروفات',value:Math.round(sum('expense',live)/1000),tone:'red',on:type==='expense',onClick:pick('expense')}]}/>
+   <DayBars title="المحصّل شهراً بشهر" sub="د.ك · آخر ستة أشهر" days={months}/>
+  </PulseStrip>
   <div className="department-toolbar"><OfficeSelect label="النوع" value={type} onChange={setType} options={[['','كل الأنواع'],...PAYMENT_TYPES]}/><DateField label="من تاريخ" value={from} onChange={setFrom}/><DateField label="إلى تاريخ" value={to} onChange={setTo}/><label className="checkbox-line"><input type="checkbox" checked={showVoid} onChange={e=>setShowVoid(e.target.checked)}/> إظهار الملغاة</label></div>
-  <div className="department-metrics"><div><span>الدفعات</span><b>{kwd(sum('payment'))} <small>د.ك</small></b></div><div><span>السداد الخارجي</span><b>{kwd(sum('external'))} <small>د.ك</small></b></div><div><span>المصروفات</span><b>{kwd(sum('expense'))} <small>د.ك</small></b></div></div>
-  <div className="panel-body">{!list.length?<Empty title="لا توجد حركات" text="تُضاف الدفعات من تبويب «الوضع المالي» في ملف التحصيل."/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>التاريخ</th><th>الملف</th><th>النوع</th><th>المبلغ</th><th>الطريقة / المرجع</th><th>سجّلها</th><th/></tr></thead><tbody>{list.map(p=>{const f=fileOf(p.subjectId);return <tr key={p.id} className={p.payload.status==='void'?'void-row':''}><td className="nowrap">{formatDate(p.payload.date)}</td><td><b>{f?.payload.code||'—'}</b><small>{f?.payload.defendant}</small></td><td>{typeLabel(p.payload.type)}{p.payload.status==='void'&&<small className="office-alert">ملغاة: {p.payload.voidReason}</small>}</td><td className="nowrap amount">{kwd(amount(p))} د.ك</td><td>{p.payload.method||'—'}<small>{p.payload.reference}</small></td><td>{p.createdBy}</td><td><button className="btn" onClick={()=>onOpen(p.subjectId)}>فتح الملف</button></td></tr>})}</tbody></table></div>}</div></section>;
+  <div className="panel-body">{!list.length?<Empty title="لا توجد حركات" text="تُضاف الدفعات من تبويب «الوضع المالي» في ملف التحصيل."/>:<ul className="story-list pay-lines" aria-label="التحصيلات"><li className="story-head" aria-hidden><span>التاريخ</span><span>الملف</span><span>المبلغ</span><span>باختصار</span><span/></li>
+   {list.map(p=>{const f=fileOf(p.subjectId),v=p.payload.status==='void';return <li key={p.id}><div className={'story-row e-'+(v?'grey':p.payload.type==='expense'?'red':'green')+(v?' void-row':'')}>
+    <span className="story-num">{formatDate(p.payload.date)}</span>
+    <span><b>{f?.payload.code||'—'}</b> <small className="muted">ضد {tidyName(f?.payload.defendant||'—')}</small></span>
+    <span className="story-num amount">{p.payload.type==='expense'?'−':''}{kwd(amount(p))} <small>د.ك</small></span>
+    <span className="line-story">{[typeLabel(p.payload.type),p.payload.method,p.payload.reference,p.createdBy&&'سجّلها '+p.createdBy,v&&'ملغاة: '+(p.payload.voidReason||'')].filter(Boolean).join(' · ')}</span>
+    <button className="btn" onClick={()=>onOpen(p.subjectId)}>فتح الملف</button></div></li>})}</ul>}</div></section>;
 }
 
 function CollectionEditor({opponents,initial,cases:loadedCases,access,statements,payments,assignees,batches,tags,clients,related,onOpenFile,onClose,onChanged,nav,onNavigate,enter}:{opponents:string[];clients:ClientOption[];related:CollectionRecord[];onOpenFile:(f:CollectionRecord)=>void;initial:CollectionRecord;cases:CaseSummary[];access:Permissions;statements:StatementRecord[];payments:PaymentRecord[];assignees:string[];batches:string[];tags:string[];onClose:()=>void;onChanged:()=>void;nav?:WindowNav;onNavigate?:(dir:'prev'|'next')=>void;enter?:Enter}) {

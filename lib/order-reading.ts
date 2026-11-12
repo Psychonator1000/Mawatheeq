@@ -50,6 +50,21 @@ function capacity() {
   return { lanes: memory >= 8 && cores >= 12 ? 4 : memory >= 8 && cores >= 8 ? 3 : cores >= 4 && memory >= 4 ? 2 : 1 };
 }
 
+// The reading gives way to the person (owner, 12 November 2026: «if I move around while uploading, the app is super
+// slow»): drawing a page and handing it to the engine run on the same thread as the app, so before each such step the
+// reading waits until the person has been still for a moment (no click, key, scroll or touch for 0.8 s) and the browser
+// is idle; a person busy without a pause still lets it move on every few seconds, so it never stops altogether.
+let lastInput = 0;
+if (typeof window !== 'undefined') for (const t of ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'])
+  window.addEventListener(t, () => { lastInput = performance.now(); }, { capture: true, passive: true });
+const idle = () => new Promise<void>(r => { const w = window as Window & { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number };
+  if (w.requestIdleCallback) w.requestIdleCallback(() => r(), { timeout: 1500 }); else setTimeout(r, 50); });
+async function giveWay() {
+  const start = performance.now();
+  while (performance.now() - lastInput < 800 && performance.now() - start < 4000) await new Promise(r => setTimeout(r, 200));
+  await idle();
+}
+
 async function run() {
   if (state.running) return;
   const { extractPDF, createOcrEngine } = await import('./pdf-reader'); const { extractFields } = await import('./document-fields');
@@ -65,10 +80,10 @@ async function run() {
         patchOrder(it.id, { status: 'reading', progress: 0, message: 'تجهيز القراءة…' });
         try {
           const name = it.file.name, wantNumbers = (page: number, text: string) => { const f = extractFields(text, name); return (NUMBERS[page] || []).some(k => empty(f, k)); };
-          let pages = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: Math.min(90, p * .9), message }), ctrl.signal, PAGES, engine, { pages: FIRST, wantNumbers });
+          let pages = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: Math.min(90, p * .9), message }), ctrl.signal, PAGES, engine, { pages: FIRST, wantNumbers, pause: giveWay });
           let data = extractFields(pagesText(pages), name);
           if (EXPECTED.some(k => empty(data, k))) {
-            const more = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: Math.min(99, 90 + p * .1), message }), ctrl.signal, PAGES, engine, { pages: SPARE });
+            const more = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: Math.min(99, 90 + p * .1), message }), ctrl.signal, PAGES, engine, { pages: SPARE, pause: giveWay });
             pages = [...pages, ...more].sort((a, b) => a.page - b.page); data = extractFields(pagesText(pages), name);
           }
           // Nothing read (every page timed out on a busy computer, or an unreadable scan) is a failure to read again, not
