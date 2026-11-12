@@ -137,7 +137,11 @@ try{
    assert.equal(await pick.getAttribute('data-value'),'desk-missed','Linked to the case');
    assert.equal(await own.getByRole('combobox',{name:'المحكمة / الدائرة'}).last().getAttribute('data-value'),(await caseOf('desk-missed')).court||'','Its court and circuit');}
   await own.getByRole('button',{name:'إضافة سطر: الأعمال والمراجعات الخارجية'}).click();await own.getByPlaceholder('الجهة التي تمت مراجعتها').fill('وزارة العدل — شهادة');await own.getByRole('button',{name:'حفظ',exact:true}).click();await own.getByText('مسودة محفوظة').waitFor();
-  await p2.screenshot({path:artifacts+'/daily-reporter.png'});await other.close();}
+  await p2.screenshot({path:artifacts+'/daily-reporter.png'});
+  // «تقويمي»: his own month, the tasks given to him, though he opens no tasks page.
+  await rpc('mawatheeq_office_request',[login.token,'save_work',JSON.stringify({item:{id:crypto.randomUUID(),revision:0,caseId:'',title:'زيارة تجريبية للموكل',kind:'task',dueDate:today,dueTime:'10:00',assigneeId:reporterId,priority:'normal',status:'open',location:'',notes:'',completionNote:''}})]);
+  await p2.getByRole('tab',{name:'تقويمي'}).click();await p2.locator('.day-cal-cell.today').getByText('زيارة تجريبية للموكل').waitFor();
+  await p2.screenshot({path:artifacts+'/daily-reporter-calendar.png'});await other.close();}
  await page.getByLabel('تقرير من').selectOption('team');const sent=page.locator('.team-story',{hasText:'ui_reporter'});await sent.getByText('مسودة').waitFor();
  // Each card tells the person's day: what the report holds so far, and the sittings and tasks as bars.
  await sent.locator('.team-story-line',{hasText:/^التقرير: .*خارجي 1/}).waitFor();assert.equal(await sent.locator('.team-meter').count(),2,'Sittings and tasks bars');

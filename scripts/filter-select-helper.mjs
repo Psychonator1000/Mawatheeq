@@ -17,7 +17,10 @@ export function supportFilterSelects(anyLocator) {
     const target = typeof value === 'object' && value && 'index' in value ? all.nth(value.index)
       : typeof value === 'object' && value && 'label' in value ? all.filter({ has: this.page().locator('b', { hasText: value.label }) }).first()
       : box.locator(`[role=option][data-value=${quote(typeof value === 'object' ? value.value : value)}]`);
-    await target.click();
+    // The list picks on mouse-down and closes at once, so the rest of a full click (mouse-up, click) would land on
+    // whatever lies under it, such as a preview frame being reloaded by the very choice, where the click can hang. Only
+    // the press the list acts on is sent.
+    await target.waitFor({state:'visible'});await target.dispatchEvent('mousedown',{button:0});
     return [await this.getAttribute('data-value')];
   };
   proto.inputValue = async function (options) {

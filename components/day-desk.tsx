@@ -66,9 +66,22 @@ export default function DayDesk(p:Props){
   // eslint-disable-next-line react-hooks/exhaustive-deps -- range follows its parts
   [mode,p.records,p.work,p.members,p.rules,today,who,p.ownCasesOnly,p.user.id]);
  const grid=useMemo(()=>monthGrid(date.slice(0,7)),[date]);
- const agenda=useMemo(()=>mode==='calendar'?agendaBetween(range,grid[0],grid[grid.length-1]):new Map<string,AgendaDay>(),
+ // An account that opens neither cases nor tasks still has its own calendar (owner, 12 November 2026: «for all
+ // employees but each employee only sees his schedules»): the work assigned to it, from the server, a month at a time.
+ const [mine,setMine]=useState<Map<string,AgendaDay>|null>(null);
+ useEffect(()=>{
+  if(mode!=='calendar'||p.missionsOn)return;let live=true;
+  officeRequest<{kind:string;title:string;dueDate:string;status:string;caseRef:string}[]>('my_schedule',{from:grid[0],to:grid[grid.length-1]}).then(list=>{
+   if(!live)return;const m=new Map<string,AgendaDay>();
+   for(const w of list){let v=m.get(w.dueDate);if(!v)m.set(w.dueDate,v={hearings:0,tasks:0,done:0,items:[]});const done=w.status==='done',kind=w.kind==='hearing'?'hearing':'task';
+    if(kind==='hearing')v.hearings++;else v.tasks++;if(done)v.done++;v.items.push({kind,title:w.title+(w.caseRef?' · '+w.caseRef:''),done})}
+   setMine(m)}).catch(()=>{if(live)setMine(new Map())});
+  return()=>{live=false};
+ },[mode,p.missionsOn,grid]);
+ const shared=useMemo(()=>mode==='calendar'&&p.missionsOn?agendaBetween(range,grid[0],grid[grid.length-1]):new Map<string,AgendaDay>(),
   // eslint-disable-next-line react-hooks/exhaustive-deps -- range follows its parts
-  [mode,grid,p.records,p.work,p.members,who,p.ownCasesOnly,p.user.id]);
+  [mode,grid,p.records,p.work,p.members,who,p.ownCasesOnly,p.user.id,p.missionsOn]);
+ const agenda=p.missionsOn?shared:(mine||new Map<string,AgendaDay>());
  // An account that sees every case but is named on none of them gets no sittings: say so, rather than an empty day.
  const unnamed=useMemo(()=>p.missionsOn&&self&&!p.ownCasesOnly&&!p.records.some(c=>namesPerson(String(c.lawyer||''),me)),
   // eslint-disable-next-line react-hooks/exhaustive-deps -- me follows the members list
@@ -104,7 +117,7 @@ export default function DayDesk(p:Props){
  const datesCol=<section className="panel day-missions" aria-label="المواعيد"><div className="day-col-head"><h2>المواعيد</h2>
    {dates.length>0&&<div className="work-chips day-chips" role="group" aria-label="تصفية المواعيد">{DATES_FILTERS.map(([k,l])=><button key={k} className={'work-chip'+(datesFilter===k?' on':'')+(k==='late'?' late':'')} aria-pressed={datesFilter===k} onClick={()=>setDatesFilter(k)}>{l}<b>{dates.filter(m=>passesDates(m,k,today)).length}</b></button>)}</div>}</div>
   <div className="day-list">{rows(dates.filter(m=>passesDates(m,datesFilter,today)),dates.length?'لا مواعيد بهذا التصنيف.':'لا مواعيد طعن ولا متابعات من أسبوع مضى إلى ثلاثين يوماً قادمة.')}</div></section>;
- const calendarCol=<section className="panel day-missions" aria-label="التقويم"><div className="day-col-head"><h2>التقويم</h2><span className="tag">{monthName(date)}</span>
+ const calendarCol=<section className="panel day-missions" aria-label="التقويم"><div className="day-col-head"><h2>{p.missionsOn?'التقويم':'تقويمي'}</h2><span className="tag">{monthName(date)}</span>
    <div className="actions"><button className="icon-btn" aria-label="الشهر السابق" onClick={()=>setDate(shiftMonth(date.slice(0,7),-1)+'-01')}><ChevronRight size={16}/></button><button className="icon-btn" aria-label="الشهر التالي" onClick={()=>setDate(shiftMonth(date.slice(0,7),1)+'-01')}><ChevronLeft size={16}/></button></div></div>
   <div className="day-cal" role="grid" aria-label={'تقويم '+monthName(date)}>{WEEKDAYS.map(d=><div key={d} className="day-cal-head" role="columnheader">{d}</div>)}
    {grid.map(d=>{const a=agenda.get(d);return <button key={d} type="button" role="gridcell" className={'day-cal-cell'+(d.slice(0,7)!==date.slice(0,7)?' out':'')+(d===today?' today':'')+(d===date?' picked':'')} onClick={()=>{setMode('day');go(d)}} aria-label={formatDate(d)+(a?` · ${a.hearings} جلسة · ${a.tasks} مهمة`:'')}>
@@ -141,11 +154,11 @@ export default function DayDesk(p:Props){
  const sub=mode==='perf'?'أداء الفريق':mode==='calendar'?monthName(date):mode==='dates'?'المواعيد القادمة والفائتة':`${weekday(date)} ${formatDate(date)} · ${mode==='posting'?'ترحيل جلسات المكتب':team?'الفريق':self?(p.missionsOn?'قائمتك وتقريرك':'تقريرك'):name}`;
  return <div className="day-desk">
   <div className="page-head day-head"><h1>مهام اليوم والتقرير</h1><p className="subtitle" title={sub}>{sub}</p>
-   {p.missionsOn&&<div className="day-modes" role="tablist" aria-label="العرض">{([['day','اليوم'],...(p.canPost?[['posting','ترحيل الجلسات']]:[]),['dates','المواعيد'],['calendar','التقويم'],...(reviewer?[['perf','الأداء']]:[])] as [Mode,string][]).map(([k,l])=><button key={k} role="tab" aria-selected={mode===k} title={TAB_HINTS[k]} className={'work-chip'+(mode===k?' on':'')} onClick={()=>{void report.flush();setMode(k)}}>{l}</button>)}</div>}
+   {<div className="day-modes" role="tablist" aria-label="العرض">{((p.missionsOn?[['day','اليوم'],...(p.canPost?[['posting','ترحيل الجلسات']]:[]),['dates','المواعيد'],['calendar','التقويم'],...(reviewer?[['perf','الأداء']]:[])]:[['day','اليوم'],['calendar','تقويمي']]) as [Mode,string][]).map(([k,l])=><button key={k} role="tab" aria-selected={mode===k} title={TAB_HINTS[k]} className={'work-chip'+(mode===k?' on':'')} onClick={()=>{void report.flush();setMode(k)}}>{l}</button>)}</div>}
    <div className={'day-controls'+(reviewer?'':' solo')}>
     {(mode==='day'||mode==='posting')&&<div className="day-nav" role="group" aria-label="اليوم">{date!==today&&<button className="btn day-back" aria-label="العودة لليوم" title="العودة لليوم" onClick={()=>go(today)}><CalendarCheck size={15}/><span>العودة لليوم</span></button>}<button className="icon-btn" aria-label="اليوم السابق" onClick={()=>go(shiftDays(date,-1))}><ChevronRight size={16}/></button>
      <DateField label="اختر يوماً" value={date} onChange={v=>v&&go(v)}/><button className="icon-btn" aria-label="اليوم التالي" onClick={()=>go(shiftDays(date,1))}><ChevronLeft size={16}/></button></div>}
-    {reviewer&&mode!=='posting'&&mode!=='perf'&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">{lead?'فريقي':'الفريق (كل التقارير)'}</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
+    {reviewer&&mode!=='posting'&&mode!=='perf'&&(p.missionsOn||mode!=='calendar')&&<SelectList className="day-who" aria-label="تقرير من" value={self?'me':who} onChange={e=>pick(e.target.value)}><option value="me">أنا</option><option value="team">{lead?'فريقي':'الفريق (كل التقارير)'}</option>{people.map(m=><option key={m.id} value={m.id}>{memberLabel(m)}</option>)}</SelectList>}
    </div></div>
   {purpose}
   <div className="day-grid solo">{mainCol}</div>

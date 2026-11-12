@@ -91,6 +91,16 @@ let task=await office(editor.token,'save_work',{item:work('61000000-0000-4000-80
 const secretWork=await office(admin.token,'save_work',{item:{...work('61000000-0000-4000-8000-000000000002',hidden.id,admin.user.id),notes:'Secret work note'}});
 const general=await office(admin.token,'save_work',{item:work('61000000-0000-4000-8000-000000000003','',admin.user.id)});
 assert.deepEqual((await office(reader.token,'work_page')).map(w=>w.id),[task.id]);
+// «التقويم» for everyone: each account gets only the work assigned to it, even one that opens no page at all.
+{const mine=await office(reader.token,'my_schedule',{from:'2026-10-01',to:'2026-10-31'});assert.deepEqual(mine.map(w=>w.id),[task.id],'Only my own work');assert.match(mine[0].caseRef,/./,'The case named when I may open it');
+ assert.equal(JSON.stringify(mine).includes('Synthetic note'),false,'Notes are not part of the schedule');
+ assert.deepEqual(await office(empty.token,'my_schedule',{from:'2026-10-01',to:'2026-10-31'}),[],'An account with no pages gets its own (empty) schedule');
+ assert.deepEqual((await office(admin.token,'my_schedule',{from:'2026-10-01',to:'2026-10-31'})).map(w=>w.id).sort(),[secretWork.id,general.id].sort());
+ await assert.rejects(()=>office(reader.token,'my_schedule',{from:'2026-01-01',to:'2026-12-31'}),/نطاق التاريخ/,'At most two months at a time');}
+// Anyone can be given a general task, even an account without the tasks page; a case's task only to whoever may open it.
+{const errand=await office(admin.token,'save_work',{item:work('61000000-0000-4000-8000-000000000009','',empty.user.id)});
+ assert.deepEqual((await office(empty.token,'my_schedule',{from:'2026-10-01',to:'2026-10-31'})).map(w=>w.id),[errand.id],'A general task reaches an account with no pages');
+ await denied(()=>office(admin.token,'save_work',{item:work('61000000-0000-4000-8000-00000000000a',hidden.id,empty.user.id)}));}
 await denied(()=>office(editor.token,'save_work',{item:{...secretWork,caseId:visible.id,assigneeId:editor.user.id}}));
 await denied(()=>office(editor.token,'save_work',{item:{...task,caseId:hidden.id}}));
 await denied(()=>office(admin.token,'save_work',{item:{...secretWork,assigneeId:reader.user.id}}));
