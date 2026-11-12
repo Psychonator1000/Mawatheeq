@@ -23,8 +23,8 @@ import ClearLog,{LastClear,useLogClears} from './archive-log-clear';
 import ReturnCheck from './archive-return';
 import ArchiveMap from './archive-map';
 import {enNumericCompare} from '@/lib/domain';
-import {PulseStrip,PulseTile} from '../pulse';
-import {archiveLine} from '@/lib/archive-line';
+import {DayBars,PulseStrip,PulseTile} from '../pulse';
+import {archiveLine,movementEdge,neededWhen,requestLine} from '@/lib/archive-line';
 
 type View='files'|'dispatch'|'custody'|'requests'|'locations'|'log';
 const PER_PAGE=25;
@@ -240,28 +240,54 @@ function CustodyPanel({file,custody:c,log,locations,people,preset,editable,canPr
 }
 
 function CustodyList({files,custody,today,caseRef,canPrint,onOpen,onApprove}:{files:ArchiveFile[];custody:Map<string,Custody>;today:string;caseRef:(f:ArchiveFile)=>string;canPrint:boolean;onOpen:(f:ArchiveFile)=>void;onApprove?:(f:ArchiveFile)=>void}) {
- const rank=(c:Custody)=>handoverOf(c)==='return-reported'?0:handoverOf(c)==='awaiting-receipt'?1:2;
- const list=[...files].sort((a,b)=>{const x=custody.get(a.id)!,y=custody.get(b.id)!;return rank(x)-rank(y)||Number(isOverdue(y,today))-Number(isOverdue(x,today))||(x.dueDate||'9').localeCompare(y.dueDate||'9')});
- const holders=[...new Set(list.map(f=>custody.get(f.id)!.holder))];
- return <section className="panel"><div className="panel-head"><div><h2>العهدة: الملفات خارج الأرشيف</h2><p className="panel-note">ما أُبلغ بإرجاعه أولاً، ثم ما لم يؤكد مستلمه استلامه، ثم المتأخر. افتح الملف لتسجيل استلامه.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('عهدة ملفات الأرشيف',formatDate(today),['رقم الأرشيف','الملف','القضية','الحالة','مع','الغرض','منذ','موعد الإعادة','التأخير'],list.map(f=>{const c=custody.get(f.id)!;return [f.payload.number,f.payload.title,caseRef(f),CUSTODY_STATES[c.state],c.holder,c.purpose,formatDate(c.since),c.dueDate?formatDate(c.dueDate):'—',isOverdue(c,today)?daysBetween(c.dueDate,today)+' يوم':'']}),formatDate(today),''))}><Printer size={15}/> طباعة العهدة</button>}</div>
-  {!list.length?<Empty title="كل الملفات في الأرشيف" text="لا يوجد ملف مسلّم لموظف أو جهة خارجية الآن."/>:<>
-  <div className="holder-chips">{holders.map(h=><span key={h} className="chip">{h} <b>{list.filter(f=>custody.get(f.id)!.holder===h).length}</b></span>)}</div>
-  <div className="table-wrap"><table className="office-table"><thead><tr><th>رقم الأرشيف</th><th>الملف</th><th>مع</th><th>منذ</th><th>موعد الإعادة</th></tr></thead><tbody>{list.map(f=>{const c=custody.get(f.id)!,late=isOverdue(c,today);return <tr key={f.id} className={'clickable'+(late?' late':'')} onClick={()=>onOpen(f)}>
-   <td className="nowrap"><b dir="ltr">{f.payload.number}</b></td><td><b>{f.payload.title}</b><small>{caseRef(f)}</small></td><td>{handoverOf(c)?<span className={'tag '+(handoverOf(c)==='return-reported'?'green':'amber')}>{HANDOVER_LABELS[handoverOf(c)!]}</span>:<span className={'tag '+stateTone[c.state]}>{CUSTODY_STATES[c.state]}</span>}<small>{c.holder}{c.purpose&&' · '+c.purpose}</small>{onApprove&&handoverOf(c)==='return-reported'&&<button type="button" className="btn primary" onClick={e=>{e.stopPropagation();onApprove(f)}}><CheckCircle2 size={14}/> عاد الملف</button>}</td>
-   <td className="nowrap">{formatDate(c.since)}<small>{daysBetween(c.since,today)} يوم</small></td><td className="nowrap">{c.dueDate?formatDate(c.dueDate):'—'}{late&&<small className="late-note">متأخر {daysBetween(c.dueDate,today)} يوم</small>}</td></tr>})}</tbody></table></div></>}</section>;
+ const [who,setWho]=useState(''),[when,setWhen]=useState(''),[hand,setHand]=useState('');
+ const cu=(f:ArchiveFile)=>custody.get(f.id)!,rank=(c:Custody)=>handoverOf(c)==='return-reported'?0:handoverOf(c)==='awaiting-receipt'?1:2;
+ const week=new Date(Date.parse(today+'T12:00:00Z')+7*86400000).toISOString().slice(0,10);
+ const dueOf=(c:Custody)=>!c.dueDate?'none':c.dueDate<today?'late':c.dueDate<=week?'soon':'later',handOf=(c:Custody)=>handoverOf(c)||'held';
+ const all=[...files].sort((a,b)=>{const x=cu(a),y=cu(b);return rank(x)-rank(y)||Number(isOverdue(y,today))-Number(isOverdue(x,today))||(x.dueDate||'9').localeCompare(y.dueDate||'9')});
+ const list=all.filter(f=>{const c=cu(f);return (!who||c.holder===who)&&(!when||dueOf(c)===when)&&(!hand||handOf(c)===hand)});
+ const holders=[...new Set(all.map(f=>cu(f).holder))].map(h=>[h,all.filter(f=>cu(f).holder===h).length] as const).sort((a,b)=>b[1]-a[1]),tones=['brand','blue','amber','green','grey'] as const;
+ const count=(t:(c:Custody)=>boolean)=>all.filter(f=>t(cu(f))).length,toggle=(v:string,set:(v:string)=>void,cur:string)=>()=>set(cur===v?'':v);
+ return <section className="panel"><div className="panel-head"><div><h2>العهدة: الملفات خارج الأرشيف</h2><p className="panel-note">ما أُبلغ بإرجاعه أولاً، ثم ما لم يؤكد مستلمه استلامه، ثم المتأخر. افتح الملف لتسجيل استلامه.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('عهدة ملفات الأرشيف',formatDate(today),['رقم الأرشيف','الملف','القضية','الحالة','مع','الغرض','منذ','موعد الإعادة','التأخير'],list.map(f=>{const c=cu(f);return [f.payload.number,f.payload.title,caseRef(f),CUSTODY_STATES[c.state],c.holder,c.purpose,formatDate(c.since),c.dueDate?formatDate(c.dueDate):'—',isOverdue(c,today)?daysBetween(c.dueDate,today)+' يوم':'']}),formatDate(today),''))}><Printer size={15}/> طباعة العهدة</button>}</div>
+  {!all.length?<Empty title="كل الملفات في الأرشيف" text="لا يوجد ملف مسلّم لموظف أو جهة خارجية الآن."/>:<>
+  <PulseStrip label="ملخص العهدة">
+   <PulseTile title="مع من" value={all.length} sub="ملف خارج الأرشيف" parts={[...holders.slice(0,5).map(([h,n],k)=>({label:h||'—',value:n,tone:tones[k],on:who===h,onClick:toggle(h,setWho,who)})),...(holders.length>5?[{label:`${holders.length-5} غيرهم`,value:holders.slice(5).reduce((s,[,n])=>s+n,0),tone:'grey' as const}]:[])]}/>
+   <PulseTile title="مواعيد الإعادة" parts={[{label:'متأخرة',value:count(c=>dueOf(c)==='late'),tone:'red',on:when==='late',onClick:toggle('late',setWhen,when)},{label:'خلال أسبوع',value:count(c=>dueOf(c)==='soon'),tone:'amber',on:when==='soon',onClick:toggle('soon',setWhen,when)},{label:'لاحقاً',value:count(c=>dueOf(c)==='later'),tone:'green',on:when==='later',onClick:toggle('later',setWhen,when)},{label:'بلا موعد',value:count(c=>dueOf(c)==='none'),tone:'grey',on:when==='none',onClick:toggle('none',setWhen,when)}]}/>
+   <PulseTile title="التسليم" parts={[{label:'أبلغ بإرجاعه',value:count(c=>handOf(c)==='return-reported'),tone:'green',on:hand==='return-reported',onClick:toggle('return-reported',setHand,hand)},{label:'لم يؤكد استلامه',value:count(c=>handOf(c)==='awaiting-receipt'),tone:'amber',on:hand==='awaiting-receipt',onClick:toggle('awaiting-receipt',setHand,hand)},{label:'مع مستلمه',value:count(c=>handOf(c)==='held'),tone:'blue',on:hand==='held',onClick:toggle('held',setHand,hand)}]}/>
+  </PulseStrip>
+  {!list.length?<Empty title="لا ملفات بهذا التصنيف" text="اضغط التصنيف المختار مرة أخرى لإلغائه."/>:<ul className="story-list custody-lines" aria-label="الملفات خارج الأرشيف"><li className="story-head" aria-hidden><span>رقم الأرشيف</span><span>الملف</span><span>الحالة</span><span>باختصار</span><span/></li>
+   {list.map(f=>{const c=cu(f),h=handoverOf(c),l=archiveLine(c,today,{awaiting:!!h});return <li key={f.id}><div className={'story-row e-'+l.edge}>
+    <span className="story-num" dir="ltr">{f.payload.number}</span>
+    <span><b>{f.payload.title}</b> <small className="muted nowrap"><bdi>{caseRef(f)}</bdi></small></span>
+    <span>{h?<span className={'tag '+(h==='return-reported'?'green':'amber')}>{HANDOVER_LABELS[h]}</span>:<span className={'tag '+stateTone[c.state]}>{CUSTODY_STATES[c.state]}</span>}</span>
+    <span className="line-story">{l.story}</span>
+    <span className="row-actions">{onApprove&&h==='return-reported'&&<button type="button" className="btn primary" onClick={()=>onApprove(f)}><CheckCircle2 size={14}/> عاد الملف</button>}<button type="button" className="btn" onClick={()=>onOpen(f)}>فتح الملف</button></span></div></li>})}</ul>}</>}</section>;
 }
 
 function RequestsList({requests,movements,files,custody,canEdit,onOpen,onDeliver,onAdd}:{onAdd?:()=>void;requests:ArchiveRequest[];movements:ArchiveMovement[];files:ArchiveFile[];custody:Map<string,Custody>;canEdit:boolean;onOpen:(r:ArchiveRequest)=>void;onDeliver:(r:ArchiveRequest)=>void}) {
- const [status,setStatus]=useState('open'),today=todayISO();
+ const [status,setStatus]=useState('open'),[need,setNeed]=useState(''),[who,setWho]=useState(''),today=todayISO();
  // Marked «سُلّم» by hand with no hand-out behind it: the colleague never got the file in the system, so it stays open here.
  const unsent=(r:ArchiveRequest)=>r.payload.status==='done'&&!!r.payload.requesterId&&!movements.some(m=>m.subjectId===r.subjectId&&m.payload.type==='checkout'&&m.payload.status==='posted'&&m.payload.holderId===r.payload.requesterId&&recordedAt(m)>=recordedAt(r));
- const list=requests.filter(r=>!r.archived&&(status==='open'?r.payload.status==='pending'||r.payload.status==='ready'||unsent(r):!status||r.payload.status===status)).sort((a,b)=>(a.payload.neededBy||'9').localeCompare(b.payload.neededBy||'9'));
- const fileOf=(id:string)=>files.find(f=>f.id===id);
- return <section className="panel"><div className="panel-head"><div><h2>طلبات الملفات</h2><p className="panel-note">يطلب الزميل الملف، يجهّزه الأرشيف، ثم يُسلَّم ويُسجَّل في عهدته.</p></div><div className="actions archive-head-actions"><OfficeSelect label="الحالة" value={status} onChange={setStatus} options={[['open','المفتوحة'],...Object.entries(REQUEST_STATUSES),['','الكل']]}/>{onAdd&&<button className="btn primary" onClick={onAdd}><Plus size={17}/> طلب ملف جديد</button>}</div></div>
-  {!list.length?<Empty title="لا توجد طلبات" text="سجّل طلباً جديداً عندما يطلب أحد الزملاء ملفاً."/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>الملف</th><th>طالب الملف</th><th>مطلوب بتاريخ</th><th>الحالة</th><th/></tr></thead><tbody>{list.map(r=>{const f=fileOf(r.subjectId),c=f&&custody.get(f.id),late=r.payload.neededBy&&r.payload.neededBy<today&&r.payload.status!=='done';return <tr key={r.id} className={late?'late':''}>
-   <td><b dir="ltr">{f?.payload.number||'—'}</b><small>{f?.payload.title}</small></td><td>{r.payload.requester}<small>{r.payload.purpose}</small></td><td className="nowrap">{r.payload.neededBy?formatDate(r.payload.neededBy):'—'}</td>
-   <td>{unsent(r)?<span className="tag red">عُلّم «سُلّم» ولم يُرسل</span>:<span className={'tag '+(r.payload.status==='ready'?'green':r.payload.status==='declined'?'red':'amber')}>{REQUEST_STATUSES[r.payload.status]}</span>}{c&&c.state!=='in'&&<small>الملف الآن {CUSTODY_STATES[c.state]}: {c.holder}</small>}</td>
-   <td><div className="row-actions">{canEdit&&(r.payload.status==='pending'||r.payload.status==='ready'||unsent(r))&&c?.state==='in'&&<button className="btn primary" title={r.payload.requesterId?'يُرسل الملف ويصل طالبه إشعار ليؤكد الاستلام':undefined} onClick={()=>onDeliver(r)}>{r.payload.requesterId?'إرسال الملف لطالبه':'تسليم الملف'}</button>}<button className="btn" onClick={()=>onOpen(r)}>فتح الطلب</button></div></td></tr>})}</tbody></table></div>}</section>;
+ const fileOf=(id:string)=>files.find(f=>f.id===id),isOpen=(r:ArchiveRequest)=>r.payload.status==='pending'||r.payload.status==='ready'||unsent(r);
+ const live=requests.filter(r=>!r.archived),open=live.filter(isOpen);
+ const base=live.filter(r=>status==='open'?isOpen(r):status==='unsent'?unsent(r):!status||r.payload.status===status);
+ const list=base.filter(r=>(!need||neededWhen(r.payload.neededBy,today)===need)&&(!who||r.payload.requester===who)).sort((a,b)=>(a.payload.neededBy||'9').localeCompare(b.payload.neededBy||'9'));
+ const people=[...new Set(base.map(r=>r.payload.requester))].map(p=>[p,base.filter(r=>r.payload.requester===p).length] as const).sort((a,b)=>b[1]-a[1]),tones=['brand','blue','amber','green'] as const;
+ const pick=(k:string)=>()=>{setStatus(status===k?'open':k);setNeed('');setWho('')},needN=(k:string)=>base.filter(r=>neededWhen(r.payload.neededBy,today)===k).length,needP=(k:string)=>()=>setNeed(need===k?'':k);
+ return <section className="panel"><div className="panel-head"><div><h2>طلبات الملفات</h2><p className="panel-note">يطلب الزميل الملف، يجهّزه الأرشيف، ثم يُسلَّم ويُسجَّل في عهدته.</p></div>{onAdd&&<div className="actions archive-head-actions"><button className="btn primary" onClick={onAdd}><Plus size={17}/> طلب ملف جديد</button></div>}</div>
+  {!!live.length&&<PulseStrip label="ملخص الطلبات">
+   <PulseTile title={status==='open'?'المفتوحة':'كل الطلبات'} value={status==='open'?open.length:live.length} sub={status==='open'?'اضغط لعرض الكل':'اضغط للمفتوحة فقط'} onClick={()=>{setStatus(status==='open'?'':'open');setNeed('');setWho('')}} on={status===''} parts={[...(Object.keys(REQUEST_STATUSES) as (keyof typeof REQUEST_STATUSES)[]).map((k,i)=>({label:REQUEST_STATUSES[k],value:live.filter(r=>r.payload.status===k&&!unsent(r)).length,tone:(['amber','green','blue','grey'] as const)[i],on:status===k,onClick:pick(k)})),{label:'لم يُرسل لطالبه',value:live.filter(unsent).length,tone:'red' as const,on:status==='unsent',onClick:pick('unsent')}]}/>
+   <PulseTile title="موعد الحاجة" parts={[{label:'فات موعده',value:needN('late'),tone:'red',on:need==='late',onClick:needP('late')},{label:'اليوم',value:needN('today'),tone:'amber',on:need==='today',onClick:needP('today')},{label:'خلال أسبوع',value:needN('week'),tone:'blue',on:need==='week',onClick:needP('week')},{label:'لاحقاً',value:needN('later'),tone:'green',on:need==='later',onClick:needP('later')},{label:'بلا موعد',value:needN('none'),tone:'grey',on:need==='none',onClick:needP('none')}]}/>
+   {!!people.length&&<PulseTile title="من طلب" parts={people.slice(0,4).map(([p,n],k)=>({label:p||'—',value:n,tone:tones[k],on:who===p,onClick:()=>setWho(who===p?'':p)}))}/>}
+  </PulseStrip>}
+  {!list.length?<Empty title="لا توجد طلبات" text={live.length?'لا طلبات بهذا التصنيف.':'سجّل طلباً جديداً عندما يطلب أحد الزملاء ملفاً.'}/>:<ul className="story-list request-lines" aria-label="طلبات الملفات"><li className="story-head" aria-hidden><span>الملف</span><span>طالب الملف</span><span>مطلوب بتاريخ</span><span>الحالة</span><span>باختصار</span><span/></li>
+   {list.map(r=>{const f=fileOf(r.subjectId),c=f&&custody.get(f.id),u=unsent(r),l=requestLine(r.payload,c?{state:c.state,holder:c.holder,stateLabel:CUSTODY_STATES[c.state]}:null,today,u);return <li key={r.id}><div className={'story-row e-'+l.edge}>
+    <span><b dir="ltr">{f?.payload.number||'—'}</b> <small className="muted">{f?.payload.title}</small></span>
+    <span><b>{r.payload.requester}</b>{r.payload.purpose&&<small className="muted"> · {r.payload.purpose}</small>}</span>
+    <span className="story-num">{r.payload.neededBy?formatDate(r.payload.neededBy):'—'}</span>
+    <span>{u?<span className="tag red">عُلّم «سُلّم» ولم يُرسل</span>:<span className={'tag '+(r.payload.status==='ready'||r.payload.status==='done'?'green':r.payload.status==='declined'?'red':'amber')}>{REQUEST_STATUSES[r.payload.status]}</span>}</span>
+    <span className="line-story">{l.story}</span>
+    <span className="row-actions">{canEdit&&(r.payload.status==='pending'||r.payload.status==='ready'||u)&&c?.state==='in'&&<button className="btn primary" title={r.payload.requesterId?'يُرسل الملف ويصل طالبه إشعار ليؤكد الاستلام':undefined} onClick={()=>onDeliver(r)}>{r.payload.requesterId?'إرسال الملف لطالبه':'تسليم الملف'}</button>}<button className="btn" onClick={()=>onOpen(r)}>فتح الطلب</button></span></div></li>})}</ul>}</section>;
 }
 
 function RequestEditor({initial,files,custody,people,canEdit,onClose,onSaved}:{initial:ArchiveRequest;files:ArchiveFile[];custody:Map<string,Custody>;people:Person[];canEdit:boolean;onClose:()=>void;onSaved:()=>void}) {
@@ -319,16 +345,32 @@ function Stocktake({location,files,custody,caseRef,canPrint,onClose,onDone}:{loc
 function MovementLog({movements,files,locOf,caseCode,canPrint,onOpen,onCleared}:{movements:ArchiveMovement[];files:ArchiveFile[];locOf:(id:string)=>ArchiveLocation|undefined;caseCode:(id:string)=>string;canPrint:boolean;onOpen:(f:ArchiveFile)=>void;onCleared:()=>void}) {
  const [clearing,setClearing]=useState(false),[cleared,setCleared]=useState(0),{canClear,clears}=useLogClears(cleared);
  const first=movements.reduce((d,m)=>!d||m.payload.date<d?m.payload.date:d,'');
- const [type,setType]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[q,setQ]=useState(''),[page,setPage]=useState(1);
+ const [type,setType]=useState(''),[who,setWho]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[q,setQ]=useState(''),[page,setPage]=useState(1);
  const fileOf=(id:string)=>files.find(f=>f.id===id),term=normalizeSearch(q);
- const list=movements.filter(m=>(!type||m.payload.type===type)&&(!from||m.payload.date>=from)&&(!to||m.payload.date<=to)
+ const list=movements.filter(m=>(!type||m.payload.type===type)&&(!who||m.createdBy===who)&&(!from||m.payload.date>=from)&&(!to||m.payload.date<=to)
   &&(!term||normalizeSearch([fileOf(m.subjectId)?.payload.number,fileOf(m.subjectId)?.payload.title,caseCode(m.caseId),m.payload.holder,m.payload.purpose,m.payload.notes,m.createdBy,MOVEMENTS[m.payload.type].label].join(' ')).includes(term))).sort((a,b)=>recordedAt(b)-recordedAt(a));
- const pages=Math.max(1,Math.ceil(list.length/20)),current=Math.min(page,pages);
- return <section className="panel desk-fill"><div className="panel-head"><div><h2>سجل الحركة</h2><p className="panel-note">كل تسليم واستلام ونقل وجرد، بمن سجّله ومتى. الحركات لا تُعدّل؛ الخاطئة تُلغى بسبب.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('سجل حركة الأرشيف',(from||to)?`من ${formatDate(from)||'البداية'} إلى ${formatDate(to)||'اليوم'}`:'كل الفترات',['التاريخ','رقم الأرشيف','الملف','الحركة','المستلم / الموقع','الغرض','سجّلها','الحالة'],list.map(m=>{const f=fileOf(m.subjectId),p=m.payload;return [formatDate(p.date),f?.payload.number||'',f?.payload.title||'',MOVEMENTS[p.type].label,p.holder||locationLabel(locOf(p.locationId)),p.purpose,m.createdBy,p.status==='void'?'ملغاة: '+p.voidReason:'']}),formatDate(todayISO()),''))}><Printer size={15}/> طباعة السجل</button>}{canClear&&!!movements.length&&<button className="btn" onClick={()=>setClearing(true)}><Eraser size={15}/> مسح السجل</button>}</div>
+ const pages=Math.max(1,Math.ceil(list.length/20)),current=Math.min(page,pages),reset=()=>setPage(1);
+ const types=(Object.keys(MOVEMENTS) as MovementType[]).map(t=>[t,movements.filter(m=>m.payload.type===t).length] as const).filter(([,n])=>n);
+ const people=[...new Set(movements.map(m=>m.createdBy))].map(p=>[p,movements.filter(m=>m.createdBy===p).length] as const).sort((a,b)=>b[1]-a[1]),tones=['brand','blue','amber','green'] as const;
+ // The last six months, each a column; pressing one shows that month only.
+ const now=todayISO(),months=Array.from({length:6},(_,i)=>{const n=+now.slice(0,4)*12+ +now.slice(5,7)-1-5+i,y=Math.floor(n/12),mo=n%12+1,k=`${y}-${String(mo).padStart(2,'0')}`,end=new Date(Date.UTC(y,mo,0)).getUTCDate();return {k,from:k+'-01',to:k+'-'+String(end).padStart(2,'0'),label:String(mo)}});
+ const tone=(t:MovementType)=>movementEdge(t,'posted')==='green'?'green':movementEdge(t,'posted')==='amber'?'amber':'grey';
+ return <section className="panel"><div className="panel-head"><div><h2>سجل الحركة</h2><p className="panel-note">كل تسليم واستلام ونقل وجرد، بمن سجّله ومتى. الحركات لا تُعدّل؛ الخاطئة تُلغى بسبب.</p></div>{canPrint&&!!list.length&&<button className="btn" onClick={()=>printHtml(listHtml('سجل حركة الأرشيف',(from||to)?`من ${formatDate(from)||'البداية'} إلى ${formatDate(to)||'اليوم'}`:'كل الفترات',['التاريخ','رقم الأرشيف','الملف','الحركة','المستلم / الموقع','الغرض','سجّلها','الحالة'],list.map(m=>{const f=fileOf(m.subjectId),p=m.payload;return [formatDate(p.date),f?.payload.number||'',f?.payload.title||'',MOVEMENTS[p.type].label,p.holder||locationLabel(locOf(p.locationId)),p.purpose,m.createdBy,p.status==='void'?'ملغاة: '+p.voidReason:'']}),formatDate(todayISO()),''))}><Printer size={15}/> طباعة السجل</button>}{canClear&&!!movements.length&&<button className="btn" onClick={()=>setClearing(true)}><Eraser size={15}/> مسح السجل</button>}</div>
   <LastClear clears={clears}/>{clearing&&<ClearLog first={first} onClose={()=>setClearing(false)} onDone={()=>{setClearing(false);setCleared(n=>n+1);onCleared()}}/>}
-  <div className="department-toolbar movement-filters"><Field label="بحث في الحركات" value={q} onChange={v=>{setQ(v);setPage(1)}} placeholder="رقم الأرشيف، كود القضية، المستلم أو من سجّلها"/><OfficeSelect label="نوع الحركة" value={type} onChange={v=>{setType(v);setPage(1)}} options={[['','كل الحركات'],...(Object.keys(MOVEMENTS) as MovementType[]).map(t=>[t,MOVEMENTS[t].label] as [string,string])]}/><DateField label="من تاريخ" value={from} onChange={v=>{setFrom(v);setPage(1)}}/><DateField label="إلى تاريخ" value={to} onChange={v=>{setTo(v);setPage(1)}}/></div>
-  {!list.length?<Empty title="لا توجد حركات" text="تظهر هنا حركات الملفات عند تسجيلها."/>:<div className="table-wrap"><table className="office-table"><thead><tr><th>التاريخ</th><th>الملف</th><th>الحركة</th><th>المستلم / الموقع</th><th>سجّلها</th></tr></thead><tbody>{list.slice((current-1)*20,current*20).map(m=>{const f=fileOf(m.subjectId),p=m.payload;return <tr key={m.id} className={'clickable'+(p.status==='void'?' void':'')} onClick={()=>{if(f)onOpen(f)}}>
-   <td className="nowrap">{formatDate(p.date)}</td><td><b dir="ltr">{f?.payload.number}</b><small>{f?.payload.title}</small></td><td>{MOVEMENTS[p.type].label}{p.status==='void'&&<small className="void-note">ملغاة: {p.voidReason}</small>}</td><td>{p.holder||locationLabel(locOf(p.locationId))||'—'}<small>{p.purpose}</small></td><td>{m.createdBy}<small>{officeTime(m.createdAt)}</small></td></tr>})}</tbody></table></div>}
+  {!!movements.length&&<PulseStrip label="ملخص الحركات">
+   <PulseTile title="نوع الحركة" value={movements.length} sub="حركة مسجّلة" parts={types.map(([t,n])=>({label:MOVEMENTS[t].label,value:n,tone:tone(t),on:type===t,onClick:()=>{setType(type===t?'':t);reset()}}))}/>
+   <DayBars title="الحركات شهراً بشهر" sub="اضغط شهراً لعرضه" days={months.map(m=>({label:m.label,value:movements.filter(x=>x.payload.date.startsWith(m.k)).length,on:from===m.from&&to===m.to,onClick:()=>{const on=from===m.from&&to===m.to;setFrom(on?'':m.from);setTo(on?'':m.to);reset()}}))}/>
+   <PulseTile title="سجّلها" parts={people.slice(0,4).map(([p,n],k)=>({label:p||'—',value:n,tone:tones[k],on:who===p,onClick:()=>{setWho(who===p?'':p);reset()}}))}/>
+  </PulseStrip>}
+  <div className="department-toolbar movement-filters"><Field label="بحث في الحركات" value={q} onChange={v=>{setQ(v);reset()}} placeholder="رقم الأرشيف، كود القضية، المستلم أو من سجّلها"/><DateField label="من تاريخ" value={from} onChange={v=>{setFrom(v);reset()}}/><DateField label="إلى تاريخ" value={to} onChange={v=>{setTo(v);reset()}}/></div>
+  {!list.length?<Empty title="لا توجد حركات" text={movements.length?'لا حركات بهذا التصنيف.':'تظهر هنا حركات الملفات عند تسجيلها.'}/>:<ul className="story-list move-lines" aria-label="حركات الملفات"><li className="story-head" aria-hidden><span>التاريخ</span><span>الملف</span><span>الحركة</span><span>باختصار</span><span>سجّلها</span><span/></li>
+   {list.slice((current-1)*20,current*20).map(m=>{const f=fileOf(m.subjectId),p=m.payload,where=p.holder||locationLabel(locOf(p.locationId));return <li key={m.id}><div className={'story-row e-'+movementEdge(p.type,p.status)+(p.status==='void'?' void':'')}>
+    <span className="story-num">{formatDate(p.date)}</span>
+    <span><b dir="ltr">{f?.payload.number||'—'}</b> <small className="muted">{f?.payload.title}</small></span>
+    <span className="move-type">{MOVEMENTS[p.type].label}</span>
+    <span className="line-story">{[p.status==='void'?'ملغاة: '+p.voidReason:'',where,p.purpose,p.dueDate?'يعود '+formatDate(p.dueDate):'',p.notes].filter(Boolean).join(' · ')||(p.type==='audit'?'تأكّد وجوده في مكانه':'—')}</span>
+    <span>{m.createdBy} <small className="muted">{officeTime(m.createdAt)}</small></span>
+    <span className="row-actions">{f&&<button type="button" className="btn" onClick={()=>onOpen(f)}>فتح الملف</button>}</span></div></li>})}</ul>}
   <PageNavigation page={current} pages={pages} total={list.length} onChange={setPage}/></section>;
 }
 

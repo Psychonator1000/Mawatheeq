@@ -17,3 +17,31 @@ export function archiveLine(c: Custody, today: string, flags: { lost?: boolean; 
   const edge: 'red' | 'amber' | 'green' | 'grey' = flags.archived ? 'grey' : late || flags.lost || flags.missing ? 'red' : c.state !== 'in' || flags.awaiting ? 'amber' : 'green';
   return { story: parts.filter(Boolean).join(' · '), edge, late };
 }
+
+const dayAr = (n: number, after = false) => n === 1 ? 'يوم واحد' : n === 2 ? (after ? 'يومين' : 'يومان') : n % 100 >= 3 && n % 100 <= 10 ? `${n} أيام` : `${n} يوماً`;
+/** When a request's file is needed, as a key for the tiles: late, today, within a week, later, or no date. */
+export function neededWhen(neededBy: string, today: string): 'late' | 'today' | 'week' | 'later' | 'none' {
+  if (!neededBy) return 'none';
+  if (neededBy < today) return 'late';
+  if (neededBy === today) return 'today';
+  return dayN(neededBy) - dayN(today) <= 7 ? 'week' : 'later';
+}
+/** A file request's line: how its date stands, where the file is now, and its edge. */
+export function requestLine(p: { status: string; neededBy: string; purpose: string; decisionNote?: string }, file: { state: string; holder: string; stateLabel: string } | null, today: string, unsent = false) {
+  const closed = p.status === 'done' || p.status === 'declined';
+  const when = neededWhen(p.neededBy, today), n = p.neededBy ? Math.abs(dayN(p.neededBy) - dayN(today)) : 0;
+  const parts = [
+    unsent ? 'عُلّم «سُلّم» ولم يُرسل للطالب' : '',
+    closed ? '' : when === 'late' ? 'تأخر تجهيزه ' + dayAr(n, true) : when === 'today' ? 'مطلوب اليوم' : when === 'none' ? 'بلا موعد' : 'مطلوب بعد ' + dayAr(n, true),
+    !file ? 'الملف غير موجود في الأرشيف' : file.state === 'in' ? (closed ? '' : 'الملف في الأرشيف') : `الملف الآن ${file.stateLabel}${file.holder ? ': ' + file.holder : ''}`,
+    p.status === 'declined' && p.decisionNote ? 'السبب: ' + p.decisionNote : '',
+  ];
+  const edge: 'red' | 'amber' | 'green' | 'grey' = p.status === 'declined' ? 'grey' : unsent || (!closed && when === 'late') ? 'red' : closed || p.status === 'ready' ? 'green' : 'amber';
+  return { story: parts.filter(Boolean).join(' · '), edge, when };
+}
+/** A movement's edge: back in the archive or counted green, out amber, cancelled red, moved within it grey. */
+export function movementEdge(type: string, status: string): 'red' | 'amber' | 'green' | 'grey' {
+  if (status === 'void') return 'red';
+  if (type === 'return' || type === 'audit') return 'green';
+  return type === 'move' ? 'grey' : 'amber';
+}

@@ -281,7 +281,7 @@ try{
  await page.getByText(/أُزيلت خزانة C/).first().waitFor();await page.locator('.map-cabinet-name').getByText('خزانة C',{exact:true}).waitFor({state:'detached'});
  await page.locator('.notice').getByText(/ملف بلا مكان حفظ/).waitFor();
  const archiveRows=await dept('archive','records_page');assert.deepEqual(archiveRows.filter(r=>r.kind==='movement').map(r=>r.payload.type).sort(),['audit','checkout','move','move','move','move','return']);
- await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.getByRole('cell',{name:'جرد وتأكيد الوجود',exact:true}).waitFor();await screen('archive-desktop');
+ await page.getByRole('button',{name:/^سجل الحركة/}).click();await page.locator('.move-lines').getByText('جرد وتأكيد الوجود',{exact:true}).first().waitFor();await screen('archive-desktop');
  // The owner clears a range of the log; what the files' custody stands on stays, and the clearing is noted for everyone.
  await click('مسح السجل');{const dlg=page.getByRole('dialog',{name:'مسح سجل الحركة'});await dlg.getByRole('button',{name:'إلى تاريخ',exact:true}).click();await page.getByRole('button',{name:'اليوم',exact:true}).click();
   await dlg.getByLabel('أفهم أن الحركات الممسوحة لا تعود',{exact:true}).check();await dlg.getByRole('button',{name:/^مسح حركات/}).click();await dlg.waitFor({state:'detached'});}
@@ -305,11 +305,11 @@ try{
  await page.getByRole('button',{name:/^ملفاتي الورقية: 1 بانتظار تأكيد استلامك/}).click();const mine=page.getByRole('dialog',{name:'ملفاتي الورقية'});
  await mine.getByRole('button',{name:'استلمت',exact:true}).click();await mine.getByRole('button',{name:'أرجعت الملف'}).click();await mine.getByText('بانتظار تأكيد الأرشيف').waitFor();await screen('paper-files');await page.keyboard.press('Escape');
  await page.getByRole('button',{name:/^العهدة/}).click();await page.getByText('أبلغ بإرجاعه · بانتظار تأكيدك').first().waitFor();
- await page.locator('.office-table').getByRole('button',{name:'عاد الملف'}).click();
+ await page.locator('.custody-lines').getByRole('button',{name:'عاد الملف'}).click();
  // The return check: a reported return can be rejected, then the file comes back short and the gap stays on record.
  {const check=page.getByRole('dialog',{name:/^استلام الملف ARC-00001/});await check.getByRole('button',{name:'لم يصل الملف'}).click();await check.getByLabel('سبب رفض الإرجاع',{exact:true}).fill('لم يُسلَّم في المكتب');await check.getByRole('button',{name:'تأكيد الرفض'}).click();await check.waitFor({state:'detached'});}
  await page.getByRole('button',{name:/^ملفاتي الورقية/}).click();await page.getByRole('dialog',{name:'ملفاتي الورقية'}).getByRole('button',{name:'أرجعت الملف'}).click();await page.keyboard.press('Escape');
- await page.getByRole('button',{name:/^العهدة/}).click();await page.getByText('أبلغ بإرجاعه · بانتظار تأكيدك').first().waitFor();await page.locator('.office-table').getByRole('button',{name:'عاد الملف'}).click();
+ await page.getByRole('button',{name:/^العهدة/}).click();await page.getByText('أبلغ بإرجاعه · بانتظار تأكيدك').first().waitFor();await page.locator('.custody-lines').getByRole('button',{name:'عاد الملف'}).click();
  {const check=page.getByRole('dialog',{name:/^استلام الملف ARC-00001/});await check.getByLabel('ناقص غير ما سبق',{exact:true}).fill('صورة الحكم');await check.getByRole('button',{name:'عاد ناقصاً'}).click();await check.waitFor({state:'detached'});}
  await page.getByRole('button',{name:/^الملفات/}).click();await page.getByRole('button',{name:/^نواقص مفتوحة/}).click();await page.locator('.archive-table').getByText('ناقص',{exact:true}).waitFor();await page.getByRole('button',{name:/^كل الملفات/}).click();
  await page.getByRole('button',{name:/^ملفاتي الورقية/}).waitFor({state:'detached'});

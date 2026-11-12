@@ -1832,7 +1832,7 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .story-row .pulse-stack{height:6px}
 .client-lines{--cols:[name] minmax(170px,1.4fr) [kind] max-content [cases] minmax(110px,.9fr) [res] minmax(90px,.7fr) [ex] max-content [story] minmax(0,2fr)}
 @media(max-width:700px){
- .story-list{grid-template-columns:1fr}.story-head{display:none}
+ .story-list{grid-template-columns:1fr}.story-list>li.story-head{display:none}
  .story-row{display:flex;flex-wrap:wrap;gap:4px 12px}.story-row>.story-name{flex:1 1 100%}.story-row>.line-meter,.story-row>.pulse-stack{flex:1 1 120px}
  .story-row>.line-story{flex:1 1 100%;white-space:normal}
 }
@@ -2025,4 +2025,10 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .due-lines{--cols:[date] max-content [file] minmax(150px,1.2fr) [action] minmax(140px,1fr) [who] max-content [story] minmax(0,1.2fr) [open] max-content}
 .pay-lines{--cols:[date] max-content [file] minmax(150px,1.2fr) [amount] max-content [story] minmax(0,1.6fr) [open] max-content}
 .story-list .story-row .btn{min-height:28px;padding:2px 10px}
+.custody-lines{--cols:[num] max-content [file] minmax(160px,1.3fr) [state] max-content [story] minmax(0,1.6fr) [open] max-content}
+.request-lines{--cols:[file] minmax(150px,1.2fr) [who] minmax(120px,1fr) [date] max-content [state] max-content [story] minmax(0,1.4fr) [open] max-content}
+.move-lines{--cols:[date] max-content [file] minmax(150px,1.2fr) [move] max-content [story] minmax(0,1.6fr) [who] max-content [open] max-content}
+.story-list .story-row .row-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
+.story-list .nowrap{white-space:nowrap}
+.move-lines .story-row.void .move-type{text-decoration:line-through;color:var(--muted-foreground)}
 .story-row.void-row{opacity:.6;text-decoration:line-through}

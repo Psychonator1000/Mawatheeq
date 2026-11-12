@@ -51,7 +51,7 @@ console.log('Informative lines: case, client and task stories and summary counts
 
 // Collection files and paper files.
 const { collectionLine } = await import('../lib/collection-line.ts');
-const { archiveLine } = await import('../lib/archive-line.ts');
+const { archiveLine, requestLine, neededWhen, movementEdge } = await import('../lib/archive-line.ts');
 const pos = { claim: 1000000, fee: 0, total: 1000000, paid: 250000, external: 0, expenses: 0, remaining: 750000, net: 250000 };
 let cl2 = collectionLine(pos, [{ category: 'calls', action: 'اتصال بالخصم', reviewDate: '2026-11-09', status: 'notDone', text: '', phone: '', contactParty: '', method: '' }], [{ type: 'payment', date: '2026-11-03', amount: '250', method: '', reference: '', notes: '' }], today, { assigned: true });
 assert.equal(cl2.story, 'إفادة مستحقة منذ 3 أيام: اتصال بالخصم · آخر دفعة 250.000 د.ك في 03/11'); assert.equal(cl2.edge, 'red'); assert.equal(cl2.pct, 25);
@@ -63,6 +63,16 @@ let al = archiveLine(cust({ state: 'staff', holder: 'أحمد', since: '2026-11-
 assert.equal(al.story, 'مع أحمد منذ 01/11 · حضور جلسة · متأخر يومين'); assert.equal(al.edge, 'red');
 al = archiveLine(cust({ state: 'court', holder: 'إدارة التنفيذ', dueDate: '2026-11-20' }), today);
 assert.equal(al.story, 'مع إدارة التنفيذ · يعود 20/11'); assert.equal(al.edge, 'amber');
+const rq = v => ({ status: 'pending', neededBy: '', purpose: '', decisionNote: '', ...v });
+let rl = requestLine(rq({ neededBy: '2026-11-10' }), { state: 'in', holder: '', stateLabel: 'في الأرشيف' }, today);
+assert.equal(rl.story, 'تأخر تجهيزه يومين · الملف في الأرشيف'); assert.equal(rl.edge, 'red');
+rl = requestLine(rq({ status: 'ready', neededBy: '2026-11-17' }), { state: 'staff', holder: 'سارة', stateLabel: 'مع موظف' }, today);
+assert.equal(rl.story, 'مطلوب بعد 5 أيام · الملف الآن مع موظف: سارة'); assert.equal(rl.edge, 'green');
+rl = requestLine(rq({ status: 'declined', decisionNote: 'الملف لدى الخبير' }), { state: 'in', holder: '', stateLabel: '' }, today);
+assert.equal(rl.story, 'السبب: الملف لدى الخبير'); assert.equal(rl.edge, 'grey');
+assert.equal(requestLine(rq({ status: 'done' }), { state: 'in', holder: '', stateLabel: '' }, today, true).edge, 'red');
+assert.deepEqual(['2026-11-11', '2026-11-12', '2026-11-19', '2026-11-20', ''].map(d => neededWhen(d, today)), ['late', 'today', 'week', 'later', 'none']);
+assert.deepEqual([['return', 'posted'], ['checkout', 'posted'], ['move', 'posted'], ['audit', 'void']].map(([t, s]) => movementEdge(t, s)), ['green', 'amber', 'grey', 'red']);
 console.log('Collection and archive lines are right too.');
 
 // The register's lawyer and file-status filters.
