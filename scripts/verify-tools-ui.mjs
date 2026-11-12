@@ -419,7 +419,7 @@ await page.keyboard.press('Escape');await lv.waitFor({state:'hidden'});
  const after=await rpc('mawatheeq_local_request',[login.token,'cases_page','{"offset":0}']);const added=after.find(c=>c.payload.autoNumber==='880000001').payload;
  assert.deepEqual([added.code,added.client,added.opponent,added.caseNumber,added.lawyer],['912','موكل من الرول','خصم من الرول','2026/92','محامٍ تجريبي'],'A new ongoing case is added from the roll');
  const tool2=after.find(c=>c.id==='tools-case-2').payload;assert.ok(tool2.procedures.some(p=>p.date===before&&p.decision==='حجز للحكم'&&p.followup===soon),'The held session is in the case\'s session log');
- await page.locator('.office-table').getByText('النطق بالحكم · أول درجة · 7002').first().waitFor();
+ await page.locator('.work-lines').getByText('النطق بالحكم · أول درجة · 7002').first().waitFor();
  // The same roll again adds nothing.
  await page.evaluate(()=>{location.hash='cases'});await page.getByLabel('ملف رول الجلسات').setInputFiles(artifacts+'/roll.xls');await dlg.getByText(/موجود من قبل ولن يتكرر/).waitFor();
  assert.equal(await dlg.getByRole('button',{name:'تطبيق الاستيراد'}).isDisabled(),true,'Nothing new to apply');await page.keyboard.press('Escape');}

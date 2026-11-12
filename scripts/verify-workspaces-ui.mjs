@@ -427,7 +427,7 @@ try{
   await db.exec('set role anon');
   assert.deepEqual(ents.find(e=>e.name==='مؤسسة المراجعة السريعة'),{name:'مؤسسة المراجعة السريعة',kind:'organization',review:false,merged_into:null},'Confirmed with its kind');
   assert.ok(ents.find(e=>e.name==='شركة تجريبية للاتصالات (Test)').merged_into,'The duplicate is merged into its twin');
-  await page.getByRole('button',{name:'عرض البطاقات'}).click();}
+  await page.getByRole('button',{name:'عرض القائمة'}).click();}
  for(const name of ['السكرتارية','التحصيل','المحاسبة','الموارد البشرية','الأرشيف']){
   await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero, .sec-agenda, .work-desk').first().waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
  }

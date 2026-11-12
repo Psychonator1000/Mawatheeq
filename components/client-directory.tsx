@@ -9,7 +9,9 @@ import RecordWindow, { useListNav, type WindowNav, type Enter } from './record-w
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { CLAIM_DETAILS, CLIENT_KINDS, CLIENT_SECTORS, emptyClient, emptyContact, type ClientEntity } from '@/lib/clients';
-import type { CaseRecord } from '@/lib/domain';
+import { DEFAULT_RULES, type CaseRecord, type Rules } from '@/lib/domain';
+import { clientLine, clientStats } from '@/lib/client-line';
+import { Meter, PulseStrip, PulseTile, StackBar } from './pulse';
 import { formatDate,caseCode} from '@/lib/domain';
 import { normalizeSearch } from '@/lib/case-browse';
 import { clampPage } from '@/lib/pagination';
@@ -119,24 +121,36 @@ export function ClientSelect({ clients, value, onChange, onCreate, onManage, dis
   </div>;
 }
 
-/** Client cards per page: twenty-five, five rows of five on wide screens. */
+/** Client lines per page. */
 const PER_PAGE = 25;
 
-export default function ClientDirectory({ clients, records, canMerge, canCollections=false, readOnly=false, onSaved, onReload, onShowCases, onAddCase, onOpenCase }: {
-  clients: ClientEntity[]; records: CaseRecord[]; canMerge: boolean; canCollections?: boolean; readOnly?: boolean; onSaved: (c: ClientEntity) => void;
+export default function ClientDirectory({ clients, records, rules=DEFAULT_RULES, canMerge, canCollections=false, readOnly=false, onSaved, onReload, onShowCases, onAddCase, onOpenCase }: {
+  clients: ClientEntity[]; records: CaseRecord[]; rules?: Rules; canMerge: boolean; canCollections?: boolean; readOnly?: boolean; onSaved: (c: ClientEntity) => void;
   onReload: () => Promise<void>; onShowCases: (id: string) => void; onAddCase?: (id: string) => void; onOpenCase: (c: CaseRecord) => void;
 }) {
   const [search, setSearch] = useState(''), [reviewOnly, setReviewOnly] = useState(false), [reviewing, setReviewing] = useState(false), [page, setPage] = useState(1), [selected, setSelectedRaw] = useState<ClientEntity | null>(null);
   const counts = useMemo(() => { const map = new Map<string, number>(); for (const c of records) if (!c.archived && c.clientEntityId) map.set(c.clientEntityId, (map.get(c.clientEntityId) || 0) + 1); return map; }, [records]);
   const filtered = clients.filter(c => (!reviewOnly || c.needsReview || c.contacts.some(p => p.needsReview)) && normalizeSearch([c.name, ...c.aliases, ...c.contacts.map(p=>p.name)].join(' ')).includes(normalizeSearch(search))).sort((a,b)=>(counts.get(b.id)||0)-(counts.get(a.id)||0)||arCompare(a.name,b.name));
   const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE)), current = clampPage(page, pages);
+  const stats = useMemo(() => clientStats(records, rules), [records, rules]), busiest = Math.max(1, ...[...stats.values()].map(t => t.cases));
   const { nav, step, enter, openItem: setSelected } = useListNav(filtered, selected, setSelectedRaw);
   return <><div className="list-desk"><div className="page-head"><div><div className="eyebrow">MAWATHEEQ / CLIENTS</div><h1>الموكلون</h1><p className="subtitle">ملف مستقل لكل جهة أو فرد، يجمع الأشخاص المرتبطين به وقضاياه.</p></div>{!readOnly&&<button className="btn primary" onClick={()=>setSelected(emptyClient())}><Plus/> إضافة موكل</button>}</div>
     <section className="panel list-desk-panel"><div className="toolbar"><div className="searchbox"><Search/><input aria-label="بحث في الموكلين والأشخاص" placeholder="ابحث باسم الجهة أو أحد الأشخاص…" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/></div>
       <label className="checkbox-line"><input type="checkbox" checked={reviewOnly} onChange={e=>{setReviewOnly(e.target.checked);setPage(1);}}/> يحتاج مراجعة ({clients.filter(c=>c.needsReview||c.contacts.some(p=>p.needsReview)).length})</label>
-      {!readOnly&&<button type="button" className={'btn'+(reviewing?' primary':'')} aria-pressed={reviewing} onClick={()=>setReviewing(r=>!r)}><CheckCheck size={15}/> {reviewing?'عرض البطاقات':`مراجعة سريعة (${clients.filter(c=>c.needsReview).length})`}</button>}</div>
+      {!readOnly&&<button type="button" className={'btn'+(reviewing?' primary':'')} aria-pressed={reviewing} onClick={()=>setReviewing(r=>!r)}><CheckCheck size={15}/> {reviewing?'عرض القائمة':`مراجعة سريعة (${clients.filter(c=>c.needsReview).length})`}</button>}</div>
       {reviewing?<ClientReview clients={clients} counts={counts} canMerge={canMerge} onSaved={onSaved} onReload={onReload} onOpen={c=>setSelected(c)}/>:<>
-      <div className="client-grid">{filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).map(c=><button className="client-card" data-tilt key={c.id} onClick={()=>setSelected(c)}><div className="client-card-top"><Building2 size={22}/><span className="tag">{counts.get(c.id)||0} قضية</span></div><h3>{c.name}</h3><p>{CLIENT_KINDS[c.kind]} · {CLIENT_SECTORS[c.sector]}</p><div className="client-card-people"><Users size={15}/>{c.contacts.length ? `${c.contacts.length} شخص مرتبط` : 'الأشخاص غير مسجلين'}</div>{(c.needsReview||c.contacts.some(p=>p.needsReview))&&<span className="tag amber">يحتاج مراجعة</span>}</button>)}</div>
+      <ClientPulse clients={clients} stats={stats} reviewOnly={reviewOnly} onReviewOnly={v=>{setReviewOnly(v);setPage(1);}}/>
+      {filtered.length>0&&<ul className="story-list client-lines" aria-label="الموكلون">
+       <li className="story-head" aria-hidden><span>الموكل</span><span>النوع</span><span>القضايا</span><span>النتائج</span><span>في التنفيذ</span><span>باختصار</span></li>
+       {filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).map(c=>{const t=stats.get(c.id),l=clientLine(c,t);
+        return <li key={c.id}><button type="button" className={'story-row client-card e-'+l.edge} onClick={()=>setSelected(c)} title={c.name+(l.story?' — '+l.story:'')}>
+         <span className="story-name"><Building2 size={15} aria-hidden/><h3>{c.name}</h3></span>
+         <span className="muted">{CLIENT_KINDS[c.kind]} · {CLIENT_SECTORS[c.sector]}</span>
+         <Meter pct={(t?.cases||0)/busiest*100} tone="brand" label={t?.cases||0} title={`القضايا: ${t?.cases||0}`}/>
+         {t?.cases?<StackBar parts={[{label:'لصالحنا',value:t.favour,tone:'green'},{label:'ضدنا',value:t.against,tone:'red'},{label:'غير محدد',value:t.open,tone:'grey'}]}/>:<span className="muted">—</span>}
+         <span className="story-num">{t?.executing||t?.ready?<>{t.executing}{t.ready>0&&<small> (جاهز: {t.ready})</small>}</>:<span className="muted">—</span>}</span>
+         <span className="line-story">{l.story}</span></button></li>;})}
+      </ul>}
       {!filtered.length&&<Empty/>}<PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></>}</section></div>
     {selected&&<ClientEditor nav={nav} onNavigate={step} enter={enter} readOnly={readOnly} key={selected.id} entity={selected} clients={clients} records={records} canMerge={canMerge} canCollections={canCollections} onClose={()=>setSelected(null)} onSaved={onSaved} onMerged={onReload} onOpenCase={onOpenCase} onShowCases={onShowCases} onAddCase={onAddCase}/>}
   </>;
@@ -147,4 +161,19 @@ export function ContactActions({ name, phone }: { name: string; phone: string })
   const links = phoneLinks(phone);
   if (!links) return phone.trim() ? <p className="contact-actions muted">تحقق من الرقم لإظهار أزرار الاتصال.</p> : null;
   return <div className="contact-actions"><a className="btn" href={links.tel} aria-label={`اتصال بـ ${name || 'الشخص'}`}><Phone size={15}/> اتصال</a><a className="btn" href={links.whatsapp} target="_blank" rel="noopener noreferrer" aria-label={`واتساب ${name || 'الشخص'}`}><MessageCircle size={15}/> واتساب</a><span className="mono muted" dir="ltr">{links.phone}</span></div>;
+}
+
+/** The page's summary tiles: the clients by kind, the cases by sector, the files still to review, the busiest five. */
+function ClientPulse({ clients, stats, reviewOnly, onReviewOnly }: { clients: ClientEntity[]; stats: Map<string, ReturnType<typeof clientStats> extends Map<string, infer T> ? T : never>; reviewOnly: boolean; onReviewOnly: (v: boolean) => void }) {
+  const kinds = { organization: 0, individual: 0, group: 0, unknown: 0 } as Record<ClientEntity['kind'], number>, sectors = { telecom: 0, insurance: 0, other: 0 } as Record<ClientEntity['sector'], number>;
+  let review = 0, total = 0;
+  for (const c of clients) { kinds[c.kind]++; const n = stats.get(c.id)?.cases || 0; sectors[c.sector] += n; total += n; if (c.needsReview || c.contacts.some(p => p.needsReview)) review++; }
+  const top = [...clients].map(c => [c, stats.get(c.id)?.cases || 0] as const).sort((a, b) => b[1] - a[1]).slice(0, 4).filter(([, n]) => n > 0);
+  const topSum = top.reduce((n, [, v]) => n + v, 0), tones = ['brand', 'blue', 'amber', 'green'] as const;
+  return <PulseStrip label="ملخص الموكلين">
+    <PulseTile icon={<Building2 size={16} aria-hidden/>} title="الموكلون" value={clients.length} parts={[{ label: 'جهات', value: kinds.organization, tone: 'brand' }, { label: 'أفراد', value: kinds.individual, tone: 'blue' }, { label: 'ورثة / مشتركة', value: kinds.group, tone: 'amber' }, { label: 'تحتاج تحديد', value: kinds.unknown, tone: 'grey' }]}/>
+    <PulseTile title="القضايا حسب القطاع" value={total} parts={[{ label: 'اتصالات', value: sectors.telecom, tone: 'brand' }, { label: 'تأمين', value: sectors.insurance, tone: 'blue' }, { label: 'عام', value: sectors.other, tone: 'grey' }]}/>
+    <PulseTile icon={<CheckCheck size={16} aria-hidden/>} title="ملفات تحتاج مراجعة" value={review} sub={'من ' + clients.length} on={reviewOnly} onClick={() => onReviewOnly(!reviewOnly)} parts={[{ label: 'تحتاج مراجعة', value: review, tone: 'amber' }, { label: 'رُوجعت', value: clients.length - review, tone: 'green' }]}/>
+    <PulseTile icon={<Users size={16} aria-hidden/>} title="الأكثر قضايا" value={total ? Math.round(topSum / total * 100) + '%' : '—'} sub="من كل القضايا" parts={[...top.map(([c, n], i) => ({ label: c.name.length > 18 ? c.name.slice(0, 17) + '…' : c.name, value: n, tone: tones[i] })), { label: 'الباقي', value: total - topSum, tone: 'grey' as const }]}/>
+  </PulseStrip>;
 }
