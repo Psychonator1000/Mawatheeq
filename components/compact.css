@@ -1892,3 +1892,26 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .archive-table>tbody>tr.edge-green>td:first-child{border-inline-start-color:#2f7d57}
 .archive-table th:first-child{width:34px}.archive-table :is(th,td):nth-child(2){width:110px}.archive-table :is(th,td):nth-child(3){width:26%}.archive-table :is(th,td):nth-child(4){width:22%}.archive-table :is(th,td):nth-child(5){width:150px}
 .archive-table td.archive-story{width:auto}
+/* Owner, 12 November 2026: «make text fully visible». The register's cells wrap instead of cutting their words; the
+   party, status and lawyer columns get room for the full names, the story takes what is left and wraps too. */
+.case-table-rows:has(td.case-step) td{overflow:visible}
+.case-table-rows:has(td.case-step) :is(th,td):nth-child(3){width:21%}
+.case-table-rows:has(td.case-step) :is(th,td):nth-child(7){width:160px}
+.case-table-rows:has(td.case-step) :is(th,td):nth-child(8){width:9%}
+.case-table-rows:has(td.case-step) td.party{max-width:none}
+.case-table-rows:has(td.case-step) td.party strong{white-space:normal;flex-wrap:wrap;overflow:visible}
+.case-table-rows:has(td.case-step) td.party>small{white-space:normal;overflow:visible}
+.case-table-rows:has(td.case-step) td.case-lawyer{white-space:normal!important;overflow:visible;max-width:none}
+.case-table-rows:has(td.case-step) td.case-status .case-badges{flex-wrap:wrap}
+.case-table-rows:has(td.case-step) td.case-status .tag{white-space:normal;text-align:center}
+.case-table-rows:has(td.case-step) td.case-story .line-story{white-space:normal;overflow:visible}
+.case-table-rows:has(td.case-step) td.case-step .line-steps{white-space:nowrap}
+.case-table-rows:has(td.case-step) :is(th,td):nth-child(8){width:10%}
+/* The same on the other informative lists: names, tags and stories wrap rather than being cut. */
+:is(.collection-table,.archive-table)>tbody>tr>td{white-space:normal;overflow:visible}
+:is(.collection-table,.archive-table)>tbody>tr>td :is(b,small){white-space:normal;overflow:visible}
+:is(.collection-table,.archive-table) .tag-line{flex-wrap:wrap}
+:is(.collection-table,.archive-table) td .line-story{white-space:normal;overflow:visible}
+.story-list .story-row>*{white-space:normal;overflow:visible}
+.story-list .story-row .line-story,.story-name h3,.story-name b{white-space:normal;overflow:visible}
+.story-list .story-row .text-link{white-space:normal;overflow:visible}
