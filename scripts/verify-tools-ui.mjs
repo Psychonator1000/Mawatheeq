@@ -460,7 +460,7 @@ await page.getByRole('button',{name:'طباعة كشف حساب'}).click();
 await page.waitForFunction(()=>window.__printed.includes('كشف حساب'));
 let finance=await page.evaluate(()=>window.__printed);
 assert.ok(finance.includes('10.000 KWD')&&finance.includes('2.500 KWD')&&finance.includes('7.500 KWD'),'Statement totals and outstanding fees');
-await page.getByRole('row',{name:/RC-1/}).getByRole('button',{name:'فتح القيد'}).click();
+await page.locator('.ledger-lines .story-row',{hasText:'RC-1'}).getByRole('button',{name:'فتح القيد'}).click();
 await stubPrint();await page.getByRole('button',{name:'طباعة السند'}).click();
 finance=await page.evaluate(()=>window.__printed);
 assert.ok(finance.includes('<h1>سند قبض</h1>')&&finance.includes('ديناران كويتيان وخمسمائة فلس'),'Receipt voucher with amount in words');

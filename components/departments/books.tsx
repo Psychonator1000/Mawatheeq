@@ -13,6 +13,7 @@ import {Field,DateField,Empty} from '../shared';
 import {OfficeSelect,officeTime} from '../office-shared';
 import FilterSelect,{FilterBox,type FilterOption} from '../filter-select';
 import PageNavigation from '../page-navigation';
+import {DayBars,PulseStrip,PulseTile} from '../pulse';
 import Needs from '../needs';
 import {EditorDialog,exportCsv,exportXlsx} from './shared';
 import {EXTRA_REPORTS,ExtraReports,type ExtraReport} from './books-reports';
@@ -201,9 +202,18 @@ function Moves({setup,cases,journal,onJournal,onOpen,onNew,version,canExport}:{s
    <DateField label="من تاريخ" value={from} onChange={setFrom}/><DateField label="إلى تاريخ" value={to} onChange={setTo}/></div>
   <Field label="بحث في القيود" value={q} onChange={setQ} placeholder="الرقم أو المرجع أو البيان أو الشريك"/>
   {error&&<p className="notice" role="alert">{error}</p>}{!rows&&!error&&<p role="status">جارٍ تحميل القيود…</p>}
-  {rows&&<><div className="table-wrap"><table className="office-table books-table"><thead><tr><th>التاريخ</th><th>الرقم</th><th>الدفتر</th><th>المرجع</th><th>الشريك</th><th>القضية</th><th>المبلغ</th><th>الحالة</th><th></th></tr></thead>
-   <tbody>{list.slice((current-1)*25,current*25).map(m=><tr key={m.id} className={m.state==='cancel'?'ledger-void':''}><td>{formatDate(m.date)}</td><td className="mono">{m.name==='/'?'—':m.name}</td><td>{jName(m.journalId)}</td><td>{m.ref||'—'}</td><td>{pName(m.partnerId)||'—'}</td><td>{cCode(m.caseId)||'—'}</td>
-    <td className="ledger-value" dir="ltr">{amount(m.amount)}</td><td><span className={'tag '+(m.state==='posted'?'green':m.state==='draft'?'amber':'')}>{MOVE_STATES[m.state]}</span>{m.reversedFrom&&<small> عكسي</small>}</td><td><button className="btn" onClick={()=>onOpen(m.id)}>فتح القيد</button></td></tr>)}</tbody></table></div>
+  {rows&&<><PulseStrip label="ملخص القيود">
+   <PulseTile title="حالة القيود" value={list.length} sub="قيد ضمن التصفية" parts={(Object.keys(MOVE_STATES) as (keyof typeof MOVE_STATES)[]).map((k,i)=>({label:MOVE_STATES[k],value:list.filter(m=>m.state===k).length,tone:(['amber','green','grey'] as const)[i],on:state===k,onClick:()=>setState(state===k?'':k)}))}/>
+   <PulseTile title="الدفاتر" parts={[...new Set(list.map(m=>m.journalId))].map(j=>[j,list.filter(m=>m.journalId===j).length] as const).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([j,n],k)=>({label:jName(j)||'—',value:n,tone:(['brand','blue','amber','green','grey'] as const)[k],on:journal===j,onClick:()=>onJournal(journal===j?'':j)}))}/>
+   <DayBars title="القيود شهراً بشهر" days={(()=>{const now=todayISO();return Array.from({length:6},(_,i)=>{const n=+now.slice(0,4)*12+ +now.slice(5,7)-1-5+i,k=`${Math.floor(n/12)}-${String(n%12+1).padStart(2,'0')}`;return {label:String(n%12+1),value:list.filter(m=>m.date.startsWith(k)).length}})})()}/>
+  </PulseStrip>
+  {!!list.length&&<ul className="story-list move-entry-lines" aria-label="القيود"><li className="story-head" aria-hidden><span>التاريخ</span><span>الرقم</span><span>الدفتر</span><span>المرجع والشريك</span><span>القضية</span><span>المبلغ</span><span>الحالة</span><span/></li>
+   {list.slice((current-1)*25,current*25).map(m=><li key={m.id}><div className={'story-row e-'+(m.state==='posted'?'green':m.state==='draft'?'amber':'grey')+(m.state==='cancel'?' void':'')}>
+    <span className="story-num">{formatDate(m.date)}</span><span className="mono">{m.name==='/'?'—':m.name}</span><span>{jName(m.journalId)}</span>
+    <span className="line-story">{[m.ref,pName(m.partnerId)].filter(Boolean).join(' · ')||'—'}</span><span className="nowrap">{cCode(m.caseId)||'—'}</span>
+    <span className="ledger-value" dir="ltr">{amount(m.amount)}</span>
+    <span><span className={'tag '+(m.state==='posted'?'green':m.state==='draft'?'amber':'')}>{MOVE_STATES[m.state]}</span>{m.reversedFrom&&<small className="muted"> عكسي</small>}</span>
+    <button className="btn" onClick={()=>onOpen(m.id)}>فتح القيد</button></div></li>)}</ul>}
    {!list.length&&<Empty text="لا توجد قيود مطابقة. أنشئ قيداً أو غيّر التصفية."/>}<PageNavigation page={current} pages={pages} total={list.length} onChange={setPage}/></>}
  </section>;
 }

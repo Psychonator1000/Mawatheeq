@@ -2038,5 +2038,9 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .stayed-lines{--cols:[case] minmax(200px,1.4fr) [reason] max-content [due] max-content [lawyer] max-content [story] minmax(0,1.6fr) [open] max-content}
 .contract-lines{--cols:[case] minmax(200px,1.5fr) [lawyer] max-content [story] minmax(0,1fr) [form] max-content}
 .contract-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.contract-form>input{width:120px;min-height:34px;border:1px solid var(--border);border-radius:10px;padding:4px 10px;background:var(--card);color:inherit;font:inherit}.contract-form .field{margin:0;min-width:140px}.contract-form .field>span:first-child,.contract-form .field>label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.ledger-lines{--cols:[date] max-content [type] max-content [party] minmax(120px,1fr) [case] max-content [amount] max-content [story] minmax(0,1.4fr) [open] max-content}
+.move-entry-lines{--cols:[date] max-content [num] max-content [journal] max-content [ref] minmax(0,1.6fr) [case] max-content [amount] max-content [state] max-content [open] max-content}
+.story-row.void .ledger-value{text-decoration:line-through;color:var(--muted-foreground)}
+.ledger-pulse .pulse-head{flex-wrap:wrap;row-gap:2px}.ledger-pulse .pulse-title{overflow:visible}.ledger-pulse .pulse-value{font-size:20px;white-space:nowrap}.ledger-pulse .pulse-head small{flex:1 1 100%;margin:0;white-space:normal}.ledger-pulse-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;margin-top:6px}.ledger-pulse-totals span{display:flex;flex-direction:column;min-width:0}.ledger-pulse-totals small{color:var(--muted-foreground);font-size:11px}.ledger-pulse-totals b{font-size:13px}
 .move-lines .story-row.void .move-type{text-decoration:line-through;color:var(--muted-foreground)}
 .story-row.void-row{opacity:.6;text-decoration:line-through}

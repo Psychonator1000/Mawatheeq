@@ -145,10 +145,10 @@ try{
  await page.setViewportSize({width:390,height:844});await screen('word-preview-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'The preview fits a phone');await page.setViewportSize({width:1440,height:1000});
  await dlg.getByRole('button',{name:'إغلاق'}).last().click();await dlg.waitFor({state:'detached'});}
  await screen('collections-batch-desktop');await click('ملفات التحصيل');
- await switchTo('المحاسبة');await page.getByRole('heading',{name:'الدفاتر اليومية',exact:true}).waitFor();await click('دفتر الحركات');await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await field('المبلغ','125.125');await field('مرجع القيد / رقم الإيصال','SYN-FEE-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');await page.getByRole('cell',{name:/SYN-FEE-UI/}).waitFor();
+ await switchTo('المحاسبة');await page.getByRole('heading',{name:'الدفاتر اليومية',exact:true}).waitFor();await click('دفتر الحركات');await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await field('المبلغ','125.125');await field('مرجع القيد / رقم الإيصال','SYN-FEE-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');await page.locator('.ledger-lines .story-row',{hasText:'SYN-FEE-UI'}).waitFor();
  await click('قيد جديد');await page.getByLabel('القضية المرتبطة',{exact:true}).selectOption('ui-case-0');await page.getByLabel('نوع القيد',{exact:true}).selectOption('receipt');await field('المبلغ','25.025');await field('مرجع القيد / رقم الإيصال','SYN-RECEIPT-UI');await field('الدافع / المستفيد','طرف تجريبي');await click('ترحيل القيد');
  await page.getByText('100.100 KWD',{exact:true}).waitFor();await screen('accounting-desktop');
- await page.getByRole('row').filter({has:page.getByRole('cell',{name:/SYN-RECEIPT-UI/})}).getByRole('button',{name:'فتح القيد',exact:true}).click();assert.equal(await page.getByLabel('المبلغ',{exact:true}).isDisabled(),true);await field('سبب إلغاء القيد','تصحيح تجريبي');await click('تأكيد إلغاء القيد');await page.locator('.ledger-balance').getByText('125.125 KWD',{exact:true}).waitFor();
+ await page.locator('.ledger-lines .story-row',{hasText:'SYN-RECEIPT-UI'}).getByRole('button',{name:'فتح القيد',exact:true}).click();assert.equal(await page.getByLabel('المبلغ',{exact:true}).isDisabled(),true);await field('سبب إلغاء القيد','تصحيح تجريبي');await click('تأكيد إلغاء القيد');await page.locator('.ledger-pulse').getByText('125.125 KWD',{exact:true}).waitFor();
 
  // The double-entry books: a fee entry drafted, refused while unbalanced, balanced, posted with its number, then the reports.
  await click('الدفاتر المحاسبية');await page.getByRole('heading',{name:'الدفاتر اليومية',exact:true}).waitFor();await screen('books-dashboard');
@@ -161,7 +161,7 @@ try{
  await page.getByRole('dialog',{name:'MISC/'+new Date().getFullYear()+'/0001'}).waitFor();await screen('books-entry-posted');
  assert.equal(await page.getByRole('dialog').getByLabel('مدين السطر 1',{exact:true}).count(),0,'A posted entry is read-only');
  await page.getByRole('dialog').getByRole('button',{name:'إغلاق',exact:true}).last().click();
- await click('القيود اليومية');await page.getByRole('cell',{name:'SYN-BOOKS-1',exact:true}).waitFor();
+ await click('القيود اليومية');await page.locator('.move-entry-lines .story-row',{hasText:'SYN-BOOKS-1'}).waitFor();await screen('books-moves');
  await click('ميزان المراجعة');await page.locator('.books-table').getByRole('button',{name:'121000 ذمم الموكلين المدينة',exact:true}).waitFor();
  await page.locator('.books-table tfoot').getByText('250.750').first().waitFor();await screen('books-trial-balance');
  await page.locator('.books-table').getByRole('button',{name:'121000 ذمم الموكلين المدينة',exact:true}).click();await page.locator('.books-group').getByText(/121000/).waitFor();
