@@ -272,6 +272,8 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
  await denied(()=>local(deputy.token,'save_rules',{rules:{first:30,appeal:30,objection:8,execution:30,warning:7}}));
  await denied(()=>office(deputy.token,'export_page',{kind:'cases'}));
  await denied(()=>office(keeper.token,'create_member',{username:'nope',password:pw}));
+ // The full backup is the owner's alone: an account holding the backup power is refused it too.
+ await assert.rejects(()=>office(keeper.token,'export_page',{kind:'cases'}),/لحساب مالك التطبيق فقط/);
  assert.equal((await office(keeper.token,'context')).canManage,false);
  const rules=await local(admin.token,'rules');await local(keeper.token,'save_rules',{rules});assert.deepEqual(await local(admin.token,'rules'),rules,'The settings power saves office rules');
  // A switched session never carries admin powers, even the owner's switch into an admin.

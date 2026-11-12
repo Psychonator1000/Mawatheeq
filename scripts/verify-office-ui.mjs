@@ -351,11 +351,11 @@ try{
  assert.equal(await page.getByRole('radio',{name:/قضاياه فقط/}).isChecked(),true,'Bulk lawyer accounts see their own cases by name');
  assert.equal(await page.getByRole('checkbox',{name:'قضايا سالم تجريبي'}).isChecked(),true);
  await page.getByText(/يرى 5 قضية الآن/).waitFor();await page.screenshot({path:artifacts+'/lawyer-scope.png'});await page.keyboard.press('Escape');
- // Delegated admin: «مدير» ticks every power the owner holds; the owner unticks backups.
+ // Delegated admin: «مدير» ticks every power that can be given; the full backup is not among them (the owner's alone).
  await go('إضافة موظف');await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_deputy');await page.getByLabel('كلمة المرور',{exact:true}).fill('Deputy-synthetic-123');
  await page.getByRole('checkbox',{name:/^مدير/}).click();
- for(const p of ['إدارة الموظفين والصلاحيات','الاعتماد وتصحيح الدرجات','إعدادات المكتب والاستيراد','النسخة الكاملة للبيانات','مراجعة المحادثات والتعليقات'])assert.equal(await page.getByRole('checkbox',{name:new RegExp('^'+p)}).isChecked(),true,'Manager gets '+p);
- await page.getByRole('checkbox',{name:/^النسخة الكاملة للبيانات/}).uncheck();await page.screenshot({path:artifacts+'/admin-powers.png'});
+ for(const p of ['إدارة الموظفين والصلاحيات','الاعتماد وتصحيح الدرجات','إعدادات المكتب والاستيراد','مراجعة المحادثات والتعليقات'])assert.equal(await page.getByRole('checkbox',{name:new RegExp('^'+p)}).isChecked(),true,'Manager gets '+p);
+ assert.equal(await page.getByRole('checkbox',{name:/^النسخة الكاملة للبيانات/}).count(),0,'The full backup cannot be given to a staff account');await page.screenshot({path:artifacts+'/admin-powers.png'});
  await go('حفظ الحساب');await go('تم');await page.getByRole('row').filter({has:page.getByText('ui_deputy',{exact:true})}).getByText(/مسؤول: .*إدارة الموظفين والصلاحيات/).waitFor();
  {const ctx2=await browser.newContext({viewport:{width:1360,height:900},reducedMotion:'reduce'});const dep=await ctx2.newPage();await configurePage(dep);
   await dep.goto(base);await dep.getByLabel('اسم المستخدم',{exact:true}).fill('ui_deputy');await dep.getByLabel('كلمة المرور',{exact:true}).fill('Deputy-synthetic-123');await dep.getByRole('button',{name:'فتح مساحة العمل',exact:true}).click();
@@ -364,11 +364,11 @@ try{
   const ownerRow=dep.getByRole('row').filter({has:dep.getByText('ui_owner',{exact:true})});assert.equal(await ownerRow.getByRole('button').count(),0,'The owner account cannot be managed by an admin');
   await dep.getByRole('row').filter({has:dep.getByText('ui_deputy',{exact:true})}).getByText(/حسابك/).waitFor();
   await dep.getByRole('row').filter({has:dep.getByText('ui_clerk',{exact:true})}).getByRole('button',{name:'تعديل الصلاحيات',exact:true}).click();
-  assert.equal(await dep.getByRole('checkbox',{name:/^النسخة الكاملة للبيانات/}).isDisabled(),true,'An admin cannot grant a power they lack');
+  assert.equal(await dep.getByRole('checkbox',{name:/^النسخة الكاملة للبيانات/}).count(),0,'No admin can grant the full backup');
   await dep.screenshot({path:artifacts+'/admin-deputy.png'});await dep.keyboard.press('Escape');
   // Office settings stay in the cases workspace, without backups for an admin lacking that power.
   await dep.evaluate(()=>{sessionStorage.setItem('mawatheeq.workspace.v1','legal');location.hash='settings'});await dep.reload();await dep.getByRole('heading',{name:'مدد احتساب المواعيد'}).waitFor();
-  assert.equal(await dep.getByRole('heading',{name:'نسخة كاملة للبيانات'}).count(),0,'No backup without the backup power');assert.equal(await dep.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).count(),0);await ctx2.close();}
+  assert.equal(await dep.getByRole('heading',{name:'نسخة كاملة للبيانات'}).count(),0,'The full backup is the owner\'s alone');assert.equal(await dep.getByRole('heading',{name:'فريق المكتب والصلاحيات'}).count(),0);await ctx2.close();}
  // «استيراد القضايا من Excel» from a newer workbook: preview first, then new judgments, filled blanks and a review list.
  {const X=require(require.resolve('xlsx',{paths:[process.cwd()]}));const w=X.utils.book_new();
   X.utils.book_append_sheet(w,X.utils.aoa_to_sheet([['معرف السجل الداخلي','الكود','إدخال الرقم الآلي','الموكل','الخصم','نوع الحكم','حالة الحكم','تاريخ الحكم','تاريخ استلام الصيغة التنفيذية','تاريخ إعلان الصيغة'],

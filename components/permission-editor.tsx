@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
 import {ShieldCheck,Scale,CalendarClock,HandCoins,Calculator,Users,Archive,BookOpenCheck,Gavel,ClipboardList,Headset,Car,Building2,SlidersHorizontal,ChevronDown,GraduationCap,Library,Briefcase,Languages,ConciergeBell,Keyboard,Truck,Coffee,Code,Network,Monitor,Wrench,type LucideIcon} from 'lucide-react';
-import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,JOB_ROLES,ADMIN_POWERS,ALL_POWERS,workspacesOf,rolesOf,combinedPreset,type AdminPower,type JobRole,type Permissions,type Section} from '@/lib/permissions';
+import {SECTIONS,LEGAL_SECTIONS,PAGE_PRESETS,WORKSPACE_LABELS,JOB_ROLES,ADMIN_POWERS,GRANTABLE_POWERS,workspacesOf,rolesOf,combinedPreset,type AdminPower,type JobRole,type Permissions,type Section} from '@/lib/permissions';
 import {type CaseRecord} from '@/lib/domain';
 import {clientName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -85,7 +85,7 @@ export default function PermissionEditor({value,onChange,records,suggestLawyer='
   </fieldset>
   {(grantable.length>0||!!powers.length)&&<fieldset className="permission-group admin-step"><legend>صلاحيات الإدارة</legend>
    <p className="subtitle">ينوب صاحب الحساب عن المالك فيما تختاره هنا. تمنح فقط الصلاحيات التي تملكها، ولا يستطيع أحد تعديل حساب المالك.</p>
-   <div className="power-grid">{ALL_POWERS.map(p=>{const on=powers.includes(p),can=grantable.includes(p);return <label key={p} className={'power-option'+(on?' on':'')+(can?'':' locked')} title={can?undefined:'لا تملك هذه الصلاحية لتمنحها'}><input type="checkbox" checked={on} disabled={!can} onChange={e=>patch({adminPowers:e.target.checked?[...powers,p]:powers.filter(x=>x!==p)})}/><span><b>{ADMIN_POWERS[p].label}</b><small>{ADMIN_POWERS[p].hint}</small></span></label>})}</div>
+   <div className="power-grid">{GRANTABLE_POWERS.map(p=>{const on=powers.includes(p),can=grantable.includes(p);return <label key={p} className={'power-option'+(on?' on':'')+(can?'':' locked')} title={can?undefined:'لا تملك هذه الصلاحية لتمنحها'}><input type="checkbox" checked={on} disabled={!can} onChange={e=>patch({adminPowers:e.target.checked?[...powers,p]:powers.filter(x=>x!==p)})}/><span><b>{ADMIN_POWERS[p].label}</b><small>{ADMIN_POWERS[p].hint}</small></span></label>})}</div>
   </fieldset>}
   <button type="button" className="permission-toggle" aria-expanded={details} onClick={()=>setDetails(v=>!v)}><SlidersHorizontal size={16} aria-hidden/>{details?'إخفاء التفاصيل':'تعديل التفاصيل: الصفحات والقضايا والعمليات'}<ChevronDown size={16} aria-hidden className="chev"/></button>
   {details&&<div className="permission-details">

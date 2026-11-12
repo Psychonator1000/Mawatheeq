@@ -37,13 +37,15 @@ export const ADMIN_POWERS: Record<AdminPower, { label: string; hint: string }> =
   staff: { label: 'إدارة الموظفين والصلاحيات', hint: 'إضافة الحسابات وتعديل صلاحياتها وكلمات مرورها، والدخول بحساباتهم، ومنح صلاحيات الإدارة التي يملكها.' },
   reviews: { label: 'الاعتماد وتصحيح الدرجات', hint: 'اعتماد مراجعات المصادر، وتصحيح درجات التقاضي المغلقة أو التراجع عن النقل.' },
   settings: { label: 'إعدادات المكتب والاستيراد', hint: 'مدد المواعيد، واستيراد السجلات من Excel، ودمج ملفات الموكلين.' },
-  backup: { label: 'النسخة الكاملة للبيانات', hint: 'تنزيل نسخة احتياطية كاملة لكل السجلات.' },
+  backup: { label: 'النسخة الكاملة للبيانات', hint: 'لحساب مالك التطبيق فقط: تنزيل نسخة احتياطية كاملة لكل السجلات.' },
   chat: { label: 'مراجعة المحادثات والتعليقات', hint: 'قراءة كل محادثات الموظفين للمراجعة، وحذف التعليقات.' },
 };
 export const ALL_POWERS = Object.keys(ADMIN_POWERS) as AdminPower[];
 export function powersOf(access: Pick<Permissions, 'adminPowers'>, owner = false): AdminPower[] { return owner ? ALL_POWERS : access.adminPowers || []; }
 /** Admins who see the settings page of the cases workspace (office rules, import or backups). */
-export function isAdmin(powers: AdminPower[]) { return powers.some(p => p === 'settings' || p === 'backup'); }
+export function isAdmin(powers: AdminPower[]) { return powers.some(p => p === 'settings'); }
+/** Powers that can be given to a staff account: the full backup is the owner's alone (owner, 12 November 2026). */
+export const GRANTABLE_POWERS = (Object.keys(ADMIN_POWERS) as AdminPower[]).filter(p => p !== 'backup');
 /** Admins who open the separate «فريق المكتب» page (accounts, roles and permissions). */
 export function canManageStaff(powers: AdminPower[]) { return powers.includes('staff'); }
 export const LEGAL_SECTIONS: Section[] = ['overview','cases','clients','deadlines','analytics','verification','work','conflicts','documents','daily'];
