@@ -64,3 +64,13 @@ assert.equal(al.story, 'مع أحمد منذ 01/11 · حضور جلسة · مت�
 al = archiveLine(cust({ state: 'court', holder: 'إدارة التنفيذ', dueDate: '2026-11-20' }), today);
 assert.equal(al.story, 'مع إدارة التنفيذ · يعود 20/11'); assert.equal(al.edge, 'amber');
 console.log('Collection and archive lines are right too.');
+
+// The register's lawyer and file-status filters.
+const { matchesCaseFilters, EMPTY_CASE_FILTERS } = await import('../lib/case-browse.ts');
+const f = v => ({ ...EMPTY_CASE_FILTERS, ...v });
+const withLawyer = mk({ lawyer: 'آية زينهم', legacyStatus: 'متداول' }), without = mk({ lawyer: ' ', legacyStatus: 'منتهي' }), blank = mk({ lawyer: '' });
+assert.deepEqual([withLawyer, without, blank].map(c => matchesCaseFilters(c, f({ lawyerSet: 'none' }))), [false, true, true]);
+assert.deepEqual([withLawyer, without, blank].map(c => matchesCaseFilters(c, f({ lawyerSet: 'set' }))), [true, false, false]);
+assert.deepEqual([withLawyer, without, blank].map(c => matchesCaseFilters(c, f({ fileStatus: 'منتهي' }))), [false, true, false]);
+assert.deepEqual([withLawyer, without, blank].map(c => matchesCaseFilters(c, f({ fileStatus: '-' }))), [false, false, true]);
+console.log('Lawyer and file-status filters pick the right cases.');

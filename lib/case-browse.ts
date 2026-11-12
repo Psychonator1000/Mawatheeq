@@ -1,8 +1,11 @@
 import { type CaseRecord, caseCode } from './domain.ts';
 import type { ClientEntity } from './clients';
 
-export type CaseFilters = { search: string; year: string; month: string; code: string; client: string; opponent: string; numberStatus: string; category: string; clientEntityId: string; analysisField:string;analysisValue:string };
-export const EMPTY_CASE_FILTERS: CaseFilters = { search: '', year: '', month: '', code: '', client: '', opponent: '', numberStatus: '', category: '', clientEntityId: '', analysisField:'',analysisValue:'' };
+export type CaseFilters = { search: string; year: string; month: string; code: string; client: string; opponent: string; numberStatus: string; category: string; clientEntityId: string; analysisField:string;analysisValue:string;
+  /** «none»: cases with no lawyer named; «set»: cases with one. */ lawyerSet?: string; /** The file's recorded status (منتهي، تنفيذ، متداول…), «-» for none. */ fileStatus?: string };
+export const EMPTY_CASE_FILTERS: CaseFilters = { search: '', year: '', month: '', code: '', client: '', opponent: '', numberStatus: '', category: '', clientEntityId: '', analysisField:'',analysisValue:'', lawyerSet: '', fileStatus: '' };
+/** A case's recorded file status as shown and filtered: the text as stored, trimmed. */
+export const fileStatusOf = (record: CaseRecord) => String(record.legacyStatus ?? '').trim();
 const analysisFields=['type','outcome','status','appeal','appealRecorded'];
 export const MONTH_NAMES = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
@@ -102,6 +105,8 @@ export function matchesCaseFilters(record: CaseRecord, filters: CaseFilters) {
     && includes(record.code, filters.code)
     && includes(`${record.clientEntityName || ''} ${record.client || ''} ${record.clientGroup || ''}`, filters.client)
     && includes(record.opponent, filters.opponent)
+    && (!filters.lawyerSet || (filters.lawyerSet === 'none') === !String(record.lawyer ?? '').trim())
+    && (!filters.fileStatus || (filters.fileStatus === '-' ? !fileStatusOf(record) : fileStatusOf(record) === filters.fileStatus))
     && (!filters.search || searchText(record).includes(normalizeSearch(filters.search)));
 }
 
