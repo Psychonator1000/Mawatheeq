@@ -1999,3 +1999,26 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .work-desk-filters>.more-filters{height:38px;min-height:38px!important;margin-bottom:6px;align-self:flex-end}
 .collection-table td small.collection-pdf{display:flex;align-items:center;justify-content:flex-end;gap:3px}
 .collection-table td small.collection-pdf svg{flex:none;opacity:.7}
+/* «الملفات»: the office's file room on its network share. */
+.theme-files{--dept:var(--brand);--dept-soft:color-mix(in srgb,var(--brand) 8%,#fffdf8)}
+.file-room .work-desk-body{display:flex;flex-direction:column;gap:8px}
+.file-room-allow{display:flex;align-items:center;gap:10px}.file-room-allow .btn{margin-inline-start:auto}
+.file-room-need{display:flex;flex-direction:column;align-items:center;gap:10px}
+.file-roots{--cols:[name] minmax(160px,.8fr) [story] minmax(0,2fr) [act] max-content}
+.file-lines{--cols:[pick] 24px [name] minmax(0,1fr) [when] max-content [size] max-content}
+.file-lines .story-row.on{background:color-mix(in srgb,var(--dept,#2f5d7c) 9%,var(--card));border-color:var(--dept,#2f5d7c)}
+.case-folders{--cols:[code] minmax(110px,.6fr) [case] minmax(180px,1.4fr) [count] minmax(90px,.6fr) [latest] max-content [story] minmax(0,1.4fr)}
+.order-folders{--cols:[name] minmax(160px,1.2fr) [count] minmax(110px,1fr) [latest] max-content [story] minmax(0,1.4fr)}
+.file-inbox{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,1fr);gap:12px;min-height:0;flex:1 1 auto}
+.file-inbox-list{min-width:0;display:flex;flex-direction:column;gap:6px;overflow:auto}
+.file-inbox-side{min-width:0;border:1px solid var(--border);border-radius:12px;background:var(--card);padding:10px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.file-preview-head{display:flex;align-items:center;gap:8px}.file-preview-head b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-preview{width:100%;height:42vh;min-height:240px;border:1px solid var(--border);border-radius:8px;background:#fff;object-fit:contain}
+.file-actions{display:grid;gap:8px}
+.file-action{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:0;display:grid;gap:6px}
+.file-action legend{display:inline-flex;align-items:center;gap:5px;font-weight:700;font-size:13px;padding:0 4px}
+.file-sublist{list-style:none;margin:2px 0 6px;padding:4px 14px;display:grid;gap:3px;border-inline-start:2px solid var(--border)}
+.file-sublist li{display:flex;align-items:center;gap:8px;font-size:12.5px}.file-sublist small{margin-inline-start:auto}
+.file-misnamed{color:#94650f;font-weight:600}
+.file-day-pick{display:flex;gap:10px}.file-day-pick .field{min-width:220px}
+@media(max-width:1000px){.file-inbox{grid-template-columns:1fr}}

@@ -61,7 +61,7 @@ async function downloadWord(button,expected,name){
 }
 try{
  await page.goto(base);await page.getByLabel('اسم المستخدم',{exact:true}).fill('ui_owner');await page.getByLabel('كلمة المرور',{exact:true}).fill('Synthetic-password-123');await click('فتح مساحة العمل');
- await page.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await page.locator('.workspace-option').count(),7,'Six workspaces and the owner-only «فريق المكتب» page');
+ await page.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await page.locator('.workspace-option').count(),8,'Seven workspaces and the owner-only «فريق المكتب» page');
  await screen('chooser-desktop');await page.setViewportSize({width:390,height:844});await screen('chooser-mobile');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true);await page.setViewportSize({width:1440,height:1000});
  await enter('السكرتارية');await click('إضافة مهمة');await field('عنوان العمل','تنسيق موعد تجريبي');await click('حفظ العمل');await page.getByText('تنسيق موعد تجريبي',{exact:true}).first().waitFor();
  await screen('secretary-desktop');
@@ -449,8 +449,35 @@ try{
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();await staff.getByLabel('كلمة المرور الحالية',{exact:true}).fill('Unsaved-password-from-previous-user');
  const otherTab=await sc.newPage();await configurePage(otherTab);await otherTab.goto(base);
  await otherTab.evaluate(token=>localStorage.setItem('mawatheeq.local-session.v1',token),login.token);
- await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),7);
+ await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),8);
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();assert.equal(await staff.getByLabel('كلمة المرور الحالية',{exact:true}).inputValue(),'','Cross-tab session replacement clears old password inputs');
+ // «الملفات»: the share's folders (here made in the browser's own storage), a scan filed by day, another into its case's
+ // folder as «name code», and the cases folder telling which folders match the register and which names lack the code.
+ {const makeRoots=async()=>{const root=await navigator.storage.getDirectory(),roots={};window.__mawatheeqFileRoots=roots;
+   for(const k of ['inbox','daily','cases','orders'])roots[k]=await root.getDirectoryHandle(k,{create:true});return roots};
+  await page.addInitScript(`(${makeRoots})()`);
+  await page.evaluate(async src=>{const make=eval(src);const root=await navigator.storage.getDirectory();for await(const [n] of root.entries())await root.removeEntry(n,{recursive:true});const roots=await make();
+   const put=async(dir,name,text)=>{const f=await dir.getFileHandle(name,{create:true});const w=await f.createWritable();await w.write(new Blob(['%PDF-1.4 '+text],{type:'application/pdf'}));await w.close()};
+   await put(roots.inbox,'scan-0001.pdf','one');await put(roots.inbox,'scan-0002.pdf','two');
+   const c=await roots.cases.getDirectoryHandle('TEST-1',{create:true});await put(c,'صحيفة TEST-1.pdf','x');await put(c,'مستند بلا كود.pdf','y');
+   await roots.cases.getDirectoryHandle('ZZZ-404',{create:true});const o=await roots.orders.getDirectoryHandle('شركة اختبار',{create:true});await put(o,'order-1.pdf','o')},`(${makeRoots})`);
+  await switchTo('الملفات');const inbox=page.getByRole('list',{name:'ملفات الوارد'});await inbox.getByText('scan-0001.pdf').waitFor();await screen('file-room-inbox');
+  await inbox.getByRole('checkbox',{name:'تحديد scan-0001.pdf'}).check();await page.getByRole('button',{name:/ترتيب المحدد في المسح اليومي/}).click();
+  await page.getByText('رُتب ملف واحد في المسح اليومي.').waitFor();
+  await page.getByRole('list',{name:'ملفات الوارد'}).getByText('scan-0002.pdf').click();
+  await page.getByLabel('اسم المستند',{exact:true}).fill('حكم أول درجة');await page.getByLabel('كود القضية',{exact:true}).selectOption('TEST-2');
+  await page.getByText('سيُحفظ باسم:').waitFor();await page.getByRole('button',{name:'حفظ في ملف القضية'}).click();await page.getByText('حُفظ في ملف القضية TEST-2.').waitFor();
+  const placed=await page.evaluate(async()=>{const root=await navigator.storage.getDirectory(),names=async d=>{const o=[];for await(const [n] of d.entries())o.push(n);return o.sort()};
+   const day=new Date(),parts=[String(day.getFullYear()),String(day.getMonth()+1).padStart(2,'0'),String(day.getDate()).padStart(2,'0')];
+   let d=await root.getDirectoryHandle('daily');for(const p of parts)d=await d.getDirectoryHandle(p);
+   return {inbox:await names(await root.getDirectoryHandle('inbox')),daily:await names(d),caseFiles:await names(await (await root.getDirectoryHandle('cases')).getDirectoryHandle('TEST-2'))}});
+  assert.deepEqual(placed,{inbox:[],daily:['scan-0001.pdf','scan-0002.pdf'],caseFiles:['حكم أول درجة TEST-2.pdf']},'Filed by day, and into the case as «name code» with a copy kept by day');
+  await page.getByRole('button',{name:'ملفات القضايا'}).click();const folders=page.getByRole('list',{name:'مجلدات القضايا'});
+  await folders.locator('.story-row',{hasText:'ZZZ-404'}).getByText('لا قضية بهذا الكود في السجل').waitFor();
+  await folders.locator('.story-row',{hasText:'TEST-1'}).getByText(/اسم واحد لا ينتهي بالكود/).waitFor();
+  await folders.locator('.story-row',{hasText:'TEST-2'}).getByText('ملف واحد').waitFor();await screen('file-room-cases');
+  await page.getByRole('button',{name:'أوامر الأداء'}).click();await page.getByRole('list',{name:'شركات أوامر الأداء'}).getByText('شركة اختبار').waitFor();
+  await page.getByRole('button',{name:'المسح اليومي'}).click();await page.getByRole('list',{name:/^ملفات /}).getByText('scan-0002.pdf').waitFor();await screen('file-room-daily');}
  assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, double-entry books (balanced posting, numbering, trial balance, ledger drill-down, profit and loss, balance sheet, new account), invoicing (customer added from the invoice, service line with discount, confirmed, partly paid, receipts, terms and services), bank (statement file imported, line matched to the invoice it names, charge to an account), reports (summary, partner ledger, aged, cash flow, comparison, Excel), advanced (taxes switched on and invoiced, asset depreciated, tax report, year-end checklist), precise ledger/void, employee/leave forms, archive custody/receipt/label/scan/stocktake, import with automatic and manual case links from both sides, civil ID/debtor/phone checks, select-all round-robin distribution with client links, client profile collection files, department-only readonly access, responsive layouts and no runtime errors.');
 }catch(e){await screen('failure');console.error(await page.locator('body').innerText());throw e}
 finally{

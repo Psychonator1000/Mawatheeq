@@ -27,7 +27,7 @@ export type MailMessage = MailSummary & {
 };
 export type MailCounts = { total: number; byWorkspace: Partial<Record<MailWorkspace, number>>; latest: { id: string; workspace: MailWorkspace; accountId: string; fromName: string; fromAddr: string; subject: string; sentAt: string }[]; errors: { id: string; address: string; error: string }[] };
 
-export const MAIL_WORKSPACES: Record<MailWorkspace, string> = { legal: 'القضايا', secretary: 'السكرتارية', collections: 'التحصيل', accounting: 'المحاسبة', hr: 'الموارد البشرية', archive: 'الأرشيف' };
+export const MAIL_WORKSPACES: Record<MailWorkspace, string> = { legal: 'القضايا', secretary: 'السكرتارية', collections: 'التحصيل', accounting: 'المحاسبة', hr: 'الموارد البشرية', archive: 'الأرشيف', files: 'الملفات' };
 
 export type Provider = 'gmail' | 'outlook' | 'yahoo' | 'zoho' | 'icloud' | 'custom';
 /** Server settings for common providers, and what the person needs to know to connect one. */

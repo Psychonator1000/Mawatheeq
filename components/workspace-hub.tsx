@@ -1,7 +1,7 @@
 import {Suspense,lazy,useContext,useEffect,useState} from 'react';
 import {effectiveView} from '@/lib/view-map';
 import {OPEN_EVENT,OPEN_MAIL_EVENT,OPEN_WORKSPACE_EVENT,pendingOpen} from '@/lib/open-record';
-import {ArrowUpLeft,Scale,CalendarDays,Files,Wallet,UsersRound,Archive,UserCog} from 'lucide-react';
+import {ArrowUpLeft,Scale,CalendarDays,Files,Wallet,UsersRound,Archive,UserCog,FolderTree} from 'lucide-react';
 import {flushSync} from 'react-dom';
 import AccountMenu,{AccountContext} from './account-menu';
 import {ChatSlot,PaperSlot} from './chat-slot';
@@ -18,7 +18,7 @@ import './office.css';
 import './workspaces.css';
 import BrandLogo from './brand-logo';
 type HubId=WorkspaceId|'team';
-const icons={legal:Scale,secretary:CalendarDays,collections:Files,accounting:Wallet,hr:UsersRound,archive:Archive,team:UserCog};
+const icons={legal:Scale,secretary:CalendarDays,collections:Files,accounting:Wallet,hr:UsersRound,archive:Archive,files:FolderTree,team:UserCog};
 // Staff accounts and permissions are an admin page of their own, not part of any workspace.
 const TEAM={name:'فريق المكتب',description:'الموظفون وأعمالهم وصفحاتهم وقضاياهم وصلاحيات الإدارة'};
 export default function WorkspaceHub({access,owner}:{access:Permissions;owner:boolean}) {

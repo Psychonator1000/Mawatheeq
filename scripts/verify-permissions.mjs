@@ -91,6 +91,11 @@ let task=await office(editor.token,'save_work',{item:work('61000000-0000-4000-80
 const secretWork=await office(admin.token,'save_work',{item:{...work('61000000-0000-4000-8000-000000000002',hidden.id,admin.user.id),notes:'Secret work note'}});
 const general=await office(admin.token,'save_work',{item:work('61000000-0000-4000-8000-000000000003','',admin.user.id)});
 assert.deepEqual((await office(reader.token,'work_page')).map(w=>w.id),[task.id]);
+// «الملفات»: the section can be given, and its holder reads the cases their access allows (here: the one case picked).
+{const filer=await create('filer',{...noAccess,sections:['files'],caseIds:[visible.id]});
+ const dept=(token,action,data={})=>rpc('mawatheeq_department_request',[token,action,JSON.stringify(data)]);
+ assert.deepEqual((await dept(filer.token,'cases_page',{workspace:'files'})).map(c=>c.id),[visible.id],'The file room lists the cases its holder may see');
+ await denied(()=>dept(reader.token,'cases_page',{workspace:'files'}));}
 // «التقويم» for everyone: each account gets only the work assigned to it, even one that opens no page at all.
 {const mine=await office(reader.token,'my_schedule',{from:'2026-10-01',to:'2026-10-31'});assert.deepEqual(mine.map(w=>w.id),[task.id],'Only my own work');assert.match(mine[0].caseRef,/./,'The case named when I may open it');
  assert.equal(JSON.stringify(mine).includes('Synthetic note'),false,'Notes are not part of the schedule');

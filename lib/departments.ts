@@ -1,7 +1,7 @@
 import type {CaseRecord} from './domain';
 import type {CollectionParty,DocumentData} from './document-fields';
 import {departmentRequest} from './local-auth';
-export type Department = 'secretary'|'collections'|'accounting'|'hr'|'archive';
+export type Department = 'secretary'|'collections'|'accounting'|'hr'|'archive'|'files';
 export type WorkspaceId = 'legal'|Department;
 export const WORKSPACES = {
  legal:{name:'القضايا',description:'ملفات القضايا، الموكلون، التنفيذ والتحليل'},
@@ -10,6 +10,7 @@ export const WORKSPACES = {
  accounting:{name:'المحاسبة',description:'الأتعاب والمقبوضات والمصروفات'},
  hr:{name:'الموارد البشرية',description:'ملفات الموظفين والإجازات'},
  archive:{name:'الأرشيف',description:'الملفات الورقية: أماكن حفظها وعهدتها وطلباتها'},
+ files:{name:'الملفات',description:'ملفات الشبكة: الوارد من الماسح، المسح اليومي، ملفات القضايا وأوامر الأداء'},
 };
 export type CaseSummary = Pick<CaseRecord,'id'|'code'|'autoNumber'|'client'|'clientGroup'|'clientEntityName'|'opponent'|'revision'|'archived'> & { insurance?: boolean };
 export type DepartmentRecord<P=Record<string,string>> = {

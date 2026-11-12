@@ -3,7 +3,7 @@ export const SECTIONS = {
   deadlines: 'المواعيد والمتابعة', analytics: 'التحليل والإحصائيات',
   verification: 'التحقق من القضايا', work: 'المهام والجلسات',
   conflicts: 'فحص الأطراف', documents: 'المستندات والأدلة', daily: 'التقرير اليومي',
-  secretary: 'السكرتارية', collections: 'التحصيل', accounting: 'المحاسبة', hr: 'الموارد البشرية', archive: 'الأرشيف',
+  secretary: 'السكرتارية', collections: 'التحصيل', accounting: 'المحاسبة', hr: 'الموارد البشرية', archive: 'الأرشيف', files: 'الملفات',
 } as const;
 export type Section = keyof typeof SECTIONS;
 export type Permissions = {
@@ -56,7 +56,7 @@ export function readsAllReports(powers: AdminPower[]) { return powers.includes('
 export function canEditClients(access: Permissions) { return access.canEdit && access.caseScope === 'all' && access.sections.includes('clients'); }
 export function canCreateCases(access: Permissions) { return access.canEdit && access.caseScope === 'all' && access.sections.includes('cases'); }
 /** The workspaces (top-level pages) an account opens, in the order of the workspace chooser. */
-export const WORKSPACE_LABELS = { legal: 'القضايا (الصفحة الرئيسية)', secretary: 'السكرتارية', collections: 'التحصيل', accounting: 'المحاسبة', hr: 'الموارد البشرية', archive: 'الأرشيف' } as const;
+export const WORKSPACE_LABELS = { legal: 'القضايا (الصفحة الرئيسية)', secretary: 'السكرتارية', collections: 'التحصيل', accounting: 'المحاسبة', hr: 'الموارد البشرية', archive: 'الأرشيف', files: 'الملفات' } as const;
 export function workspacesOf(access: Pick<Permissions, 'sections'> & { view?: Permissions['view'] }) {
   return (Object.keys(WORKSPACE_LABELS) as (keyof typeof WORKSPACE_LABELS)[]).filter(id => id === 'legal' ? access.sections.some(s => LEGAL_SECTIONS.includes(s)) : access.sections.includes(id as Section) && access.view?.['ws:' + id] !== 'hide');
 }
