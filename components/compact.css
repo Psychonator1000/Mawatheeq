@@ -2042,5 +2042,8 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .move-entry-lines{--cols:[date] max-content [num] max-content [journal] max-content [ref] minmax(0,1.6fr) [case] max-content [amount] max-content [state] max-content [open] max-content}
 .story-row.void .ledger-value{text-decoration:line-through;color:var(--muted-foreground)}
 .ledger-pulse .pulse-head{flex-wrap:wrap;row-gap:2px}.ledger-pulse .pulse-title{overflow:visible}.ledger-pulse .pulse-value{font-size:20px;white-space:nowrap}.ledger-pulse .pulse-head small{flex:1 1 100%;margin:0;white-space:normal}.ledger-pulse-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;margin-top:6px}.ledger-pulse-totals span{display:flex;flex-direction:column;min-width:0}.ledger-pulse-totals small{color:var(--muted-foreground);font-size:11px}.ledger-pulse-totals b{font-size:13px}
+.people-lines{--cols:[who] minmax(180px,1.3fr) [title] minmax(140px,1fr) [leave] max-content [state] max-content [story] minmax(0,1.5fr) [open] max-content}
+.leave-lines{--cols:[who] minmax(150px,1.1fr) [type] max-content [period] max-content [state] max-content [story] minmax(0,1.5fr) [open] max-content}
+.story-row.e-blue{border-inline-start-color:#2f6db0}
 .move-lines .story-row.void .move-type{text-decoration:line-through;color:var(--muted-foreground)}
 .story-row.void-row{opacity:.6;text-decoration:line-through}
