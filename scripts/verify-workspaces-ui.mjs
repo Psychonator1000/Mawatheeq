@@ -82,6 +82,8 @@ try{
   assert.equal(await page.getByRole('dialog').count(),0,'Reading the orders does not cover the page');
   await click('التحصيلات');await bar.waitFor();await click('ملفات التحصيل');
   await bar.getByText(/اكتملت قراءة/).waitFor({timeout:240000});await screen('order-reading-bar');
+  // A reload keeps the orders read (kept in this browser until saved or removed).
+  await page.reload();await bar.waitFor({timeout:60000});await bar.getByText(/اكتملت قراءة/).waitFor({timeout:60000});
   await bar.getByRole('button',{name:/مراجعة وحفظ/}).click();const review=page.getByRole('dialog',{name:'ملفات تحصيل من أوامر الأداء'});await review.getByText('order-two.pdf').waitFor();
   await review.getByRole('button',{name:'إغلاق'}).last().click();await review.waitFor({state:'detached'});await bar.waitFor();
   await bar.getByRole('button',{name:'تجاهل'}).click();await bar.waitFor({state:'detached'});}

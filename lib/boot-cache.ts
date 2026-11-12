@@ -83,4 +83,6 @@ export function clearBoot() {
   try { localStorage.removeItem(BOOT); localStorage.removeItem(OWNER_BOOT); } catch { /* Ignore. */ }
   forgetInstant();
   void dropSnapshots();
+  // The payment orders kept while being read (lib/order-store.ts) go with the account.
+  void import('./order-store').then(m => m.dropOrders()).catch(() => {});
 }
