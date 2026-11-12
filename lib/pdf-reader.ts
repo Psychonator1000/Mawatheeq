@@ -38,9 +38,9 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
   const cancel=()=>{renderTask?.cancel();if(worker){void worker.terminate().catch(()=>{});opts.drop?.();}};
   signal.addEventListener('abort',cancel,{once:true});
   const list=(opts.pages?opts.pages.filter(n=>n>=1&&n<=pdf.numPages):Array.from({length:Math.min(pdf.numPages,maxPages)},(_,n)=>n+1));
-  const total=list.length;
+  const total=list.length,retried=new Set<number>();
   try{
-    for(let at=1;at<=total;at++){
+    for(let at=1;at<=list.length;at++){
       // `at` counts the pages read (for the progress), `i` is the page itself.
       const i=list[at-1];
       check(signal);onProgress((at-1)/total*100,`قراءة الصفحة ${at} من ${total}`);
@@ -108,6 +108,8 @@ export async function readPDFPages(pdf:PDFDocumentProxy,canvasFactory:()=>HTMLCa
         if(signal.aborted)throw aborted();
         renderTask?.cancel();
         if(worker){await worker.terminate().catch(()=>{});worker=undefined;opts.drop?.();}
+        // A page that ran out of time (a busy computer) is read once more, with a fresh engine, before giving up on it.
+        if(!retried.has(i)&&e instanceof Error&&/وقتاً طويلاً/.test(e.message)){retried.add(i);list.splice(at,0,i);continue;}
         pages.push({page:i,text:'',method:'ocr',warning:`تعذرت قراءة هذه الصفحة؛ راجع الأصل. ${e instanceof Error?e.message:''}`});
       }finally{ocrProgress=()=>{};if(canvas)canvas.width=canvas.height=0;page.cleanup();renderTask=undefined;}
       onProgress(at/total*100,`اكتملت الصفحة ${at} من ${total}`);

@@ -1995,3 +1995,7 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .batch-table td.batch-state{white-space:normal}.batch-table td.batch-state .line-story{white-space:normal;overflow:visible}
 .collection-table td small.collection-pdf{display:block;font-size:11px;color:var(--muted-foreground);direction:ltr;text-align:end}
 .collection-table .line-story.has-problem{color:#a32e38}
+/* «تصفية إضافية» lines up with the fields beside it: their height, and the same gap under it (owner, 12 November 2026). */
+.work-desk-filters>.more-filters{height:38px;min-height:38px!important;margin-bottom:6px;align-self:flex-end}
+.collection-table td small.collection-pdf{display:flex;align-items:center;justify-content:flex-end;gap:3px}
+.collection-table td small.collection-pdf svg{flex:none;opacity:.7}

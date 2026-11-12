@@ -17,6 +17,8 @@ assert.equal(parseDocumentDate('٠٨/١٢/٢٠٢٤'),'2024-12-08');
 assert.equal(parseDocumentDate('2024/12/8'),'2024-12-08');
 assert.equal(parseDocumentDate('14 OCT 2025'),'2025-10-14');
 assert.equal(parseDocumentDate('31/02/2025'),'');
+// «أداء» misread on a real order (the number and year read right): the order number is still found.
+assert.equal(extractFields('باسم حضرة صاحب السمو أمير دولة الكويت\n\nأمر shal رقم 563705/ 2024\n\nنحن قاضي محكمة العاصمة الجزئية','x.pdf').orderNumber,'563705/2024');
 assert.equal(parseDocumentDate('14 OCT 5'),'');
 assert.equal(assessText('a1 , .. abc $$$ '.repeat(30)).usable,false);
 assert.equal(extractionSummary(extractFields('a1 , .. abc $$$ '.repeat(30))).status,'failed');

@@ -79,7 +79,7 @@ export function OrderReadingPanel({files,clients,onDone}:{files:CollectionRecord
       <header className="order-card-head"><b>{i.file.name}</b>
        {i.status==='reading'&&<span className="tag" role="status"><LoaderCircle className="spin" size={13}/> {i.message} ({Math.round(i.progress)}%)</span>}
        {i.status==='waiting'&&<span className="tag">بانتظار القراءة</span>}
-       {i.status==='failed'&&<span className="tag red" role="alert">تعذرت القراءة: {i.error}</span>}
+       {i.status==='failed'&&<><span className="tag red" role="alert">تعذرت القراءة: {i.error}</span><button type="button" className="btn" onClick={()=>orderReading.retry(i.id)}>إعادة القراءة</button></>}
        {i.status==='ready'&&(dup?<span className="tag">يكمّل الملف الموجود بهذا الرقم الآلي</span>:check.length?<span className="tag amber">{check.length} حقل للمراجعة</span>:<span className="tag green">جاهز</span>)}
        {i.status==='ready'&&<label className="checkbox-line"><input type="checkbox" checked={!i.skip} onChange={e=>patchOrder(i.id,{skip:!e.target.checked})}/> {dup?'إكمال الملف':'إنشاء ملف'}</label>}
       </header>

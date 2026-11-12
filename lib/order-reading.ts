@@ -65,11 +65,17 @@ async function run() {
         patchOrder(it.id, { status: 'reading', progress: 0, message: 'تجهيز القراءة…' });
         try {
           const name = it.file.name, wantNumbers = (page: number, text: string) => { const f = extractFields(text, name); return (NUMBERS[page] || []).some(k => empty(f, k)); };
-          let pages = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: p * .9, message }), ctrl.signal, PAGES, engine, { pages: FIRST, wantNumbers });
+          let pages = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: Math.min(90, p * .9), message }), ctrl.signal, PAGES, engine, { pages: FIRST, wantNumbers });
           let data = extractFields(pagesText(pages), name);
           if (EXPECTED.some(k => empty(data, k))) {
-            const more = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: 90 + p * .1, message }), ctrl.signal, PAGES, engine, { pages: SPARE });
+            const more = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: Math.min(99, 90 + p * .1), message }), ctrl.signal, PAGES, engine, { pages: SPARE });
             pages = [...pages, ...more].sort((a, b) => a.page - b.page); data = extractFields(pagesText(pages), name);
+          }
+          // Nothing read (every page timed out on a busy computer, or an unreadable scan) is a failure to read again, not
+          // an order to save: an empty reading used to be saved as an empty file (owner, 12 November 2026).
+          if (!data.company && !data.defendant && !String(data.amount || '').trim()) {
+            const why = pages.find(p => p.warning)?.warning || '';
+            throw new Error(/وقتاً طويلاً/.test(why) ? 'انتهت مهلة القراءة على هذا الجهاز. أعد قراءته.' : 'لم يُقرأ شيء من هذا الملف. أعد قراءته أو راجع جودة المسح.');
           }
           patchOrder(it.id, { status: 'ready', progress: 100, data });
         } catch (e) {
@@ -110,6 +116,12 @@ export const orderReading = {
     void run();
   },
   resume() { void run(); },
+  /** Reads a failed order again (or all failed orders). */
+  retry(id?: string) {
+    set({ items: state.items.map(i => i.status === 'failed' && (!id || i.id === id) ? { ...i, status: 'waiting' as const, progress: 0, message: 'بانتظار القراءة', error: undefined } : i) });
+    keep(state.items.filter(i => i.status === 'waiting').map(i => i.id));
+    void run();
+  },
   stop() { stopper?.abort(); },
   open(v: boolean) { set({ open: v }); },
   /** Drops the orders saved (or all of them), and stops reading when nothing is left. */

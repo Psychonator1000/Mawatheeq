@@ -129,6 +129,9 @@ export function extractFields(raw:string,filename=''):DocumentData {
     const year=line.match(/20\d{2}/)?.[0],num=line.split(' ').map(t=>t.length>=10&&t.startsWith('20')?t.slice(-6):t).find(t=>/^\d{5,7}$/.test(t)&&!/^20\d{2}\d?$/.test(t));
     if(year&&num)d.orderNumber=`${num}/${year}`;
   }
+  // «أداء» itself misread (seen on a real order stored sideways: «أمر shal رقم 563705/ 2024»): one short word between
+  // «أمر» and «رقم», then the number and a year.
+  if(!d.orderNumber){const m=order.match(/امر\s+\S{1,8}\s+رقم\s*[:\-]?\s*(\d{5,7})\s*[/\\]\s*(20\d{2})(?!\d)/);if(m)d.orderNumber=`${m[1]}/${m[2]}`;}
   if(!d.orderNumber){const c=receipt.match(/(?:^|\n)\s*(\d{2})(\d{6})\s*(?:المحكم|\n)/);if(c)d.orderNumber=`${c[2]}/20${c[1]}`;}
   const court=order.match(/محكمة\s*(العاصمة|الاحمدي|الجهراء|حولي|الفروانية|مبارك الكبير)\s*الجزئية/);
   d.court=court?`جزئي ${court[1]}`:get(/(جزئي\s*(?:العاصمة|الاحمدي|الجهراء|حولي|الفروانية|مبارك الكبير))/);
