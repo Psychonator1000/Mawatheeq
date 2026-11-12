@@ -1854,3 +1854,41 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 /* A short screen keeps the list in view: the tiles keep their number and bar, the line of parts under them goes
    (each part's number is still on the bar's label and in the list's filters). */
 @media (min-width:701px) and (max-height:760px){.pulse-legend{display:none}.pulse-tile{padding-block:5px 6px;gap:4px}.pulse-days{min-height:40px}.pulse-days span{display:none}}
+/* Collection files: each a line of its own with its state on the edge (red: a follow-up is due; amber: unassigned or
+   no amount; green: in hand or paid; grey: closed), what came in of what is owed as a bar, and its story. */
+.collection-table{border-collapse:separate;border-spacing:0 3px}
+.collection-table>tbody>tr>td{background:var(--card);border-top:1px solid var(--border)!important;border-bottom:1px solid var(--border)!important;padding-block:5px!important}
+.collection-table>tbody>tr>td:first-child{border-inline-start:3px solid #9a958f;border-start-start-radius:8px;border-end-start-radius:8px}
+.collection-table>tbody>tr>td:last-child{border-inline-end:1px solid var(--border);border-start-end-radius:8px;border-end-end-radius:8px}
+.collection-table>tbody>tr.edge-red>td:first-child{border-inline-start-color:#c0392b}
+.collection-table>tbody>tr.edge-amber>td:first-child{border-inline-start-color:#c98a1a}
+.collection-table>tbody>tr.edge-green>td:first-child{border-inline-start-color:#2f7d57}
+.collection-table td.amount{min-width:150px}.collection-table td.amount .line-meter{width:150px}.collection-table td.amount small{display:block;font-size:11px;color:var(--muted-foreground)}
+.collection-table td.collection-story{max-width:0;width:28%}
+.work-desk>.pulse-strip,.work-desk .pulse-strip{margin:6px 0 8px}
+.collection-table{table-layout:fixed;width:100%}
+.collection-table th.pick-col{width:34px}
+.collection-table :is(th,td):nth-last-child(7){width:96px}
+.collection-table :is(th,td):nth-last-child(6){width:190px}
+.collection-table :is(th,td):nth-last-child(5){width:150px}
+.collection-table :is(th,td):nth-last-child(4){width:170px}
+.collection-table :is(th,td):nth-last-child(3){width:84px}
+.collection-table :is(th,td):nth-last-child(1){width:96px}
+.collection-table td.collection-story{width:auto;max-width:none}
+.collection-table>tbody>tr>td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.collection-table>tbody>tr>td :is(b,small){display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.collection-table .tag-line{flex-wrap:nowrap;overflow:hidden}
+.collection-table td.amount .line-meter{width:100%}
+.collection-table td .btn{white-space:nowrap}
+/* Archive files: a line each, state on the edge (red: late, lost or missing papers; amber: out of the archive or being
+   handed over; green: in place; grey: closed), and its story in place of the last-count column. */
+.archive-table{border-collapse:separate;border-spacing:0 3px;table-layout:fixed;width:100%}
+.archive-table>tbody>tr>td{background:var(--card);border-top:1px solid var(--border)!important;border-bottom:1px solid var(--border)!important;padding-block:5px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.archive-table>tbody>tr>td :is(b,small){display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.archive-table>tbody>tr>td:first-child{border-inline-start:3px solid #9a958f;border-start-start-radius:8px;border-end-start-radius:8px}
+.archive-table>tbody>tr>td:last-child{border-inline-end:1px solid var(--border);border-start-end-radius:8px;border-end-end-radius:8px}
+.archive-table>tbody>tr.edge-red>td:first-child{border-inline-start-color:#c0392b}
+.archive-table>tbody>tr.edge-amber>td:first-child{border-inline-start-color:#c98a1a}
+.archive-table>tbody>tr.edge-green>td:first-child{border-inline-start-color:#2f7d57}
+.archive-table th:first-child{width:34px}.archive-table :is(th,td):nth-child(2){width:110px}.archive-table :is(th,td):nth-child(3){width:26%}.archive-table :is(th,td):nth-child(4){width:22%}.archive-table :is(th,td):nth-child(5){width:150px}
+.archive-table td.archive-story{width:auto}

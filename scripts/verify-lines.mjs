@@ -48,3 +48,19 @@ assert.equal(workLine(w({ status: 'done', completedAt: '2026-11-08T10:00:00Z', c
 const wp = workPulse([w({ dueDate: '2026-11-10' }), w({ dueDate: today, kind: 'hearing' }), w({ dueDate: '2026-12-30', priority: 'urgent' }), w({ status: 'done' })], today);
 assert.equal(wp.late, 1); assert.equal(wp.days[0].value, 1); assert.equal(wp.days[0].label, 'اليوم'); assert.equal(wp.days[1].label, 'جمعة'); assert.equal(wp.later, 1); assert.equal(wp.total, 3); assert.equal(wp.urgent, 1); assert.equal(wp.hearings, 1);
 console.log('Informative lines: case, client and task stories and summary counts are right.');
+
+// Collection files and paper files.
+const { collectionLine } = await import('../lib/collection-line.ts');
+const { archiveLine } = await import('../lib/archive-line.ts');
+const pos = { claim: 1000000, fee: 0, total: 1000000, paid: 250000, external: 0, expenses: 0, remaining: 750000, net: 250000 };
+let cl2 = collectionLine(pos, [{ category: 'calls', action: 'اتصال بالخصم', reviewDate: '2026-11-09', status: 'notDone', text: '', phone: '', contactParty: '', method: '' }], [{ type: 'payment', date: '2026-11-03', amount: '250', method: '', reference: '', notes: '' }], today, { assigned: true });
+assert.equal(cl2.story, 'إفادة مستحقة منذ 3 أيام: اتصال بالخصم · آخر دفعة 250.000 د.ك في 03/11'); assert.equal(cl2.edge, 'red'); assert.equal(cl2.pct, 25);
+cl2 = collectionLine({ ...pos, paid: 1000000, remaining: 0 }, [], [], today, { assigned: false });
+assert.equal(cl2.story, 'لا دفعات بعد · غير موزّع'); assert.ok(cl2.paidAll);
+const cust = v => ({ state: 'in', locationId: '', holder: '', holderId: '', dueDate: '', since: '', purpose: '', lastAudit: '', last: null, ...v });
+assert.equal(archiveLine(cust({ since: '2026-10-01', lastAudit: '2026-11-01' }), today).story, 'منذ 01/10 · آخر جرد 01/11');
+let al = archiveLine(cust({ state: 'staff', holder: 'أحمد', since: '2026-11-01', purpose: 'حضور جلسة', dueDate: '2026-11-10' }), today);
+assert.equal(al.story, 'مع أحمد منذ 01/11 · حضور جلسة · متأخر يومين'); assert.equal(al.edge, 'red');
+al = archiveLine(cust({ state: 'court', holder: 'إدارة التنفيذ', dueDate: '2026-11-20' }), today);
+assert.equal(al.story, 'مع إدارة التنفيذ · يعود 20/11'); assert.equal(al.edge, 'amber');
+console.log('Collection and archive lines are right too.');

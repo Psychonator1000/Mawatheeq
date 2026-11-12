@@ -2,6 +2,8 @@ import {Fragment,lazy,Suspense,useCallback,useEffect,useMemo,useRef,useState,typ
 import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf,suggestions} from '@/lib/choices';
 import {Plus,FileCheck2,Scale,Link2,Trash2,UserPlus,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
 import BatchPrint from './batch-print';
+import {Meter,PulseStrip,PulseTile} from '../pulse';
+import {collectionLine} from '@/lib/collection-line';
 import WordPreview,{paperName,type WordItem} from './word-preview';
 import CollectionImport from './collection-import';
 import OrderImport,{OrderReadingPanel} from './order-import';
@@ -103,6 +105,7 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
   {view==='payments'&&<div className="work-desk-body"><PaymentsList payments={allPayments} fileOf={fileOf} onOpen={open} canPrint={access.canExport}/></div>}
   {view==='print'&&<div className="work-desk-body"><BatchPrint canExport={access.canExport} canImport={access.canEdit&&access.caseScope==='all'} clients={clients} onImported={reload}/></div>}
   {view==='files'&&<>
+  <CollectionPulse active={active} pos={pos} statements={allStatements} today={today} assignee={assignee} onAssignee={v=>{setAssignee(v);setPage(1)}} linked={linked} onLinked={v=>{setLinked(v);setPage(1)}} onDue={()=>setView('due')}/>
   <div className="status-chips" role="group" aria-label="حالة الملف">{['',...FILE_STATUSES].map(s=>{const n=active.filter(r=>!s||r.payload.fileStatus===s).length;return (n||!s||fileStatus===s)&&<button type="button" key={s||'all'} className={'chip'+(fileStatus===s?' on':'')} onClick={()=>{setFileStatus(s);setPage(1)}}>{s||'كل الحالات'} <b>{n}</b></button>})}</div>
   <div className="work-desk-filters"><Field label="بحث ملفات التحصيل" value={search} onChange={v=>{setSearch(v);setPage(1)}} placeholder="الكود، الأطراف، الرقم المدني، العقد، الهاتف أو الترقيم"/><OfficeSelect label="عرض" value={status} onChange={v=>{setStatus(v);setPage(1)}} options={[['active','الملفات النشطة'],['archived','المؤرشفة'],['all','كل الملفات']]}/>
    <OfficeSelect label="الموظف المسؤول" value={assignee} onChange={v=>{setAssignee(v);setPage(1)}} options={[['','كل الموظفين'],['none','غير موزّع'],...assignees.map(a=>[a,a] as [string,string])]}/>
@@ -115,14 +118,15 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
   {access.canEdit&&picked.size>0&&<div className="pick-bar" role="status"><b>تم تحديد {picked.size} ملف</b><Field label="توزيع على موظف أو أكثر (افصل بـ ،)" value={assignTo} onChange={setAssignTo} suggestions={assignees} placeholder="سارة، أحمد"/><label className="field"><span>تغيير الحالة</span><Choice label="تغيير الحالة" empty="بدون تغيير" value={bulkStatus} onChange={setBulkStatus} options={FILE_STATUSES}/></label>{!!clients.length&&<OfficeSelect label="ربط بملف الموكل" value={bulkClient} onChange={setBulkClient} options={[['','بدون تغيير'],['none','إزالة الربط'],...clients.map(c=>[c.id,c.name] as [string,string])]}/>}
    {staffList.length>1&&<small className="muted">يُوزَّع {picked.size} ملف بالتناوب على {staffList.length} موظفين (حوالي {Math.ceil(picked.size/staffList.length)} لكل موظف).</small>}
    <button className="btn primary" title={!staffList.length&&!bulkStatus&&!bulkClient?'اختر موظفاً للتوزيع أو حالة جديدة أو ملف موكل أولاً':undefined} disabled={bulkBusy||(!staffList.length&&!bulkStatus&&!bulkClient)} onClick={()=>void distribute()}><UserCheck size={15}/> تطبيق على المحدد</button><button className="btn" onClick={()=>setPicked(new Set())}>إلغاء التحديد</button></div>}
-  <div className="work-desk-body"><StatusMessage loading={loading} error={error}/>{!loading&&!error&&<>{filtered.length?<table className="office-table collection-table"><thead><tr>{access.canEdit&&<th className="pick-col"><input type="checkbox" aria-label={'تحديد كل النتائج ('+filtered.filter(f=>!f.archived).length+')'} title="تحديد كل النتائج" checked={filtered.some(f=>!f.archived)&&filtered.filter(f=>!f.archived).every(f=>picked.has(f.id))} onChange={e=>setPicked(e.target.checked?new Set(filtered.filter(f=>!f.archived).map(f=>f.id)):new Set())}/></th>}<th>الملف</th><th>الأطراف</th><th>الحالة</th><th>الباقي</th><th>المسؤول</th><th/></tr></thead>
-   <tbody>{filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).map(r=>{const p=pos(r),open=(statementsOf.get(r.id)||[]).filter(s=>!s.archived&&s.payload.status!=='done').length,others=sameDebtor(r).length;return <tr className={'collection-row'+(picked.has(r.id)?' picked':'')} key={r.id}>
+  <div className="work-desk-body"><StatusMessage loading={loading} error={error}/>{!loading&&!error&&<>{filtered.length?<table className="office-table collection-table"><thead><tr>{access.canEdit&&<th className="pick-col"><input type="checkbox" aria-label={'تحديد كل النتائج ('+filtered.filter(f=>!f.archived).length+')'} title="تحديد كل النتائج" checked={filtered.some(f=>!f.archived)&&filtered.filter(f=>!f.archived).every(f=>picked.has(f.id))} onChange={e=>setPicked(e.target.checked?new Set(filtered.filter(f=>!f.archived).map(f=>f.id)):new Set())}/></th>}<th>الملف</th><th>الأطراف</th><th>الحالة</th><th>التحصيل</th><th>المسؤول</th><th>باختصار</th><th/></tr></thead>
+   <tbody>{filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).map(r=>{const p=pos(r),open=(statementsOf.get(r.id)||[]).filter(s=>!s.archived&&s.payload.status!=='done').length,others=sameDebtor(r).length,l=collectionLine(p,(statementsOf.get(r.id)||[]).filter(s=>!s.archived).map(s=>s.payload),(paymentsOf.get(r.id)||[]).map(x=>x.payload),today,{archived:r.archived,assigned:!!r.payload.assignedTo,status:r.payload.fileStatus});return <tr className={'collection-row edge-'+l.edge+(picked.has(r.id)?' picked':'')} key={r.id}>
     {access.canEdit&&<td className="pick-col">{!r.archived&&<input type="checkbox" aria-label={'تحديد الملف '+(r.payload.code||r.payload.defendant)} checked={picked.has(r.id)} onChange={e=>setPicked(old=>{const n=new Set(old);if(e.target.checked)n.add(r.id);else n.delete(r.id);return n})}/>}</td>}
     <td><b className="collection-code">{r.payload.code||cases.find(c=>c.id===r.caseId)?.code||'بلا كود'}</b><small>{r.payload.batchNumber?'باتش '+r.payload.batchNumber:''}{!r.caseId&&' · بلا قضية'}</small></td>
     <td><b>{partyLabel(r.payload.company,r.payload.plaintiffs)||'موكل غير مكتمل'}</b><small>ضد {partyLabel(r.payload.defendant,r.payload.defendants)||'طرف غير مكتمل'}</small></td>
     <td><div className="tag-line">{r.payload.fileStatus&&<span className={'tag '+statusTone(r.payload.fileStatus)}>{r.payload.fileStatus}</span>}{r.archived&&<span className="tag">مؤرشف</span>}{badCivil(r)&&<span className="tag red" title="الرقم المدني لا يطابق رقم التحقق أو تاريخ الميلاد">رقم مدني؟</span>}{check==='claimneeds'&&(()=>{const m=missingDocumentFields(r.payload,'claim');return <span className="tag amber" title={m.join('، ')}>ينقص: {m.slice(0,3).join('، ')}{m.length>3?` و${m.length-3} غيرها`:''}</span>})()}{open>0&&<span className="tag amber">{open} إفادة مفتوحة</span>}{others>0&&<span className="tag">{others+1} ملفات للخصم</span>}</div></td>
-    <td className="nowrap amount"><b>{kwd(Math.max(0,p.remaining))}</b><small>من {kwd(p.total)} د.ك</small></td>
+    <td className="nowrap amount">{p.total?<Meter pct={l.pct} tone={l.paidAll?'green':l.pct>0?'amber':'grey'} label={l.paidAll?'مسدد بالكامل':`باقٍ ${kwd(Math.max(0,p.remaining))}`} title={`حُصّل ${kwd(p.paid)} من ${kwd(p.total)} د.ك`}/>:<span className="muted">—</span>}<small>حُصّل {kwd(p.paid)} من {kwd(p.total)} د.ك</small></td>
     <td>{r.payload.assignedTo||<span className="muted">غير موزّع</span>}</td>
+    <td className="collection-story"><span className="line-story" title={l.story}>{l.story}</span></td>
     <td><button className="btn" onClick={()=>setEditing(r)}>فتح الملف</button></td></tr>})}</tbody></table>:<Empty text="أضف ملفاً مرتبطاً بقضية وابدأ بإدخال البيانات من مصدرها."/>}<PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></>}</div></>}
  </section></div>
  {access.canEdit&&<OrderReadingPanel files={files} clients={clients} onDone={reload}/>}
@@ -331,4 +335,20 @@ function ExtraParties({plaintiffs,defendants,clients,opponents,onChange}:{plaint
   {side('plaintiffs',plaintiffs,'مدعون آخرون','إضافة مدعٍ',clients.map(c=>c.name))}
   {side('defendants',defendants,'مدعى عليهم آخرون','إضافة مدعى عليه',opponents)}
  </section>;
+}
+
+/** The files' summary tiles: what came in of what is owed, the follow-ups by when, who holds the files, and how many are linked to a case. */
+function CollectionPulse({active,pos,statements,today,assignee,onAssignee,linked,onLinked,onDue}:{active:CollectionRecord[];pos:(r:CollectionRecord)=>ReturnType<typeof position>;statements:StatementRecord[];today:string;assignee:string;onAssignee:(v:string)=>void;linked:string;onLinked:(v:string)=>void;onDue:()=>void}){
+ const t=active.reduce((a,r)=>{const p=pos(r);return {total:a.total+p.total,paid:a.paid+p.paid}},{total:0,paid:0});
+ const ids=new Set(active.map(r=>r.id)),open=statements.filter(s=>!s.archived&&ids.has(s.subjectId)&&s.payload.status!=='done'&&s.payload.reviewDate);
+ const week=new Date(Date.parse(today+'T12:00:00Z')+7*86400000).toISOString().slice(0,10);
+ const people=new Map<string,number>();for(const r of active){const k=r.payload.assignedTo||'';people.set(k,(people.get(k)||0)+1)}
+ const top=[...people.entries()].filter(([k])=>k).sort((a,b)=>b[1]-a[1]).slice(0,3),rest=[...people.entries()].filter(([k])=>k).slice(3).reduce((n,[,v])=>n+v,0),none=people.get('')||0,tones=['brand','blue','amber'] as const;
+ const withCase=active.filter(r=>r.caseId).length;
+ return <PulseStrip label="ملخص التحصيل">
+  <PulseTile title="المحصّل" value={t.total?Math.round(t.paid/t.total*100)+'%':'—'} sub={`من ${kwd(t.total)} د.ك`} parts={[{label:'حُصّل',value:Math.round(t.paid/1000),tone:'green'},{label:'باقٍ',value:Math.max(0,Math.round((t.total-t.paid)/1000)),tone:'amber'}]}/>
+  <PulseTile title="المتابعات" value={open.filter(s=>s.payload.reviewDate<=today).length} sub="مستحقة الآن" onClick={onDue} parts={[{label:'متأخرة',value:open.filter(s=>s.payload.reviewDate<today).length,tone:'red'},{label:'اليوم',value:open.filter(s=>s.payload.reviewDate===today).length,tone:'amber'},{label:'هذا الأسبوع',value:open.filter(s=>s.payload.reviewDate>today&&s.payload.reviewDate<=week).length,tone:'brand'},{label:'لاحقاً',value:open.filter(s=>s.payload.reviewDate>week).length,tone:'grey'}]}/>
+  <PulseTile title="على من" sub="الملفات النشطة لكل موظف" parts={[...top.map(([k,n],i)=>({label:k,value:n,tone:tones[i],on:assignee===k,onClick:()=>onAssignee(assignee===k?'':k)})),...(rest?[{label:'آخرون',value:rest,tone:'grey' as const}]:[]),{label:'غير موزّع',value:none,tone:'red',on:assignee==='none',onClick:()=>onAssignee(assignee==='none'?'':'none')}]}/>
+  <PulseTile title="الارتباط بقضية" value={active.length} sub="ملف نشط" parts={[{label:'مرتبطة بقضية',value:withCase,tone:'green',on:linked==='yes',onClick:()=>onLinked(linked==='yes'?'':'yes')},{label:'بلا قضية بعد',value:active.length-withCase,tone:'amber',on:linked==='no',onClick:()=>onLinked(linked==='no'?'':'no')}]}/>
+ </PulseStrip>;
 }
