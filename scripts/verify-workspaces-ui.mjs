@@ -105,7 +105,7 @@ try{
  await page.locator('.position-tile').filter({hasText:'إجمالي المسدد'}).getByText('25.125').waitFor();await page.locator('.position-tile').filter({hasText:'الباقي'}).getByText('100.000').waitFor();await screen('collections-money-desktop');
  // Follow-up fields: changing the file status keeps the source review.
  await page.getByRole('tab',{name:/^بيانات الملف/}).click();await page.getByRole('combobox',{name:'حالة الملف'}).click();await page.getByRole('option',{name:'تحصيل ودي',exact:true}).click();await click('حفظ ملف التحصيل');
- await click('إغلاق الملف');await page.locator('.sec-agenda').getByText('لم يرد على الاتصال').waitFor();await page.getByRole('button',{name:'المتابعات المستحقة (1)'}).click();await page.locator('.work-desk-body').getByText('لم يرد على الاتصال').waitFor();await click('ملفات التحصيل');
+ await click('إغلاق الملف');await page.locator('.collection-table .line-story',{hasText:'إفادة مستحقة'}).first().waitFor();await page.getByRole('button',{name:'المتابعات المستحقة (1)'}).click();await page.locator('.work-desk-body').getByText('لم يرد على الاتصال').waitFor();await click('ملفات التحصيل');
  await screen('collections-desktop');assert.equal(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+2),true,'Collections desk fits the screen');
  await click('طباعة الحافظة والدعوى');await page.locator('.batch-table').getByText('جاهز',{exact:true}).waitFor();
  // A client's Excel list of payment orders (a title row, then the headings) makes files right here, chosen for printing.
@@ -429,7 +429,7 @@ try{
   assert.ok(ents.find(e=>e.name==='شركة تجريبية للاتصالات (Test)').merged_into,'The duplicate is merged into its twin');
   await page.getByRole('button',{name:'عرض القائمة'}).click();}
  for(const name of ['السكرتارية','التحصيل','المحاسبة','الموارد البشرية','الأرشيف']){
-  await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero, .sec-agenda, .work-desk').first().waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
+  await switchTo(name);await page.setViewportSize({width:390,height:844});await page.locator('.department-hero:visible, .sec-agenda:visible, .work-desk:visible').first().waitFor();await screen('mobile-'+({'السكرتارية':'secretary','التحصيل':'collections','المحاسبة':'accounting','الموارد البشرية':'hr','الأرشيف':'archive'}[name]));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,name+' mobile overflow');await page.setViewportSize({width:1440,height:1000});
  }
  // Department-only read-only account gets exactly its chooser cards and safe case summaries.
  await db.exec('reset role');const staffId=(await db.query("insert into mawatheeq_private.accounts(username,password_hash,must_change_password) values('dept_ui_reader',extensions.crypt('Synthetic-password-123',extensions.gen_salt('bf',4)),false) returning id")).rows[0].id;

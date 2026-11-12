@@ -15,7 +15,9 @@ export function emptyClient(): ClientEntity {
   return { id: crypto.randomUUID(), name: '', kind: 'organization', sector: 'other', contacts: [], aliases: [], notes: '', needsReview: false, revision: 0 };
 }
 export function emptyContact(): ClientContact { return { id: crypto.randomUUID(), name: '', role: '', phone: '', notes: '' }; }
-export function clientName(record: Pick<CaseRecord,'clientEntityName'|'clientGroup'|'client'>) { return record.clientEntityName || record.clientGroup || record.client; }
+/** A name as shown: no space just inside its brackets («( Stc)» → «(Stc)»), so a line never breaks inside them. */
+export const tidyName = (name: string) => String(name ?? '').replace(/([(\[])\s+/g, '$1').replace(/\s+([)\]])/g, '$1');
+export function clientName(record: Pick<CaseRecord,'clientEntityName'|'clientGroup'|'client'>) { return tidyName(record.clientEntityName || record.clientGroup || record.client); }
 // Lookups by id, built once per client list (lists are replaced, not mutated), so enriching every case stays linear.
 const clientIndex = new WeakMap<ClientEntity[], Map<string, ClientEntity>>();
 function clientById(clients: ClientEntity[], id?: string) {

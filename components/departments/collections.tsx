@@ -15,7 +15,7 @@ import type {Permissions} from '@/lib/permissions';
 import {blankDocument,amountInWords,joinNames,partyLabel,partyNames,type CollectionParty} from '@/lib/document-fields';
 import {COLLECTION_FIELDS,missingDocumentFields,missingFieldKeys} from '@/lib/collection-documents';
 import {ALL_FILE_STATUSES as FILE_STATUSES,CLOSED_STATUSES,STATEMENT_CATEGORIES,STATEMENT_STATUSES,PAYMENT_TYPES,dueStatements,fils,kwd,kwdPlain,position,civilIdValid,debtorKey,roundRobin} from '@/lib/collections';
-import {clientName} from '@/lib/clients';
+import {clientName,tidyName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
 import {emptyCase,formatDate,todayISO,type CaseRecord,caseCode} from '@/lib/domain';
 import Needs,{type NeedList} from '../needs';
@@ -84,8 +84,9 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  }
  const open=(id:string)=>{const f=fileOf(id);if(f){setView('files');setEditing(f)}};
  const dueSorted=[...due].sort((a,b)=>a.payload.reviewDate.localeCompare(b.payload.reviewDate));
- // One screen: the day's follow-ups and totals beside the files, the lists scrolling inside their panels.
- return <><div className="work-desk-grid">
+ // One screen: the day's follow-ups and totals beside the follow-ups and payments; the files take the whole width
+ // (owner, 12 November 2026: «make use of the entire space»), their tiles already giving the totals and follow-ups.
+ return <><div className={'work-desk-grid'+(view==='files'?' solo':'')}>
  <div className="work-desk-aside"><section className="panel sec-agenda" aria-label="اليوم في التحصيل">
   <div className="sec-agenda-head"><div><h2>اليوم في التحصيل</h2><small>{formatDate(today)} · {active.length} ملف نشط</small></div></div>
   <div className="desk-stats">
@@ -119,12 +120,12 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
    {staffList.length>1&&<small className="muted">يُوزَّع {picked.size} ملف بالتناوب على {staffList.length} موظفين (حوالي {Math.ceil(picked.size/staffList.length)} لكل موظف).</small>}
    <button className="btn primary" title={!staffList.length&&!bulkStatus&&!bulkClient?'اختر موظفاً للتوزيع أو حالة جديدة أو ملف موكل أولاً':undefined} disabled={bulkBusy||(!staffList.length&&!bulkStatus&&!bulkClient)} onClick={()=>void distribute()}><UserCheck size={15}/> تطبيق على المحدد</button><button className="btn" onClick={()=>setPicked(new Set())}>إلغاء التحديد</button></div>}
   <div className="work-desk-body"><StatusMessage loading={loading} error={error}/>{!loading&&!error&&<>{filtered.length?<table className="office-table collection-table"><thead><tr>{access.canEdit&&<th className="pick-col"><input type="checkbox" aria-label={'تحديد كل النتائج ('+filtered.filter(f=>!f.archived).length+')'} title="تحديد كل النتائج" checked={filtered.some(f=>!f.archived)&&filtered.filter(f=>!f.archived).every(f=>picked.has(f.id))} onChange={e=>setPicked(e.target.checked?new Set(filtered.filter(f=>!f.archived).map(f=>f.id)):new Set())}/></th>}<th>الملف</th><th>الأطراف</th><th>الحالة</th><th>التحصيل</th><th>المسؤول</th><th>باختصار</th><th/></tr></thead>
-   <tbody>{filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).map(r=>{const p=pos(r),open=(statementsOf.get(r.id)||[]).filter(s=>!s.archived&&s.payload.status!=='done').length,others=sameDebtor(r).length,l=collectionLine(p,(statementsOf.get(r.id)||[]).filter(s=>!s.archived).map(s=>s.payload),(paymentsOf.get(r.id)||[]).map(x=>x.payload),today,{archived:r.archived,assigned:!!r.payload.assignedTo,status:r.payload.fileStatus});return <tr className={'collection-row edge-'+l.edge+(picked.has(r.id)?' picked':'')} key={r.id}>
+   <tbody>{filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).map(r=>{const p=pos(r),others=sameDebtor(r).length,l=collectionLine(p,(statementsOf.get(r.id)||[]).filter(s=>!s.archived).map(s=>s.payload),(paymentsOf.get(r.id)||[]).map(x=>x.payload),today,{archived:r.archived,assigned:!!r.payload.assignedTo,status:r.payload.fileStatus});return <tr className={'collection-row edge-'+l.edge+(picked.has(r.id)?' picked':'')} key={r.id}>
     {access.canEdit&&<td className="pick-col">{!r.archived&&<input type="checkbox" aria-label={'تحديد الملف '+(r.payload.code||r.payload.defendant)} checked={picked.has(r.id)} onChange={e=>setPicked(old=>{const n=new Set(old);if(e.target.checked)n.add(r.id);else n.delete(r.id);return n})}/>}</td>}
     <td><b className="collection-code">{r.payload.code||cases.find(c=>c.id===r.caseId)?.code||'بلا كود'}</b><small>{r.payload.batchNumber?'باتش '+r.payload.batchNumber:''}{!r.caseId&&' · بلا قضية'}</small></td>
-    <td><b>{partyLabel(r.payload.company,r.payload.plaintiffs)||'موكل غير مكتمل'}</b><small>ضد {partyLabel(r.payload.defendant,r.payload.defendants)||'طرف غير مكتمل'}</small></td>
-    <td><div className="tag-line">{r.payload.fileStatus&&<span className={'tag '+statusTone(r.payload.fileStatus)}>{r.payload.fileStatus}</span>}{r.archived&&<span className="tag">مؤرشف</span>}{badCivil(r)&&<span className="tag red" title="الرقم المدني لا يطابق رقم التحقق أو تاريخ الميلاد">رقم مدني؟</span>}{check==='claimneeds'&&(()=>{const m=missingDocumentFields(r.payload,'claim');return <span className="tag amber" title={m.join('، ')}>ينقص: {m.slice(0,3).join('، ')}{m.length>3?` و${m.length-3} غيرها`:''}</span>})()}{open>0&&<span className="tag amber">{open} إفادة مفتوحة</span>}{others>0&&<span className="tag">{others+1} ملفات للخصم</span>}</div></td>
-    <td className="nowrap amount">{p.total?<Meter pct={l.pct} tone={l.paidAll?'green':l.pct>0?'amber':'grey'} label={l.paidAll?'مسدد بالكامل':`باقٍ ${kwd(Math.max(0,p.remaining))}`} title={`حُصّل ${kwd(p.paid)} من ${kwd(p.total)} د.ك`}/>:<span className="muted">—</span>}<small>حُصّل {kwd(p.paid)} من {kwd(p.total)} د.ك</small></td>
+    <td className="collection-parties" title={`${tidyName(partyLabel(r.payload.company,r.payload.plaintiffs))||'موكل غير مكتمل'} ضد ${tidyName(partyLabel(r.payload.defendant,r.payload.defendants))||'طرف غير مكتمل'}`}><b>{tidyName(partyLabel(r.payload.company,r.payload.plaintiffs))||'موكل غير مكتمل'}</b> <small>ضد {tidyName(partyLabel(r.payload.defendant,r.payload.defendants))||'طرف غير مكتمل'}</small></td>
+    <td><div className="tag-line">{r.payload.fileStatus&&<span className={'tag '+statusTone(r.payload.fileStatus)}>{r.payload.fileStatus}</span>}{r.archived&&<span className="tag">مؤرشف</span>}{badCivil(r)&&<span className="tag red" title="الرقم المدني لا يطابق رقم التحقق أو تاريخ الميلاد">رقم مدني؟</span>}{check==='claimneeds'&&(()=>{const m=missingDocumentFields(r.payload,'claim');return <span className="tag amber" title={m.join('، ')}>ينقص: {m.slice(0,3).join('، ')}{m.length>3?` و${m.length-3} غيرها`:''}</span>})()}{others>0&&<span className="tag">{others+1} ملفات للخصم</span>}</div></td>
+    <td className="nowrap amount">{p.total?<Meter pct={l.pct} tone={l.paidAll?'green':l.pct>0?'amber':'grey'} label={l.paidAll?'مسدد بالكامل':`باقٍ ${kwd(Math.max(0,p.remaining))}`} title={`حُصّل ${kwd(p.paid)} من ${kwd(p.total)} د.ك`}/>:<span className="muted">—</span>}</td>
     <td>{r.payload.assignedTo||<span className="muted">غير موزّع</span>}</td>
     <td className="collection-story"><span className="line-story" title={l.story}>{l.story}</span></td>
     <td><button className="btn" onClick={()=>setEditing(r)}>فتح الملف</button></td></tr>})}</tbody></table>:<Empty text="أضف ملفاً مرتبطاً بقضية وابدأ بإدخال البيانات من مصدرها."/>}<PageNavigation page={current} pages={pages} total={filtered.length} onChange={setPage}/></>}</div></>}
