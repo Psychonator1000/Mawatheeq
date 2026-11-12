@@ -86,7 +86,7 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  const dueSorted=[...due].sort((a,b)=>a.payload.reviewDate.localeCompare(b.payload.reviewDate));
  // One screen: the day's follow-ups and totals beside the follow-ups and payments; the files take the whole width
  // (owner, 12 November 2026: «make use of the entire space»), their tiles already giving the totals and follow-ups.
- return <><div className={'work-desk-grid'+(view==='files'?' solo':'')}>
+ return <><div className={'work-desk-grid'+(view==='files'||view==='print'?' solo':'')}>
  <div className="work-desk-aside"><section className="panel sec-agenda" aria-label="اليوم في التحصيل">
   <div className="sec-agenda-head"><div><h2>اليوم في التحصيل</h2><small>{formatDate(today)} · {active.length} ملف نشط</small></div></div>
   <div className="desk-stats">

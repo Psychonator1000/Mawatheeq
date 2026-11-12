@@ -12,6 +12,9 @@ import {normalizeSearch} from '@/lib/case-browse';
 import {Field,DateField,Empty} from '../shared';
 import {OfficeSelect} from '../office-shared';
 import {StatusMessage} from './shared';
+import {PulseStrip,PulseTile} from '../pulse';
+import {tidyName} from '@/lib/clients';
+import {addDays,todayISO} from '@/lib/domain';
 
 type Kind='claim'|'bundle';
 const KINDS:Record<Kind,{label:string}>={bundle:{label:'حافظة مستندات'},claim:{label:'صحيفة الدعوى'}};
@@ -71,10 +74,32 @@ export default function BatchPrint({canExport,canImport=false,clients=[],onImpor
    <div className="batch-bar"><button className="btn" onClick={toggleAll} disabled={!visible.some(ready)}>{allChosen?<CheckSquare size={16}/>:<Square size={16}/>} {allChosen?'إلغاء تحديد الكل':'تحديد كل الجاهز'}</button><span className="subtitle">محدد {chosen.length} من {visible.filter(ready).length} جاهز</span>
     {canExport?<button className="btn primary" disabled={!chosen.length||!!progress} onClick={()=>void run()}><Printer size={16}/> {progress?`جارٍ الإنشاء ${progress.done} من ${progress.total}…`:`معاينة وطباعة (${chosen.length})`}</button>:<span className="notice">يحتاج الإنشاء إلى صلاحية التصدير.</span>}</div>
    {progress&&<div className="batch-progress" aria-hidden><i style={{width:`${Math.round(progress.done/Math.max(1,progress.total)*100)}%`}}/></div>}
-   <div className="table-wrap"><table className="office-table batch-table"><thead><tr><th aria-label="تحديد"/><th>الكود</th><th>الشركة / المدعى عليه</th><th>الجلسة</th><th>الحالة</th></tr></thead>
-    <tbody>{visible.map(row=>{const ok=ready(row),p=row.record.payload;return <tr key={row.record.id} className={ok?'':'ledger-void'}><td><input type="checkbox" aria-label={'تحديد '+(p.code||p.defendant)} disabled={!ok} checked={ok&&selected.has(row.record.id)} onChange={()=>toggle(row.record.id)}/></td><td>{p.code||'—'}</td><td>{p.company}<small>{p.defendant}</small></td><td>{p.hearingDate?formatDate(p.hearingDate):'—'}<small>{[p.hearingCourt,p.hearingCircuit].filter(Boolean).join(' · ')}</small></td><td>{ok?<span className="tag green">جاهز</span>:<span className="tag amber">{reason(row)}</span>}</td></tr>})}</tbody></table></div>
+   <BatchPulse rows={rows}/>
+   <div className="table-wrap"><table className="office-table batch-table"><thead><tr><th aria-label="تحديد"/><th>الملف</th><th>الأطراف</th><th>المبلغ</th><th>الجلسة</th><th>الأوراق</th><th>الحالة</th></tr></thead>
+    <tbody>{visible.map(row=>{const ok=ready(row),p=row.record.payload,paper=(k:Kind)=><span className={'batch-paper '+(row.missing[k].length?'no':'ok')} title={row.missing[k].length?'ينقص: '+row.missing[k].join('، '):'جاهزة للطباعة'}>{row.missing[k].length?'✗':'✓'} {k==='bundle'?'حافظة':'صحيفة'}</span>;
+     return <tr key={row.record.id} className={'batch-row '+(ok?'edge-green':'edge-amber ledger-void')}><td><input type="checkbox" aria-label={'تحديد '+(p.code||p.defendant)} disabled={!ok} checked={ok&&selected.has(row.record.id)} onChange={()=>toggle(row.record.id)}/></td>
+      <td><b>{p.code||'—'}</b>{p.orderNumber&&<small>أمر {p.orderNumber}</small>}</td>
+      <td title={`${tidyName(p.company)} ضد ${tidyName(p.defendant)}`}><b>{tidyName(p.company)}</b> <small>ضد {tidyName(p.defendant)||'—'}</small></td>
+      <td className="mono">{p.amount?`${p.amount} د.ك`:<span className="muted">—</span>}</td>
+      <td>{p.hearingDate?formatDate(p.hearingDate):<span className="muted">بلا موعد</span>}{(p.hearingCourt||p.hearingCircuit)&&<small>{[p.hearingCourt,p.hearingCircuit].filter(Boolean).join(' · ')}</small>}</td>
+      <td className="batch-papers">{paper('bundle')}{paper('claim')}</td>
+      <td className="batch-state">{ok?<span className="tag green">جاهز</span>:<span className="line-story" title={reason(row)}>{reason(row)}</span>}</td></tr>})}</tbody></table></div>
    {!visible.length&&<Empty title="لا توجد ملفات" text={show==='ready'?'لا توجد ملفات جاهزة بهذه التصفية. الملف الجاهز حقوله المطلوبة مكتملة.':'لا توجد ملفات تحصيل نشطة.'}/>}
    {skipped.length>0&&<div className="notice" role="alert"><b>لم تُنشأ هذه المستندات:</b><ul>{skipped.map(s=><li key={s.name}>{s.name}: {s.reason}</li>)}</ul></div>}
   </>}
  {preview&&<WordPreview items={preview} onClose={()=>setPreview(null)}/>}</section>;
+}
+
+/** The print page's summary tiles: how many files each paper can print now, what is missing most, and when their hearings are. */
+function BatchPulse({rows}:{rows:Row[]}){
+ const today=todayISO(),week=addDays(today,7);
+ const both=rows.filter(r=>!r.missing.bundle.length&&!r.missing.claim.length).length,bundle=rows.filter(r=>!r.missing.bundle.length&&r.missing.claim.length).length,claim=rows.filter(r=>r.missing.bundle.length&&!r.missing.claim.length).length;
+ const counts=new Map<string,number>();for(const r of rows)for(const f of new Set([...r.missing.bundle,...r.missing.claim]))counts.set(f,(counts.get(f)||0)+1);
+ const top=[...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,4),tones=['red','amber','blue','grey'] as const;
+ const h=(r:Row)=>r.record.payload.hearingDate||'';
+ return <PulseStrip label="ملخص الطباعة">
+  <PulseTile title="الجاهزة للطباعة" value={both+bundle+claim} sub={'من '+rows.length+' ملف'} parts={[{label:'الحافظة والصحيفة',value:both,tone:'green'},{label:'الحافظة فقط',value:bundle,tone:'blue'},{label:'الصحيفة فقط',value:claim,tone:'brand'},{label:'غير جاهزة',value:rows.length-both-bundle-claim,tone:'amber'}]}/>
+  <PulseTile title="أكثر ما ينقص" sub="عدد الملفات" parts={top.length?top.map(([f,n],i)=>({label:f,value:n,tone:tones[i]})):[{label:'لا شيء ينقص',value:rows.length,tone:'green'}]}/>
+  <PulseTile title="الجلسات" parts={[{label:'هذا الأسبوع',value:rows.filter(r=>h(r)>=today&&h(r)<=week).length,tone:'red'},{label:'لاحقاً',value:rows.filter(r=>h(r)>week).length,tone:'brand'},{label:'فائتة',value:rows.filter(r=>h(r)&&h(r)<today).length,tone:'grey'},{label:'بلا موعد',value:rows.filter(r=>!h(r)).length,tone:'amber'}]}/>
+ </PulseStrip>;
 }

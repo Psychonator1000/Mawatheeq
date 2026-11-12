@@ -1980,3 +1980,19 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .collection-table>tbody>tr>td:last-child{overflow:visible;text-align:end}
 .collection-table td .btn{padding-inline:10px}
 .collection-table .tag-line{flex-wrap:wrap;max-height:26px;overflow:hidden;align-content:flex-start}
+/* «طباعة الحافظة والدعوى»: one line a file across the whole width: what each paper still needs, at a glance. */
+.batch-table{table-layout:fixed;width:100%;border-collapse:collapse}
+.batch-table>tbody>tr>td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;padding-block:6px!important;border-bottom:1px solid var(--border)}
+.batch-table>tbody>tr>td:first-child{border-inline-start:3px solid #9a958f}
+.batch-table>tbody>tr.edge-green>td:first-child{border-inline-start-color:#2f7d57}.batch-table>tbody>tr.edge-amber>td:first-child{border-inline-start-color:#c98a1a}
+.batch-table>tbody>tr>td :is(b,small){display:inline;white-space:nowrap}.batch-table>tbody>tr>td small{margin-inline-start:6px;color:var(--muted-foreground)}
+.batch-table :is(th,td):nth-child(2){width:12%}.batch-table :is(th,td):nth-child(3){width:28%}.batch-table :is(th,td):nth-child(4){width:9%}
+.batch-table :is(th,td):nth-child(5){width:14%}.batch-table :is(th,td):nth-child(6){width:150px}
+.batch-papers{display:table-cell}.batch-paper{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;padding:1px 7px;border-radius:999px;margin-inline-end:4px}
+.batch-paper.ok{background:#2f7d5718;color:#2f7d57}.batch-paper.no{background:#c98a1a1c;color:#94650f}
+.batch-table tr.ledger-void>td{opacity:1}.batch-table tr.ledger-void>td:not(.batch-state){color:var(--muted-foreground)}
+.batch-print>.pulse-strip{margin:4px 0 10px}
+.batch-table :is(th,td):nth-child(2){width:10%}.batch-table :is(th,td):nth-child(3){width:24%}.batch-table :is(th,td):nth-child(4){width:8%}
+.batch-table :is(th,td):nth-child(5){width:11%}.batch-table :is(th,td):nth-child(6){width:170px}
+.batch-table td.batch-papers{overflow:visible;text-overflow:clip}
+.batch-table td.batch-state{white-space:normal}.batch-table td.batch-state .line-story{white-space:normal;overflow:visible}
