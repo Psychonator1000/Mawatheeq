@@ -14,10 +14,12 @@ import {OfficeSelect} from './office-shared';
 import {EditorDialog} from './departments/shared';
 import {attendsCourt,type Member,type WorkItem} from '@/lib/office';
 import {SelectList} from './filter-select';
+import PageNavigation from './page-navigation';
 import {NUMBER_FIELDS,ROLL_FIELDS,ROLL_SORTS,modesFor,passesRollRules,rollOptions,rollValue,ruleActive,sortRoll,splitValues,type RollField,type RollItem,type RollMode,type RollRule,type RollSort} from '@/lib/roll-filter';
 import {normalizeSearch} from '@/lib/case-browse';
 import {PulseStrip,PulseTile,type PulsePart} from './pulse';
 import {ageOf,consultationLine,sinceAr,stayLine,type When} from '@/lib/desk-line';
+import {daysAr} from '@/lib/case-line';
 
 type Props={page:DeskPage;records:CaseRecord[];rules?:Rules;clients:ClientEntity[];work:WorkItem[];members:Member[];canEdit:boolean;canCreate:boolean;canExport:boolean;printedBy:string;
  onOpen:(c:CaseRecord)=>void;onSaved:(c:CaseRecord)=>void;onNew:(c:CaseRecord)=>void;
@@ -84,13 +86,24 @@ function Posting(p:Props){
 function PostingErrors(p:Props){
  const today=todayISO();
  const rows=useMemo(()=>p.records.flatMap(c=>postingErrors(c,today).map(e=>({c,e}))).sort((a,b)=>a.e.date.localeCompare(b.e.date)),[p.records,today]);
- const [kind,setKind]=useState('');
- const shown=rows.filter(r=>!kind||r.e.kind===kind),missed=shown.filter(r=>r.e.kind==='notPosted'||r.e.kind==='judgmentPending');
+ const [kind,setKind]=useState(''),[lawyer,setLawyer]=useState(''),[age,setAge]=useState('');
+ const ageOfErr=(d:string)=>{const n=daysBetween(d,today)??0;return n<=7?'week':n<=30?'month':'older'};
+ const shown=rows.filter(r=>(!kind||r.e.kind===kind)&&byLawyer(lawyer)(r.c)&&(!age||ageOfErr(r.e.date)===age)),missed=shown.filter(r=>r.e.kind==='notPosted'||r.e.kind==='judgmentPending');
+ const kinds=Object.entries(POSTING_ERRORS).filter(([k])=>rows.some(r=>r.e.kind===k));
  return <Panel title="أخطاء الترحيل" note="تُكتشف تلقائياً من سجل الجلسات. الجلسات الفائتة تُرحّل هنا مباشرة؛ الأخطاء الأخرى تُصحح من ملف القضية.">
-  <div className="status-chips">{[['','الكل'] as [string,string],...Object.entries(POSTING_ERRORS)].map(([k,l])=>{const n=rows.filter(r=>!k||r.e.kind===k).length;return (n||!k)&&<button type="button" key={k||'all'} className={'chip'+(kind===k?' on':'')} onClick={()=>setKind(k)}>{l} <b>{n}</b></button>})}</div>
-  {!shown.length?<Empty title="لا أخطاء في الترحيل" text="كل الجلسات مرحّلة بمواعيد صحيحة."/>:<>
+  {!!rows.length&&<PulseStrip label="ملخص أخطاء الترحيل">
+   <PulseTile title="نوع الخطأ" value={rows.length} sub="خطأ في الترحيل" parts={kinds.map(([k,l],i)=>({label:l,value:rows.filter(r=>r.e.kind===k).length,tone:(['red','amber','blue','brand','grey'] as const)[i%5],on:kind===k,onClick:()=>setKind(kind===k?'':k)}))}/>
+   <PulseTile title="منذ متى" parts={([['week','خلال أسبوع','amber'],['month','حتى شهر','red'],['older','أقدم','brand']] as const).map(([k,l,t])=>({label:l,value:rows.filter(r=>ageOfErr(r.e.date)===k).length,tone:t,on:age===k,onClick:()=>setAge(age===k?'':k)}))}/>
+   <PulseTile title="المحامي" parts={lawyerParts(rows.map(r=>r.c),lawyer,setLawyer)}/>
+  </PulseStrip>}
+  {!shown.length?<Empty title={rows.length?'لا أخطاء بهذا التصنيف':'لا أخطاء في الترحيل'} text={rows.length?'اضغط التصنيف المختار مرة أخرى لإلغائه.':'كل الجلسات مرحّلة بمواعيد صحيحة.'}/>:<>
    {!!missed.length&&<><h3 className="desk-sub">جلسات فائتة لم تُرحَّل ({missed.length})</h3><PostTable rows={missed.map(r=>({c:r.c,date:r.e.date}))} p={p}/></>}
-   {shown.length>missed.length&&<><h3 className="desk-sub">أخطاء تحتاج تصحيحاً في ملف القضية</h3><div className="table-wrap"><table className="office-table"><thead><tr><th>القضية</th><th>الخطأ</th><th>التاريخ</th><th/></tr></thead><tbody>{shown.filter(r=>!missed.includes(r)).map(r=><tr key={r.c.id+r.e.kind}><td><CaseCell c={r.c} onOpen={p.onOpen}/></td><td><span className="tag amber"><AlertTriangle size={13}/> {r.e.label}</span></td><td className="nowrap">{formatDate(r.e.date)}</td><td><button className="btn" onClick={()=>p.onOpen(r.c)}><ArrowUpLeft size={15}/> فتح القضية</button></td></tr>)}</tbody></table></div></>}
+   {shown.length>missed.length&&<><h3 className="desk-sub">أخطاء تحتاج تصحيحاً في ملف القضية</h3><ul className="story-list fix-lines" aria-label="أخطاء تحتاج تصحيحاً">
+    <li className="story-head" aria-hidden><span>القضية</span><span>الخطأ</span><span>التاريخ</span><span>باختصار</span><span/></li>
+    {shown.filter(r=>!missed.includes(r)).map(r=>{const n=daysBetween(r.e.date,today)??0;return <li key={r.c.id+r.e.kind}><div className={'story-row e-'+(n>30?'red':'amber')}><CaseLineCell c={r.c}/>
+     <span><span className="tag amber"><AlertTriangle size={13}/> {r.e.label}</span></span><span className="story-num">{formatDate(r.e.date)}</span>
+     <span className="line-story">{[n>0?'منذ '+daysAr(n,true):'اليوم',String(r.c.lawyer||'').trim()||'بلا محامٍ',String(r.c.court||'')].filter(Boolean).join(' · ')}</span>
+     <button className="btn" onClick={()=>p.onOpen(r.c)}><ArrowUpLeft size={15}/> فتح القضية</button></div></li>})}</ul></>}
   </>}
  </Panel>;
 }
@@ -297,7 +310,7 @@ function ContractRow({c,p,today}:{c:CaseRecord;p:Props;today:string}){
 }
 function NoContract(p:Props){
  const rows=withoutContract(p.records),groups=[...new Set(rows.map(c=>clientName(c)||'بلا موكل'))].sort(),today=todayISO();
- const [client,setClient]=useState(''),[lawyer,setLawyer]=useState(''),[age,setAge]=useState('');
+ const [client,setClient]=useState(''),[lawyer,setLawyer]=useState(''),[age,setAge]=useState(''),[page,setPage]=useState(1);
  const ofClient=rows.filter(c=>!client||(clientName(c)||'بلا موكل')===client),shown=ofClient.filter(c=>byLawyer(lawyer)(c)&&(!age||ageOf(String(c.date||''),today)===age));
  const top=groups.map(g=>[g,rows.filter(c=>(clientName(c)||'بلا موكل')===g).length] as const).sort((a,b)=>b[1]-a[1]),tones=['brand','blue','amber','green'] as const;
  return <Panel title="القضايا بدون عقود" note="قضايا مفتوحة لم يُسجل لها عقد أتعاب. سجّل رقم العقد هنا أو من ملف القضية، أو علّمها «لا يلزم عقد»."
@@ -308,7 +321,7 @@ function NoContract(p:Props){
    <PulseTile title="المحامي" parts={lawyerParts(ofClient,lawyer,setLawyer)}/>
   </PulseStrip>}
   <div className="desk-toolbar"><OfficeSelect label="الموكل" value={client} onChange={setClient} options={[['',`كل الموكلين (${groups.length})`],...groups.map(g=>[g,`${g} (${rows.filter(c=>(clientName(c)||'بلا موكل')===g).length})`] as [string,string])]}/><span className="tag amber">{shown.length} قضية بلا عقد</span></div>
-  {!shown.length?<Empty title={rows.length?'لا قضايا بهذا التصنيف':'كل القضايا لها عقود'} text={rows.length?'اضغط التصنيف المختار مرة أخرى لإلغائه.':'لا توجد قضايا مفتوحة بلا عقد أتعاب.'}/>:<><ul className={'story-list contract-lines'+(p.canEdit?' can-edit':'')} aria-label="القضايا بدون عقود"><li className="story-head" aria-hidden><span>القضية</span><span>المحامي</span><span>باختصار</span><span>{p.canEdit?'العقد':''}</span></li>{shown.slice(0,100).map(c=><ContractRow key={c.id} c={c} p={p} today={today}/>)}</ul>{shown.length>100&&<p className="subtitle">تُعرض أول 100 قضية؛ اختر موكلاً لتضييق القائمة.</p>}</>}
+  {!shown.length?<Empty title={rows.length?'لا قضايا بهذا التصنيف':'كل القضايا لها عقود'} text={rows.length?'اضغط التصنيف المختار مرة أخرى لإلغائه.':'لا توجد قضايا مفتوحة بلا عقد أتعاب.'}/>:<><ul className={'story-list contract-lines'+(p.canEdit?' can-edit':'')} aria-label="القضايا بدون عقود"><li className="story-head" aria-hidden><span>القضية</span><span>المحامي</span><span>باختصار</span><span>{p.canEdit?'العقد':''}</span></li>{shown.slice((Math.min(page,Math.ceil(shown.length/25))-1)*25,Math.min(page,Math.ceil(shown.length/25))*25).map(c=><ContractRow key={c.id} c={c} p={p} today={today}/>)}</ul><PageNavigation page={Math.min(page,Math.ceil(shown.length/25))} pages={Math.ceil(shown.length/25)} total={shown.length} onChange={setPage}/></>}
  </Panel>;
 }
 function FileDialog({c,p,onClose}:{c:CaseRecord;p:Props;onClose:()=>void}){

@@ -2051,5 +2051,9 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .people-lines{--cols:[who] minmax(180px,1.3fr) [title] minmax(140px,1fr) [leave] max-content [state] max-content [story] minmax(0,1.5fr) [open] max-content}
 .leave-lines{--cols:[who] minmax(150px,1.1fr) [type] max-content [period] max-content [state] max-content [story] minmax(0,1.5fr) [open] max-content}
 .story-row.e-blue{border-inline-start-color:#2f6db0}
+.fix-lines{--cols:[case] minmax(200px,1.4fr) [err] max-content [date] max-content [story] minmax(0,1.4fr) [open] max-content}
+:root .work-desk-head .archive-scan.head-scan{display:flex;align-items:center;gap:6px;margin-inline-start:auto;border:0;padding:0;background:none;box-shadow:none}.head-scan .field{margin:0}.head-scan input{width:230px;min-height:32px}
+.archive-waiting{display:flex;align-items:center;gap:10px;justify-content:space-between}
+@media(max-width:700px){.head-scan{width:100%;margin:0}.head-scan .field{flex:1}.head-scan input{width:100%}}
 .move-lines .story-row.void .move-type{text-decoration:line-through;color:var(--muted-foreground)}
 .story-row.void-row{opacity:.6;text-decoration:line-through}

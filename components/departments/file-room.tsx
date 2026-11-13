@@ -71,7 +71,7 @@ function HelperGuide({compact=false}:{compact?:boolean}){
   {!compact&&<p className="notice"><MonitorCog size={16} aria-hidden/> <span>لتعمل هذه الصفحة في أي متصفح (مثل Zen أو Firefox)، شغّل «برنامج الملفات» على جهاز المكتب الذي يرى مجلدات الشبكة. لا يحذف البرنامج أي ملف، ولا يرسل شيئاً خارج الجهاز.</span></p>}
   <ol className="file-helper-steps">
    <li>ثبّت <b>Node.js</b> مرة واحدة على الجهاز (الإصدار LTS، مجاني) من <bdi>nodejs.org</bdi>.</li>
-   <li>نزّل الملفين وضعهما معاً في مجلد على الجهاز، مثل <bdi dir="ltr">C:\Mawatheeq\Files</bdi>: {HELPER_FILES.map(f=><a key={f} className="btn" href={assetUrl('/'+f)} download><Download size={14}/> <bdi>{f.split('/').pop()}</bdi></a>)}</li>
+   <li>نزّل الملفين وضعهما معاً في مجلد على الجهاز، مثل <bdi dir="ltr">C:\Mawatheeq\Files</bdi>: {HELPER_FILES.map(f=><a key={f} className="btn" href={assetUrl("/"+f)} download aria-label={"تنزيل "+f.split("/").pop()}><Download size={14}/> <bdi>{f.split('/').pop()}</bdi></a>)}</li>
    <li>شغّل <bdi>start-mawatheeq-files.bat</bdi> بنقرة مزدوجة، واترك نافذته مفتوحة.</li>
    <li>عُد إلى هذه الصفحة واضغط «إعادة الفحص»، ثم اكتب في «المجلدات» مسار كل مجلد من مجلدات الشبكة.</li>
    <li>ليعمل تلقائياً عند تشغيل الجهاز: اضغط <bdi dir="ltr">Win + R</bdi> واكتب <bdi dir="ltr">shell:startup</bdi>، وضع في المجلد الذي يُفتح اختصاراً للملف <bdi>start-mawatheeq-files.bat</bdi>.</li>
