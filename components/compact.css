@@ -349,7 +349,9 @@ button.link{background:none;border:0;padding:0;color:var(--dept,inherit);text-de
 .list-desk>.list-desk-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin:0}.list-desk-panel>*{flex-shrink:0}
 .list-desk-panel>.table-wrap{flex:1 1 auto;min-height:160px;overflow:auto}.list-desk-panel>.table-wrap [data-slot=table-container]{overflow:visible}
 .list-desk-panel>.table-wrap thead th{position:sticky;top:0;z-index:2;background:var(--card)}
-@media(max-width:1000px){.list-desk{height:auto;min-height:0}.list-desk-panel>.table-wrap{overflow:visible}}
+/* The lines scroll inside the panel as the tables did (owner, 13 November 2026: «can't scroll»). */
+.list-desk-panel>.story-list{flex:1 1 auto;min-height:160px;overflow:auto;overscroll-behavior:contain}
+@media(max-width:1000px){.list-desk{height:auto;min-height:0}.list-desk-panel>.table-wrap,.list-desk-panel>.story-list{overflow:visible}}
 .list-desk>.desk-scroll{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:16px;overscroll-behavior:contain;padding-bottom:2px}.list-desk>.desk-scroll>*{flex-shrink:0;margin:0!important}
 .list-desk .desk-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin:0}.list-desk .desk-panel>*{flex-shrink:0}.list-desk .desk-panel>.panel-body{flex:1 1 auto;min-height:0;overflow:auto}
 .list-desk .desk-panel>.panel-body thead th,.list-desk-panel>.table-wrap thead th{position:sticky;top:0;z-index:2;background:var(--card)}
