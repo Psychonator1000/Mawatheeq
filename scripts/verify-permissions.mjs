@@ -254,6 +254,9 @@ assert.deepEqual((await office(admin.token,'account_history',{id:editor.user.id}
   assert.deepEqual((await local((await login('role_clerk')).token,'access')).view,p.view,'The account receives its view');
   for(const bad of [{view:{'tab:finance':'maybe'}},{view:{'drop table':'hide'}},{accountKind:'boss'},{clientEntityIds:['x']}])
    await assert.rejects(async()=>{const q=await now();await office(admin.token,'set_member_access',{id:m.id,revision:q.revision,permissions:{...q,...bad}})},/راجع/,'Rejected: '+JSON.stringify(bad));
+  // A new page shown to a restricted account keeps its «show» (lib/view-map.ts: new pages start hidden for them).
+  p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,view:{'page:roll':'hide','page:future':'show'}}});
+  p=await now();assert.deepEqual(p.view,{'page:roll':'hide','page:future':'show'},'«show» is stored for a new page');
   p=await now();await office(admin.token,'set_member_access',{id:m.id,revision:p.revision,permissions:{...p,view:{}}});
   p=await now();assert.deepEqual(p.view,{},'Everything shown again');assert.equal(p.accountKind,'counsel','The kind is kept');
   await assert.rejects(async()=>{const q=await now();await office(admin.token,'set_member_access',{id:m.id,revision:q.revision,permissions:{...q,jobRoles:'lawyer'}})},/دور الموظف/);

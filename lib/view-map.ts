@@ -6,8 +6,8 @@
 export type ViewMode = 'show' | 'read' | 'hide';
 export type ViewKind = 'workspace' | 'page' | 'tab' | 'card' | 'field';
 export type ViewItem = { id: string; label: string; kind: ViewKind; parent?: string; group?: string; section?: string };
-/** Saved per account: only the items that are not simply shown. */
-export type ViewSettings = Record<string, Exclude<ViewMode, 'show'>>;
+/** Saved per account: only the items that are not simply shown (and «show» for a new page shown to a restricted account). */
+export type ViewSettings = Record<string, ViewMode>;
 export type AccountKind = 'staff' | 'lawyer' | 'counsel' | 'client';
 export const ACCOUNT_KINDS: Record<AccountKind, { label: string; hint: string }> = {
   staff: { label: 'موظف', hint: 'موظف في المكتب: يرى الصفحات والقضايا التي تمنحها له.' },
@@ -83,6 +83,27 @@ export const VIEW_ITEMS: ViewItem[] = [
   field('stay', 'stayed', 'القضية موقوفة'), field('stay', 'stayReason', 'سبب الإيقاف'),
 ];
 const BY_ID = new Map(VIEW_ITEMS.map(i => [i.id, i]));
+
+// New pages start hidden for restricted accounts (owner, 13 November 2026: «yes do the new pages hidden too»): the
+// pages and workspaces as they stood on 13 November 2026. One added after that (any page or workspace not listed here)
+// starts hidden for an account whose view hides any page or workspace, until the owner shows it in its permissions,
+// which keeps {"page:x": "show"}. Accounts that see everything see it as before. Never add to this list.
+const PAGES_ON_13_NOV_2026 = new Set(['page:overview', 'page:cases', 'page:study', 'page:consultations', 'page:stayed', 'page:noContract', 'page:verification',
+  'page:conflicts', 'page:daily', 'page:work', 'page:posting', 'page:postingErrors', 'page:followup', 'page:deadlines', 'page:roll', 'page:judgments',
+  'page:statements', 'page:clients', 'page:summary', 'page:analytics', 'page:paper', 'ws:secretary', 'ws:collections', 'ws:accounting', 'ws:hr',
+  'ws:archive', 'ws:mail', 'ws:chat']);
+/** A page or workspace added after 13 November 2026. */
+export const isNewPage = (i: ViewItem | undefined) => !!i && (i.kind === 'page' || i.kind === 'workspace') && !PAGES_ON_13_NOV_2026.has(i.id);
+/** An account whose view hides at least one page or workspace. */
+export const restricted = (view: ViewSettings | undefined) => Object.entries(view || {}).some(([k, m]) => m === 'hide' && /^(page|ws):/.test(k));
+/** The account's view with the new pages it has not been shown hidden, when it is restricted. */
+export function withDefaults(view: ViewSettings | undefined, items: ViewItem[] = VIEW_ITEMS): ViewSettings {
+  const v = view || {};
+  if (!restricted(v)) return v;
+  let out = v;
+  for (const i of items) if (isNewPage(i) && !(i.id in v)) out = { ...out, [i.id]: 'hide' };
+  return out;
+}
 const RANK: Record<ViewMode, number> = { show: 0, read: 1, hide: 2 };
 
 /** An item's mode for an account: its own setting, or a stricter one from the items above it. */
@@ -102,13 +123,14 @@ export function cycleMode(mode: ViewMode, readable = true): ViewMode {
 }
 export function setMode(view: ViewSettings, id: string, mode: ViewMode): ViewSettings {
   const next = { ...view };
-  if (mode === 'show') delete next[id]; else next[id] = mode;
+  // A new page keeps its «show», so a restricted account goes on seeing it (see withDefaults).
+  if (mode === 'show' && !isNewPage(BY_ID.get(id))) delete next[id]; else next[id] = mode;
   return next;
 }
 /** Saved settings keep only known items with a valid mode. */
 export function cleanView(view: unknown): ViewSettings {
   const out: ViewSettings = {};
-  if (view && typeof view === 'object') for (const [k, v] of Object.entries(view as Record<string, unknown>)) if (BY_ID.has(k) && (v === 'read' || v === 'hide')) out[k] = v;
+  if (view && typeof view === 'object') for (const [k, v] of Object.entries(view as Record<string, unknown>)) if (BY_ID.has(k) && (v === 'read' || v === 'hide' || (v === 'show' && isNewPage(BY_ID.get(k))))) out[k] = v;
   return out;
 }
 
@@ -134,7 +156,8 @@ const CLIENT_NEVER = ['tab:files', 'tab:discussion', 'tab:verification', 'tab:fi
 /** Whether mail or chat is switched off for this account (the owner, with no view map, always has both). */
 export const toolOff = (access: { view?: ViewSettings; accountKind?: AccountKind } | null | undefined, tool: 'mail' | 'chat') => !!access && effectiveView(access)['ws:' + tool] === 'hide';
 export function effectiveView(access: { view?: ViewSettings; accountKind?: AccountKind }): ViewSettings {
-  return access.accountKind === 'client' ? { ...(access.view || {}), ...Object.fromEntries(CLIENT_NEVER.map(id => [id, 'hide'])) } : access.view || {};
+  const view = withDefaults(access.view);
+  return access.accountKind === 'client' ? { ...view, ...Object.fromEntries(CLIENT_NEVER.map(id => [id, 'hide'])) } : view;
 }
 
 // «مهام اليوم والتقرير» also opens for an account with cases, hearings or deadlines (canOpen in permissions.ts), so its
@@ -149,7 +172,7 @@ export const itemGranted = (v: Pages, i: ViewItem) => !i.section || v.sections.i
 /** The item's mode for an account: hidden when it is not granted. */
 export function itemMode(v: Pages, i: ViewItem): ViewMode {
   if (!itemGranted(v, i)) return 'hide';
-  const own = viewMode(v.view || {}, i.id);
+  const own = viewMode(withDefaults(v.view), i.id);
   return i.id === DAILY && own === 'show' && !v.sections.includes('daily') ? 'read' : own;
 }
 /** What one click on the item does: grants it when it is not granted, else turns it to the next mode. */
@@ -177,6 +200,6 @@ export function withItemMode<P extends Pages>(v: P, i: ViewItem, mode: ViewMode)
   }
   next = setMode(next, i.id, mode);
   // The section goes with its last page; the pages keep their hidden mark, since some open by another section too.
-  if (sec && siblings.every(x => viewMode(next, x.id) === 'hide')) return { ...v, view: next, sections: v.sections.filter(x => x !== sec) };
+  if (sec && siblings.every(x => viewMode(withDefaults(next), x.id) === 'hide')) return { ...v, view: next, sections: v.sections.filter(x => x !== sec) };
   return { ...v, view: next };
 }

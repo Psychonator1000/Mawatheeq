@@ -1,7 +1,8 @@
 // What each account sees: items inherit the strictest setting above them; one click cycles shown → read-only → hidden;
 // only known items with valid modes are kept; the templates hide money for «الأعمال الإدارية فقط» and for clients.
 import assert from 'node:assert/strict';
-import { VIEW_ITEMS, VIEW_TEMPLATES, viewMode, canSee, canChange, cycleMode, setMode, cleanView, itemMode, itemGranted, nextItemMode, withItemMode } from '../lib/view-map.ts';
+import { VIEW_ITEMS, VIEW_TEMPLATES, viewMode, canSee, canChange, cycleMode, setMode, cleanView, itemMode, itemGranted, nextItemMode, withItemMode, withDefaults, restricted, isNewPage, effectiveView } from '../lib/view-map.ts';
+import { DESK_PAGES } from '../lib/case-desk.ts';
 
 assert.equal(new Set(VIEW_ITEMS.map(i => i.id)).size, VIEW_ITEMS.length, 'Every item once');
 for (const i of VIEW_ITEMS) if (i.parent) assert.ok(VIEW_ITEMS.some(p => p.id === i.parent), i.id + ' has a known parent');
@@ -46,3 +47,20 @@ let c = { sections: ['cases'], view: {} };
 for (const i of VIEW_ITEMS.filter(x => x.section === 'cases')) c = withItemMode(c, i, 'hide');
 assert.deepEqual(c.sections, []); assert.equal(c.view['page:cases'], 'hide');
 console.log('view map OK');
+// New pages start hidden for restricted accounts (owner, 13 November 2026): a page added later is hidden for an account
+// that hides any page or workspace until it is shown to it, and shown as before to everyone else.
+for (const [id] of DESK_PAGES) assert.ok(VIEW_ITEMS.some(i => i.id === 'page:' + id), `page:${id} can be hidden per account`);
+assert.equal(VIEW_ITEMS.filter(isNewPage).length, 0, 'Every page of today stays as it is for every account');
+const future = { id: 'page:future', label: 'صفحة لاحقة', kind: 'page', section: 'cases' }, tab = { id: 'tab:future', label: 'تبويب', kind: 'tab' };
+const nwrLike = { 'page:roll': 'hide', 'page:summary': 'hide', 'field:court': 'hide' };
+assert.ok(restricted(nwrLike)); assert.ok(!restricted({ 'field:court': 'hide', 'tab:finance': 'read' }), 'Hiding fields or tabs is not a restricted menu');
+assert.equal(withDefaults(nwrLike, [...VIEW_ITEMS, future, tab])['page:future'], 'hide', 'A new page starts hidden for a restricted account');
+assert.equal(withDefaults(nwrLike, [...VIEW_ITEMS, future, tab])['tab:future'], undefined, 'Only pages and workspaces');
+assert.equal(withDefaults({}, [future])['page:future'], undefined, 'Shown as before to an account that sees everything');
+assert.equal(withDefaults({ ...nwrLike, 'page:future': 'show' }, [future])['page:future'], 'show', 'Once shown to it, it stays shown');
+assert.deepEqual(withDefaults(nwrLike), nwrLike, 'Nothing changes for today\'s pages');
+assert.deepEqual(effectiveView({ view: nwrLike }), nwrLike);
+assert.deepEqual(cleanView({ 'page:roll': 'show', 'page:cases': 'hide' }), { 'page:cases': 'hide' }, '«show» is kept only for new pages');
+assert.deepEqual(setMode({ 'page:roll': 'hide' }, 'page:roll', 'show'), {}, 'Showing a page of today leaves no mark');
+console.log('New pages start hidden for restricted accounts.');
+
