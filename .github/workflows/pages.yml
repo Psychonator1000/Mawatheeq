@@ -42,6 +42,7 @@ jobs:
       - run: pnpm run test:comments
       - run: pnpm run test:attendance
       - run: pnpm run test:tools
+      - run: pnpm run test:files
       - name: Install isolated browser test dependency
         run: npm install --prefix "$RUNNER_TEMP/office-browser" --no-save --package-lock=false --ignore-scripts playwright@1.62.1
       - name: Test office workflows in Chrome

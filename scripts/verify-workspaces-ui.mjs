@@ -3,6 +3,9 @@
 import {supportFilterSelects} from './filter-select-helper.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {createFilesServer} from '../public/helper/mawatheeq-files.mjs';
 import {createRequire} from 'node:module';
 import {PGlite} from '@electric-sql/pglite';
 import {pgcrypto} from '@electric-sql/pglite/contrib/pgcrypto';
@@ -451,8 +454,9 @@ try{
  await otherTab.evaluate(token=>localStorage.setItem('mawatheeq.local-session.v1',token),login.token);
  await staff.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();assert.equal(await staff.locator('.workspace-option').count(),8);
  await staff.getByRole('button',{name:/^حساب /}).click();await staff.getByRole('button',{name:'تغيير كلمة المرور',exact:true}).click();assert.equal(await staff.getByLabel('كلمة المرور الحالية',{exact:true}).inputValue(),'','Cross-tab session replacement clears old password inputs');
- // «الملفات»: the share's folders (here made in the browser's own storage), a scan filed by day, another into its case's
- // folder as «name code», and the cases folder telling which folders match the register and which names lack the code.
+ // «الملفات»: the share's folders (here made in the browser's own storage). Every scan is copied by day by itself, one is
+ // copied into its case's folder as «name code», and nothing ever leaves the inbox; the cases folder tells which
+ // folders match the register and which names lack the code.
  {const makeRoots=async()=>{const root=await navigator.storage.getDirectory(),roots={};window.__mawatheeqFileRoots=roots;
    for(const k of ['inbox','daily','cases','orders'])roots[k]=await root.getDirectoryHandle(k,{create:true});return roots};
   await page.addInitScript(`(${makeRoots})()`);
@@ -461,23 +465,50 @@ try{
    await put(roots.inbox,'scan-0001.pdf','one');await put(roots.inbox,'scan-0002.pdf','two');
    const c=await roots.cases.getDirectoryHandle('TEST-1',{create:true});await put(c,'صحيفة TEST-1.pdf','x');await put(c,'مستند بلا كود.pdf','y');
    await roots.cases.getDirectoryHandle('ZZZ-404',{create:true});const o=await roots.orders.getDirectoryHandle('شركة اختبار',{create:true});await put(o,'order-1.pdf','o')},`(${makeRoots})`);
-  await switchTo('الملفات');const inbox=page.getByRole('list',{name:'ملفات الوارد'});await inbox.getByText('scan-0001.pdf').waitFor();await screen('file-room-inbox');
-  await inbox.getByRole('checkbox',{name:'تحديد scan-0001.pdf'}).check();await page.getByRole('button',{name:/ترتيب المحدد في المسح اليومي/}).click();
-  await page.getByText('رُتب ملف واحد في المسح اليومي.').waitFor();
-  await page.getByRole('list',{name:'ملفات الوارد'}).getByText('scan-0002.pdf').click();
+  await switchTo('الملفات');const inbox=page.getByRole('list',{name:'ملفات الوارد'});await inbox.getByText('scan-0001.pdf').waitFor();
+  await page.getByText('رُتب ملفان تلقائياً في المسح اليومي.').first().waitFor();await inbox.getByText('في المسح اليومي').first().waitFor();await screen('file-room-inbox');
+  await inbox.getByText('scan-0002.pdf').click();
   await page.getByLabel('اسم المستند',{exact:true}).fill('حكم أول درجة');await page.getByLabel('كود القضية',{exact:true}).selectOption('TEST-2');
-  await page.getByText('سيُحفظ باسم:').waitFor();await page.getByRole('button',{name:'حفظ في ملف القضية'}).click();await page.getByText('حُفظ في ملف القضية TEST-2.').waitFor();
+  await page.getByText('ستُحفظ نسخة باسم:').waitFor();await page.getByRole('button',{name:'حفظ في ملف القضية'}).click();await page.getByText('حُفظ في ملف القضية TEST-2.').waitFor();
+  // Filed scans leave the list of what waits, not the inbox.
+  await inbox.getByText('scan-0002.pdf').waitFor({state:'detached'});await page.getByRole('button',{name:/^في ملف قضية/}).click();await inbox.getByText('scan-0002.pdf').waitFor();await inbox.getByText('في القضية TEST-2').waitFor();
   const placed=await page.evaluate(async()=>{const root=await navigator.storage.getDirectory(),names=async d=>{const o=[];for await(const [n] of d.entries())o.push(n);return o.sort()};
    const day=new Date(),parts=[String(day.getFullYear()),String(day.getMonth()+1).padStart(2,'0'),String(day.getDate()).padStart(2,'0')];
    let d=await root.getDirectoryHandle('daily');for(const p of parts)d=await d.getDirectoryHandle(p);
-   return {inbox:await names(await root.getDirectoryHandle('inbox')),daily:await names(d),caseFiles:await names(await (await root.getDirectoryHandle('cases')).getDirectoryHandle('TEST-2'))}});
-  assert.deepEqual(placed,{inbox:[],daily:['scan-0001.pdf','scan-0002.pdf'],caseFiles:['حكم أول درجة TEST-2.pdf']},'Filed by day, and into the case as «name code» with a copy kept by day');
+   const inbox=await root.getDirectoryHandle('inbox'),note=JSON.parse(await (await (await inbox.getFileHandle('.mawatheeq-placed.json')).getFile()).text());
+   return {inbox:await names(inbox),daily:await names(d),caseFiles:await names(await (await root.getDirectoryHandle('cases')).getDirectoryHandle('TEST-2')),note:Object.fromEntries(Object.entries(note).map(([k,v])=>[k,v.to.map(t=>t.where).sort()]))}});
+  assert.deepEqual(placed,{inbox:['.mawatheeq-placed.json','scan-0001.pdf','scan-0002.pdf'],daily:['scan-0001.pdf','scan-0002.pdf'],caseFiles:['حكم أول درجة TEST-2.pdf'],note:{'scan-0001.pdf':['daily'],'scan-0002.pdf':['cases','daily']}},'Copies by day and into the case as «name code»; the originals stay, and the note says where each went');
   await page.getByRole('button',{name:'ملفات القضايا'}).click();const folders=page.getByRole('list',{name:'مجلدات القضايا'});
   await folders.locator('.story-row',{hasText:'ZZZ-404'}).getByText('لا قضية بهذا الكود في السجل').waitFor();
   await folders.locator('.story-row',{hasText:'TEST-1'}).getByText(/اسم واحد لا ينتهي بالكود/).waitFor();
   await folders.locator('.story-row',{hasText:'TEST-2'}).getByText('ملف واحد').waitFor();await screen('file-room-cases');
   await page.getByRole('button',{name:'أوامر الأداء'}).click();await page.getByRole('list',{name:'شركات أوامر الأداء'}).getByText('شركة اختبار').waitFor();
   await page.getByRole('button',{name:'المسح اليومي'}).click();await page.getByRole('list',{name:/^ملفات /}).getByText('scan-0002.pdf').waitFor();await screen('file-room-daily');}
+ // The same room from a browser that cannot be given folders (Zen, Firefox): through «برنامج الملفات» on this computer,
+ // its folders typed in once; the scans are copied by day and into a case, and nothing leaves the inbox.
+ {const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'mawatheeq-room-')),dirs={};for(const k of ['inbox','daily','cases','orders']){dirs[k]=path.join(tmp,k);fs.mkdirSync(dirs[k])}
+  fs.writeFileSync(path.join(dirs.inbox,'scan-0101.pdf'),'%PDF-1.4 helper one');fs.writeFileSync(path.join(dirs.inbox,'scan-0102.pdf'),'%PDF-1.4 helper two');
+  const helper=createFilesServer({configPath:path.join(tmp,'mawatheeq-files.json'),port:0}),port=await helper.listen();
+  try{
+   const zen=await context.newPage();await configurePage(zen);supportFilterSelects(zen.locator('body'));
+   await zen.addInitScript(`delete window.showDirectoryPicker;delete Window.prototype.showDirectoryPicker;window.__mawatheeqFilesHelper='http://127.0.0.1:${port}';`);
+   await zen.goto(base);await zen.getByRole('heading',{name:'اختر مساحة عملك',exact:true}).waitFor();await zen.getByRole('button',{name:'فتح الملفات',exact:true}).click();
+   await zen.getByText(/برنامج الملفات .* يعمل على هذا الجهاز/).waitFor();
+   for(const k of ['inbox','daily','cases','orders'])await zen.getByLabel('مسار '+{inbox:'الوارد من الماسح',daily:'المسح اليومي',cases:'ملفات القضايا',orders:'أوامر الأداء'}[k],{exact:true}).fill(dirs[k]);
+   await zen.getByRole('button',{name:'حفظ المجلدات'}).click();await zen.getByText('حُفظت المجلدات في برنامج الملفات.').first().waitFor();await zen.screenshot({path:artifacts+'/file-room-helper-setup.png',fullPage:true});
+   await zen.getByRole('button',{name:'الوارد',exact:true}).click();await zen.getByText('رُتب ملفان تلقائياً في المسح اليومي.').first().waitFor();
+   const inbox=zen.getByRole('list',{name:'ملفات الوارد'});await inbox.getByText('scan-0102.pdf').click();await zen.locator('iframe.file-preview').waitFor();
+   await zen.getByLabel('اسم المستند',{exact:true}).fill('صحيفة الدعوى');await zen.getByLabel('كود القضية',{exact:true}).selectOption('TEST-3');
+   await zen.getByRole('button',{name:'حفظ في ملف القضية'}).click();await zen.getByText('حُفظ في ملف القضية TEST-3.').first().waitFor();await zen.screenshot({path:artifacts+'/file-room-helper.png',fullPage:true});
+   const day=new Date(fs.statSync(path.join(dirs.inbox,'scan-0101.pdf')).mtimeMs),parts=[String(day.getFullYear()),String(day.getMonth()+1).padStart(2,'0'),String(day.getDate()).padStart(2,'0')];
+   assert.deepEqual(fs.readdirSync(dirs.inbox).sort(),['.mawatheeq-placed.json','scan-0101.pdf','scan-0102.pdf'],'Nothing leaves the inbox');
+   assert.deepEqual(fs.readdirSync(path.join(dirs.daily,...parts)).sort(),['scan-0101.pdf','scan-0102.pdf']);
+   assert.deepEqual(fs.readdirSync(path.join(dirs.cases,'TEST-3')),['صحيفة الدعوى TEST-3.pdf']);
+   assert.equal(fs.readFileSync(path.join(dirs.cases,'TEST-3','صحيفة الدعوى TEST-3.pdf'),'utf8'),'%PDF-1.4 helper two');
+   await zen.reload();await zen.getByRole('button',{name:'فتح الملفات',exact:true}).click({timeout:4000}).catch(()=>{});await zen.getByRole('list',{name:'ملفات الوارد'}).getByText('scan-0101.pdf').waitFor();
+   assert.equal(fs.readdirSync(path.join(dirs.daily,...parts)).length,2,'Opening again copies nothing twice');
+   await zen.close();
+  }finally{helper.server.close();fs.rmSync(tmp,{recursive:true,force:true})}}
  assert.deepEqual(errors,[]);console.log('Passed workspace UI: chooser, session refresh/new login/cross-tab replacement, shared secretary task, reviewed claim/bundle Word downloads, double-entry books (balanced posting, numbering, trial balance, ledger drill-down, profit and loss, balance sheet, new account), invoicing (customer added from the invoice, service line with discount, confirmed, partly paid, receipts, terms and services), bank (statement file imported, line matched to the invoice it names, charge to an account), reports (summary, partner ledger, aged, cash flow, comparison, Excel), advanced (taxes switched on and invoiced, asset depreciated, tax report, year-end checklist), precise ledger/void, employee/leave forms, archive custody/receipt/label/scan/stocktake, import with automatic and manual case links from both sides, civil ID/debtor/phone checks, select-all round-robin distribution with client links, client profile collection files, department-only readonly access, responsive layouts and no runtime errors.');
 }catch(e){await screen('failure');console.error(await page.locator('body').innerText());throw e}
 finally{

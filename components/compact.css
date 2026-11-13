@@ -2005,7 +2005,13 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .file-room-allow{display:flex;align-items:center;gap:10px}.file-room-allow .btn{margin-inline-start:auto}
 .file-room-need{display:flex;flex-direction:column;align-items:center;gap:10px}
 .file-roots{--cols:[name] minmax(160px,.8fr) [story] minmax(0,2fr) [act] max-content}
-.file-lines{--cols:[pick] 24px [name] minmax(0,1fr) [when] max-content [size] max-content}
+.file-lines{--cols:[name] minmax(0,1.2fr) [when] max-content [size] max-content [story] minmax(0,1fr)}
+.file-lines.day-files{--cols:[name] minmax(0,1fr) [when] max-content [size] max-content}
+.file-roots:has(.file-root-path){--cols:[name] minmax(150px,.7fr) [path] minmax(0,1.6fr) [story] minmax(110px,.6fr)}
+.file-root-path input{width:100%;min-height:32px;border:1px solid var(--border);border-radius:10px;padding:4px 10px;background:var(--card);color:inherit;font:inherit;font-size:13px}
+.file-helper-guide{display:flex;flex-direction:column;gap:10px}.file-helper-guide .notice{display:flex;gap:8px;align-items:flex-start}
+.file-helper-steps{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:8px;line-height:1.7}.file-helper-steps .btn{margin-inline-start:6px;min-height:28px;padding:2px 10px}
+.file-helper-more{margin-top:10px}.file-helper-more summary{cursor:pointer;color:var(--muted-foreground);font-size:13px;margin-bottom:8px}
 .file-lines .story-row.on{background:color-mix(in srgb,var(--dept,#2f5d7c) 9%,var(--card));border-color:var(--dept,#2f5d7c)}
 .case-folders{--cols:[code] minmax(110px,.6fr) [case] minmax(180px,1.4fr) [count] minmax(90px,.6fr) [latest] max-content [story] minmax(0,1.4fr)}
 .order-folders{--cols:[name] minmax(160px,1.2fr) [count] minmax(110px,1fr) [latest] max-content [story] minmax(0,1.4fr)}
