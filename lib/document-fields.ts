@@ -146,7 +146,8 @@ export function extractFields(raw:string,filename=''):DocumentData {
   const court=order.match(/محكمة\s*(العاصمة|الاحمدي|الجهراء|حولي|الفروانية|مبارك الكبير)\s*الجزئية/);
   d.court=court?`جزئي ${court[1]}`:get(/(جزئي\s*(?:العاصمة|الاحمدي|الجهراء|حولي|الفروانية|مبارك الكبير))/);
   const nationality=tidy(order.match(/الجنسي[ةه]\s*[:\-]?\s*([^\n:]{2,30}?)(?=\s*الرقم|\n)/)?.[1]||'');
-  d.nationality=/^(?:الكويت|كويتي|Kuwait)$/i.test(nationality)?'كويتي الجنسية':nationality;
+  // Latin from a scan («yma») is no nationality: left empty, so it is checked by hand (owner, 14 November 2026).
+  d.nationality=/^(?:الكويت|كويتي|Kuwait)$/i.test(nationality)?'كويتي الجنسية':/[A-Za-z]/.test(nationality)?'':nationality;
   const opponentPart=after(order,/(?:^|\n)\s*ضد\s*:/,700);
   d.address=tidy(opponentPart.match(/(?:موطنه|العنوان|عنوانه|ويعلن في)\s*[:\-]\s*([^\n]{5,180})/)?.[1]||'');
   if(!d.address)d.address=tidy((demand||text).match(/(?:العنوان|عنوانه|ويعلن في|المقيم)\s*[:/\-]\s*([^\n]{5,180})/)?.[1]||'');
@@ -202,6 +203,21 @@ export function assessText(raw:string){
 }
 
 /** Further plaintiffs or defendants on one collection file; the first of each stays in the usual fields. */
+
+// The nationality as the statement of claim words it after the debtor's name («…، ويحمل بطاقة مدنية»): «مصري الجنسية»,
+// not «مصر» (owner, 14 November 2026: the claims of non-Kuwaiti debtors read «مصر، ويحمل بطاقة مدنية»). Junk from a
+// scan («yma») gives nothing, so the claim keeps its dotted blank to fill by hand.
+const NATIONALITY_WORDS:Record<string,string>={'الكويت':'كويتي','كويت':'كويتي','مصر':'مصري','الفلبين':'فلبيني','السعوديه':'سعودي','المملكه العربيه السعوديه':'سعودي','سوريا':'سوري','سوريه':'سوري','الهند':'هندي','ايران':'إيراني','الاردن':'أردني','العراق':'عراقي','السودان':'سوداني','عمان':'عماني','سلطنه عمان':'عماني','لبنان':'لبناني','فلسطين':'فلسطيني','اليمن':'يمني','البحرين':'بحريني','قطر':'قطري','الامارات':'إماراتي','الامارات العربيه المتحده':'إماراتي','باكستان':'باكستاني','بنجلاديش':'بنغلاديشي','بنغلاديش':'بنغلاديشي','سريلانكا':'سريلانكي','سيريلانكا':'سريلانكي','نيبال':'نيبالي','تونس':'تونسي','المغرب':'مغربي','الجزائر':'جزائري','ليبيا':'ليبي','اثيوبيا':'إثيوبي','تركيا':'تركي','افغانستان':'أفغاني','اندونيسيا':'إندونيسي','الصين':'صيني','كندا':'كندي','بريطانيا':'بريطاني','المملكه المتحده':'بريطاني','الولايات المتحده':'أمريكي','الولايات المتحده الامريكيه':'أمريكي','امريكا':'أمريكي'};
+export function nationalityPhrase(raw:string):string{
+  const v=String(raw||'').replace(/\s+/g,' ').trim();
+  if(!v||/[A-Za-z]/.test(v))return '';
+  if(/الجنسي[ةه]|المقيمين|بدون|غير محدد/.test(v))return /^المقيمين/.test(v)?'من '+v:v;
+  const key=v.replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+  const word=NATIONALITY_WORDS[key];
+  if(word)return word+' الجنسية';
+  // Already an adjective («مصري», «هندي»): it only needs «الجنسية».
+  return /ي$/.test(v)?v+' الجنسية':v;
+}
 export type CollectionParty = { id: string; name: string; civilId?: string; job?: string; nationality?: string; address?: string; phone?: string; clientEntityId?: string };
 /** Every name on one side, the first party first, blanks dropped. */
 export const partyNames = (first: string, more: CollectionParty[] = []) => [first, ...more.map(x => x.name)].map(n => (n || '').trim()).filter(Boolean);
