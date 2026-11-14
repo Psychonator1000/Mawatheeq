@@ -30,16 +30,50 @@ export function fieldsToCheck(d: DocumentData): TextField[] {
 
 // The office files telecom clients under their English names; the orders name them in Arabic.
 const TELECOM: [RegExp, RegExp][] = [[/الاتصالات\s*الكويتي/, /\bstc\b|الاتصالات\s*الكويتي/i], [/الوطني[ةه]\s*للاتصالات|اوريدو|أوريدو/, /ooredoo|الوطني[ةه]\s*للاتصالات/i], [/الاتصالات\s*المتنقل[ةه]|زين/, /\bzain\b|الاتصالات\s*المتنقل/i]];
-/** The client file an order's creditor belongs to: the same name, or the telecom company the Arabic name refers to. */
-export function guessClient(company: string, clients: { id: string; name: string }[]): string {
+type ClientFile = { archived?: boolean; payload: { clientEntityId?: string; company?: string } };
+/** How many of the files each client holds. */
+export function filesPerClient(files: ClientFile[]): Map<string, number> {
+  const n = new Map<string, number>();
+  for (const f of files) if (!f.archived && f.payload.clientEntityId) n.set(f.payload.clientEntityId, (n.get(f.payload.clientEntityId) || 0) + 1);
+  return n;
+}
+/**
+ * The client file an order's creditor belongs to: the same name, or the telecom company the Arabic name refers to. When
+ * two client files fit («شركة الاتصالات الكويتية» and «… STC»), the one holding more files wins, so the orders of one
+ * client never split between two (owner, 14 November 2026).
+ */
+export function guessClient(company: string, clients: { id: string; name: string }[], held: Map<string, number> = new Map()): string {
   const n = normalizeSearch(company);
   if (!n) return '';
   const same = clients.find(c => normalizeSearch(c.name) === n);
   if (same) return same.id;
   // «الإتصالات» and «الاتصالات» are the same word; a name may also carry the English one («( Stc)»).
   const plain = company.replace(/[أإآ]/g, 'ا');
-  for (const [arabic, client] of TELECOM) if (arabic.test(plain) || client.test(company)) { const hit = clients.filter(c => client.test(c.name)); if (hit.length === 1) return hit[0].id; }
+  for (const [arabic, client] of TELECOM) if (arabic.test(plain) || client.test(company)) {
+    const hit = clients.filter(c => client.test(c.name.replace(/[أإآ]/g, 'ا'))).sort((a, b) => (held.get(b.id) || 0) - (held.get(a.id) || 0));
+    if (hit.length === 1 || (hit.length > 1 && (held.get(hit[0].id) || 0) > (held.get(hit[1].id) || 0))) return hit[0].id;
+  }
   return '';
+}
+/**
+ * The client of an order whose creditor the scan could not read: the client the other orders of the same reading were
+ * read for, else the client nearly all files (four in five) belong to; nobody when that is not clear.
+ */
+export function fallbackClient(batch: string[], held: Map<string, number>): string {
+  const top = (counts: Map<string, number>) => [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  const read = new Map<string, number>();
+  for (const id of batch) if (id) read.set(id, (read.get(id) || 0) + 1);
+  const fromBatch = top(read);
+  if (fromBatch) return fromBatch[0];
+  const all = [...held.values()].reduce((t, v) => t + v, 0), most = top(held);
+  return most && most[1] >= all * 0.8 ? most[0] : '';
+}
+/** The client's name as the office writes it on its files (most of that client's files), else as its client file has it. */
+export function clientNameOnFiles(clientId: string, files: ClientFile[], clients: { id: string; name: string }[]): string {
+  if (!clientId) return '';
+  const names = new Map<string, number>();
+  for (const f of files) if (!f.archived && f.payload.clientEntityId === clientId && f.payload.company?.trim()) names.set(f.payload.company.trim(), (names.get(f.payload.company.trim()) || 0) + 1);
+  return [...names.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || clients.find(c => c.id === clientId)?.name || '';
 }
 
 /** The documents of a payment-order bundle, listed for the claim's bundle of evidence. */

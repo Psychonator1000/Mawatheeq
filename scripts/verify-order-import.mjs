@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
-import { fieldsToCheck, fillEmpty, guessClient, orderPayload, pagesText } from '../lib/order-import.ts';
+import { clientNameOnFiles, fallbackClient, fieldsToCheck, filesPerClient, fillEmpty, guessClient, orderPayload, pagesText } from '../lib/order-import.ts';
 import { blankDocument } from '../lib/document-fields.ts';
 import { isOrderList, mapOrderList } from '../lib/collections.ts';
 const good = { ...blankDocument(), orderAuto: '251234567', orderNumber: '612345/2025', company: 'شركة الاختبار', defendant: 'خالد سالم عبدالله', civilId: '290010100123',
@@ -16,6 +16,22 @@ assert.equal(guessClient('شركة الاتصالات المتنقلة', clients
 assert.equal(guessClient('الشركة الوطنية للاتصالات المتنقلة', clients), 'oo');
 assert.equal(guessClient('شركة الاختبار', clients), 'x', 'The same name');
 assert.equal(guessClient('شركة أخرى', clients), '', 'No guess for an unknown creditor');
+// One client, never two (owner, 14 November 2026): two client files fit the creditor → the one holding the files; an
+// unreadable creditor → the client of the rest of the reading, else the client nearly all files belong to; the creditor
+// written as that client's files write it.
+{const two = [{ id: 'main', name: 'شركة الاتصالات الكويتية' }, { id: 'old', name: 'شركة الاتصالات الكويتية STC' }, { id: 'zain', name: 'Zain' }];
+ const files = [...Array(9)].map(() => ({ payload: { clientEntityId: 'main', company: 'شركة الإتصالات الكويتية ( Stc)' } })).concat([{ payload: { clientEntityId: 'main', company: 'شركة الاتصالات الكويتية' } }, { payload: { clientEntityId: 'old', company: 'شركة الاتصالات الكويتية' } }, { archived: true, payload: { clientEntityId: 'old', company: 'x' } }]);
+ const held = filesPerClient(files);
+ assert.deepEqual([...held.entries()].sort(), [['main', 10], ['old', 1]], 'Archived files are not counted');
+ assert.equal(guessClient('شركة الإتصالات الكويتية', two, held), 'main', 'Two client files fit: the one holding the files');
+ assert.equal(guessClient('شركة الاتصالات الكويتية', two), 'main', 'The same name still wins outright');
+ assert.equal(guessClient('شركة الكويتية للاتصالات STC', two, new Map()), '', 'Two fit and neither holds more: no guess');
+ assert.equal(fallbackClient(['', 'zain', 'zain', 'main'], held), 'zain', 'The client most of the reading was read for');
+ assert.equal(fallbackClient(['', ''], held), 'main', 'Nothing read: the client nearly all files belong to');
+ assert.equal(fallbackClient([], new Map([['a', 5], ['b', 4]])), '', 'No clear client: nobody');
+ assert.equal(clientNameOnFiles('main', files, two), 'شركة الإتصالات الكويتية ( Stc)', 'Written as most of its files write it');
+ assert.equal(clientNameOnFiles('zain', files, two), 'Zain', 'No files yet: as its client file has it');
+ assert.equal(clientNameOnFiles('', files, two), '');}
 const p = orderPayload(good, { clientEntityId: 'x', source: 'أمر أداء (PDF): a.pdf' });
 assert.equal(p.amountWords, 'خمسمائة واثنا عشر ديناراً كويتياً ومائتان وخمسون فلساً', 'The amount in words');
 assert.equal(p.evidence.length, 6, 'The bundle lists the order\'s six documents');

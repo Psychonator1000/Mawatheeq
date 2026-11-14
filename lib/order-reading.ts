@@ -20,8 +20,8 @@ type State = { items: OrderItem[]; running: boolean; open: boolean };
 // field missing (an order whose pages come in another order). Each page's numbers pass (an extra reading of dates and
 // codes, a third of the time) runs only when the page's own numbers are still missing after the main reading.
 const PAGES = 4, FIRST = [1, 2, 4], SPARE = [3];
-const NUMBERS: Record<number, (keyof DocumentData)[]> = { 1: ['civilId', 'orderNumber', 'amount'], 2: ['receiptDate', 'receiptNumber', 'receiptFee'], 4: ['statementDate'] };
-const EXPECTED: (keyof DocumentData)[] = ['company', 'defendant', 'civilId', 'amount', 'orderNumber', 'receiptDate', 'receiptNumber', 'receiptFee', 'statementDate'];
+const NUMBERS: Record<number, (keyof DocumentData)[]> = { 1: ['civilId', 'orderNumber', 'amount'], 2: ['receiptDate', 'receiptNumber', 'receiptFee'], 4: ['statementDate', 'phone'] };
+const EXPECTED: (keyof DocumentData)[] = ['company', 'defendant', 'civilId', 'amount', 'orderNumber', 'receiptDate', 'receiptNumber', 'receiptFee', 'statementDate', 'phone'];
 const empty = (d: DocumentData, k: keyof DocumentData) => !String(d[k] ?? '').trim();
 let state: State = { items: [], running: false, open: false };
 let stopper: AbortController | null = null;
