@@ -29,18 +29,36 @@ for (const [alias, gov] of [['محافظة العاصمة', 'العاصمة'], [
 
 /** The governorate a part of an address names, if any. */
 export const governorateOf = (part: string) => GOV.get(placeKey(part)) || '';
-/** The governorate an area lies in, if the area is known. */
-export const areaGovernorate = (part: string) => AREA.get(placeKey(part)) || '';
+/** The governorate an area lies in, if the area is known; «صباح الأحمد السكنية» is «صباح الأحمد». */
+export function areaGovernorate(part: string): string {
+  const k = placeKey(part);
+  if (AREA.has(k)) return AREA.get(k)!;
+  let best = '';
+  for (const a of AREA.keys()) if (a.length >= 4 && k.startsWith(a) && a.length > best.length) best = a;
+  return best ? AREA.get(best)! : '';
+}
+/** How many letters apart two names are (insertions, deletions, changes). */
+function distance(a: string, b: string) {
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0]; row[0] = i;
+    for (let j = 1; j <= b.length; j++) { const cur = row[j]; row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
+  }
+  return row[b.length];
+}
 
 /**
  * An address with its governorate: kept as written when the scan read it; when its first part is junk (Latin letters,
- * nothing Arabic) or there is no governorate at all, the governorate of the area that follows is put in its place.
+ * nothing Arabic), a misreading of the governorate one or two letters off («الاحصدي» for «الأحمدي»), or there is no
+ * governorate at all, the governorate of the area that follows is put in its place.
  */
 export function withGovernorate(address: string): string {
   const parts = address.split(/\s+-\s+/);
-  if (parts.length < 2 || parts.some(p => governorateOf(p))) return address;
-  const junk = /[A-Za-z]/.test(parts[0]) && !/[ء-ي]{3,}/.test(parts[0]);
-  const at = junk ? 1 : 0, gov = areaGovernorate(parts[at] || '');
-  if (!gov) return address;
-  return [gov, ...parts.slice(at)].join(' - ');
+  if (parts.length < 2 || governorateOf(parts[0])) return address;
+  const junk = /[A-Za-z]/.test(parts[0]) && !/[\u0621-\u064A]{3,}/.test(parts[0]);
+  const fromNext = areaGovernorate(parts[1]);
+  if (junk) return fromNext ? [fromNext, ...parts.slice(1)].join(' - ') : address;
+  if (fromNext && distance(placeKey(parts[0]), placeKey(fromNext)) <= 2) return [fromNext, ...parts.slice(1)].join(' - ');
+  const own = areaGovernorate(parts[0]);
+  return own && !parts.some(p => governorateOf(p)) ? [own, ...parts].join(' - ') : address;
 }
