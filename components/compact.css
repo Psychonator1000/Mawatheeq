@@ -1994,6 +1994,7 @@ button.pulse-head{cursor:pointer;border-radius:6px}button.pulse-head:focus-visib
 .batch-table :is(th,td):nth-child(2){width:10%}.batch-table :is(th,td):nth-child(3){width:24%}.batch-table :is(th,td):nth-child(4){width:8%}
 .batch-table :is(th,td):nth-child(5){width:11%}.batch-table :is(th,td):nth-child(6){width:170px}
 .batch-table td.batch-papers{overflow:visible;text-overflow:clip}
+.batch-table td.batch-state .batch-other{display:block;margin-top:3px;color:#9a5b00;font-size:11.5px}
 .batch-table td.batch-state{white-space:normal}.batch-table td.batch-state .line-story{white-space:normal;overflow:visible}
 .collection-table td small.collection-pdf{display:block;font-size:11px;color:var(--muted-foreground);direction:ltr;text-align:end}
 .collection-table .line-story.has-problem{color:#a32e38}

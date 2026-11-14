@@ -13,7 +13,7 @@ import {departmentRequest} from '@/lib/local-auth';
 import {type CaseSummary,type CollectionData,type CollectionRecord,newDepartmentRecord} from '@/lib/departments';
 import type {Permissions} from '@/lib/permissions';
 import {blankDocument,amountInWords,joinNames,partyLabel,partyNames,type CollectionParty} from '@/lib/document-fields';
-import {COLLECTION_FIELDS,missingDocumentFields,missingFieldKeys} from '@/lib/collection-documents';
+import {COLLECTION_FIELDS,COLLECTION_LABELS,missingDocumentFields,missingFieldKeys} from '@/lib/collection-documents';
 import {ALL_FILE_STATUSES as FILE_STATUSES,CLOSED_STATUSES,STATEMENT_CATEGORIES,STATEMENT_STATUSES,PAYMENT_TYPES,dueStatements,fils,kwd,kwdPlain,position,civilIdValid,debtorKey,roundRobin} from '@/lib/collections';
 import {clientName,tidyName} from '@/lib/clients';
 import {normalizeSearch} from '@/lib/case-browse';
@@ -59,7 +59,12 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  const badCivil=(r:CollectionRecord)=>!!r.payload.civilId&&!civilIdValid(r.payload.civilId);
  // What a file still lacks or has wrong (owner, 12 November 2026: «a section for errors and incomplete ones»), and the
  // PDF it was read from, so a bad reading is traced to its order at a glance.
- const problems=(r:CollectionRecord)=>{const p=r.payload;return [!partyLabel(p.company,p.plaintiffs)&&'الموكل',!partyLabel(p.defendant,p.defendants)&&'الخصم',!fils(p.amount)&&'المبلغ',!p.civilId&&'الرقم المدني',badCivil(r)&&'رقم مدني غير صحيح'].filter(Boolean) as string[]};
+ // What a file still lacks: the essentials, everything its statement of claim needs, and the receipt number and the
+ // statement's date (owner, 14 November 2026: a file only looks fine when it is complete enough to print).
+ const problems=(r:CollectionRecord)=>{const p=r.payload;const out=[!partyLabel(p.company,p.plaintiffs)&&'الموكل',!partyLabel(p.defendant,p.defendants)&&'الخصم',!fils(p.amount)&&'المبلغ',!p.civilId&&'الرقم المدني',badCivil(r)&&'رقم مدني غير صحيح'].filter(Boolean) as string[];
+  const claim=[...missingFieldKeys(p).entries()].filter(([k,kinds])=>kinds.includes('claim')&&!['company','defendant','amount'].includes(k)).map(([k])=>k==='amountWords'?'المبلغ كتابة':COLLECTION_LABELS[k]||k);
+  for(const m of [...claim,!String(p.receiptNumber||'').trim()&&'رقم الإيصال',!String(p.statementDate||'').trim()&&'تاريخ كشف الحساب'])if(m&&!out.includes(m))out.push(m);
+  return out};
  const pdfOf=(r:CollectionRecord)=>{const m=/^أمر أداء \(PDF\):\s*(.+)$/.exec(String(r.payload.sourceReference||'').trim());return m?m[1]:''};
  const pos=(r:CollectionRecord)=>position(r.payload,(paymentsOf.get(r.id)||[]).map(p=>p.payload));
  const filtered=files.filter(r=>(status==='all'||status==='archived'?status==='all'||r.archived:!r.archived)

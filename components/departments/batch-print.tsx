@@ -89,7 +89,15 @@ export default function BatchPrint({canExport,canImport=false,clients=[],onImpor
       <td className="mono">{p.amount?`${p.amount} د.ك`:<span className="muted">—</span>}</td>
       <td>{p.hearingDate?formatDate(p.hearingDate):<span className="muted">بلا موعد</span>}{(p.hearingCourt||p.hearingCircuit)&&<small>{[p.hearingCourt,p.hearingCircuit].filter(Boolean).join(' · ')}</small>}</td>
       <td className="batch-papers">{paper('bundle')}{paper('claim')}</td>
-      <td className="batch-state">{ok?<span className="tag green">جاهز</span>:<span className="line-story" title={reason(row)}>{reason(row)}</span>}</td></tr>})}</tbody></table></div>
+      <td className="batch-state">{(()=>{
+       // «جاهز» only when both papers can be printed (owner, 14 November 2026: «جاهز» beside a claim marked ✗ read as a
+       // finished file); ready for the chosen paper only says which, and what the other one still lacks.
+       const lacks=(k:Kind)=>row.missing[k].length?`${KINDS[k].label}: ينقص ${row.missing[k].join('، ')}`:'';
+       if(!row.missing.bundle.length&&!row.missing.claim.length)return <span className="tag green">جاهز</span>;
+       if(!ok)return <span className="line-story" title={reason(row)}>{reason(row)}</span>;
+       const other=(['bundle','claim'] as Kind[]).filter(k=>!wanted.includes(k)).map(lacks).filter(Boolean).join(' · ');
+       return <><span className="tag green">{wanted.length===1&&wanted[0]==='bundle'?'جاهز للحافظة':'جاهز للصحيفة'}</span>{other&&<span className="line-story batch-other" title={other}>{other}</span>}</>;
+      })()}</td></tr>})}</tbody></table></div>
    {!visible.length&&<Empty title="لا توجد ملفات" text={show==='ready'?'لا توجد ملفات جاهزة بهذه التصفية. الملف الجاهز حقوله المطلوبة مكتملة.':'لا توجد ملفات تحصيل نشطة.'}/>}
    {skipped.length>0&&<div className="notice" role="alert"><b>لم تُنشأ هذه المستندات:</b><ul>{skipped.map(s=><li key={s.name}>{s.name}: {s.reason}</li>)}</ul></div>}
   </>}
