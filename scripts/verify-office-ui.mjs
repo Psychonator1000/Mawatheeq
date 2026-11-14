@@ -149,8 +149,10 @@ try{
  assert.equal(await staffSheet.getByLabel('الخصم',{exact:true}).isDisabled(),false);assert.equal(await staffSheet.getByLabel('الموكل / الجهة',{exact:true}).isDisabled(),true);await staffSheet.getByLabel('ملاحظات',{exact:true}).fill('Allowed restricted staff edit');await staffGo('حفظ التغييرات');await staff.getByText('تم حفظ السجل وتحديث القوائم',{exact:true}).waitFor();
  // Owner renames the staff account and sets a permanent password; the staff member signs in with the new name directly.
  const staffRow=()=>page.getByRole('row').filter({has:page.getByRole('cell',{name:/^ui_staff/})});
- await staffRow().getByRole('button',{name:'تغيير الاسم',exact:true}).click();await page.getByLabel('اسم المستخدم الجديد',{exact:true}).fill('ui_clerk');await go('حفظ الاسم');await page.getByRole('cell',{name:'ui_clerk',exact:true}).waitFor();
- await page.getByRole('row').filter({has:page.getByRole('cell',{name:'ui_clerk',exact:true})}).getByRole('button',{name:'كلمة المرور',exact:true}).click();await page.getByRole('button',{name:'توليد',exact:true}).click();assert.match(await page.getByLabel('كلمة المرور',{exact:true}).inputValue(),/^[A-Z][a-z]{3}-\d{4}-[A-Z][a-z]{3}-[A-Z][a-z]{3}$/);await page.getByLabel('كلمة المرور',{exact:true}).fill('Permanent-synthetic-123');await go('حفظ الحساب');await page.locator('.issued-password code').getByText('Permanent-synthetic-123',{exact:true}).waitFor();await go('تم');await page.getByRole('dialog').waitFor({state:'hidden'});
+ // The Arabic name shown to colleagues is changed in the same dialog (owner, 14 November 2026).
+ await staffRow().getByRole('button',{name:'تغيير الاسم',exact:true}).click();await page.getByLabel('اسم الموظف بالعربية',{exact:true}).fill('موظف تجريبي');await page.getByLabel('اسم المستخدم (للدخول)',{exact:true}).fill('ui_clerk');await page.screenshot({path:artifacts+'/rename-dialog.png'});await go('حفظ الاسم');await page.getByRole('cell',{name:/^ui_clerk/}).waitFor();
+ await page.getByRole('row').filter({has:page.getByRole('cell',{name:/^ui_clerk/})}).getByText('موظف تجريبي').first().waitFor();
+ await page.getByRole('row').filter({has:page.getByRole('cell',{name:/^ui_clerk/})}).getByRole('button',{name:'كلمة المرور',exact:true}).click();await page.getByRole('button',{name:'توليد',exact:true}).click();assert.match(await page.getByLabel('كلمة المرور',{exact:true}).inputValue(),/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%&*?+=-])[A-Za-z\d!@#$%&*?+=-]{16}$/);await page.getByLabel('كلمة المرور',{exact:true}).fill('Permanent-synthetic-123');await go('حفظ الحساب');await page.locator('.issued-password code').getByText('Permanent-synthetic-123',{exact:true}).waitFor();await go('تم');await page.getByRole('dialog').waitFor({state:'hidden'});
  await staff.reload();await staff.getByRole('heading',{name:'تسجيل الدخول',exact:true}).waitFor();
  await staff.getByLabel('اسم المستخدم',{exact:true}).fill('ui_clerk');await staff.getByLabel('كلمة المرور',{exact:true}).fill('Permanent-synthetic-123');await staffGo('فتح مساحة العمل');await staff.getByRole('button',{name:/^سجل الأحكام/}).first().waitFor();assert.equal(await staff.locator('.workspace-chooser').count(),0,'a single workspace opens directly');
  assert.equal(await staff.getByLabel('كلمة المرور الجديدة',{exact:true}).count(),0,'a permanent password is not forced to change');
@@ -320,8 +322,8 @@ try{
   assert.deepEqual((await waitPages('ui_clerk',v=>!v.includes('secretary'))).filter(x=>x!=='daily').sort(),['accounting','hr']);
   await page.keyboard.press('Escape');await page.locator('.org-panel').waitFor({state:'detached'});
   // A second boss: salem.ui (in «القضايا») dropped on ui_clerk answers to him as well: a dotted line ending in a circle.
-  await box('salem.ui').dragTo(box('ui_clerk'));await page.getByRole('dialog').getByRole('button',{name:/يتبع ui_clerk أيضاً/}).click();
-  await page.getByText(/يتبع ui_clerk أيضاً الآن/).waitFor();await tree.locator('.org-links > path.boss').waitFor();
+  await box('salem.ui').dragTo(box('ui_clerk'));await page.getByRole('dialog').getByRole('button',{name:/يتبع (?:ui_clerk|موظف تجريبي) أيضاً/}).click();
+  await page.getByText(/يتبع (?:ui_clerk|موظف تجريبي) أيضاً الآن/).waitFor();await tree.locator('.org-links > path.boss').waitFor();
   // Still there after a reload: the second boss's line and the extra section's line.
   await page.reload();await page.locator('.org-tree-wrap').waitFor();await tree.locator('.org-links > path.boss').waitFor({timeout:8000});await tree.locator('.org-links > path.area').first().waitFor();
   // Which way a branch grows: «القضايا» to the right.

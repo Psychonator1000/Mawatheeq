@@ -14,7 +14,7 @@
     "setup:ocr": "node scripts/copy-ocr-assets.mjs",
     "check": "tsc --noEmit",
     "test:pdf": "node scripts/verify-pdf-reader.mjs && node --experimental-strip-types scripts/verify-order-import.mjs",
-    "test:domain": "node --experimental-strip-types scripts/verify-domain.mjs && node --experimental-strip-types scripts/verify-case-state.mjs && node --experimental-strip-types scripts/verify-lines.mjs",
+    "test:domain": "node --experimental-strip-types scripts/verify-domain.mjs && node --experimental-strip-types scripts/verify-case-state.mjs && node --experimental-strip-types scripts/verify-lines.mjs && node --experimental-strip-types scripts/verify-zip-names.mjs",
     "build:pages": "node scripts/build-pages.mjs",
     "test:shared": "node scripts/verify-shared-backend.mjs",
     "check:pages-config": "node scripts/check-pages-config.mjs",

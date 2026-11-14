@@ -54,7 +54,9 @@ function distance(a: string, b: string) {
  */
 export function withGovernorate(address: string): string {
   const parts = address.split(/\s+-\s+/);
-  if (parts.length < 2 || governorateOf(parts[0])) return address;
+  if (parts.length < 2) return address;
+  // Written in its proper form: «العاصمه» → «العاصمة», «الاحمدي» → «الأحمدي».
+  if (governorateOf(parts[0])) return [governorateOf(parts[0]), ...parts.slice(1)].join(' - ');
   const junk = /[A-Za-z]/.test(parts[0]) && !/[\u0621-\u064A]{3,}/.test(parts[0]);
   const fromNext = areaGovernorate(parts[1]);
   if (junk) return fromNext ? [fromNext, ...parts.slice(1)].join(' - ') : address;

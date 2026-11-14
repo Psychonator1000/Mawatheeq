@@ -56,19 +56,34 @@ for(const name of ['jbig2.wasm','jbig2_nowasm_fallback.js','openjpeg.wasm'])asse
 // The creditor through the scan's slips (owner, 14 November 2026: left empty on a clear order): a stray dot after «مقدمه:»,
 // a space inside «شركة», and the order's own line «بأن يؤدي الى» without the hamza when the first line is lost.
 {const f=extractFields(['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاتصالات الكويتية','ضد: اماني سعدي عواد الشمري الجنسية: السعودية الرقم المدني: 296091701464','و موطنه: ol gall - تيماء - ق 7 - ش 1 - م 196 - الرقم الالي للعنوان: 14441421','يدين الطالب المقدم ضده بمبلغ: 806.658 د.ك'].join('\n'),'250256370.pdf');
- assert.equal(f.address,'الجهراء - تيماء - ق 7 - ش 1 - م 196 - الرقم الالي للعنوان: 14441421','The governorate read as Latin junk comes back from its area');}
+ assert.equal(f.address,'الجهراء - تيماء - ق 7 - ش 1 - م 196 - الرقم الآلي للعنوان: 14441421','The governorate read as Latin junk comes back from its area');}
 {const {withGovernorate}=await import('../lib/kuwait-areas.ts');
- assert.equal(withGovernorate('الفراونيــه - خيطان - ق 8 - ش 70'),'الفراونيــه - خيطان - ق 8 - ش 70','A governorate read by the scan stays as written');
- assert.equal(withGovernorate('حولـــي - السالمية - ق 2'),'حولـــي - السالمية - ق 2');
+ assert.equal(withGovernorate('الفراونيــه - خيطان - ق 8 - ش 70'),'الفروانية - خيطان - ق 8 - ش 70','A governorate read by the scan is written in its proper form');
+ assert.equal(withGovernorate('حولـــي - السالمية - ق 2'),'حولي - السالمية - ق 2');
+ assert.equal(withGovernorate('العاصمه - القبلة - ق 14'),'العاصمة - القبلة - ق 14');
  assert.equal(withGovernorate('السالمية - ق 2 - ش سالم المبارك'),'حولي - السالمية - ق 2 - ش سالم المبارك','No governorate at all: it comes from the area');
  assert.equal(withGovernorate('xx yy - منطقة غير معروفة - ق 1'),'xx yy - منطقة غير معروفة - ق 1','An unknown area changes nothing');
  assert.equal(withGovernorate('ol gall - صباح الأحمد - ق 3'),'الأحمدي - صباح الأحمد - ق 3');
  assert.equal(withGovernorate('الاحصدي - صباح الاحمد السكنيه - ق 1 - ش 120 - م 86'),'الأحمدي - صباح الاحمد السكنيه - ق 1 - ش 120 - م 86','A governorate misread by a letter is put right from its area');
- assert.equal(withGovernorate('الجهـــراء - تيماء - ق 7'),'الجهـــراء - تيماء - ق 7','A governorate read right stays');
+ assert.equal(withGovernorate('الجهـــراء - تيماء - ق 7'),'الجهراء - تيماء - ق 7','A governorate read right stays, without the stretching');
  assert.equal(withGovernorate('العديلية - ق 3 - ش 31'),'العاصمة - العديلية - ق 3 - ش 31');
  assert.equal(withGovernorate('السالمي - خيطان - ق 8'),'السالمي - خيطان - ق 8','Far from the governorate of its area: left as read');
  assert.equal(withGovernorate('مدينة سعد العبدالله - ق 1 - ش 103'),'الجهراء - مدينة سعد العبدالله - ق 1 - ش 103');
  assert.equal(withGovernorate('عبدالله مبارك الصباح - قطعة 4'),'الفروانية - عبدالله مبارك الصباح - قطعة 4');}
+// 14 November 2026: the debtor's address found whatever the scan does to its label or line order, the creditor's own
+// address never taken for it, and written as the order spells it («سلوى», «الأندلس»); every subscription line of the
+// statement table read for the claim («الخاص بخط الاشتراك رقم (…)»).
+{const order=(line,before='')=>['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاختبار','و موطنه:حولي - السالمية - ق 2 - ش سالم المب - الرقم الالي للعنوان: .,',before,
+   'ضد: سالم أحمد علي الجنسية : الكويت الرقم المدنى: 290010100123',line,'يدين الطالب المقدم ضده بمبلغ: 100.500 د.ك'].filter(Boolean).join('\n');
+ const want='حولي - سلوى - ق 4 - ش 4 - م 259';
+ for(const line of ['و موطنه: حولـــي - سلوى - ق 4 - ش 4 - م 259 -','و موطنه حولي - سلوى - ق 4 - ش 4 - م 259 -','و موطنة : حولي - سلوى - ق 4 - ش 4 - م 259','و مرطنه: Jol - سلوى - ق 4 - ش 4 - م 259 -'])
+  assert.equal(extractFields(order(line),'x.pdf').address,want,`Address from «${line}»`);
+ assert.equal(extractFields(order('','و موطنه: حولي - سلوى - ق 4 - ش 4 - م 259 -'),'x.pdf').address,want,'The address line read before «ضد»');
+ assert.equal(extractFields(order('و موطنه: الفروانية - الأندلس - ق 6 - ش 5 - م 219'),'x.pdf').address,'الفروانية - الأندلس - ق 6 - ش 5 - م 219','Spelled as written');
+ const table=['الصفحة 4','كشف حساب لمشترك خارج الخدمة','رقم الاشتراك المبالغ المستحقة تاريخ الفاتورة المبالغ المسددة الرصيد','50000001 100.250 2025/2/2 0 100.250','50000002 0.250 2025/3/2 0 0.250','50000001 1 2025/4/2 0 1','0','اجمالى المستحق 101.5 0 101.5'];
+ assert.equal(extractFields(order('')+'\n'+table.join('\n'),'x.pdf').phone,'50000001، 50000002','Each line of the table once');
+ const column=['الصفحة 4','كشف حساب لمشترك خارج الخدمة','رقم العقد','رقم الاشتراك','','50000003','','51000004','','290010100123','اجمالى المستحق'];
+ assert.equal(extractFields(order('')+'\n'+column.join('\n'),'x.pdf').phone,'50000003، 51000004','The table read as a column');}
 // The receipt number underlined (stuck «_», a space, E for F) and the debtor's name cut short on the order but whole on the receipt.
 for(const [receiptNo,want] of [['F0939577_','F0939577'],['F 0939577','F0939577'],['E0939577','F0939577'],['FO939577','F0939577']]){
  const f=extractFields(['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاتصالات الكويتية','ضد: ابراهيم محمد عبدالقادر الحاج','الجنسية: الكويت الرقم المدني: 273122700105','مبلغ: 911.170 د.ك',

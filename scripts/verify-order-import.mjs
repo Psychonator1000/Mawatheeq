@@ -47,4 +47,7 @@ assert.equal(fillEmpty({ ...fromList, evidence: [{ id: 'x', included: true, date
  assert.equal(/\{\{(?:company|defendant)\}\} {5,}/.test(xml), false, 'No run of spaces after a party\'s name');}
 {const PizZip=createRequire(import.meta.url)('pizzip');const claim=new PizZip(JSON.parse(fs.readFileSync('lib/data/templates.json','utf8')).claim,{base64:true}).file('word/document.xml').asText();
  const at=k=>claim.indexOf('{{'+k+'}}');assert.ok(at('company')<at('companyAddress')&&at('companyAddress')<at('email')&&at('email')<at('companyCivil'),'The claim states the company, its address, email, then its civil and register numbers');}
+// The claim's page footer carries the page number only, no typist's mark (owner, 14 November 2026: «remove that footer»).
+{const PizZip=createRequire(import.meta.url)('pizzip');const zip=new PizZip(JSON.parse(fs.readFileSync('lib/data/templates.json','utf8')).claim,{base64:true});
+ const footer=zip.file('word/footer1.xml').asText().replace(/<[^>]+>/g,'');assert.equal(/[\u0621-\u064A]/.test(footer),false,'No Arabic mark in the claim footer');assert.ok(footer.includes('PAGE'),'The page number stays');}
 console.log('Passed order import: fields to check, client from the creditor\'s name, new file details and bundle documents, client lists of payment orders, completing files made from a list, the claim\'s company lines in order.');

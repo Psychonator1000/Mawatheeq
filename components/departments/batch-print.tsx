@@ -58,8 +58,8 @@ export default function BatchPrint({canExport,canImport=false,clients=[],onImpor
     try{
      const output=await departmentRequest<{id:string;data:CollectionData;templateVersion:string}>('generate',{workspace:'collections',id:row.record.id,revision:row.record.revision,kind,outputId:crypto.randomUUID()});
      if(output.templateVersion!=='office-word-v1')throw new Error('إصدار القالب غير مدعوم.');
-     // Named after the opposite party, then the paper («- حافظة»), so the files tell themselves apart.
-     made.push({id:row.record.id+':'+kind,kind,name:paperName(who,kind),blob:await generateWord(kind,output.data)});
+     // Named after the opposite party, its number, then the paper («- حافظة»), so the files tell themselves apart and are found by either.
+     made.push({id:row.record.id+':'+kind,kind,name:paperName(who,kind,p.fileAutoNumber||p.orderAuto||p.code||''),blob:await generateWord(kind,output.data)});
     }catch(e){failed.push({name:`${who} (${KINDS[kind].label})`,reason:(e as Error).message})}
     setProgress({done:++done,total});
    }

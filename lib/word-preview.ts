@@ -132,3 +132,4 @@ export async function printWords(docs: WordDoc[]) {
   document.documentElement.classList.add('wd-printing'); window.addEventListener('afterprint', done);
   window.print();
 }
+

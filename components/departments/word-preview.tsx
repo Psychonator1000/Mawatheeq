@@ -4,12 +4,14 @@ import {toast} from 'sonner';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '../ui/dialog';
 import {saveBlob} from '../shared';
 import {collectWord,openWord,printWords,renderWord,safeFileName,wordBlob,type WordDoc} from '@/lib/word-preview';
+import {zipFileName} from '@/lib/zip-names';
 
 export type WordItem={id:string;name:string;kind:'claim'|'bundle';blob:Blob};
 const KIND_LABEL={claim:'صحيفة الدعوى',bundle:'حافظة مستندات'};
 /** The word each paper's file name ends with, and the folder its batch downloads into (owner, 11 November 2026). */
 export const PAPER={bundle:'حافظة',claim:'صحيفة دعوى'} as const;
-export const paperName=(who:string,kind:'claim'|'bundle')=>`${who} - ${PAPER[kind]}`;
+/** «اسم المدين - الرقم الآلي - حافظة»: the name and the number side by side, so a file is found by either (owner, 14 November 2026). */
+export const paperName=(who:string,kind:'claim'|'bundle',number='')=>[who,number.trim(),PAPER[kind]].filter(Boolean).join(' - ');
 
 /** Each paper's file name (without «.docx»); a name used twice gets «(2)», «(3)»… so no download replaces another. */
 export function fileNames(items:WordItem[],names:Record<string,string>){
@@ -58,7 +60,7 @@ export default function WordPreview({items,onClose}:{items:WordItem[];onClose:()
    // Several papers download as one folder (a .zip) named after the paper: «حافظة»; with both papers, a folder for each.
    const PizZip=(await import('pizzip')).default,zip=new PizZip(),both=new Set(list.map(it=>it.kind)).size>1;
    for(const it of list)zip.file((both?PAPER[it.kind]+'/':'')+final[it.id]+'.docx',new Uint8Array(await blobOf(it).arrayBuffer()),{binary:true});
-   saveBlob(zip.generate({type:'blob',mimeType:'application/zip',compression:'STORE'}),(both?`${PAPER.bundle} و${PAPER.claim.split(' ')[0]}`:PAPER[list[0].kind])+'.zip');
+   saveBlob(zip.generate({type:'blob',mimeType:'application/zip',compression:'STORE',encodeFileName:zipFileName as never/* its types say Buffer; a byte string is what it reads */}),(both?`${PAPER.bundle} و${PAPER.claim.split(' ')[0]}`:PAPER[list[0].kind])+'.zip');
    toast.success(`نُزّل ${list.length} ملفات Word في مجلد واحد.`);
   }catch(e){setError((e as Error).message)}finally{setBusy(false)}
  }

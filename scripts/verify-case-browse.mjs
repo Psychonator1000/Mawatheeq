@@ -5,7 +5,7 @@ import { suggestions, weekdayOf, CLIENT_ROLES } from '../lib/choices.ts';
 import { fils, kwd, kwdPlain, position, dueStatements, FILE_STATUSES, mapCollectionSheet, ALL_FILE_STATUSES, civilIdValid, debtorKey, roundRobin } from '../lib/collections.ts';
 import { custodyOf, isOverdue, nextNumber, code39, code39Ready, code39Svg, daysBetween, MOVEMENTS } from '../lib/archive.ts';
 import { clampPage, pageNumbers, parsePage } from '../lib/pagination.ts';
-import { suggestUsername } from '../lib/staff-accounts.ts';
+import { suggestUsername, generatePassword, PASSWORD_SETS } from '../lib/staff-accounts.ts';
 import { workflowOf, isFiled, lastSitting, nextSitting, dueForPosting, postingErrors, sittingsBetween, judgmentsBetween, stayOf, renewalDeadline, withoutContract, isWeekend, requiredAction } from '../lib/case-desk.ts';
 
 const fixture = (id, fields) => ({ ...emptyCase(), id, ...fields });
@@ -245,6 +245,12 @@ console.log('Passed archive custody (latest posted movement, cancelled skipped, 
  assert.deepEqual(codeFirst(list,'326').map(c=>c.id),['c','b','a','d'],'The exact code first, then codes that begin with it, then the rest in order');
  assert.deepEqual(codeFirst(list,'٣٢٦').map(c=>c.id),['c','b','a','d'],'Arabic digits too');
  assert.deepEqual(codeFirst(list,'شركة').map(c=>c.id),['a','b','c','d'],'Words keep the order');}
+// Generated passwords: 16 random characters, every kind in each, no words, no look-alikes, never the same twice.
+{const many=Array.from({length:400},()=>generatePassword());
+ for(const p of many){assert.equal(p.length,16);assert.ok(PASSWORD_SETS.every(set=>[...p].some(c=>set.includes(c))),p);assert.equal(/[0O1lI]/.test(p),false,p);assert.equal(/^[A-Z][a-z]{3}-\d{4}-/.test(p),false,'Not the old word form');}
+ assert.equal(new Set(many).size,many.length,'Never the same twice');
+ const counts=new Map();for(const p of many)for(const c of p)counts.set(c,(counts.get(c)||0)+1);
+ assert.equal(counts.size,PASSWORD_SETS.join('').length,'Every allowed character turns up');}
 console.log('Passed one code sequence, duplicate detection and code-first search.');
 // Insurance cases keep their register numbers and are shown «ت-N»; «ت-12» in the search finds insurance case 12 first.
 {

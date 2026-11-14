@@ -1,5 +1,5 @@
 'use client';
-import {useContext,useEffect,useMemo,useState} from 'react';
+import {useContext,useEffect,useMemo,useRef,useState} from 'react';
 import {toast} from 'sonner';
 import {Search,X} from 'lucide-react';
 import {dailyRequest,officeRequest,switchToUser} from '@/lib/local-auth';
@@ -49,6 +49,7 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
  const [history,setHistory]=useState<AccessChange[]>([]),[historyError,setHistoryError]=useState('');
  const [newRoles,setNewRoles]=useState<JobRole[]>([]),[applyPreset,setApplyPreset]=useState(false);
  const [staffSearch,setStaffSearch]=useState(''),[displayName,setDisplayName]=useState(''),[typedName,setTypedName]=useState('');
+ const renameDone=useRef('');
  // The team at a glance (owner: «every page must be informative»): accounts by state, job and how much they open; a part picks them out in the list.
  const [pick,setPick]=useState('');
  const jobOf=(m:Member)=>m.role==='owner'?'owner':(m.permissions?.jobRoles?.[0]||m.permissions?.jobRole||''),reach=(m:Member)=>m.role==='owner'?'full':!m.permissions?.sections?.length?'none':restricted(m.permissions?.view)?'limited':'full';
@@ -142,7 +143,7 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
  const blocked=(m:Member)=>!isOwner&&(m.id===context.user.id?'حسابك: يديره المالك أو مسؤول آخر.':powersOf(m.permissions||{}).some(p=>!powers.includes(p))?'يملك صلاحيات إدارة لا تملكها.':'');
  const open=(m:Member|'new',nextMode:Mode='permissions')=>{
   setPerson(null);
-  setUsername(m!=='new'&&nextMode==='rename'?m.username:'');setDisplayName('');setTypedName('');setMustChange(false);setShowPassword(false);setIssued(null);setPassword('');setError('');setMode(nextMode);setAccess(m==='new'?{...NO_ACCESS}:m.permissions||{...NO_ACCESS});setNewRoles(m!=='new'&&m.permissions?inferRoles(m.permissions):[]);setApplyPreset(false);setHistory([]);setHistoryError('');setEditing(m);
+  setUsername(m!=='new'&&nextMode==='rename'?m.username:'');setDisplayName(m!=='new'&&nextMode==='rename'?m.displayName||'':'');setTypedName('');setMustChange(false);setShowPassword(false);setIssued(null);setPassword('');setError('');setMode(nextMode);setAccess(m==='new'?{...NO_ACCESS}:m.permissions||{...NO_ACCESS});setNewRoles(m!=='new'&&m.permissions?inferRoles(m.permissions):[]);setApplyPreset(false);setHistory([]);setHistoryError('');setEditing(m);
   if(m!=='new'&&nextMode==='permissions')officeRequest<AccessChange[]>('access_history',{id:m.id}).then(setHistory).catch(e=>setHistoryError(e.message));
  };
  async function save(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');try{
@@ -154,8 +155,15 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
   }
   else if(editing&&mode==='password')await (mustChange?officeRequest('reset_member_password',{id:editing.id,password}):officeRequest('set_member_password',{id:editing.id,password,mustChange:false}));
   else if(editing&&mode==='rename'){
-   const renamed=await officeRequest<Member>('rename_member',{id:editing.id,username});
-   if(editing.id===context.user.id){toast.success(`اسم دخولك الآن ${renamed.username}`);setTimeout(()=>window.location.reload(),900)}
+   // The Arabic name shown to colleagues and the sign-in name, each changed only when it was edited (owner, 14 November 2026).
+   const nameChanged=displayName.trim()!==(editing.displayName||'').trim(),userChanged=username.trim().toLowerCase()!==editing.username.toLowerCase();
+   if(!nameChanged&&!userChanged)throw new Error('لم يتغير شيء.');
+   if(nameChanged){if(!displayName.trim())throw new Error('اكتب اسم الموظف بالعربية.');await officeRequest('set_display_name',{id:editing.id,displayName:displayName.trim()})}
+   if(userChanged){
+    const renamed=await officeRequest<Member>('rename_member',{id:editing.id,username});
+    if(editing.id===context.user.id){toast.success(`اسم دخولك الآن ${renamed.username}`);setTimeout(()=>window.location.reload(),900)}
+   }
+   renameDone.current=userChanged&&nameChanged?'تم تغيير الاسم واسم المستخدم. يسجل الدخول بالاسم الجديد.':userChanged?'تم تغيير اسم المستخدم. يسجل الدخول بالاسم الجديد.':'تم تغيير الاسم الظاهر للزملاء.';
   }
   else if(editing&&mode==='role'){
    // Changing the role keeps the account's pages and cases unless asked to apply the role's suggested settings.
@@ -170,7 +178,7 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
   onChanged();
   // Show the password once more with a copy button, so it can be handed to the employee.
   if(editing==='new'||mode==='password'){setIssued({username:editing==='new'?username.trim().toLowerCase():editing!.username,password});setPassword('');return}
-  setPassword('');setEditing(null);toast.success(mode==='rename'?'تم تغيير اسم المستخدم. يسجل الدخول بالاسم الجديد.':mode==='role'?'تم تغيير الدور الوظيفي.':'تم حفظ الصلاحيات. تُطبّق عند تسجيل الدخول.');
+  setPassword('');setEditing(null);toast.success(mode==='rename'?renameDone.current:mode==='role'?'تم تغيير الدور الوظيفي.':'تم حفظ الصلاحيات. تُطبّق عند تسجيل الدخول.');
  }catch(e){setError(friendly(e))}finally{setBusy(false)}}
  async function switchTo(m:Member){if(!window.confirm(`الدخول إلى حساب ${m.displayName||m.username}؟ سترى ما يراه فقط، ويمكنك العودة إلى حسابك من الشريط أسفل الصفحة.`))return;setBusy(true);try{await switchToUser(m.id)}catch(e){toast.error(friendly(e))}finally{setBusy(false)}}
  // Lawyer accounts (named as on the cases) that still see every case or a fixed list: switch them to their own cases by name.
@@ -233,12 +241,13 @@ export default function OfficeStaff({context,records,onChanged,powers}:{context:
    <div className="area-foot"><button type="button" className="btn" onClick={()=>setChoice(null)}>إلغاء</button></div>
   </DialogContent></Dialog>})()}
  {areaEdit&&<AreaEditor area={areaEdit==='branch'?'new':areaEdit} preset={areaEdit==='branch'?'branch':undefined} chart={chart} members={context.members} busy={treeBusy} flow={areaEdit!=='new'&&areaEdit!=='branch'?<><FlowPicker value={chart.flow?.['a:'+areaEdit.id]||'down'} onChange={d=>void setFlow('a:'+areaEdit.id,d)}/>{(chart.layout?.['a:'+areaEdit.id]||chart.layout?.['g:a:'+areaEdit.id])&&<button type="button" className="btn" onClick={()=>void placeBoxes({['a:'+areaEdit.id]:null,['g:a:'+areaEdit.id]:null})}>إعادته لمكانه التلقائي</button>}{strays('a:'+areaEdit.id).length>0&&<button type="button" className="btn" onClick={()=>gather('a:'+areaEdit.id)}>جمع من فيه في إطار واحد ({strays('a:'+areaEdit.id).length})</button>}</>:null} onSave={d=>void saveArea(d)} onDelete={a=>void deleteArea(a)} onClose={()=>setAreaEdit(null)}/>}
- {editing&&<Dialog open onOpenChange={v=>{if(!v&&!busy){setEditing(null);setPassword('')}}}><DialogContent dir="rtl" className="office-dialog permissions-dialog"><DialogHeader><DialogTitle className="person-title">{editing==='new'?'إضافة موظف':{password:'كلمة مرور',rename:'تغيير اسم',permissions:'صلاحيات',role:'الدور الوظيفي لـ'}[mode]}{(()=>{const name=editing==='new'?displayName.trim():editing.displayName||'',user=editing==='new'?username.trim():editing.username;return (name||user)&&<>{' '}<span className="title-person">{name&&<b>{name}</b>}{name&&user&&' '}{user&&<code dir="ltr">{user}</code>}</span></>})()}</DialogTitle><DialogDescription>{mode==='password'?'اختر كلمة مرور الموظف بنفسك. تنتهي جلساته الحالية عند الحفظ.':mode==='rename'?'يسجل صاحب الحساب الدخول بالاسم الجديد. تبقى صلاحياته وسجلاته كما هي.':mode==='role'?'يظهر الدور في قائمة الفريق وملفه. تبقى صفحاته وقضاياه كما هي ما لم تطلب تطبيق إعدادات الدور.':'حدد الصفحات والقضايا قبل الحفظ. صلاحيات الحساب تُفحص على الخادم في كل طلب.'}</DialogDescription>{!issued&&<button className="btn primary dialog-save" type="submit" form="staff-form" disabled={busy}>{busy?'جارٍ الحفظ…':editing==='new'||mode==='password'?'حفظ الحساب':mode==='rename'?'حفظ الاسم':mode==='role'?'حفظ الدور الوظيفي':'حفظ الصلاحيات وإنهاء الجلسات'}</button>}</DialogHeader><div className="dialog-body">
+ {editing&&<Dialog open onOpenChange={v=>{if(!v&&!busy){setEditing(null);setPassword('')}}}><DialogContent dir="rtl" className="office-dialog permissions-dialog"><DialogHeader><DialogTitle className="person-title">{editing==='new'?'إضافة موظف':{password:'كلمة مرور',rename:'تغيير اسم',permissions:'صلاحيات',role:'الدور الوظيفي لـ'}[mode]}{(()=>{const name=editing==='new'?displayName.trim():editing.displayName||'',user=editing==='new'?username.trim():editing.username;return (name||user)&&<>{' '}<span className="title-person">{name&&<b>{name}</b>}{name&&user&&' '}{user&&<code dir="ltr">{user}</code>}</span></>})()}</DialogTitle><DialogDescription>{mode==='password'?'اختر كلمة مرور الموظف بنفسك. تنتهي جلساته الحالية عند الحفظ.':mode==='rename'?'غيّر الاسم بالعربية أو اسم الدخول أو كليهما. تبقى صلاحياته وسجلاته كما هي.':mode==='role'?'يظهر الدور في قائمة الفريق وملفه. تبقى صفحاته وقضاياه كما هي ما لم تطلب تطبيق إعدادات الدور.':'حدد الصفحات والقضايا قبل الحفظ. صلاحيات الحساب تُفحص على الخادم في كل طلب.'}</DialogDescription>{!issued&&<button className="btn primary dialog-save" type="submit" form="staff-form" disabled={busy}>{busy?'جارٍ الحفظ…':editing==='new'||mode==='password'?'حفظ الحساب':mode==='rename'?'حفظ الاسم':mode==='role'?'حفظ الدور الوظيفي':'حفظ الصلاحيات وإنهاء الجلسات'}</button>}</DialogHeader><div className="dialog-body">
  {issued?<div className="issued-password" role="status"><p>كلمة مرور <b dir="ltr">{issued.username}</b> الجديدة. انسخها الآن وسلّمها للموظف؛ لا يمكن عرضها مرة أخرى لأنها تُحفظ مشفرة.</p><code dir="ltr">{issued.password}</code><div className="actions"><button className="btn primary" onClick={()=>void copy(issued.password)}>نسخ كلمة المرور</button><button className="btn" onClick={()=>{setIssued(null);setEditing(null)}}>تم</button></div></div>:
  <form id="staff-form" className="office-form" onSubmit={save}><fieldset disabled={busy}>
  <div className={editing==='new'?'account-fields':''}>
- {(editing==='new'||mode==='rename')&&<label className="field"><span id="staff-username-label">اسم المستخدم الجديد</span><input aria-labelledby="staff-username-label" aria-describedby="staff-username-help" dir="ltr" value={username} onChange={e=>setUsername(e.target.value)} required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{2,31}" autoComplete="off"/><small id="staff-username-help">3–32 حرفاً إنجليزياً أو رقماً أو . _ -</small></label>}
- {(editing==='new'||mode==='password')&&<label className="field"><span id="staff-password-label">كلمة المرور</span><span className="password-row"><input aria-labelledby="staff-password-label" aria-describedby="staff-password-help" type={showPassword?'text':'password'} dir="ltr" value={password} onChange={e=>setPassword(e.target.value)} minLength={12} required autoComplete="new-password"/><button type="button" className="btn" onClick={()=>{setPassword(generatePassword());setShowPassword(true)}}>توليد</button><button type="button" className="btn" onClick={()=>setShowPassword(v=>!v)}>{showPassword?'إخفاء':'إظهار'}</button></span><small id="staff-password-help">12 حرفاً على الأقل. «توليد» ينشئ كلمة مرور قوية سهلة القراءة.</small></label>}
+ {mode==='rename'&&editing!=='new'&&<label className="field"><span id="staff-display-label">اسم الموظف بالعربية</span><input aria-labelledby="staff-display-label" value={displayName} onChange={e=>setDisplayName(e.target.value)} maxLength={80} placeholder="كما يظهر للزملاء"/><small>يظهر في المحادثة والمهام وملف الموارد البشرية.</small></label>}
+ {(editing==='new'||mode==='rename')&&<label className="field"><span id="staff-username-label">{editing==='new'?'اسم المستخدم الجديد':'اسم المستخدم (للدخول)'}</span><input aria-labelledby="staff-username-label" aria-describedby="staff-username-help" dir="ltr" value={username} onChange={e=>setUsername(e.target.value)} required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{2,31}" autoComplete="off"/><small id="staff-username-help">3–32 حرفاً إنجليزياً أو رقماً أو . _ -</small></label>}
+ {(editing==='new'||mode==='password')&&<label className="field"><span id="staff-password-label">كلمة المرور</span><span className="password-row"><input aria-labelledby="staff-password-label" aria-describedby="staff-password-help" type={showPassword?'text':'password'} dir="ltr" value={password} onChange={e=>setPassword(e.target.value)} minLength={12} required autoComplete="new-password"/><button type="button" className="btn" onClick={()=>{setPassword(generatePassword());setShowPassword(true)}}>توليد</button><button type="button" className="btn" onClick={()=>setShowPassword(v=>!v)}>{showPassword?'إخفاء':'إظهار'}</button></span><small id="staff-password-help">12 حرفاً على الأقل. «توليد» ينشئ كلمة مرور عشوائية قوية من 16 حرفاً ورقماً ورمزاً.</small></label>}
  {editing==='new'&&<label className="field"><span>اسم الموظف كما يظهر للزملاء</span><input value={displayName} onChange={e=>setDisplayName(e.target.value)} onBlur={()=>setTypedName(displayName.trim())} maxLength={80} placeholder="للمحامي: اسمه كما في خانة «المحامي»"/><small>اختياري. يظهر في المحادثة والمهام وملف الموارد البشرية.</small></label>}
  {(editing==='new'||mode==='password')&&<label className="checkbox-line"><input type="checkbox" checked={mustChange} onChange={e=>setMustChange(e.target.checked)}/>اطلب من الموظف تغييرها عند الدخول التالي</label>}
  </div>

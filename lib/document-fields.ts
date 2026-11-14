@@ -84,6 +84,12 @@ function receiptValues(receipt:string){
   if(values.length!==2)return {fee:'',claim:''};
   const [fee,claim]=values.sort((a,b)=>a-b);return {fee:fee.toFixed(3),claim:claim.toFixed(3)};
 }
+/** A value read on the flattened text, given back in the original's spelling (the two line up letter for letter). */
+function spelledAsWritten(value:string,flat:string,original:string):string{
+  if(!value||flat.length!==original.length)return value;
+  const at=flat.indexOf(value);
+  return at<0?value:original.slice(at,at+value.length);
+}
 export function extractFields(raw:string,filename=''):DocumentData {
   const original=cleanDocumentText(raw),text=matchText(raw),d=blankDocument();
   const get=(r:RegExp)=>tidy(text.match(r)?.[1]||'');
@@ -122,7 +128,7 @@ export function extractFields(raw:string,filename=''):DocumentData {
   d.civilId=selectNumber(order,/الرقم\s*المد[نتم][يى]\s*[:\-]?\s*([23]\d{11})\b/g)||selectNumber(text,/(?<!\d)([23]\d{11})(?!\d)/g);
   d.account=selectNumber(statement+'\n'+order+'\n'+text,/(?:حساب|عقد|العقد|الحساب)\s*(?:رقم)?\s*[:\-]?\s*(\d{1,4}[.]\d{6,12})\b/g)||get(/\b(1\.\d{7,10})\b/);
   if(!d.account)d.account=selectNumber(order+'\n'+text,/كشف\s*حساب\s*رقم\s*[:\-]?\s*(\d{8,12})\b/g);
-  d.phone=tidy((statement||text).match(/(?:رقم\s*(?:الاشتراك|الخط)|خط\s*الاشتراك|الهاتف\s*النقال)\s*[:\-]?\s*([569]\d{7})\b/)?.[1]||'');
+  d.phone=subscriptionLines(statement||text)||tidy((statement||text).match(/(?:رقم\s*(?:الاشتراك|الخط)|خط\s*الاشتراك|الهاتف\s*النقال)\s*[:\-]?\s*([569]\d{7})\b/)?.[1]||'');
   const amounts=[...order.matchAll(/(?:مبلغ|بمبلغ|المديونية|قيمة\s*الدعوي)[^\d\n]{0,30}(\d+(?:[,٬]\d{3})*[.٫]\d{1,3}|\d+,\d{3}|\d+(?=\s*(?:د\.?ك|دينار)))(?![\d.,٫])/g)].map(m=>money(m[1]));
   // The amount is written several times and a scan can lose digits in one copy («0», «1»): the value most copies agree
   // on wins, amounts with fils before bare whole numbers, and the court receipt's claim value counts as one more copy.
@@ -149,7 +155,15 @@ export function extractFields(raw:string,filename=''):DocumentData {
   // Latin from a scan («yma») is no nationality: left empty, so it is checked by hand (owner, 14 November 2026).
   d.nationality=/^(?:الكويت|كويتي|Kuwait)$/i.test(nationality)?'كويتي الجنسية':/[A-Za-z]/.test(nationality)?'':nationality;
   const opponentPart=after(order,/(?:^|\n)\s*ضد\s*:/,700);
-  d.address=tidy(opponentPart.match(/(?:موطنه|العنوان|عنوانه|ويعلن في)\s*[:\-]\s*([^\n]{5,180})/)?.[1]||'');
+  d.address=tidy(opponentPart.match(/(?:مو[طظ]ن[هة]\s*[:\-.؛]?|(?:العنوان|عنوانه|ويعلن في)\s*[:\-])\s*([^\n]{5,180})/)?.[1]||'');
+  // A scan that garbles the label («موطنة», no colon) or puts the line out of order (owner, 14 November 2026: 250254890
+  // came out with no address): the first line of the order shaped like an address («… - ق 4 - ش 4 - م 259») that is not
+  // the creditor's own, the one under «مقدمه».
+  if(!d.address){
+    const own=after(order,/مقدم[هة]\s*:/,400).split('\n').slice(0,3).find(l=>/مو[طظ]ن/.test(l))||'\u0000';
+    const shaped=order.split('\n').find(l=>l!==own&&!/للعنوان\s*:?\s*[.,،]*\s*$/.test(l)&&/(?:^|[\s\-])ق\s*\d/.test(l)&&/(?:^|[\s\-])(?:ش|م)\s*\S/.test(l)&&/\s-\s/.test(l));
+    if(shaped)d.address=tidy(shaped.replace(/^.*?مو[طظ]ن[هة]\s*[:\-.؛]?/,'').replace(/^\s*و?\s*[^\s:\-]{2,8}\s*:\s*/,'').replace(/^\s*و\s+/,''));
+  }
   if(!d.address)d.address=tidy((demand||text).match(/(?:العنوان|عنوانه|ويعلن في|المقيم)\s*[:/\-]\s*([^\n]{5,180})/)?.[1]||'');
   const detailedAddress=demand.split('\n').find(line=>/قطع[ةه]\s*\d/.test(line)&&/شارع\s*\d/.test(line)&&/منزل/.test(line));
   if(detailedAddress){
@@ -161,7 +175,9 @@ export function extractFields(raw:string,filename=''):DocumentData {
   // A stretched name (« الجهـــراء ») can come out of the scan as Latin junk («ol gall - تيماء…»): its governorate comes
   // back from the area that follows (lib/kuwait-areas.ts), then the address keeps the Arabic and its numbers only
   // (owner, 14 November 2026: «we need the full address though»).
-  d.address=withGovernorate(d.address).replace(/[A-Za-z][A-Za-z.'’]*(?:\s+[A-Za-z][A-Za-z.'’]*)*/g,' ').replace(/\s{2,}/g,' ').replace(/(?:\s*-\s*){2,}/g,' - ').replace(/^[\s\-–,.،]+|[\s\-–,.،]+$/g,'').trim();
+  // Read on the flattened text (أ/إ/آ as ا, ى as ي) but written as the order spells it: «سلوى», not «سلوي».
+  d.address=spelledAsWritten(d.address,text,original);
+  d.address=withGovernorate(d.address).replace(/الرقم\s+الالي/g,'الرقم الآلي').replace(/[A-Za-z][A-Za-z.'’]*(?:\s+[A-Za-z][A-Za-z.'’]*)*/g,' ').replace(/\s{2,}/g,' ').replace(/(?:\s*-\s*){2,}/g,' - ').replace(/^[\s\-–,.،]+|[\s\-–,.،]+$/g,'').trim();
   d.code=get(/(?:كود|الكود)\s*[:\-]?\s*(\d{1,6})(?!\d)/)||tidy(matchText(filename).match(/(?:كود|code)\s*[_: -]?\s*(\d{1,6})(?!\d)/i)?.[1]||'');
   // «بعثة» is often read as Latin junk («King بريدية فى تاريخ : 21-05-2025»): the date is also found after «بريدية فى
   // تاريخ» and after «بتكليفه بضرورة الوفاء», which opens the same sentence (owner, 14 November 2026).
@@ -217,6 +233,26 @@ export function nationalityPhrase(raw:string):string{
   if(word)return word+' الجنسية';
   // Already an adjective («مصري», «هندي»): it only needs «الجنسية».
   return /ي$/.test(v)?v+' الجنسية':v;
+}
+/**
+ * The subscription numbers of a statement whose table reads «رقم الاشتراك | المبالغ المستحقة | …» with a row per line
+ * (owner, 14 November 2026: «subscription number is a must to have»): the eight-digit number each row starts with,
+ * down to the first row that does not, every line once («50388990، 50591736»).
+ */
+export function subscriptionLines(text:string):string{
+  const lines=String(text||'').split('\n').map(l=>l.trim());
+  for(let i=0;i<lines.length;i++){
+    if(!/رقم\s*الاشتراك/.test(lines[i]))continue;
+    const found:string[]=[];
+    for(const l of lines.slice(i+1,i+16)){
+      if(!l)continue;
+      const n=l.match(/^([4569]\d{7})(?!\d)/)?.[1];
+      if(!n)break;
+      if(!found.includes(n))found.push(n);
+    }
+    if(found.length)return found.join('، ');
+  }
+  return '';
 }
 export type CollectionParty = { id: string; name: string; civilId?: string; job?: string; nationality?: string; address?: string; phone?: string; clientEntityId?: string };
 /** Every name on one side, the first party first, blanks dropped. */

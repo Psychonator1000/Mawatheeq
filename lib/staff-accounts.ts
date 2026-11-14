@@ -65,11 +65,20 @@ export function suggestUsername(label: string, taken: Iterable<string>): string 
   while (used.has(candidate)) candidate = `${base}${n++}`;
   return candidate;
 }
-/** A readable random password, e.g. «Kufa-7342-Ratel-Mivo» (about 50 bits; sign-in attempts are rate-limited and locked). */
-export function generatePassword(): string {
-  const consonants = 'bcdfghjkmnprstvz', vowels = 'aeiou';
-  const pick = (set: string) => set[crypto.getRandomValues(new Uint32Array(1))[0] % set.length];
-  const word = () => { let w = ''; for (let i = 0; i < 4; i++) w += i % 2 ? pick(vowels) : pick(consonants); return w[0].toUpperCase() + w.slice(1); };
-  const digits = String(crypto.getRandomValues(new Uint32Array(1))[0] % 9000 + 1000);
-  return [word(), digits, word(), word()].join('-');
+export const PASSWORD_SETS = ['ABCDEFGHJKMNPQRSTUVWXYZ', 'abcdefghijkmnpqrstuvwxyz', '23456789', '!@#$%&*?+=-'];
+/**
+ * A random password of 16 characters (owner, 14 November 2026: «more secure and less of a word»): capitals, small
+ * letters, digits and symbols, at least one of each, every character drawn evenly with the browser's secure random
+ * numbers. Letters that look alike (0/O, 1/l/I) are left out, so it can be read out or typed from a note.
+ */
+export function generatePassword(length = 16): string {
+  const all = PASSWORD_SETS.join('');
+  const pick = (set: string) => {
+    const limit = 2 ** 32 - (2 ** 32 % set.length), box = new Uint32Array(1);
+    for (;;) { crypto.getRandomValues(box); if (box[0] < limit) return set[box[0] % set.length]; }
+  };
+  for (;;) {
+    const chars = Array.from({ length }, () => pick(all));
+    if (PASSWORD_SETS.every(set => chars.some(c => set.includes(c)))) return chars.join('');
+  }
 }
