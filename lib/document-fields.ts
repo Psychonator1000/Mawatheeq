@@ -162,7 +162,9 @@ export function extractFields(raw:string,filename=''):DocumentData {
   // (owner, 14 November 2026: «we need the full address though»).
   d.address=withGovernorate(d.address).replace(/[A-Za-z][A-Za-z.'’]*(?:\s+[A-Za-z][A-Za-z.'’]*)*/g,' ').replace(/\s{2,}/g,' ').replace(/(?:\s*-\s*){2,}/g,' - ').replace(/^[\s\-–,.،]+|[\s\-–,.،]+$/g,'').trim();
   d.code=get(/(?:كود|الكود)\s*[:\-]?\s*(\d{1,6})(?!\d)/)||tidy(matchText(filename).match(/(?:كود|code)\s*[_: -]?\s*(\d{1,6})(?!\d)/i)?.[1]||'');
-  d.demandDate=datesIn(after(order,/(?:بعث[ةيه]+\s*بريدية|البعثية|ارسل بتاريخ|كتاب\s*التكليف)/,170))[0]||'';
+  // «بعثة» is often read as Latin junk («King بريدية فى تاريخ : 21-05-2025»): the date is also found after «بريدية فى
+  // تاريخ» and after «بتكليفه بضرورة الوفاء», which opens the same sentence (owner, 14 November 2026).
+  d.demandDate=datesIn(after(order,/(?:بعث[ةيه]+\s*بريدية|البعثية|ارسل بتاريخ|كتاب\s*التكليف|بتكليفه\s*بضرورة\s*الوفاء|بريدي[ةه]\s*(?:ف[يى]\s*)?تاريخ)/,170))[0]||'';
   d.statementDate=datesIn(after(statement,/(?:تاريخ\s*الفاتور[ةه]|تاريخ\s*الكشف|كشف\s*الحساب)/,160))[0]||'';
   if(!d.statementDate){const dates=[...new Set(datesIn(statement))];if(dates.length===1)d.statementDate=dates[0];}
   const refused=after(order,/(?:رفض|الرفض|مرفوض)/,180);

@@ -1,6 +1,6 @@
 import {Fragment,lazy,Suspense,useCallback,useEffect,useMemo,useRef,useState,type ReactElement} from 'react';
 import {COURTS,NATIONALITIES,WEEKDAYS,weekdayOf,suggestions} from '@/lib/choices';
-import {Plus,FileCheck2,Scale,Link2,Trash2,UserPlus,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,UserCheck,type LucideIcon} from 'lucide-react';
+import {Plus,FileCheck2,Scale,Link2,Trash2,UserPlus,ListChecks,FileText,Users,ScrollText,Wallet,History,ClipboardList,Printer,Copy,UserCheck,type LucideIcon} from 'lucide-react';
 import BatchPrint from './batch-print';
 import {DayBars,Meter,PulseStrip,PulseTile} from '../pulse';
 import {collectionLine} from '@/lib/collection-line';
@@ -28,6 +28,7 @@ import {CasePicker,DepartmentHistory,EditorDialog,StatusMessage,useRecords,expor
 import {FollowFields,FileStatements,FilePosition,type StatementRecord,type PaymentRecord} from './collection-followup';
 import RecordWindow,{useListNav,type WindowNav,type Enter} from '../record-window';
 import CopyChip from '../copy-chip';
+import {copyText} from '@/lib/polyfills';
 import CircuitField from '../circuit-field';
 import {useBooksAvailable} from '@/lib/books-api';
 import {arCompare} from '@/lib/domain';
@@ -59,11 +60,13 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  const badCivil=(r:CollectionRecord)=>!!r.payload.civilId&&!civilIdValid(r.payload.civilId);
  // What a file still lacks or has wrong (owner, 12 November 2026: «a section for errors and incomplete ones»), and the
  // PDF it was read from, so a bad reading is traced to its order at a glance.
- // What a file still lacks: the essentials, everything its statement of claim needs, and the receipt number and the
- // statement's date (owner, 14 November 2026: a file only looks fine when it is complete enough to print).
+ // What a file still lacks: the essentials and everything its statement of claim needs (owner, 14 November 2026: a file
+ // only looks fine when it can be printed).
  const problems=(r:CollectionRecord)=>{const p=r.payload;const out=[!partyLabel(p.company,p.plaintiffs)&&'الموكل',!partyLabel(p.defendant,p.defendants)&&'الخصم',!fils(p.amount)&&'المبلغ',!p.civilId&&'الرقم المدني',badCivil(r)&&'رقم مدني غير صحيح'].filter(Boolean) as string[];
   const claim=[...missingFieldKeys(p).entries()].filter(([k,kinds])=>kinds.includes('claim')&&!['company','defendant','amount'].includes(k)).map(([k])=>k==='amountWords'?'المبلغ كتابة':COLLECTION_LABELS[k]||k);
-  for(const m of [...claim,!String(p.receiptNumber||'').trim()&&'رقم الإيصال',!String(p.statementDate||'').trim()&&'تاريخ كشف الحساب'])if(m&&!out.includes(m))out.push(m);
+  // Only what stops printing counts (owner, 14 November 2026: the receipt number and the statement's date made complete
+  // files look broken; the claim leaves the statement's date as a dotted blank to fill in by hand).
+  for(const m of claim)if(m&&!out.includes(m))out.push(m);
   return out};
  const pdfOf=(r:CollectionRecord)=>{const m=/^أمر أداء \(PDF\):\s*(.+)$/.exec(String(r.payload.sourceReference||'').trim());return m?m[1]:''};
  const pos=(r:CollectionRecord)=>position(r.payload,(paymentsOf.get(r.id)||[]).map(p=>p.payload));
@@ -110,7 +113,11 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
  </section></div>
  <section className="panel work-desk">
   <div className="work-desk-head"><h2>التحصيل</h2>{views}
-   {view==='files'&&<div className="actions">{access.canExport&&<button className="btn" onClick={()=>void exportCsv('collections','Mawatheeq-collections',[['الكود','الموكل','الخصم','حالة الملف','الباتش','المسؤول','المطالبة','المسدد','الباقي'],...filtered.map(r=>{const p=pos(r);return [r.payload.code,r.payload.company,r.payload.defendant,r.payload.fileStatus||'',r.payload.batchNumber||'',r.payload.assignedTo||'',kwdPlain(p.total),kwdPlain(p.paid),kwdPlain(p.remaining)]})]).catch(e=>toast.error(e.message))}>تصدير القائمة</button>}{access.canEdit&&access.caseScope==='all'&&<CollectionImport files={files} clients={clients} onDone={reload}/>}{access.canEdit&&<OrderImport/>}{access.canEdit&&<button className="btn primary" onClick={()=>setEditing(newDepartmentRecord('collections','file',{...blankDocument(),sourceReference:'',notes:''}))}><Plus size={17}/> ملف تحصيل جديد</button>}</div>}</div>
+   {view==='files'&&<div className="actions">{(()=>{
+    // The PDFs of the files shown, named by their automatic numbers, ready to paste into the upload window's «File name» box
+    // (owner, 14 November 2026: «make it copy pastable»), so only those orders are read again.
+    const names=[...new Set(filtered.map(r=>String(r.payload.orderAuto||r.payload.fileAutoNumber||'').trim()).filter(Boolean))];
+    return names.length>0&&names.length<files.filter(x=>!x.archived).length&&<button className="btn" title="الصقها في خانة «File name» في نافذة رفع أوامر الأداء فتُختار هذه الملفات وحدها" onClick={()=>void copyText(names.map(n=>`"${n}.pdf"`).join(' ')).then(()=>toast.success(`نُسخت أسماء ${names.length===1?'ملف واحد':names.length===2?'ملفين':names.length%100>=3&&names.length%100<=10?names.length+' ملفات':names.length+' ملفاً'}. افتح «من أوامر أداء (PDF)» والصقها في خانة اسم الملف (File name) ثم اضغط Open.`),()=>toast.error('تعذر النسخ؛ اسمح للمتصفح بالنسخ.'))}><Copy size={15}/> نسخ أسماء ملفات PDF ({names.length})</button>})()}{access.canExport&&<button className="btn" onClick={()=>void exportCsv('collections','Mawatheeq-collections',[['الكود','الموكل','الخصم','حالة الملف','الباتش','المسؤول','المطالبة','المسدد','الباقي'],...filtered.map(r=>{const p=pos(r);return [r.payload.code,r.payload.company,r.payload.defendant,r.payload.fileStatus||'',r.payload.batchNumber||'',r.payload.assignedTo||'',kwdPlain(p.total),kwdPlain(p.paid),kwdPlain(p.remaining)]})]).catch(e=>toast.error(e.message))}>تصدير القائمة</button>}{access.canEdit&&access.caseScope==='all'&&<CollectionImport files={files} clients={clients} onDone={reload}/>}{access.canEdit&&<OrderImport/>}{access.canEdit&&<button className="btn primary" onClick={()=>setEditing(newDepartmentRecord('collections','file',{...blankDocument(),sourceReference:'',notes:''}))}><Plus size={17}/> ملف تحصيل جديد</button>}</div>}</div>
   {view==='due'&&<div className="work-desk-body"><DueList due={due} fileOf={fileOf} onOpen={open} canPrint={access.canExport}/></div>}
   {view==='payments'&&<div className="work-desk-body"><PaymentsList payments={allPayments} fileOf={fileOf} onOpen={open} canPrint={access.canExport}/></div>}
   {view==='print'&&<div className="work-desk-body"><BatchPrint canExport={access.canExport} canImport={access.canEdit&&access.caseScope==='all'} clients={clients} onImported={reload}/></div>}
@@ -132,7 +139,7 @@ export default function Collections({cases,access}:{cases:CaseSummary[];access:P
   <div className="work-desk-body"><StatusMessage loading={loading} error={error}/>{!loading&&!error&&<>{filtered.length?<table className="office-table collection-table"><thead><tr>{access.canEdit&&<th className="pick-col"><input type="checkbox" aria-label={'تحديد كل النتائج ('+filtered.filter(f=>!f.archived).length+')'} title="تحديد كل النتائج" checked={filtered.some(f=>!f.archived)&&filtered.filter(f=>!f.archived).every(f=>picked.has(f.id))} onChange={e=>setPicked(e.target.checked?new Set(filtered.filter(f=>!f.archived).map(f=>f.id)):new Set())}/></th>}<th>الملف</th><th>الأطراف</th><th>الحالة</th><th>التحصيل</th><th>المسؤول</th><th>باختصار</th><th/></tr></thead>
    <tbody>{filtered.slice((current-1)*PER_PAGE,current*PER_PAGE).map(r=>{const p=pos(r),others=sameDebtor(r).length,l=collectionLine(p,(statementsOf.get(r.id)||[]).filter(s=>!s.archived).map(s=>s.payload),(paymentsOf.get(r.id)||[]).map(x=>x.payload),today,{archived:r.archived,assigned:!!r.payload.assignedTo,status:r.payload.fileStatus});return <tr className={'collection-row edge-'+l.edge+(picked.has(r.id)?' picked':'')} key={r.id}>
     {access.canEdit&&<td className="pick-col">{!r.archived&&<input type="checkbox" aria-label={'تحديد الملف '+(r.payload.code||r.payload.defendant)} checked={picked.has(r.id)} onChange={e=>setPicked(old=>{const n=new Set(old);if(e.target.checked)n.add(r.id);else n.delete(r.id);return n})}/>}</td>}
-    <td><b className="collection-code">{r.payload.code||cases.find(c=>c.id===r.caseId)?.code||'بلا كود'}</b><small>{r.payload.batchNumber?'باتش '+r.payload.batchNumber:''}{!r.caseId&&' · بلا قضية'}</small>{pdfOf(r)&&<small className="collection-pdf" title={'قُرئ من: '+pdfOf(r)}><FileText size={11} aria-hidden/><bdi>{pdfOf(r)}</bdi></small>}</td>
+    <td><b className="collection-code">{r.payload.code||cases.find(c=>c.id===r.caseId)?.code||'بلا كود'}</b><small>{r.payload.batchNumber?'باتش '+r.payload.batchNumber:''}{!r.caseId&&' · بلا قضية'}</small>{(r.payload.orderAuto||r.payload.fileAutoNumber)&&<CopyChip label="الرقم الآلي (اسم ملف PDF)" value={String(r.payload.orderAuto||r.payload.fileAutoNumber)}/>}{pdfOf(r)&&<small className="collection-pdf" title={'قُرئ من: '+pdfOf(r)}><FileText size={11} aria-hidden/><bdi>{pdfOf(r)}</bdi></small>}</td>
     <td className="collection-parties" title={`${tidyName(partyLabel(r.payload.company,r.payload.plaintiffs))||'موكل غير مكتمل'} ضد ${tidyName(partyLabel(r.payload.defendant,r.payload.defendants))||'طرف غير مكتمل'}`}><b>{tidyName(partyLabel(r.payload.company,r.payload.plaintiffs))||'موكل غير مكتمل'}</b> <small>ضد {tidyName(partyLabel(r.payload.defendant,r.payload.defendants))||'طرف غير مكتمل'}</small></td>
     <td><div className="tag-line">{r.payload.fileStatus&&<span className={'tag '+statusTone(r.payload.fileStatus)}>{r.payload.fileStatus}</span>}{r.archived&&<span className="tag">مؤرشف</span>}{badCivil(r)&&<span className="tag red" title="الرقم المدني لا يطابق رقم التحقق أو تاريخ الميلاد">رقم مدني؟</span>}{check==='claimneeds'&&(()=>{const m=missingDocumentFields(r.payload,'claim');return <span className="tag amber" title={m.join('، ')}>ينقص: {m.slice(0,3).join('، ')}{m.length>3?` و${m.length-3} غيرها`:''}</span>})()}{others>0&&<span className="tag">{others+1} ملفات للخصم</span>}</div></td>
     <td className="nowrap amount">{p.total?<Meter pct={l.pct} tone={l.paidAll?'green':l.pct>0?'amber':'grey'} label={l.paidAll?'مسدد بالكامل':`باقٍ ${kwd(Math.max(0,p.remaining))}`} title={`حُصّل ${kwd(p.paid)} من ${kwd(p.total)} د.ك`}/>:<span className="muted">—</span>}</td>

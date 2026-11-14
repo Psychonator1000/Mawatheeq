@@ -62,7 +62,11 @@ for(const name of ['jbig2.wasm','jbig2_nowasm_fallback.js','openjpeg.wasm'])asse
  assert.equal(withGovernorate('حولـــي - السالمية - ق 2'),'حولـــي - السالمية - ق 2');
  assert.equal(withGovernorate('السالمية - ق 2 - ش سالم المبارك'),'حولي - السالمية - ق 2 - ش سالم المبارك','No governorate at all: it comes from the area');
  assert.equal(withGovernorate('xx yy - منطقة غير معروفة - ق 1'),'xx yy - منطقة غير معروفة - ق 1','An unknown area changes nothing');
- assert.equal(withGovernorate('ol gall - صباح الأحمد - ق 3'),'الأحمدي - صباح الأحمد - ق 3');}
+ assert.equal(withGovernorate('ol gall - صباح الأحمد - ق 3'),'الأحمدي - صباح الأحمد - ق 3');
+ assert.equal(withGovernorate('الاحصدي - صباح الاحمد السكنيه - ق 1 - ش 120 - م 86'),'الأحمدي - صباح الاحمد السكنيه - ق 1 - ش 120 - م 86','A governorate misread by a letter is put right from its area');
+ assert.equal(withGovernorate('الجهـــراء - تيماء - ق 7'),'الجهـــراء - تيماء - ق 7','A governorate read right stays');
+ assert.equal(withGovernorate('العديلية - ق 3 - ش 31'),'العاصمة - العديلية - ق 3 - ش 31');
+ assert.equal(withGovernorate('السالمي - خيطان - ق 8'),'السالمي - خيطان - ق 8','Far from the governorate of its area: left as read');}
 // The receipt number underlined (stuck «_», a space, E for F) and the debtor's name cut short on the order but whole on the receipt.
 for(const [receiptNo,want] of [['F0939577_','F0939577'],['F 0939577','F0939577'],['E0939577','F0939577'],['FO939577','F0939577']]){
  const f=extractFields(['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاتصالات الكويتية','ضد: ابراهيم محمد عبدالقادر الحاج','الجنسية: الكويت الرقم المدني: 273122700105','مبلغ: 911.170 د.ك',
@@ -71,6 +75,9 @@ for(const [receiptNo,want] of [['F0939577_','F0939577'],['F 0939577','F0939577']
  assert.equal(f.defendant,'ابراهيم محمد عبدالقادر الحاج محمد','The whole name from the receipt');}
 {const f=extractFields(['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاتصالات الكويتية','ضد: سالم احمد علي','الصفحة 2','F0939577','شركة الاتصالات الكويتية','خالد يوسف فهد'].join('\n'),'x.pdf');
  assert.equal(f.defendant,'سالم احمد علي','Another name on the receipt never replaces the debtor');}
+// «بعثة» read as Latin junk on two real orders (252106630, 252104030): the notice date is still found.
+for(const junk of ['King','ay','بعثة'])assert.equal(extractFields(['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاتصالات الكويتية','ضد: سالم احمد علي',
+ 'لذلك فقد قام الطالب بتكليفه بضرورة الوفاء له بالمبلغ المذكور و ذلك بموجب',`كتاب مسجل / ${junk} بريدية فى تاريخ : 21-05-2025 و بما أنه بالرغم من فوات المهلة`].join('\n'),'x.pdf').demandDate,'2025-05-21','notice date after «'+junk+' بريدية»');
 for(const [first,last] of [['مقدمه: . شركة الاتصالات الكويتية',''],['مقدمه: شر كة الاتصالات الكويتية',''],['مقدمه: ...','بأن يؤدي الى : شركة الاتصالات الكويتية'],['مقدمه:','بأن يؤدى إلى شر كة الاتصالات الكويتية']]){
  const f=extractFields(['الصفحة 1','طلب استصدار أمر أداء',first,'ضد: حاتم حسيني الجنسية: الهند الرقم المدني: 291070501516','يدين الطالب المقدم ضده بمبلغ: 932.279 د.ك',last,'مبلغ: 932.279 د.ك فقط'].join('\n'),'250256450.pdf');
  assert.equal(f.company,'شركة الاتصالات الكويتية',`creditor read through «${first}» / «${last}»`);}

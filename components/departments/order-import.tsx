@@ -3,6 +3,7 @@ import {Check,FileText,LoaderCircle,X,Eye} from 'lucide-react';
 import {toast} from 'sonner';
 import {departmentRequest} from '@/lib/local-auth';
 import {type CollectionRecord,newDepartmentRecord} from '@/lib/departments';
+import {COLLECTION_LABELS,missingFieldKeys} from '@/lib/collection-documents';
 import {type DocumentData} from '@/lib/document-fields';
 import {normalizeSearch} from '@/lib/case-browse';
 import {ORDER_FIELDS,fieldsToCheck,fillEmpty,guessClient,orderPayload} from '@/lib/order-import';
@@ -87,7 +88,10 @@ export function OrderReadingPanel({files,clients,onDone}:{files:CollectionRecord
        {i.status==='reading'&&<span className="tag" role="status"><LoaderCircle className="spin" size={13}/> {i.message} ({Math.round(i.progress)}%)</span>}
        {i.status==='waiting'&&<span className="tag">بانتظار القراءة</span>}
        {i.status==='failed'&&<><span className="tag red" role="alert">تعذرت القراءة: {i.error}</span><button type="button" className="btn" onClick={()=>orderReading.retry(i.id)}>إعادة القراءة</button></>}
-       {i.status==='ready'&&(dup?(()=>{const have=existingFile(d)!,n=adds(have,{...fillEmpty(have.payload,d!),clientEntityId:have.payload.clientEntityId||clientOf(i)});return n?<span className="tag">يكمّل الملف الموجود بهذا الرقم الآلي: يضيف {fieldsAr(n)}</span>:<span className="tag green">مكتمل · لن يتغير شيء</span>})():check.length?<span className="tag amber">{check.length} حقل للمراجعة</span>:<span className="tag green">جاهز</span>)}
+       {i.status==='ready'&&(dup?(()=>{const have=existingFile(d)!,n=adds(have,{...fillEmpty(have.payload,d!),clientEntityId:have.payload.clientEntityId||clientOf(i)});return n?<span className="tag">يكمّل الملف الموجود بهذا الرقم الآلي: يضيف {fieldsAr(n)}</span>:(()=>{
+        // «مكتمل» only for a file that can be printed; otherwise the reading added nothing and the file still lacks something (owner, 14 November 2026).
+        const lacks=[...missingFieldKeys(have.payload).entries()].filter(([,kinds])=>kinds.includes('claim')).map(([k])=>k==='amountWords'?'المبلغ كتابة':COLLECTION_LABELS[k]||k);
+        return lacks.length?<span className="tag amber" title="اكتب الناقص في الحقول أدناه ثم احفظ">لا جديد في هذه القراءة · ينقص الملف: {lacks.join('، ')}</span>:<span className="tag green">مكتمل · لن يتغير شيء</span>})()})():check.length?<span className="tag amber">{check.length} حقل للمراجعة</span>:<span className="tag green">جاهز</span>)}
        {i.status==='ready'&&<label className="checkbox-line"><input type="checkbox" checked={!i.skip} onChange={e=>patchOrder(i.id,{skip:!e.target.checked})}/> {dup?'إكمال الملف':'إنشاء ملف'}</label>}
       </header>
       {d&&!i.skip&&<div className="order-fields">
