@@ -12,7 +12,10 @@ import { dropOrders, loadOrders, putOrders, type StoredOrder } from './order-sto
 export type OrderItem = {
   id: string; file: File; status: 'waiting' | 'reading' | 'ready' | 'failed'; progress: number; message: string;
   data?: DocumentData; client?: string; skip: boolean; error?: string;
+  /** A file already saved that lacks only what one page carries: just that page is read (owner, 14 November 2026). */
+  only?: Only;
 };
+export type Only = { pages: number[]; auto: string; need: string[] };
 type State = { items: OrderItem[]; running: boolean; open: boolean };
 
 // The order, the court receipt, the office's bundle list and the account statement are the first four pages. Nothing is
@@ -32,7 +35,7 @@ const set = (next: Partial<State>) => { state = { ...state, ...next }; listeners
 const added = new Map<string, number>();
 const stored = (i: OrderItem): StoredOrder => ({
   id: i.id, user: cachedUser()?.id || '', at: added.get(i.id) ?? Date.now(), name: i.file.name, type: i.file.type, lastModified: i.file.lastModified, file: i.file,
-  status: i.status === 'reading' ? 'waiting' : i.status, data: i.data, client: i.client, skip: i.skip, error: i.error,
+  status: i.status === 'reading' ? 'waiting' : i.status, data: i.data, client: i.client, skip: i.skip, error: i.error, only: i.only,
 });
 const keep = (ids: string[]) => { const list = state.items.filter(i => ids.includes(i.id)).map(stored); if (list[0]?.user) void putOrders(list); };
 
@@ -80,8 +83,15 @@ async function run() {
         patchOrder(it.id, { status: 'reading', progress: 0, message: 'تجهيز القراءة…' });
         try {
           const name = it.file.name, wantNumbers = (page: number, text: string) => { const f = extractFields(text, name); return (NUMBERS[page] || []).some(k => empty(f, k)); };
+          // A saved file missing only a page's fields: that page alone, and the whole order only if it is not found there.
+          if (it.only) {
+            const part = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: Math.min(99, p), message }), ctrl.signal, PAGES, engine, { pages: it.only.pages, wantNumbers, pause: giveWay });
+            const got = extractFields(pagesText(part), name);
+            if (it.only.need.every(k => !empty(got, k as keyof DocumentData))) { patchOrder(it.id, { status: 'ready', progress: 100, data: { ...got, orderAuto: got.orderAuto || it.only.auto } }); continue; }
+          }
           let pages = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: Math.min(90, p * .9), message }), ctrl.signal, PAGES, engine, { pages: FIRST, wantNumbers, pause: giveWay });
           let data = extractFields(pagesText(pages), name);
+          if (it.only && !data.orderAuto) data = { ...data, orderAuto: it.only.auto };
           if (EXPECTED.some(k => empty(data, k))) {
             const more = await extractPDF(it.file, (p, message) => patchOrder(it.id, { progress: Math.min(99, 90 + p * .1), message }), ctrl.signal, PAGES, engine, { pages: SPARE, pause: giveWay });
             pages = [...pages, ...more].sort((a, b) => a.page - b.page); data = extractFields(pagesText(pages), name);
@@ -114,7 +124,7 @@ async function restore() {
   const back: OrderItem[] = kept.filter(o => !known.has(o.id)).map(o => {
     added.set(o.id, o.at);
     return { id: o.id, file: new File([o.file], o.name, { type: o.type, lastModified: o.lastModified }), status: o.status, progress: o.status === 'waiting' ? 0 : 100,
-      message: o.status === 'waiting' ? 'بانتظار القراءة' : '', data: o.data as DocumentData | undefined, client: o.client, skip: o.skip, error: o.error };
+      message: o.status === 'waiting' ? 'بانتظار القراءة' : '', data: o.data as DocumentData | undefined, client: o.client, skip: o.skip, error: o.error, only: o.only as Only | undefined };
   });
   if (!back.length) return;
   set({ items: [...back, ...state.items] });
@@ -123,9 +133,9 @@ async function restore() {
 
 export const orderReading = {
   /** Adds PDFs to the queue (and keeps them) and starts reading if it is not already. */
-  start(files: File[]) {
+  start(files: File[], only?: (file: File) => Only | undefined) {
     const now = Date.now();
-    const fresh = files.map((file, n) => { const id = crypto.randomUUID(); added.set(id, now + n); return { id, file, status: 'waiting' as const, progress: 0, message: 'بانتظار القراءة', skip: false }; });
+    const fresh = files.map((file, n) => { const id = crypto.randomUUID(); added.set(id, now + n); return { id, file, status: 'waiting' as const, progress: 0, message: 'بانتظار القراءة', skip: false, only: only?.(file) }; });
     set({ items: [...state.items, ...fresh] });
     keep(fresh.map(i => i.id));
     void run();

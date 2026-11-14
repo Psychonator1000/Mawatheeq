@@ -7,19 +7,31 @@ import {COLLECTION_LABELS,missingFieldKeys} from '@/lib/collection-documents';
 import {type DocumentData} from '@/lib/document-fields';
 import {normalizeSearch} from '@/lib/case-browse';
 import {ORDER_FIELDS,clientNameOnFiles,fallbackClient,fieldsToCheck,filesPerClient,fillEmpty,guessClient,orderPayload} from '@/lib/order-import';
-import {orderReading,patchOrder,useOrderReading,type OrderItem} from '@/lib/order-reading';
+import {orderReading,patchOrder,useOrderReading,type OrderItem,type Only} from '@/lib/order-reading';
+
+/** What the account statement page carries for a claim. */
+const STATEMENT_FIELDS:(keyof DocumentData)[]=['phone','statementDate'];
 import {EditorDialog} from './shared';
 
 /** «أمر واحد», «أمرين», «3 أوامر», «11 أمراً»: the count of orders as Arabic says it. */
 const orders=(n:number)=>n===1?'أمر واحد':n===2?'أمرين':n<=10?`${n} أوامر`:`${n} أمراً`;
 
 /** «من أوامر أداء (PDF)»: the chosen orders join the reading queue, which runs in the background. */
-export default function OrderImport(){
+export default function OrderImport({files=[]}:{files?:CollectionRecord[]}){
+ // A PDF named by the automatic number of a file that lacks only what the account statement carries (the subscription
+ // line, its date) is read from that page alone, a third of the time (owner, 14 November 2026: «I have to rescan again»).
+ const only=(file:File):Only|undefined=>{
+  const auto=file.name.match(/(?<!\d)(\d{9})(?!\d)/)?.[1],have=auto&&files.find(f=>!f.archived&&(f.payload.orderAuto===auto||f.payload.fileAutoNumber===auto));
+  if(!auto||!have)return undefined;
+  const need=[...missingFieldKeys(have.payload).entries()].filter(([,kinds])=>kinds.includes('claim')).map(([k])=>k);
+  return need.length&&need.every(k=>STATEMENT_FIELDS.includes(k as keyof DocumentData))?{pages:[4],auto,need}:undefined;
+ };
  function pick(chosen:FileList|null){
   const pdfs=[...(chosen||[])].filter(f=>/\.pdf$/i.test(f.name)||f.type==='application/pdf');
   if(!pdfs.length){toast.error('اختر ملفات PDF لأوامر الأداء.');return}
-  orderReading.start(pdfs);
-  toast.success(`بدأت قراءة ${orders(pdfs.length)} في الخلفية. يمكنك متابعة عملك.`);
+  orderReading.start(pdfs,only);
+  const quick=pdfs.filter(f=>only(f)).length;
+  toast.success(`بدأت قراءة ${orders(pdfs.length)} في الخلفية${quick?`، منها ${quick} تُقرأ من صفحة كشف الحساب وحدها`:''}. يمكنك متابعة عملك.`);
  }
  return <label className="btn"><FileText size={16}/> من أوامر أداء (PDF)<input type="file" accept="application/pdf,.pdf" multiple className="upload-input" aria-label="ملفات PDF لأوامر الأداء" onChange={e=>{pick(e.target.files);e.target.value=''}}/></label>;
 }
@@ -53,7 +65,11 @@ export function OrderReadingPanel({files,clients,onDone}:{files:CollectionRecord
  const guessed=(i:OrderItem)=>existingFile(i.data)?.payload.clientEntityId||guessClient(i.data?.company||'',clients,held);
  const clientOf=(i:OrderItem)=>i.client??(guessed(i)||fallbackClient(items.filter(x=>x.status==='ready'&&!x.client).map(guessed),held));
  // With a client, the creditor is written as that client's other files write it («… ( Stc)»), never as the scan read it.
- const shown=(i:OrderItem):DocumentData|undefined=>{const d=i.data,name=d&&clientNameOnFiles(clientOf(i),files,clients);return d&&name?{...d,company:name}:d};
+ // A file read from one page shows the saved file's details with what that page added.
+ const shown=(i:OrderItem):DocumentData|undefined=>{
+  const have=i.only&&i.data?existingFile(i.data):undefined;
+  const d=i.data&&have?{...i.data,...Object.fromEntries(ORDER_FIELDS.map(([k])=>[k,String(i.data![k]??'').trim()||String(have.payload[k as keyof typeof have.payload]??'')])),phone:i.data.phone||String(have.payload.phone||'')}:i.data;
+  const name=d&&clientNameOnFiles(clientOf(i),files,clients);return d&&name?{...d,company:name}:d};
  const ready=items.filter(i=>i.status==='ready'&&!i.skip),done=items.filter(i=>i.status==='ready'||i.status==='failed').length;
  const reading=items.filter(i=>i.status==='reading'),current=reading[0],waiting=items.filter(i=>i.status==='waiting').length;
  const overall=items.length?Math.round((done+reading.reduce((t,i)=>t+i.progress/100,0))/items.length*100):0;

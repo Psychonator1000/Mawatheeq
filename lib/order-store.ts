@@ -5,7 +5,7 @@ const DB = 'mawatheeq-orders', STORE = 'orders';
 
 export type StoredOrder = {
   id: string; user: string; at: number; name: string; type: string; lastModified: number; file: Blob;
-  status: 'waiting' | 'ready' | 'failed'; data?: unknown; client?: string; skip: boolean; error?: string;
+  status: 'waiting' | 'ready' | 'failed'; data?: unknown; client?: string; skip: boolean; error?: string; only?: { pages: number[]; auto: string; need: string[] };
 };
 
 let open: Promise<IDBDatabase | null> | null = null;
