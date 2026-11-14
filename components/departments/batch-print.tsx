@@ -28,7 +28,7 @@ type Row={record:CollectionRecord;missing:Record<Kind,string[]>};
  */
 export default function BatchPrint({canExport,canImport=false,clients=[],onImported}:{canExport:boolean;canImport?:boolean;clients?:{id:string;name:string}[];onImported?:()=>void}){
  const [records,setRecords]=useState<CollectionRecord[]|null>(null),[error,setError]=useState(''),[version,setVersion]=useState(0);
- const [kinds,setKinds]=useState<'bundle'|'claim'|'both'>('bundle'),[search,setSearch]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[show,setShow]=useState<'ready'|'all'>('ready'),[client,setClient]=useState(''),[batch,setBatch]=useState('');
+ const [kinds,setKinds]=useState<'bundle'|'claim'|'both'>('bundle'),[search,setSearch]=useState(''),[from,setFrom]=useState(''),[to,setTo]=useState(''),[show,setShow]=useState<'ready'|'missing'|'all'>('ready'),[client,setClient]=useState(''),[batch,setBatch]=useState('');
  const [preview,setPreview]=useState<WordItem[]|null>(null);
  const [selected,setSelected]=useState<Set<string>>(new Set()),[progress,setProgress]=useState<{done:number;total:number}|null>(null),[skipped,setSkipped]=useState<{name:string;reason:string}[]>([]);
  useEffect(()=>{let active=true;departmentPages<CollectionRecord>('collections','records_page').then(r=>{if(active){setRecords(r.filter(x=>x.kind==='file'));setError('')}}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[version]);
@@ -39,7 +39,7 @@ export default function BatchPrint({canExport,canImport=false,clients=[],onImpor
  const who=(row:Row)=>tidyName(row.record.payload.company||'').trim();
  const clientsHere=useMemo(()=>{const m=new Map<string,number>();for(const r of rows){const k=tidyName(r.record.payload.company||'').trim();if(k)m.set(k,(m.get(k)||0)+1)}return [...m.entries()].sort((a,b)=>b[1]-a[1])},[rows]);
  const batchesHere=useMemo(()=>{const m=new Map<string,number>();for(const r of rows){if(client&&tidyName(r.record.payload.company||'').trim()!==client)continue;const k=String(r.record.payload.batchNumber||'').trim();if(k)m.set(k,(m.get(k)||0)+1)}return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],'ar',{numeric:true}))},[rows,client]);
- const visible=rows.filter(row=>(!client||who(row)===client)&&(!batch||String(row.record.payload.batchNumber||'').trim()===batch)&&(show==='all'||ready(row))&&(!from||row.record.payload.hearingDate>=from)&&(!to||row.record.payload.hearingDate<=to)&&normalizeSearch([row.record.payload.code,row.record.payload.company,row.record.payload.defendant,row.record.payload.lawsuitNumber].join(' ')).includes(normalizeSearch(search)))
+ const visible=rows.filter(row=>(!client||who(row)===client)&&(!batch||String(row.record.payload.batchNumber||'').trim()===batch)&&(show==='all'||(show==='missing'?!ready(row):ready(row)))&&(!from||row.record.payload.hearingDate>=from)&&(!to||row.record.payload.hearingDate<=to)&&normalizeSearch([row.record.payload.code,row.record.payload.company,row.record.payload.defendant,row.record.payload.lawsuitNumber].join(' ')).includes(normalizeSearch(search)))
   .sort((a,b)=>(a.record.payload.hearingDate||'9999').localeCompare(b.record.payload.hearingDate||'9999')||(a.record.payload.code||'').localeCompare(b.record.payload.code||''));
  const chosen=visible.filter(row=>selected.has(row.record.id)&&ready(row));
  const allChosen=visible.filter(ready).length>0&&visible.filter(ready).every(row=>selected.has(row.record.id));
@@ -72,7 +72,7 @@ export default function BatchPrint({canExport,canImport=false,clients=[],onImpor
  return <section className="panel batch-print"><div className="department-toolbar"><h2><FileStack size={20}/> طباعة الحافظة والدعوى</h2>{canImport&&records&&<CollectionImport files={records} clients={clients} label="إنشاء ملفات من Excel" onImported={ids=>{setSelected(new Set(ids));setVersion(v=>v+1);onImported?.()}} onDone={()=>setVersion(v=>v+1)}/>}</div>
   <p className="subtitle">اختر الملفات الجاهزة ونوع المستند (أو أنشئ الملفات من كشف Excel)، فيظهر كل مستند كما سيُطبع لتعدله في الصفحة، ثم يُنزَّل كل مستند في ملف Word باسم المدعى عليه.</p>
   <div className="batch-kinds" role="group" aria-label="نوع المستند">{([['bundle','حافظة مستندات'],['claim','صحيفة الدعوى'],['both','الاثنان معاً']] as const).map(([k,label])=><button key={k} className={'btn '+(kinds===k?'primary':'')} aria-pressed={kinds===k} onClick={()=>setKinds(k)}>{label}</button>)}</div>
-  <div className="department-filters"><Field label="بحث في ملفات الطباعة" value={search} onChange={setSearch}/><DateField label="جلسة من" value={from} onChange={setFrom}/><DateField label="جلسة إلى" value={to} onChange={setTo}/><OfficeSelect label="عرض" value={show} onChange={v=>setShow(v as 'ready'|'all')} options={[['ready','الجاهزة للطباعة فقط'],['all','كل الملفات النشطة']]}/>
+  <div className="department-filters"><Field label="بحث في ملفات الطباعة" value={search} onChange={setSearch}/><DateField label="جلسة من" value={from} onChange={setFrom}/><DateField label="جلسة إلى" value={to} onChange={setTo}/><OfficeSelect label="عرض" value={show} onChange={v=>setShow(v as 'ready'|'missing'|'all')} options={[['ready','الجاهزة للطباعة فقط'],['missing','غير الجاهزة (ينقصها)'],['all','كل الملفات النشطة']]}/>
    <OfficeSelect label="الموكل" value={client} onChange={v=>{setClient(v);setBatch('');setSelected(new Set())}} options={[['','كل الموكلين'],...clientsHere.map(([k,n])=>[k,`${k} (${n})`] as [string,string])]}/>
    {batchesHere.length>0&&<OfficeSelect label="الباتش" value={batch} onChange={v=>{setBatch(v);setSelected(new Set())}} options={[['','كل الباتشات'],...batchesHere.map(([k,n])=>[k,`${k} (${n})`] as [string,string])]}/>}</div>
   <StatusMessage loading={!records&&!error} error={error}/>
@@ -84,7 +84,7 @@ export default function BatchPrint({canExport,canImport=false,clients=[],onImpor
    <div className="table-wrap"><table className="office-table batch-table"><thead><tr><th aria-label="تحديد"/><th>الملف</th><th>الأطراف</th><th>المبلغ</th><th>الجلسة</th><th>الأوراق</th><th>الحالة</th></tr></thead>
     <tbody>{visible.map(row=>{const ok=ready(row),p=row.record.payload,paper=(k:Kind)=><span className={'batch-paper '+(row.missing[k].length?'no':'ok')} title={row.missing[k].length?'ينقص: '+row.missing[k].join('، '):'جاهزة للطباعة'}>{row.missing[k].length?'✗':'✓'} {k==='bundle'?'حافظة':'صحيفة'}</span>;
      return <tr key={row.record.id} className={'batch-row '+(ok?'edge-green':'edge-amber ledger-void')}><td><input type="checkbox" aria-label={'تحديد '+(p.code||p.defendant)} disabled={!ok} checked={ok&&selected.has(row.record.id)} onChange={()=>toggle(row.record.id)}/></td>
-      <td><b>{p.code||'—'}</b>{p.orderNumber&&<small>أمر {p.orderNumber}</small>}</td>
+      <td><b>{p.code||<span dir="ltr" title="الرقم الآلي لأمر الأداء">{p.orderAuto||p.fileAutoNumber||'—'}</span>}</b>{p.orderNumber?<small>أمر {p.orderNumber}</small>:<small className="batch-other">بلا رقم أمر أداء</small>}</td>
       <td title={`${tidyName(p.company)} ضد ${tidyName(p.defendant)}`}><b>{tidyName(p.company)}</b> <small>ضد {tidyName(p.defendant)||'—'}</small></td>
       <td className="mono">{p.amount?`${p.amount} د.ك`:<span className="muted">—</span>}</td>
       <td>{p.hearingDate?formatDate(p.hearingDate):<span className="muted">بلا موعد</span>}{(p.hearingCourt||p.hearingCircuit)&&<small>{[p.hearingCourt,p.hearingCircuit].filter(Boolean).join(' · ')}</small>}</td>
@@ -98,7 +98,7 @@ export default function BatchPrint({canExport,canImport=false,clients=[],onImpor
        const other=(['bundle','claim'] as Kind[]).filter(k=>!wanted.includes(k)).map(lacks).filter(Boolean).join(' · ');
        return <><span className="tag green">{wanted.length===1&&wanted[0]==='bundle'?'جاهز للحافظة':'جاهز للصحيفة'}</span>{other&&<span className="line-story batch-other" title={other}>{other}</span>}</>;
       })()}</td></tr>})}</tbody></table></div>
-   {!visible.length&&<Empty title="لا توجد ملفات" text={show==='ready'?'لا توجد ملفات جاهزة بهذه التصفية. الملف الجاهز حقوله المطلوبة مكتملة.':'لا توجد ملفات تحصيل نشطة.'}/>}
+   {!visible.length&&<Empty title="لا توجد ملفات" text={show==='ready'?'لا توجد ملفات جاهزة بهذه التصفية. الملف الجاهز حقوله المطلوبة مكتملة.':show==='missing'?'كل الملفات بهذه التصفية جاهزة للطباعة.':'لا توجد ملفات تحصيل نشطة.'}/>}
    {skipped.length>0&&<div className="notice" role="alert"><b>لم تُنشأ هذه المستندات:</b><ul>{skipped.map(s=><li key={s.name}>{s.name}: {s.reason}</li>)}</ul></div>}
   </>}
  {preview&&<WordPreview items={preview} onClose={()=>setPreview(null)}/>}</section>;

@@ -34,13 +34,17 @@ export function OrderReadingPanel({files,clients,onDone}:{files:CollectionRecord
  // A file already made for this order (from the client's list of orders) is completed rather than made again.
  const existingFile=(d?:DocumentData)=>d?.orderAuto?files.find(f=>!f.archived&&(f.payload.orderAuto===d.orderAuto||f.payload.fileAutoNumber===d.orderAuto)):undefined;
  const existing=(d?:DocumentData)=>!!existingFile(d);
+ // What reading the order again would add to the file it completes: only its empty fields (owner, 14 November 2026: «any
+ // file that exists fully should be skipped»). A complete file is left as it is, with nothing saved.
+ const adds=(have:CollectionRecord,payload:CollectionRecord['payload'])=>Object.keys(payload).filter(k=>JSON.stringify(payload[k as keyof typeof payload])!==JSON.stringify(have.payload[k as keyof typeof have.payload])).length;
+ const fieldsAr=(n:number)=>n===1?'حقلاً واحداً':n===2?'حقلين':n%100>=3&&n%100<=10?`${n} حقول`:`${n} حقلاً`;
  // The client is taken from the file this order completes, or guessed from the creditor's name, until it is chosen.
  const clientOf=(i:OrderItem)=>i.client??(existingFile(i.data)?.payload.clientEntityId||guessClient(i.data?.company||'',clients));
  const ready=items.filter(i=>i.status==='ready'&&!i.skip),done=items.filter(i=>i.status==='ready'||i.status==='failed').length;
  const reading=items.filter(i=>i.status==='reading'),current=reading[0],waiting=items.filter(i=>i.status==='waiting').length;
  const overall=items.length?Math.round((done+reading.reduce((t,i)=>t+i.progress/100,0))/items.length*100):0;
  async function create(){
-  setSaving(true);const failed:string[]=[],saved:string[]=[];let made=0;
+  setSaving(true);const failed:string[]=[],saved:string[]=[];let made=0,unchanged=0;
   for(const i of ready){
    // The client's own details (civil and commercial register numbers, e-mail) are the same on every file: they come
    // from the latest file of the same client, so nobody types them again.
@@ -48,13 +52,16 @@ export function OrderReadingPanel({files,clients,onDone}:{files:CollectionRecord
    const data={...i.data!,...(prev?{companyCivil:i.data!.companyCivil||prev.payload.companyCivil||'',companyRegister:i.data!.companyRegister||prev.payload.companyRegister||'',email:i.data!.email||prev.payload.email||''}:{})};
    const have=existingFile(i.data);
    try{
-    if(have)await departmentRequest('save_record',{workspace:'collections',record:{...have,payload:{...fillEmpty(have.payload,data),clientEntityId:have.payload.clientEntityId||clientOf(i)}}});
+    if(have){const payload={...fillEmpty(have.payload,data),clientEntityId:have.payload.clientEntityId||clientOf(i)};
+     if(!adds(have,payload)){unchanged++;saved.push(i.id);continue}
+     await departmentRequest('save_record',{workspace:'collections',record:{...have,payload}});}
     else await departmentRequest('save_record',{workspace:'collections',record:newDepartmentRecord('collections','file',orderPayload(data,{clientEntityId:clientOf(i),source:'أمر أداء (PDF): '+i.file.name}))});
     made++;saved.push(i.id)}
    catch(e){failed.push(`${i.file.name}: ${(e as Error).message}`)}
   }
   setSaving(false);orderReading.remove(saved);if(made)onDone();
   if(made)toast.success(`حُفظ ${made} ملف تحصيل. اطبعها من «طباعة الحافظة والدعوى».`);
+  if(unchanged)toast.success(`${unchanged===1?'ملف واحد كان':unchanged===2?'ملفان كانا':unchanged%100>=3&&unchanged%100<=10?unchanged+' ملفات كانت':unchanged+' ملفاً كان'} مكتملاً فلم يتغير.`);
   if(failed.length)toast.error(failed.join(' · '));
  }
  if(!items.length)return null;
@@ -80,7 +87,7 @@ export function OrderReadingPanel({files,clients,onDone}:{files:CollectionRecord
        {i.status==='reading'&&<span className="tag" role="status"><LoaderCircle className="spin" size={13}/> {i.message} ({Math.round(i.progress)}%)</span>}
        {i.status==='waiting'&&<span className="tag">بانتظار القراءة</span>}
        {i.status==='failed'&&<><span className="tag red" role="alert">تعذرت القراءة: {i.error}</span><button type="button" className="btn" onClick={()=>orderReading.retry(i.id)}>إعادة القراءة</button></>}
-       {i.status==='ready'&&(dup?<span className="tag">يكمّل الملف الموجود بهذا الرقم الآلي</span>:check.length?<span className="tag amber">{check.length} حقل للمراجعة</span>:<span className="tag green">جاهز</span>)}
+       {i.status==='ready'&&(dup?(()=>{const have=existingFile(d)!,n=adds(have,{...fillEmpty(have.payload,d!),clientEntityId:have.payload.clientEntityId||clientOf(i)});return n?<span className="tag">يكمّل الملف الموجود بهذا الرقم الآلي: يضيف {fieldsAr(n)}</span>:<span className="tag green">مكتمل · لن يتغير شيء</span>})():check.length?<span className="tag amber">{check.length} حقل للمراجعة</span>:<span className="tag green">جاهز</span>)}
        {i.status==='ready'&&<label className="checkbox-line"><input type="checkbox" checked={!i.skip} onChange={e=>patchOrder(i.id,{skip:!e.target.checked})}/> {dup?'إكمال الملف':'إنشاء ملف'}</label>}
       </header>
       {d&&!i.skip&&<div className="order-fields">
