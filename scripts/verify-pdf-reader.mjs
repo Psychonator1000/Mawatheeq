@@ -10,7 +10,7 @@ const compile=(file,replacements={})=>{
  for(const [from,to] of Object.entries(replacements))code=code.replaceAll(from,to);
  return 'data:text/javascript;base64,'+Buffer.from(code).toString('base64');
 };
-const fieldsURL=compile('lib/document-fields.ts');
+const fieldsURL=compile('lib/document-fields.ts',{"'./kuwait-areas.ts'":"'"+compile('lib/kuwait-areas.ts')+"'"});
 const {extractFields,extractionSummary,parseDocumentDate,assessText,amountInWords}=await import(fieldsURL);
 const {readPDFPages}=await import(compile('lib/pdf-reader.ts',{'./document-fields':fieldsURL,'./asset-url':compile('lib/asset-url.ts')}));
 assert.equal(parseDocumentDate('٠٨/١٢/٢٠٢٤'),'2024-12-08');
@@ -53,6 +53,27 @@ for(const name of ['jbig2.wasm','jbig2_nowasm_fallback.js','openjpeg.wasm'])asse
  assert.equal(f.account,'1234567890','The statement number');
  const noSlash=extractFields(scan.replace('أمر أداء رقم 20259612345','أمر أداء رقم'),'order.pdf');
  assert.equal(noSlash.orderNumber,'612345/2025','The order number from the receipt\'s case number');}
+// The creditor through the scan's slips (owner, 14 November 2026: left empty on a clear order): a stray dot after «مقدمه:»,
+// a space inside «شركة», and the order's own line «بأن يؤدي الى» without the hamza when the first line is lost.
+{const f=extractFields(['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاتصالات الكويتية','ضد: اماني سعدي عواد الشمري الجنسية: السعودية الرقم المدني: 296091701464','و موطنه: ol gall - تيماء - ق 7 - ش 1 - م 196 - الرقم الالي للعنوان: 14441421','يدين الطالب المقدم ضده بمبلغ: 806.658 د.ك'].join('\n'),'250256370.pdf');
+ assert.equal(f.address,'الجهراء - تيماء - ق 7 - ش 1 - م 196 - الرقم الالي للعنوان: 14441421','The governorate read as Latin junk comes back from its area');}
+{const {withGovernorate}=await import('../lib/kuwait-areas.ts');
+ assert.equal(withGovernorate('الفراونيــه - خيطان - ق 8 - ش 70'),'الفراونيــه - خيطان - ق 8 - ش 70','A governorate read by the scan stays as written');
+ assert.equal(withGovernorate('حولـــي - السالمية - ق 2'),'حولـــي - السالمية - ق 2');
+ assert.equal(withGovernorate('السالمية - ق 2 - ش سالم المبارك'),'حولي - السالمية - ق 2 - ش سالم المبارك','No governorate at all: it comes from the area');
+ assert.equal(withGovernorate('xx yy - منطقة غير معروفة - ق 1'),'xx yy - منطقة غير معروفة - ق 1','An unknown area changes nothing');
+ assert.equal(withGovernorate('ol gall - صباح الأحمد - ق 3'),'الأحمدي - صباح الأحمد - ق 3');}
+// The receipt number underlined (stuck «_», a space, E for F) and the debtor's name cut short on the order but whole on the receipt.
+for(const [receiptNo,want] of [['F0939577_','F0939577'],['F 0939577','F0939577'],['E0939577','F0939577'],['FO939577','F0939577']]){
+ const f=extractFields(['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاتصالات الكويتية','ضد: ابراهيم محمد عبدالقادر الحاج','الجنسية: الكويت الرقم المدني: 273122700105','مبلغ: 911.170 د.ك',
+  'الصفحة 2','2025/2024',receiptNo,'250255690','25504467','2025-01-20','المحكمة الكلية','جدول المحكمة الكلية - العاصمة','شركة الاتصالات الكويتية','ابراهيم محمد عبدالقادر الحاج محمد','22.780','911.170','رسوم قضائية','2025-01-20','16:13:07'].join('\n'),'250255690.pdf');
+ assert.equal(f.receiptNumber,want,'receipt number from «'+receiptNo+'»');
+ assert.equal(f.defendant,'ابراهيم محمد عبدالقادر الحاج محمد','The whole name from the receipt');}
+{const f=extractFields(['الصفحة 1','طلب استصدار أمر أداء','مقدمه: شركة الاتصالات الكويتية','ضد: سالم احمد علي','الصفحة 2','F0939577','شركة الاتصالات الكويتية','خالد يوسف فهد'].join('\n'),'x.pdf');
+ assert.equal(f.defendant,'سالم احمد علي','Another name on the receipt never replaces the debtor');}
+for(const [first,last] of [['مقدمه: . شركة الاتصالات الكويتية',''],['مقدمه: شر كة الاتصالات الكويتية',''],['مقدمه: ...','بأن يؤدي الى : شركة الاتصالات الكويتية'],['مقدمه:','بأن يؤدى إلى شر كة الاتصالات الكويتية']]){
+ const f=extractFields(['الصفحة 1','طلب استصدار أمر أداء',first,'ضد: حاتم حسيني الجنسية: الهند الرقم المدني: 291070501516','يدين الطالب المقدم ضده بمبلغ: 932.279 د.ك',last,'مبلغ: 932.279 د.ك فقط'].join('\n'),'250256450.pdf');
+ assert.equal(f.company,'شركة الاتصالات الكويتية',`creditor read through «${first}» / «${last}»`);}
 console.log('Passed: localized labels, Arabic digits, date formats, invalid dates, empty/garbled text, filename code, cancellation, decoder assets, scanned payment orders (voted amount, order number, receipt fee, date and number, clean debtor name, statement number).');
 
 const source=process.argv[2];

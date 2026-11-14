@@ -1,4 +1,5 @@
 export type Evidence = {id:string;included:boolean;date:string;description:string;pages:number};
+import {withGovernorate} from './kuwait-areas.ts';
 export type DocumentData = {company:string;defendant:string;civilId:string;nationality:string;address:string;address2:string;amount:string;amountWords:string;account:string;phone:string;orderNumber:string;court:string;rejectedDate:string;demandDate:string;statementDate:string;companyCivil:string;companyRegister:string;email:string;code:string;hearingCourt:string;hearingDay:string;hearingDate:string;hearingCircuit:string;lawsuitNumber:string;lawsuitYear:string;receiptDate:string;receiptFee:string;receiptNumber:string;orderAuto:string;evidence:Evidence[];[key:string]:unknown};
 export const blankDocument = ():DocumentData => ({company:'',defendant:'',civilId:'',nationality:'',address:'',address2:'',amount:'',amountWords:'',account:'',phone:'',orderNumber:'',court:'',rejectedDate:'',demandDate:'',statementDate:'',companyCivil:'',companyRegister:'',email:'',code:'',hearingCourt:'',hearingDay:'',hearingDate:'',hearingCircuit:'',lawsuitNumber:'',lawsuitYear:'',receiptDate:'',receiptFee:'',receiptNumber:'',orderAuto:'',evidence:[]});
 export const normalizeDigits = (text:string) => text.replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776));
@@ -93,11 +94,13 @@ export function extractFields(raw:string,filename=''):DocumentData {
   const demand=chunks.find(t=>/حيث انكم مدينون/.test(t))||chunks.find(t=>/كتاب\s*التكليف\s*بالوفاء/.test(t))||'';
   const originalOrder=original.split(/(?:^|\n)الصفحة\s+\d+\s*\n/).find(t=>/طلب\s*استصدار\s*[اأ]مر\s*[اأ]داء/.test(t))||original;
 
-  d.company=tidy(originalOrder.match(/(?:مقدم[هة]|الطالبة|الدائنة|المدعية)\s*[:/\-]?\s*((?:ال)?شرك[ةه][^\n]{4,110})/)?.[1]||'');
+  // The scan slips: «مقدمه: . شركة», «مقدمه: شر كة» (owner, 14 November 2026: the creditor left empty on a clear order).
+  const fixCompany=(v:string)=>tidy(v).replace(/^(ال)?شر\s+ك/,'$1شرك');
+  d.company=fixCompany(originalOrder.match(/(?:مقدم[هة]|الطالبة|الدائنة|المدعية)\s*[:/\-]?\s*[.،,]?\s*((?:ال)?شر\s?ك[ةه][^\n]{4,110})/)?.[1]||'');
   if(!d.company)d.company=tidy(original.match(/((?:ال)?شرك[ةه]\s+الوطنية\s+للاتصالات\s*المتنقلة|شركة\s+الاتصالات\s*المتنقلة)/)?.[1]||'');
   d.company=d.company.replace(/للاتصالات(?=المتنقلة)/g,'للاتصالات ');
   if(!d.company||/[a-z]/i.test(d.company)){
-    const clearer=tidy(originalOrder.match(/بأن\s*يؤدى\s*إلى\s*:\s*((?:ال)?شرك[ةه][^\n]{4,110})/)?.[1]||'');
+    const clearer=fixCompany(originalOrder.match(/بأن\s*يؤد[ىي]\s*[إاأ]ل[ىي]\s*:?\s*[.،,]?\s*((?:ال)?شر\s?ك[ةه][^\n]{4,110})/)?.[1]||'');
     if(clearer&&!/[a-z]/i.test(clearer))d.company=clearer;
     else d.company=tidy(original.match(/((?:ال)?شرك[ةه]\s+الوطنية\s+للاتصالات\s*المتنقلة|شركة\s+الاتصالات\s*المتنقلة)/)?.[1]||'');
   }
@@ -109,6 +112,13 @@ export function extractFields(raw:string,filename=''):DocumentData {
     const clean=[originalOrder.match(/نأمر\s*المقدم\s*(?:ضده|ده)\s*:\s*([^\n:0-9]{5,100})/)?.[1],original.match(/الطرف\s*الثان[يى]\s*[:\-]?\s*([^\n:0-9]{5,100})/)?.[1]].map(v=>tidy(v||'')).find(v=>v&&!/[a-z]/i.test(v));
     if(clean)d.defendant=clean;
   }
+  // The court receipt prints the debtor's whole name on the line after the creditor's: when it carries on the name read
+  // above (same words, then more), the name above lost its end in the scan (owner, 14 November 2026: «… الحاج» for
+  // «… الحاج محمد»).
+  {const lines=receipt.split('\n').map(l=>tidy(l)).filter(Boolean),at=lines.findIndex(l=>/^(?:ال)?شرك[ةه]\s/.test(l));
+   const onReceipt=at>=0?lines.slice(at+1).find(l=>/^[\u0621-\u064A\s]{5,100}$/.test(l)&&!/رسوم|المحكم[ةه]|جدول|امر|اداء|قضائي/.test(l))||'':'';
+   const key=(v:string)=>v.replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
+   if(onReceipt&&(!d.defendant||(key(onReceipt).startsWith(key(d.defendant)+' ')&&onReceipt.split(/\s+/).length-d.defendant.split(/\s+/).length<=3)))d.defendant=onReceipt;}
   d.civilId=selectNumber(order,/الرقم\s*المد[نتم][يى]\s*[:\-]?\s*([23]\d{11})\b/g)||selectNumber(text,/(?<!\d)([23]\d{11})(?!\d)/g);
   d.account=selectNumber(statement+'\n'+order+'\n'+text,/(?:حساب|عقد|العقد|الحساب)\s*(?:رقم)?\s*[:\-]?\s*(\d{1,4}[.]\d{6,12})\b/g)||get(/\b(1\.\d{7,10})\b/);
   if(!d.account)d.account=selectNumber(order+'\n'+text,/كشف\s*حساب\s*رقم\s*[:\-]?\s*(\d{8,12})\b/g);
@@ -147,6 +157,10 @@ export function extractFields(raw:string,filename=''):DocumentData {
     const unitNumber=unit.match(/\b\d{7,9}\b/)?.[0];
     if(unitNumber)d.address2=`الرقم الآلي للوحدة: ${unitNumber}`;
   }
+  // A stretched name (« الجهـــراء ») can come out of the scan as Latin junk («ol gall - تيماء…»): its governorate comes
+  // back from the area that follows (lib/kuwait-areas.ts), then the address keeps the Arabic and its numbers only
+  // (owner, 14 November 2026: «we need the full address though»).
+  d.address=withGovernorate(d.address).replace(/[A-Za-z][A-Za-z.'’]*(?:\s+[A-Za-z][A-Za-z.'’]*)*/g,' ').replace(/\s{2,}/g,' ').replace(/(?:\s*-\s*){2,}/g,' - ').replace(/^[\s\-–,.،]+|[\s\-–,.،]+$/g,'').trim();
   d.code=get(/(?:كود|الكود)\s*[:\-]?\s*(\d{1,6})(?!\d)/)||tidy(matchText(filename).match(/(?:كود|code)\s*[_: -]?\s*(\d{1,6})(?!\d)/i)?.[1]||'');
   d.demandDate=datesIn(after(order,/(?:بعث[ةيه]+\s*بريدية|البعثية|ارسل بتاريخ|كتاب\s*التكليف)/,170))[0]||'';
   d.statementDate=datesIn(after(statement,/(?:تاريخ\s*الفاتور[ةه]|تاريخ\s*الكشف|كشف\s*الحساب)/,160))[0]||'';
@@ -156,7 +170,9 @@ export function extractFields(raw:string,filename=''):DocumentData {
   // A complete date stamp on the signed order page is distinct from the demand date.
   if(!d.rejectedDate){const stamp=order.match(/\b\d{1,2}\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s+20\d{2}\b/i);if(stamp&&/امر\s*اداء/.test(order)&&/رفض|مرفوض/.test(text))d.rejectedDate=parseDocumentDate(stamp[0]);}
   // «F» then digits; a scan may read the first zero as the letter O.
-  d.receiptNumber=tidy(receipt.match(/\b(F[0O]\d{5,11})\b/i)?.[1]||'').toUpperCase().replace(/^F[O]/,'F0');
+  // Underlined on the receipt, so the scan can leave the line stuck to it («F0939577_»), a space after the letter, or E for F
+  // (owner, 14 November 2026: the receipt number missed on a clear receipt).
+  d.receiptNumber=tidy(receipt.match(/(?<![A-Za-z0-9])([FE]\s?[0Oo]\d{5,11})(?!\d)/)?.[1]||'').toUpperCase().replace(/\s/g,'').replace(/^E/,'F').replace(/^FO/,'F0');
   // The receipt prints the date twice; a copy under an underline can lose a digit («2025-04-3»): fully written dates
   // are preferred, then the one most copies agree on.
   const written=Array.from(receipt.matchAll(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g),m=>m[0]),full=written.filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&parseDocumentDate(v));
